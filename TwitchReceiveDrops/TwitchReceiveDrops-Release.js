@@ -17,7 +17,7 @@
 // @match        https://www.twitch.tv/drops/inventory
 // @icon         https://cdn-icons-png.flaticon.com/512/8214/8214044.png
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
 // @run-at       document-body

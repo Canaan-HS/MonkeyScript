@@ -11,7 +11,7 @@
 // @match        *://*/*
 // @icon         https://cdn-icons-png.flaticon.com/512/8298/8298181.png
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
 // @run-at       document-start

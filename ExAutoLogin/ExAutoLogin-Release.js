@@ -19,7 +19,7 @@
 // @match        *://exhentai.org/*
 // @icon         https://e-hentai.org/favicon.ico
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
 // @run-at       document-start
