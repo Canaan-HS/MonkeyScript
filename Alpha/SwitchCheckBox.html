@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.5.2/jscolor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+    <script>
+        jscolor.presets.default = {
+            mode: "HSV",
+            format: "hex",
+            width: 250,
+            height: 150,
+            padding: 15,
+            crossSize: 7,
+            zIndex: 10000,
+            borderWidth: 2,
+            borderRadius: 10,
+            pointerThickness: 2,
+            pointerBorderWidth: 0,
+            pointerColor: "#FAF0E6",
+            borderColor: "#5C5470",
+            controlBorderWidth: 1,
+            controlBorderColor: "#B9B4C7",
+            buttonColor: "#FAF0E6",
+            backgroundColor: "#352F44",
+            onInput: function(color = this.toHEXString()) {
+                $("body").css("background-color", color);
+
+            }, palette: ["#FAFAFA", "#000000", "#FF0000", "#FFA600", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF", "#9300FF", "#FF00FF"],
+        }
+    </script>
+    <style>
+        .color-transformation {
+            color: #70757e;
+        }
+
+        .Switch-Input[type=checkbox]{
+            display: none;
+        }
+
+        .Switch-Label {
+        	cursor: pointer;
+        	width: 200px;
+        	height: 100px;
+        	display: block;
+            background: grey;
+        	border-radius: 100px;
+        	position: relative;
+        }
+
+        .Switch-Label:after {
+        	content: "";
+        	top: 5px;
+        	left: 5px;
+        	width: 90px;
+        	height: 90px;
+            transition: 0.3s;
+            background: #fff;
+            position: absolute;
+            border-radius: 90px;
+        }
+
+        .Switch-Input:checked + .Switch-Label {
+	        background: #6f42c1;
+        }
+
+        .Switch-Input:checked + .Switch-Label:after {
+	        left: calc(100% - 5px);
+	        transform: translateX(-100%);
+        }
+    </style>
+</head>
+<body>
+    <input type="checkbox" class="Switch-Input" id="switch">
+    <label for="switch" class="Switch-Label"></label>
+</body>
+</html>
