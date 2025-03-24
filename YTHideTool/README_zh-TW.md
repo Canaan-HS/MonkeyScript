@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/472081/YouTube%20Hide%20Tool.user.js)
 3. 前往 [youtube](https://www.youtube.com/)
 
 ---
