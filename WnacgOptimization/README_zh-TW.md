@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/472726/wnacg%20%E5%84%AA%E5%8C%96.user.js)
 3. 前往 [wnacg](https://www.wnacg.com/)
 
 ---
