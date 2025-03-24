@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/488622/ColaManga%20%E7%80%8F%E8%A6%BD%E5%A2%9E%E5%BC%B7.user.js)
 3. 前往 [ColaManga](https://www.colamanga.com/) 網站
 
 ---
