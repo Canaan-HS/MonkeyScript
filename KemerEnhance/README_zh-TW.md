@@ -6,7 +6,7 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）。
+1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
 2. 安裝腳本
 3. 前往
     - [kemono](https://kemono.su/)
