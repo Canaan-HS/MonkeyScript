@@ -21,7 +21,7 @@
 
 // @run-at       document-StartTime
 
-// @license      MIT
+// @license      MPL-2.0
 // @grant        none
 // @namespace    https://greasyfork.org/users/989635
 // ==/UserScript==

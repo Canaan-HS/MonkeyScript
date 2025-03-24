@@ -17,7 +17,7 @@
 // @match        *://*.twitch.tv/*
 // @icon         https://cdn-icons-png.flaticon.com/512/9290/9290165.png
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
 // @run-at       document-body

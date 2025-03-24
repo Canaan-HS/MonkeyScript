@@ -13,7 +13,7 @@
 // @match        *://www.colamanga.com/manga-*/*/*.html
 // @icon         https://www.colamanga.com/favicon.png
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
 // @run-at       document-start

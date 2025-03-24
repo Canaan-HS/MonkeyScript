@@ -20,7 +20,7 @@
 // @match        *://*.coomer.su/*
 // @match        *://*.nekohouse.su/*
 
-// @license      MIT
+// @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
