@@ -2,7 +2,7 @@
 
 [繁中版本](README_zh-TW.md)
 
-This repository contains Tampermonkey scripts I wrote to solve personal issues. I share them in the hope of helping others who may face the same challenges.
+This repository contains Tampermonkey scripts I wrote to solve personal issues. I share them in the hope of helping others who may have similar needs.
 
 ## Installation
 
