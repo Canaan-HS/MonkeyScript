@@ -4,9 +4,9 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）。
+1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
 2. 安裝腳本
-3. 前往 [twitch](https://www.twitch.tv/) 網站。
+3. 前往 [twitch](https://www.twitch.tv/) 網站
 
 ---
 
