@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.slim.min.js"></script>
+    <title>Modal</title>
+    <style>
+        /* 模態背景 */
+        .modal-background {
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            z-index: 9999;
+            overflow: auto;
+            position: fixed;
+            pointer-events: none;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* 模態介面 */
+        .modal-interface {
+            margin: 0;
+            top: 2vh;
+            right: 3vw;
+            display: flex;
+            overflow: auto;
+            position: fixed;
+            border-radius: 5px;
+            background-color: #2C2E3E;
+            border: 3px solid #EE2B47;
+            pointer-events: auto;
+        }
+
+        /* 模態內容盒 */
+        .modal-box {
+            padding: 0.5rem;
+            height: 50vh;
+            width: 32vw;
+        }
+
+        /* 菜單框架 */
+        .menu {
+            width: 5.5vw;
+            text-align: center;
+            vertical-align: top;
+            border-radius: 2px;
+            border: 2px solid #F6F6F6;
+        }
+
+        /* 菜單文字標題 */
+        .menu-text {
+            color: #EE2B47;
+            cursor: default;
+            padding: 0.2rem;
+            margin: 0.3rem;
+            margin-bottom: 1.5rem;
+            white-space: nowrap;
+            border-radius: 10px;
+            border: 4px solid #f05d73;
+            background-color: #1f202c;
+        }
+
+        /* 菜單選項按鈕 */
+        .menu-options {
+            cursor: pointer;
+            font-size: 1.05rem;
+            color: #F6F6F6;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-bottom: 1.2rem;
+            border: 5px inset #EE2B47;
+            background-color: #6e7292;
+            transition: color 0.8s, background-color 0.8s;
+        }
+
+        .menu-options:hover {
+            color: #EE2B47;
+            background-color: #F6F6F6;
+        }
+
+        .menu-options:disabled {
+            color: #6e7292;
+            cursor: default;
+            background-color: #c5c5c5;
+            border: 5px inset #faa5b2;
+        }
+
+        /* 設置內容框架 */
+        .content {
+            height: 48vh;
+            width: 28vw;
+            padding: 0px 1rem;
+            border-radius: 2px;
+            vertical-align: top;
+            border-top: 2px solid #F6F6F6;
+            border-right: 2px solid #F6F6F6;
+        }
+
+        .narrative {
+            color: #EE2B47;
+        }
+
+        .Image-input-settings {
+            width: 8rem;
+            color: #F6F6F6;
+            text-align: center;
+            font-size: 1.5rem;
+            border-radius: 15px;
+            border: 3px inset #EE2B47;
+            background-color: #202127;
+        }
+
+        .Image-input-settings:disabled {
+            border: 3px inset #faa5b2;
+            background-color: #5a5a5a;
+        }
+
+        /* 底部按鈕框架 */
+        .button-area {
+            display: flex;
+            padding: 0.3rem;
+            border-left: none;
+            border-radius: 2px;
+            border: 2px solid #F6F6F6;
+            justify-content: space-between;
+        }
+
+        .button-area select {
+            color: #F6F6F6;
+            margin-right: auto;
+            border: 3px inset #EE2B47;
+            background-color: #6e7292;
+        }
+
+        /* 底部選項 */
+        .button-options {
+            color: #F6F6F6;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 10px;
+            white-space: nowrap;
+            background-color: #6e7292;
+            border: 3px inset #EE2B47;
+            transition: color 0.5s, background-color 0.5s;
+        }
+
+        .button-options:hover {
+            color: #EE2B47;
+            background-color: #F6F6F6;
+        }
+
+        .button-space {
+            margin: 0 0.6rem;
+        }
+
+        /* 整體框線 */
+        table,
+        td {
+            border-spacing: 0px;
+            margin: 0px;
+            padding: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="modal-background">
+        <div class="modal-interface">
+            <table class="modal-box">
+                <tr>
+                    <td class="menu">
+                        <h2 class="menu-text">設置菜單</h2>
+                        <button class="menu-options" id="image-settings">圖像設置</button>
+                        <button class="menu-options" disabled>後續開發</button>
+                    </td>
+                    <td>
+                        <table>
+                            <tr>
+                                <td class="content" id="set-content">
+                                    <div id="image-settings-show" style="transition: opacity 0.8s; opacity: 0;">
+                                        <div>
+                                            <h2 class="narrative">圖片高度：</h2>
+                                            <p>
+                                                <input type="number" id="height" class="Image-input-settings"
+                                                    oninput="if(value>1000)value=1000;if(value<0)value=0">
+                                                <select id="height_unit" class="Image-input-settings"
+                                                    style="margin-left: 1rem;">
+                                                    <option value="px" selected>px</option>
+                                                    <option value="%">%</option>
+                                                    <option value="rem">rem</option>
+                                                    <option value="vh">vh</option>
+                                                    <option value="vw">vw</option>
+                                                    <option value="auto">auto</option>
+                                                </select>
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h2 class="narrative">圖片寬度：</h2>
+                                            <p>
+                                                <input type="number" id="width" class="Image-input-settings"
+                                                    oninput="if(value>1000)value=1000;if(value<0)value=0">
+                                                <select id="width_unit" class="Image-input-settings"
+                                                    style="margin-left: 1rem;">
+                                                    <option value="px" selected>px</option>
+                                                    <option value="%">%</option>
+                                                    <option value="rem">rem</option>
+                                                    <option value="vh">vh</option>
+                                                    <option value="vw">vw</option>
+                                                    <option value="auto">auto</option>
+                                                </select>
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h2 class="narrative">圖片最大寬度：</h2>
+                                            <p>
+                                                <input type="number" id="max-width" class="Image-input-settings"
+                                                    oninput="if(value>1000)value=1000;if(value<0)value=0">
+                                                <select id="max-width_unit" class="Image-input-settings"
+                                                    style="margin-left: 1rem;">
+                                                    <option value="px" selected>px</option>
+                                                    <option value="%">%</option>
+                                                    <option value="rem">rem</option>
+                                                    <option value="vh">vh</option>
+                                                    <option value="vw">vw</option>
+                                                    <option value="auto">auto</option>
+                                                </select>
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <h2 class="narrative">圖片間隔高度：</h2>
+                                            <p>
+                                                <input type="number" id="gap-height" class="Image-input-settings"
+                                                    oninput="if(value>1000)value=1000;if(value<0)value=0">
+                                                <select id="gap-height_unit" class="Image-input-settings"
+                                                    style="margin-left: 1rem;">
+                                                    <option value="px" selected>px</option>
+                                                    <option value="%">%</option>
+                                                    <option value="rem">rem</option>
+                                                    <option value="vh">vh</option>
+                                                    <option value="vw">vw</option>
+                                                    <option value="auto">auto</option>
+                                                </select>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="button-area">
+                                    <select id="language">
+                                        <option value="" disabled selected>Language</option>
+                                        <option value="en">English</option>
+                                        <option value="tw">Traditional</option>
+                                        <option value="cn">Simplified</option>
+                                        <option value="ja">Japanese</option>
+                                    </select>
+                                    <button id="closure" class="button-options">關閉離開</button>
+                                    <span class="button-space"></span>
+                                    <button id="application" class="button-options">保存應用</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>
