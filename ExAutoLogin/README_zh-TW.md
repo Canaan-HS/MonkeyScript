@@ -6,7 +6,7 @@
 
 1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
 2. 安裝腳本
-3. 前往 [e-hentai](https://e-hentai.org/) 或 [exhentai](https://exhentai.org/)。
+3. 前往 [e-hentai](https://e-hentai.org/) 或 [exhentai](https://exhentai.org/)
 
 ---
 
@@ -57,6 +57,6 @@
 
 ### **更新內容**
 1. 更新 API
-2. 調整 適應 5.3.0 前版本插件, 菜單樣式
+2. 調整 適應 5.3.0 前版本插件，菜單樣式
 
 ---
