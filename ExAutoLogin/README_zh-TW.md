@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/470710/%5BEEx-Hentai%5D%20AutoLogin.user.js)
 3. 前往 [e-hentai](https://e-hentai.org/) 或 [exhentai](https://exhentai.org/)
 
 ---
