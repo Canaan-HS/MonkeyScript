@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/488726/Pornhub%20%E6%BB%91%E9%BC%A0%E9%9A%B1%E8%97%8F.user.js)
 3. 前往 [pornhub](https://cn.pornhub.com/) 網站
 
 ---
