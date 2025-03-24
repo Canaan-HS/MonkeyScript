@@ -4,8 +4,8 @@
 
 ## **👻 使用方法**
 
-1. 安裝瀏覽器腳本管理工具（如 Tampermonkey）
-2. 安裝腳本
+1. 安裝瀏覽器腳本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安裝腳本](https://update.greasyfork.org/scripts/504153/%E7%B0%A1%E6%98%93%E6%96%87%E6%9C%AC%E8%BD%89%E6%8F%9B%E5%99%A8.user.js)
 3. 前往支援的網站
 
 ---
