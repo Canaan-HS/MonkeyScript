@@ -75,12 +75,10 @@
         {
             Name: "LeveStageCheckIn",
             verifyLogin: "Levelinfinite_Verified",
-            API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-            Url: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
-            verifyStatus: (Name, { code, retcode }) => {
-                code === 0 ? Qmsg.success(`${Name} 簽到成功`)
-                : code === 1001009 || code === 1002007 ? Qmsg.info(`${Name} 已經簽到`)
-                : retcode === -500012 ? Qmsg.info(`${Name} 活動結束`) : Qmsg.error(`${Name} 簽到失敗`)
+            API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
+            Url: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
+            verifyStatus: (Name, { code }) => {
+                code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 || code === 1002007 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         }
     ];
