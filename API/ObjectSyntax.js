@@ -58,18 +58,18 @@ const Syn = (() => {
         },
         StorageMatch = { // Storage()
             String: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
             Number: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true) : Number(key),
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true) : Number(key),
             Array: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true)
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true)
                     : (key = JSON.parse(key), Array.isArray(key[0]) ? new Map(key) : key),
             Object: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
             Boolean: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
             Date: (storage, key, value) =>
-                value !== null ? (storage.setItem(key, JSON.stringify(value)), true) : new Date(key),
+                value != null ? (storage.setItem(key, JSON.stringify(value)), true) : new Date(key),
             Map: (storage, key, value) =>
                 (storage.setItem(key, JSON.stringify([...value])), true)
         };
