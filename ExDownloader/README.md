@@ -51,10 +51,12 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.16-Beta8**
+**Release Version: 0.0.16** 
 
 ### **Updates**
-1. Fixed the image request location for the original image (does not apply to single image download).
+1. API updates
+2. Added language support
+3. Modified some translations
 
 ### **Known Issues**
 ❗️ Currently unsure whether the issue is from the website or elsewhere, the logic that previously worked has now encountered several problems, becoming quite frustrating.
