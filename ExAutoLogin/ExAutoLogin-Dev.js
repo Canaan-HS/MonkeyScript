@@ -458,7 +458,6 @@
             /* 監聽選單切換, 全局套用 */
             this.GlobalMenuToggle = async() => {
                 Syn.StoreListen(["Login", "Expand"], listen=> {
-                    console.log(listen);
                     listen.far && this.LoginToggle();
                 });
             };
