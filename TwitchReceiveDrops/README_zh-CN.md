@@ -1,0 +1,76 @@
+# **自动领取 Twitch 的 Drops**
+
+---
+
+## **👻 使用方法**
+
+1. 安装浏览器脚本管理工具（如 [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)）
+2. [安装脚本](https://update.greasyfork.org/scripts/474799/Twitch%20%E8%87%AA%E5%8B%95%E9%A0%98%E5%8F%96%E6%8E%89%E5%AF%B6%20%20Auto%20Receive%20Drops.user.js)
+3. 前往 [inventory](https://www.twitch.tv/drops/inventory) 页面
+
+---
+
+## **⚠️ 使用须知**
+- 当 Twitch 修改页面元素，有可能造成功能失效，就需要重新配置（有问题可反馈）
+- ❗️ 个人使用上有问题，请先尝试自定配置参数，这只是一个很简单的脚本，没有针对不同环境适应变化的功能
+- 使用时确保脚本管理工具，已经加载此脚本，同时打开直播页面与 Inventory 页面，即可放置于后台等待自动领取
+
+
+## **📜 功能概述**
+
+### **自动重启直播**
+- 配置 RestartLive 是 True 时启用
+- 当 inventory 页面 "存在掉宝进度" 时，每次刷新都会进行记录，如进度始终没有变化，且没变化的时间 >= JudgmentInterval 的配置时间，将会判断为直播中断，进而重启直播
+- 尽量不要设置语言筛选可能导致找不到，会根据频道的 Tags，是否与 FindTag 设置的文字匹配，并打开第一个匹配直播
+- 如果是第二次重启直播，会自动关闭前一次窗口，始终保持一个直播窗口（自行打开的无效）
+
+### **完成自动关闭**
+- 配置 EndAutoClose 是 True 时启用
+- 存在被记录的掉宝进度，在完成后会自动关闭窗口
+- 没有被记录的掉宝进度，就不会触发
+
+### **清除过期进度**
+- 配置 ClearExpiration 是 True 时启用
+- 这是针对活动时间已经过期的掉宝对象进行清除，但因为该功能需要判断时间戳，针对不同语言时间戳的格式又不同
+目前只有支持特定几种语言，不在支持内的就不会有效果
+- **🌐 支持语言**：根据网站设置自动适配以下语言：
+  - en-US，en-GB，es-ES，fr-FR，pt-PT，pt-BR，ru-RU，de-DE，it-IT，tr-TR，es-MX，ja-JP，ko-KR，zh-TW，zh-CN
+
+
+## **⚙️ 额外配置（代码上方）**
+
+|      **参数**       |                  **说明**                  |                **默认值**                 |
+| :-----------------: | :----------------------------------------: | :---------------------------------------: |
+|    `RestartLive`    |                自动重启直播                |                  `true`                   |
+|   `EndAutoClose`    |           活动完成后自动关闭窗口           |                  `true`                   |
+|   `TryStayActive`   |       "尝试" 让窗口始终处于活跃状态        |                  `true`                   |
+|  `RestartLiveMute`  | 重启直播后静音（不一定有效 or 比较慢运作） |                  `true`                   |
+| `RestartLowQuality` |            重启直播自动最低画质            |                  `false`                  |
+|   `UpdateDisplay`   |      在网页标签显示检查掉宝的间隔倒数      |                  `true`                   |
+|  `ClearExpiration`  |           清除过期活动的掉宝进度           |                  `true`                   |
+|  `ProgressDisplay`  |           在网页标签显示掉宝进度           |                  `true`                   |
+|  `UpdateInterval`   |          掉宝检查的间隔时间（秒）          |                   `120`                   |
+| `JudgmentInterval`  |        判断重启直播的间隔时间（分）        |                    `6`                    |
+|      `FindTag`      |        重启直播查找的包含 Tag 标签         | `drops、啟用掉寶、启用掉宝、드롭활성화됨` |
+
+---
+
+## **🔗 相关链接**
+
+- **开发环境**：[Greasy Fork](https://greasyfork.org/zh-TW/users/989635-canaan-hs)  
+- **GitHub 仓库**：[GitHub](https://github.com/Canaan-HS/MonkeyScript/tree/main/TwitchReceiveDrops)
+
+---
+
+## **📦 版本信息**
+
+**发布版本：0.0.16-Beta** 
+
+### **更新内容**
+1. 移除 早期跳出判断
+2. 修改 自动领取掉宝逻辑（目前 时间过期的无法自动领取）
+
+### **已知问题**
+1.目前插件的 `GM_notification` 有些问题，依赖该 API 的功能实现，可能无法正常运行
+
+---
