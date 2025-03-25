@@ -2,8 +2,8 @@
 // @name         ColaManga 瀏覽增強
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
-// @name:en      ColaManga Browsing Enhancement
-// @version      0.0.11-Beta4
+// @name:en      ColaManga Browsing Enhance
+// @version      0.0.11
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -20,7 +20,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 
-// @require      https://update.greasyfork.org/scripts/487608/1456525/ClassSyntax_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1551580/ClassSyntax_min.js
 // ==/UserScript==
 
 (async () => {
@@ -68,7 +68,7 @@
                 ChildS: "CME_Child-Scroll-Hidden"
             };
             this.Get_Data = async callback => {
-                this.WaitMap(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], element => {
+                this.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], element => {
                     const [Body, Title, HeadPager, Readend, Manga] = element;
                     this.Body = Body;
                     const HomeLink = this.$$("a", {
