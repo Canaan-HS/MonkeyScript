@@ -52,13 +52,10 @@ Currently, there is no settings menu available. Customizations need to be done b
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.11-Beta4**
+**Release Version: 0.0.11**
 
 ### **Updates**
-1. Adjusted function injection timing to improve stability.
-2. Fixed compatibility issues with mobile features.
-3. Added synchronized update of quick jump links when using infinite page turning.
-4. Adjusted sensitivity of mobile swipe jump and added debounce mechanism.
+1. API Update
 
 ### **Known Issues**
 1. Ad-blocking is limited to page display and cannot prevent pop-ups triggered by accidental clicks.
