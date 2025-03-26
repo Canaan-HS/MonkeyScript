@@ -51,8 +51,6 @@
 // @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/svg-with-js.min.css
 // ==/UserScript==
 
-// Todo - 等待修正 preact 替代 react 後的語法問題
-
 (async () => {
     /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
     const User_Config = {
@@ -80,8 +78,8 @@
         Preview: {
             CardZoom: {mode: 2, enable: true}, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
             CardText: {mode: 2, enable: true}, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            QuickPostToggle: {mode: 0, enable: true}, // 快速切換帖子 (部份網站失效)
-            NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟 (部份網站失效)
+            QuickPostToggle: {mode: 0, enable: true}, // 快速切換帖子 (僅支援 nekohouse)
+            NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
                 enable: true,
                 newtab_active: false,
@@ -1358,8 +1356,9 @@
                     target && (event.preventDefault(), GetNextPage(target.href));
                 }, {capture: true, mark: "QuickPostToggle"});
 
+                // Todo - 修正對於 Neko 換頁的問題
                 async function GetNextPage(link) {
-                    const old_section = Syn.$$("section"); // 獲取當前頁面的 section
+                    const old_card = Syn.$$(".card-list");
                     const items = Syn.$$(".card-list__items"); // 用於載入 加載圖示
                     requestAnimationFrame(()=> {GM_addElement(items, "img", {class: "gif-overlay"})});
                     GM_xmlhttpRequest({
@@ -1367,8 +1366,8 @@
                         url: link,
                         nocache: false,
                         onload: response => {
-                            const Section = Syn.$$("section", {root: response.responseXML});
-                            preact.render(preact.h(DLL.Rendering, { content: Section.innerHTML }), old_section);
+                            const card = Syn.$$(".card-list", {root: response.responseXML});
+                            render(preact.h(DLL.Rendering, { content: card.innerHTML }), old_card);
                             history.pushState(null, null, link);
                         },
                         onerror: error => {GetNextPage(link)}
@@ -1533,7 +1532,7 @@
                             onload: response => {
                                 const XML = response.responseXML;
                                 const Main = Syn.$$("main", {root: XML});
-                                preact.render(preact.h(DLL.Rendering, { content: Main.innerHTML }), old_main); // 替換 main
+                                render(preact.h(DLL.Rendering, { content: Main.innerHTML }), old_main); // 替換 main
 
                                 const Title = Syn.$$("title", {root: XML})?.textContent;
                                 history.pushState(null, null, url); // 修改連結與紀錄
@@ -1636,9 +1635,9 @@
                                         }
                                     }
                                 }
-    
+
                                 // 重新渲染影片, 避免跑版
-                                preact.render(preact.h(VideoRendering, { stream: stream }), li);
+                                render(preact.h(VideoRendering, { stream: stream }), li);
                                 // 將連結元素進行插入 (確保不重複添加)
                                 li.insertBefore(node, Syn.$$("summary", {root: li}));
                             }
@@ -1760,10 +1759,10 @@
                                         Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
 
                                         this.Request(object, hrefP, href => {
-                                            preact.render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
+                                            render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
                                         });
                                     } else {
-                                        preact.render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Nurl: hrefP }), object);
+                                        render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Nurl: hrefP }), object);
                                     }
 
                                 }, index * 300);
@@ -1829,10 +1828,10 @@
                                             Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
 
                                             this.Request(object, hrefP, href => {
-                                                preact.render(preact.h(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
+                                                render(preact.h(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
                                             });
                                         } else {
-                                            preact.render(preact.h(this.ImgRendering, { ID: object.alt, Nurl: hrefP }), object);
+                                            render(preact.h(this.ImgRendering, { ID: object.alt, Nurl: hrefP }), object);
                                         }
                                     }
                                 });
@@ -2172,4 +2171,12 @@
             }
         });
     };
+
+    /* ==================== 額外封裝函數 ==================== */
+
+    // 透過 innerHTML 實現 react 的覆蓋渲染
+    function render(element, container) {
+        container.innerHTML = '';
+        preact.render(element, container);
+    }
 })();
