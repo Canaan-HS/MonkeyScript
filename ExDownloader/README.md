@@ -51,7 +51,7 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.16** 
+**Release Version: 0.0.16**
 
 ### **Updates**
 1. API updates
