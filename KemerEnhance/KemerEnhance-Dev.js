@@ -43,7 +43,7 @@
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/ObjectSyntax.js
+// @require      https://update.greasyfork.org/scripts/495339/1560532/ObjectSyntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/hooks.umd.min.js
 
@@ -116,97 +116,97 @@
             Traditional: {},
             Simplified: {
                 "📝 設置選單": "📝 设置菜单",
-                "設置菜單": "设置菜单", 
+                "設置菜單": "设置菜单",
                 "圖像設置": "图像设置",
-                "讀取設定": "加载设置", 
-                "關閉離開": "关闭", 
+                "讀取設定": "加载设置",
+                "關閉離開": "关闭",
                 "保存應用": "保存并应用",
-                "語言": "语言", 
-                "英文": "英语", 
-                "繁體": "繁体中文", 
-                "簡體": "简体中文", 
+                "語言": "语言",
+                "英文": "英语",
+                "繁體": "繁体中文",
+                "簡體": "简体中文",
                 "日文": "日语",
                 "韓文": "韩语",
                 "俄語": "俄语",
-                "圖片高度": "图片高度", 
-                "圖片寬度": "图片宽度", 
-                "圖片最大寬度": "图片最大宽度", 
+                "圖片高度": "图片高度",
+                "圖片寬度": "图片宽度",
+                "圖片最大寬度": "图片最大宽度",
                 "圖片間隔高度": "图片间距"
             },
             Japan: {
                 "📝 設置選單": "📝 設定メニュー",
-                "設置菜單": "設定メニュー", 
+                "設置菜單": "設定メニュー",
                 "圖像設置": "画像設定",
-                "讀取設定": "設定を読み込む", 
-                "關閉離開": "閉じる", 
+                "讀取設定": "設定を読み込む",
+                "關閉離開": "閉じる",
                 "保存應用": "保存して適用",
-                "語言": "言語", 
-                "英文": "英語", 
-                "繁體": "繁体字中国語", 
-                "簡體": "簡体字中国語", 
+                "語言": "言語",
+                "英文": "英語",
+                "繁體": "繁体字中国語",
+                "簡體": "簡体字中国語",
                 "日文": "日本語",
                 "韓文": "韓国語",
                 "俄語": "ロシア語",
-                "圖片高度": "画像の高さ", 
-                "圖片寬度": "画像の幅", 
-                "圖片最大寬度": "画像の最大幅", 
+                "圖片高度": "画像の高さ",
+                "圖片寬度": "画像の幅",
+                "圖片最大寬度": "画像の最大幅",
                 "圖片間隔高度": "画像の間隔"
             },
             Korea: {
                 "📝 設置選單": "📝 설정 메뉴",
-                "設置菜單": "설정 메뉴", 
+                "設置菜單": "설정 메뉴",
                 "圖像設置": "이미지 설정",
-                "讀取設定": "설정 불러오기", 
-                "關閉離開": "닫기", 
+                "讀取設定": "설정 불러오기",
+                "關閉離開": "닫기",
                 "保存應用": "저장 및 적용",
-                "語言": "언어", 
-                "英文": "영어", 
-                "繁體": "번체 중국어", 
-                "簡體": "간체 중국어", 
+                "語言": "언어",
+                "英文": "영어",
+                "繁體": "번체 중국어",
+                "簡體": "간체 중국어",
                 "日文": "일본어",
                 "韓文": "한국어",
                 "俄語": "러시아어",
-                "圖片高度": "이미지 높이", 
-                "圖片寬度": "이미지 너비", 
-                "圖片最大寬度": "이미지 최대 너비", 
+                "圖片高度": "이미지 높이",
+                "圖片寬度": "이미지 너비",
+                "圖片最大寬度": "이미지 최대 너비",
                 "圖片間隔高度": "이미지 간격"
             },
             Russia: {
                 "📝 設置選單": "📝 Меню настроек",
-                "設置菜單": "Меню настроек", 
+                "設置菜單": "Меню настроек",
                 "圖像設置": "Настройки изображений",
-                "讀取設定": "Загрузить настройки", 
-                "關閉離開": "Закрыть", 
+                "讀取設定": "Загрузить настройки",
+                "關閉離開": "Закрыть",
                 "保存應用": "Сохранить и применить",
-                "語言": "Язык", 
-                "英文": "Английский", 
-                "繁體": "Традиционный китайский", 
-                "簡體": "Упрощенный китайский", 
+                "語言": "Язык",
+                "英文": "Английский",
+                "繁體": "Традиционный китайский",
+                "簡體": "Упрощенный китайский",
                 "日文": "Японский",
                 "韓文": "Корейский",
                 "俄語": "Русский",
-                "圖片高度": "Высота изображения", 
-                "圖片寬度": "Ширина изображения", 
-                "圖片最大寬度": "Максимальная ширина", 
+                "圖片高度": "Высота изображения",
+                "圖片寬度": "Ширина изображения",
+                "圖片最大寬度": "Максимальная ширина",
                 "圖片間隔高度": "Интервал между изображениями"
             },
             English: {
                 "📝 設置選單": "📝 Settings Menu",
-                "設置菜單": "Settings Menu", 
+                "設置菜單": "Settings Menu",
                 "圖像設置": "Image Settings",
-                "讀取設定": "Load Settings", 
-                "關閉離開": "Close & Exit", 
+                "讀取設定": "Load Settings",
+                "關閉離開": "Close & Exit",
                 "保存應用": "Save & Apply",
-                "語言": "Language", 
-                "英文": "English", 
-                "繁體": "Traditional Chinese", 
-                "簡體": "Simplified Chinese", 
+                "語言": "Language",
+                "英文": "English",
+                "繁體": "Traditional Chinese",
+                "簡體": "Simplified Chinese",
                 "日文": "Japanese",
                 "韓文": "Korean",
                 "俄語": "Russian",
-                "圖片高度": "Image Height", 
-                "圖片寬度": "Image Width", 
-                "圖片最大寬度": "Max Image Width", 
+                "圖片高度": "Image Height",
+                "圖片寬度": "Image Width",
+                "圖片最大寬度": "Max Image Width",
                 "圖片間隔高度": "Image Spacing"
             }
         }, Match = {
@@ -308,7 +308,7 @@
                     }
                     .edit_artist {
                         position: absolute;
-                        top: 36%;
+                        top: 85px;
                         right: 8%;
                         color: #fff;
                         display: none;
@@ -353,7 +353,7 @@
                         transition: background-color 0.3s ease;
                     }
                     fix_view .edit_artist {
-                        top: 40%;
+                        top: 65px;
                         right: 5%;
                         transform: translateY(-80%);
                     }
@@ -375,8 +375,8 @@
                         display: inline-block;
                     }
                     fix_cont .edit_artist {
-                        top: 95%;
-                        right: -10%;
+                        top: 200px;
+                        right: -5%;
                     }
                     fix_cont:hover fix_name {
                         background-color: #fff;
@@ -853,6 +853,7 @@
                     const Fix_Requ = { // 宣告修復需要的函數
                         Record_Cache: undefined, // 讀取修復紀錄 用於緩存
                         Fix_Cache: new Map(), // 修復後 用於緩存
+                        Register_Eement: new Map(), // 用於存放以被註冊的元素
                         Get_Record: () => Syn.Storage("fix_record_v2", { type: localStorage, error: new Map() }),
                         Save_Record: async function (save) {
                             await Syn.Storage("fix_record_v2",
@@ -987,6 +988,9 @@
                             } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */}
                         },
                         Dynamic_Fix: async function (Listen, Element) {
+                            if (this.Register_Eement.has(Listen)) return;
+                            this.Register_Eement.set(Listen, true);
+
                             Syn.Observer(Listen, ()=> {
                                 this.Record_Cache = this.Get_Record(); // 觸發時重新抓取
                                 const element = typeof Element === "string" ? Syn.$$(Element) : Element;
@@ -996,7 +1000,7 @@
                                         !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
                                 }
-                            }, {mark: "Dynamic_Fix", debounce: 50, subtree: false});
+                            }, {subtree: false, debounce: 50});
                         }
                     }
                     Fix_Requ.Record_Cache = Fix_Requ.Get_Record(); // 初始化緩存
@@ -1032,7 +1036,7 @@
                 Syn.WaitElem("aside", null, {object: document, timeout: 5}).then(aside => aside.remove());
             },
             BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
-                if (DLL.IsNeko) return;  
+                if (DLL.IsNeko) return;
 
                 const cookieString = document.cookie;
                 const required = ["ts_popunder", "ts_popunder-cnt"];
@@ -1072,7 +1076,7 @@
                         // document.querySelector(".root--ujvuu button")?.click();
                     });
                     Ad_observer.observe(document.head, {childList: true, subtree: true});
-                `, "Ad-blocking-script", false);                
+                `, "Ad-blocking-script", false);
             },
             TextToLink: async (Config) => { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
@@ -1574,7 +1578,7 @@
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {raf: true, all: true, timeout: 5}).then(parents => {
                         Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {raf: true, all: true, timeout: 5}).then(post => {
                             const VideoRendering = LoadFunc.VideoBeautify_Dependent();
-    
+
                             let li;
                             for (li of parents) {
                                 let [node, title, stream] = [
@@ -1582,10 +1586,10 @@
                                     Syn.$$("summary", {root: li}),
                                     Syn.$$("source", {root: li})
                                 ];
-    
+
                                 if (!title || !stream) continue;
                                 if (title.previousElementSibling) continue; // 排除極端狀況下的重複添加
-    
+
                                 let link;
                                 for (link of post) {
                                     if (link.textContent.includes(title.textContent)) {
@@ -1603,7 +1607,7 @@
                                 // 將連結元素進行插入 (確保不重複添加)
                                 li.insertBefore(node, Syn.$$("summary", {root: li}));
                             }
-    
+
                         });
                     });
                 }
@@ -1851,12 +1855,12 @@
                     Span.appendChild(Next_btn);
 
                     // 點擊回到上方的按鈕
-                    Syn.AddListener(Svg, "click", () => {
+                    Syn.Listen(Svg, "click", () => {
                         Syn.$$("header").scrollIntoView();
                     }, { capture: true, passive: true });
 
                     // 點擊切換下一頁按鈕
-                    Syn.AddListener(Next_btn, "click", ()=> {
+                    Syn.Listen(Next_btn, "click", ()=> {
                         if (DLL.IsNeko) {
                             GetNextPage(
                                 Next_btn.getAttribute("jump"),
