@@ -52,10 +52,11 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.33-Beta**
+**Release Version: 0.0.33**
 
 ### **Updates**
-1. Updated API.
-2. Adjusted for compatibility with versions before 5.3.0 and modified menu styles.
+1. API updates
+2. Added language support
+3. Modified some translations
 
 ---
