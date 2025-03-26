@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         ClassSyntax
-// @version      2025/03/24
+// @version      2025/03/27
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Class Type)
 // @namespace    https://greasyfork.org/users/989635
@@ -36,23 +36,6 @@ class Syntax {
             trace: label => console.trace(label),
             error: label => console.error(label),
             count: label => console.count(label),
-        };
-        this.Query = {
-            Match: /[ .#=:]/,
-            "#": (source, select) => source.getElementById(select.slice(1)),
-            ".": (source, select, all) => {
-                const query = source.getElementsByClassName(select.slice(1));
-                return all ? [...query] : query[0];
-            },
-            "tag": (source, select, all) => {
-                const query = source.getElementsByTagName(select);
-                return all ? [...query] : query[0];
-            },
-            "default": (source, select, all) => {
-                return all
-                    ? source.querySelectorAll(select)
-                    : source.querySelector(select);
-            }
         };
         this.WaitCore = {
             queryMap: (selector) => {
@@ -121,22 +104,30 @@ class Syntax {
     /* ========== 通用常用函數 ========== */
 
     /**
-     * * { 簡化查找語法 }
+     * * { 簡化語法, 並以更高性能 查找 }
      * @param {string} selector - 查找元素
-     * @param {boolean} {all}   - 是否查找全部
-     * @param {element} {root}  - 查找來源
-     * @returns {element}       - DOM 元素
-     *
-     * @example
-     * $$("查找元素", {all: true, root: 查找來源})
+     * @param {Object} [options] - 選項
+     * @param {boolean} [options.all=false] - 是否查找全部
+     * @param {Element} [options.root=document] - 查找來源
+     * @returns {Element|Element[]|null} - DOM元素
      */
-    $$(selector, {
-        all = false,
-        root = document
-    } = {}) {
-        const type = !this.Query.Match.test(selector) ? "tag"
-            : this.Query.Match.test(selector.slice(1)) ? "default" : selector[0];
-        return this.Query[type](root, selector, all);
+    $$(selector, {all = false, root = document} = {}) {
+
+        if (!all && selector[0] === '#' && selector.indexOf(' ') === -1) { // ID選擇器 (#id)
+            return document.getElementById(selector.slice(1));
+        }
+
+        if (selector[0] === '.' && selector.indexOf(' ') === -1) { // 類選擇器 (.class)
+            const collection = root.getElementsByClassName(selector.slice(1));
+            return all ? [...collection] : collection[0];
+        }
+
+        if (!/[ #.\[:]/.test(selector)) { // 標籤選擇器 (tag)
+            const collection = root.getElementsByTagName(selector);
+            return all ? [...collection] : collection[0];
+        }
+
+        return all ? root.querySelectorAll(selector) : root.querySelector(selector); // 複雜選擇器
     }
 
     /**
@@ -160,11 +151,7 @@ class Syntax {
      * collapsed=true - 打印後是否收起
      * }
      */
-    async Log(group = null, label = "print", {
-        dev = true,
-        type = "log",
-        collapsed = true
-    } = {}) {
+    async Log(group = null, label = "print", {dev = true, type = "log", collapsed = true} = {}) {
         if (!dev) return;
 
         const Call = this.Print[type] || this.Print.log;
@@ -287,93 +274,101 @@ class Syntax {
     }
 
     /**
-     ** { 持續監聽對象, 並運行函數 (用於持續監聽) }
-     * @param {element} object          - 觀察對象
-     * @param {function} trigger        - 觸發函數
-     * @param {string} {mark}           - 創建標記, 用於避免重複創建
-     * @param {boolean} {subtree}       - 觀察 目標節點及其所有後代節點的變化
-     * @param {boolean} {childList}     - 觀察 目標節點的子節點數量的
-     * @param {boolean} {attributes}    - 觀察 目標的元素屬性變化
-     * @param {boolean} {characterData} - 觀察 目標文本節點的變化
-     * @paeam {*} {callback} - 觀察對象, 觀察參數
+     * * { 持續監聽DOM變化並執行回調函數 }
+     *
+     * @param {Element} target - 要觀察的DOM元素
+     * @param {Function} onFunc - 當觀察到變化時執行的回調函數
+     * @param {Object} [options] - 配置選項
+     * @param {string} [options.mark=""] - 創建標記，避免重複創建觀察器
+     * @param {number} [options.debounce=0] - 防抖時間(毫秒)
+     * @param {boolean} [options.subtree=true] - 是否觀察目標及其所有後代節點的變化
+     * @param {boolean} [options.childList=true] - 是否觀察子節點的添加或移除
+     * @param {boolean} [options.attributes=true] - 是否觀察屬性變化
+     * @param {boolean} [options.characterData=false] - 是否觀察文本內容變化
+     * @param {Function} [callback=null] - 觀察器初始化後的回調，接收{ob, op}參數
+     * @returns {MutationObserver} 創建的觀察器實例
      *
      * @example
-     * Observer("觀察對象", ()=> {
-     *      運行邏輯...
-     * }, {mark: "標記", childList: false}, back=> {
-     *      如果需要進行額外操作
-     *      const observer = back.ob;
-     *      const options = back.op;
-     * })
+     * Observer(document.body, () => {
+     *     console.log("DOM發生變化");
+     * }, {
+     *     mark: "bodyObserver", 
+     *     debounce: 200
+     * }, ({ ob, op }) => {
+     *    ob.disconnect(); // 關閉觀察器
+     *    ob.observe(document.body, op); // 重建觀察器
+     * });
      */
-    async Observer(object, trigger, {
-        mark = false,
-        throttle = 0,
-        subtree = true,
-        childList = true,
-        attributes = true,
-        characterData = false,
-    } = {}, callback = null) {
+    async Observer(target, onFunc, options = {}, callback = null) {
+        const {
+            mark="",
+            debounce=0,
+            subtree=true,
+            childList=true,
+            attributes=true,
+            characterData=false,
+        } = options ?? {};
+
         if (mark) {
-            if (this.Mark[mark]) { return }
-            else { this.Mark[mark] = true }
-        }
+            if (Mark[mark]) { return } else { Mark[mark] = true }
+        };
+
         const op = {
             subtree: subtree,
             childList: childList,
             attributes: attributes,
             characterData: characterData
-        }, ob = new MutationObserver(this.Throttle(() => { trigger() }, throttle));
-        ob.observe(object, op);
+        }, ob = new MutationObserver(this.Debounce(() => { onFunc() }, debounce));
+        ob.observe(target, op);
+
         callback && callback({ ob, op });
     }
 
     /**
-     * ! 使用 this 勿修改為匿名函數
-     * * { 等待元素出現 }
-     * @param {string} selector - 查找的物件
-     * @param {function} found  - 找到後的回條
+     * * { 等待元素出現在DOM中並執行回調 }
      *
-     * 選項設置 (以下為預設值)
-     * {
-     *     raf: false, - 是否使用 requestAnimationFrame 查找
-     *     all: false, - 使否使用多查找 (selector 為單字串時, 才能使用)
-     *     timeout: 8, - 查找的超時時間
-     *     throttle: 50, - 針對 MutationObserver 的節流
-     *     subtree: true, - MutationObserver 觀察 目標節點及其所有後代節點的變化
-     *     childList: true, - MutationObserver 觀察 目標節點的子節點數量的變化
-     *     attributes: true, - MutationObserver 觀察 目標節點的屬性變化
-     *     characterData: false, - MutationObserver 觀察 目標文本節點的變化
-     *     timeoutResult: false, - 超時是否回傳找到的結果
-     *     root: document, - MutationObserver 的觀察對象
-     * }
+     * @param {string|string[]} selector - 要查找的選擇器 或 選擇器數組
+     * @param {Function} [found=null] - 找到元素後執行的回調函數
+     * @param {Object} [options] - 配置選項
+     * @param {boolean} [options.raf=false] - 使用 requestAnimationFrame 進行查找 (極致快的查找, 沒有 debounce 限制, 用於盡可能最快找到元素)
+     * @param {boolean} [options.all=false] - 是否以 all 查找, 僅支援 selector 是單個字串
+     * @param {number} [options.timeout=8] - 超時時間(秒)
+     * @param {number} [options.debounce=50] - 防抖時間(毫秒)
+     * @param {boolean} [options.subtree=true] - 是否觀察所有後代節點
+     * @param {boolean} [options.childList=true] - 是否觀察子節點變化
+     * @param {boolean} [options.attributes=true] - 是否觀察屬性變化
+     * @param {boolean} [options.characterData=false] - 是否觀察文本內容變化
+     * @param {boolean} [options.timeoutResult=false] - 超時時是否返回已找到的結果
+     * @param {Document|Element} [options.root=document] - 查找的根元素
+     * @returns {Promise<Element|Element[]|null>} 返回找到的元素或元素數組的Promise
      *
      * @example
-     * WaitElem("元素", found=> {
-     *      console.log(found); 找到的元素
-     * }, {設置參數});
+     * WaitElem(".example-element", element => {
+     *     console.log("找到元素:", element);
+     * });
      *
-     * WaitElem("元素", null, {設置參數}).then(found => { console.log(found); });
+     * WaitElem(".example-element")
+     *   .then(element => {
+     *     console.log("找到元素:", element);
+     *   });
      *
-     * ? 以下為多元素查找
+     * WaitElem([".header", ".main", ".footer"])
+     *   .then(([header, main, footer]) => {
+     *     console.log("找到所有元素:", header, main, footer);
+     *   });
      *
-     * WaitElem(["元素1", "元素2", "元素3"], found=> {
-     *      const [e1, e2, e3] = found;
-     * }, {設置參數});
-     *
-     * WaitElem(["元素1", "元素2", "元素3"], null, {設置參數})
-     *      .then(found => {
-     *           const [e1, e2, e3] = found;
-     *       });
+     * WaitElem(".example-element", null, {raf: true, root: document.getElementById("app")}).then(element => {
+     *     console.log("找到動態內容:", element);
+     * });
      */
     async WaitElem(selector, found = null, options = {}) {
         const self = this;
-        const Query = selector instanceof Array ? self.WaitCore.queryMap : self.WaitCore.queryElement; //! 批量查找只能傳 Array
+        const Query = Array.isArray(selector) ? WaitCore.queryMap : WaitCore.queryElement; //! 批量查找只能傳 Array
         const {
             raf=false,
             all=false,
             timeout=8,
-            throttle=50,
+            debounce=50,
             subtree=true,
             childList=true,
             attributes=true,
@@ -416,7 +411,7 @@ class Syntax {
                     }, (1000 * timeout));
 
                 } else {
-                    const observer = new MutationObserver(self.Throttle(() => {
+                    const observer = new MutationObserver(self.Debounce(() => {
                         result = Query(selector, all);
 
                         if (result) {
@@ -426,7 +421,7 @@ class Syntax {
                             found && found(result);
                             resolve(result);
                         }
-                    }, throttle));
+                    }, debounce));
 
                     observer.observe(root, {
                         subtree: subtree,
@@ -643,7 +638,7 @@ class Syntax {
      *      console.log(Success);
      * })
      */
-    async OutputTXT (Data, Name, Success = null) {
+    async OutputTXT(Data, Name, Success = null) {
         try {
             Name = typeof Name !== "string" ? "Anonymous.txt" : Name.endsWith(".txt") ? Name : `${Name}.txt`;
 
@@ -672,7 +667,7 @@ class Syntax {
      *      console.log(Success);
      * })
      */
-    async OutputJson (Data, Name, Success = null) {
+    async OutputJson(Data, Name, Success = null) {
         try {
             Data = typeof Data !== "string" ? JSON.stringify(Data, null, 4) : Data;
             Name = typeof Name !== "string" ? "Anonymous.json" : Name.endsWith(".json") ? Name : `${Name}.json`;
