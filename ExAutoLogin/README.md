@@ -40,6 +40,7 @@
   - Japanese
   - English
   - Korean
+  - Russian
 
 ---
 
