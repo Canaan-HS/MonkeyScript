@@ -1,15 +1,19 @@
 // ==UserScript==
-// @name         Kemer 增強
+// @name         Kemer Enhance
 // @name:zh-TW   Kemer 增強
 // @name:zh-CN   Kemer 增强
 // @name:ja      Kemer 強化
-// @name:en      Kemer Enhancement
+// @name:ko      Kemer 강화
+// @name:ru      Kemer Улучшение
+// @name:en      Kemer Enhance
 // @version      0.0.49-Beta8
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-CN  美化界面和重新排版，包括移除广告和多余的横幅，修正画师名称和编辑相关的资讯保存，自动载入原始图像，菜单设置图像大小间距，快捷键触发自动滚动，解析文本中的链接并转换为可点击的链接，快速的页面切换和跳转功能，并重新定向到新分頁
 // @description:ja     インターフェイスの美化と再配置、広告や余分なバナーの削除、イラストレーター名の修正と関連情報の保存の編集、オリジナル画像の自動読み込み、メニューでの画像のサイズと間隔の設定、ショートカットキーによる自動スクロールのトリガー、テキスト内のリンクの解析とクリック可能なリンクへの変換、高速なページ切り替えとジャンプ機能、新しいタブへのリダイレクト
+// @description:ko     인터페이스 미화 및 재배치, 광고 및 불필요한 배너 제거, 아티스트 이름 수정 및 관련 정보 저장 편집, 원본 이미지 자동 로드, 메뉴에서 이미지 크기 및 간격 설정, 단축키로 자동 스크롤 트리거, 텍스트 내 링크 분석 및 클릭 가능한 링크로 변환, 빠른 페이지 전환 및 점프 기능, 새 탭으로 리디렉션
+// @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
 // @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
 
 // @match        *://kemono.su/*
@@ -38,14 +42,16 @@
 // @grant        GM_addValueChangeListener
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1551581/ObjectSyntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+// @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/hooks.umd.min.js
 
 // @resource     loading https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/images/loading.gif
 // @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/svg-with-js.min.css
 // ==/UserScript==
+
+// Todo - 等待修正 preact 替代 react 後的語法問題
 
 (async () => {
     /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
@@ -109,33 +115,126 @@
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
 
         // 展示語言
-        const Display_Lang = {
+        const Word = {
             Traditional: {},
             Simplified: {
-                "📝 設置選單":"📝 设置菜单",
-                "設置菜單":"设置菜单", "圖像設置":"图像设置",
-                "讀取設定":"读取设置", "關閉離開":"关闭退出", "保存應用":"保存应用",
-                "語言":"语言", "英文":"英文", "繁體":"繁体", "簡體":"简体", "日文":"日文",
-                "圖片高度":"图片高度", "圖片寬度":"图片宽度", "圖片最大寬度":"图片最大宽度", "圖片間隔高度":"图片间隔高度"
+                "📝 設置選單": "📝 设置菜单",
+                "設置菜單": "设置菜单", 
+                "圖像設置": "图像设置",
+                "讀取設定": "加载设置", 
+                "關閉離開": "关闭", 
+                "保存應用": "保存并应用",
+                "語言": "语言", 
+                "英文": "英语", 
+                "繁體": "繁体中文", 
+                "簡體": "简体中文", 
+                "日文": "日语",
+                "韓文": "韩语",
+                "俄語": "俄语",
+                "圖片高度": "图片高度", 
+                "圖片寬度": "图片宽度", 
+                "圖片最大寬度": "图片最大宽度", 
+                "圖片間隔高度": "图片间距"
             },
             Japan: {
-                "📝 設置選單":"📝 設定メニュー",
-                "設置菜單":"設定メニュー", "圖像設置":"画像設定",
-                "讀取設定":"設定の読み込み", "關閉離開":"閉じて終了する", "保存應用":"保存して適用する",
-                "語言":"言語", "英文":"英語", "繁體":"繁体字", "簡體":"簡体字", "日文":"日本語",
-                "圖片高度":"画像の高さ", "圖片寬度":"画像の幅", "圖片最大寬度":"画像の最大幅", "圖片間隔高度":"画像の間隔の高さ"
+                "📝 設置選單": "📝 設定メニュー",
+                "設置菜單": "設定メニュー", 
+                "圖像設置": "画像設定",
+                "讀取設定": "設定を読み込む", 
+                "關閉離開": "閉じる", 
+                "保存應用": "保存して適用",
+                "語言": "言語", 
+                "英文": "英語", 
+                "繁體": "繁体字中国語", 
+                "簡體": "簡体字中国語", 
+                "日文": "日本語",
+                "韓文": "韓国語",
+                "俄語": "ロシア語",
+                "圖片高度": "画像の高さ", 
+                "圖片寬度": "画像の幅", 
+                "圖片最大寬度": "画像の最大幅", 
+                "圖片間隔高度": "画像の間隔"
+            },
+            Korea: {
+                "📝 設置選單": "📝 설정 메뉴",
+                "設置菜單": "설정 메뉴", 
+                "圖像設置": "이미지 설정",
+                "讀取設定": "설정 불러오기", 
+                "關閉離開": "닫기", 
+                "保存應用": "저장 및 적용",
+                "語言": "언어", 
+                "英文": "영어", 
+                "繁體": "번체 중국어", 
+                "簡體": "간체 중국어", 
+                "日文": "일본어",
+                "韓文": "한국어",
+                "俄語": "러시아어",
+                "圖片高度": "이미지 높이", 
+                "圖片寬度": "이미지 너비", 
+                "圖片最大寬度": "이미지 최대 너비", 
+                "圖片間隔高度": "이미지 간격"
+            },
+            Russia: {
+                "📝 設置選單": "📝 Меню настроек",
+                "設置菜單": "Меню настроек", 
+                "圖像設置": "Настройки изображений",
+                "讀取設定": "Загрузить настройки", 
+                "關閉離開": "Закрыть", 
+                "保存應用": "Сохранить и применить",
+                "語言": "Язык", 
+                "英文": "Английский", 
+                "繁體": "Традиционный китайский", 
+                "簡體": "Упрощенный китайский", 
+                "日文": "Японский",
+                "韓文": "Корейский",
+                "俄語": "Русский",
+                "圖片高度": "Высота изображения", 
+                "圖片寬度": "Ширина изображения", 
+                "圖片最大寬度": "Максимальная ширина", 
+                "圖片間隔高度": "Интервал между изображениями"
             },
             English: {
-                "📝 設置選單":"📝 Settings Menu",
-                "設置菜單":"Settings Menu", "圖像設置":"Image Settings",
-                "讀取設定":"Load Settings", "關閉離開":"Close and Exit", "保存應用":"Save and Apply",
-                "語言":"Language", "英文":"English", "繁體":"Traditional Chinese", "簡體":"Simplified Chinese", "日文":"Japanese",
-                "圖片高度":"Image Height", "圖片寬度":"Image Width", "圖片最大寬度":"Maximum Image Width", "圖片間隔高度":"Image Spacing Height"
+                "📝 設置選單": "📝 Settings Menu",
+                "設置菜單": "Settings Menu", 
+                "圖像設置": "Image Settings",
+                "讀取設定": "Load Settings", 
+                "關閉離開": "Close & Exit", 
+                "保存應用": "Save & Apply",
+                "語言": "Language", 
+                "英文": "English", 
+                "繁體": "Traditional Chinese", 
+                "簡體": "Simplified Chinese", 
+                "日文": "Japanese",
+                "韓文": "Korean",
+                "俄語": "Russian",
+                "圖片高度": "Image Height", 
+                "圖片寬度": "Image Width", 
+                "圖片最大寬度": "Max Image Width", 
+                "圖片間隔高度": "Image Spacing"
             }
         }, Match = {
-            "zh-TW": Display_Lang.Traditional, "zh-HK": Display_Lang.Traditional, "zh-MO": Display_Lang.Traditional,
-            "zh-CN": Display_Lang.Simplified, "zh-SG": Display_Lang.Simplified,
-            "en-US": Display_Lang.English, "ja": Display_Lang.Japan
+            "ko": Word.Korea,
+            "ko-KR": Word.Korea,
+            "ja": Word.Japan,
+            "ja-JP": Word.Japan,
+            "ru": Word.Russia,
+            "ru-RU": Word.Russia,
+            "en": Word.English,
+            "en-US": Word.English,
+            "en-GB": Word.English,
+            "en-AU": Word.English,
+            "en-CA": Word.English,
+            "en-NZ": Word.English,
+            "en-IE": Word.English,
+            "en-ZA": Word.English,
+            "en-IN": Word.English,
+            "zh": Word.Simplified,
+            "zh-CN": Word.Simplified,
+            "zh-SG": Word.Simplified,
+            "zh-MY": Word.Simplified,
+            "zh-TW": Word.Traditional,
+            "zh-HK": Word.Traditional,
+            "zh-MO": Word.Traditional
         };
 
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
@@ -575,7 +674,7 @@
                     Transl: (Str) => ML[Str] ?? Str
                 }
             },
-            Rendering: ({ content }) => React.createElement("div", { dangerouslySetInnerHTML: { __html: content } }),
+            Rendering: ({ content }) => preact.h("div", { dangerouslySetInnerHTML: { __html: content } }),
 
             ...UserSet, Style, Color, SaveKey, Style_Pointer,
             Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
@@ -965,6 +1064,8 @@
                 Syn.WaitElem("aside", null, {object: document, timeout: 5}).then(aside => aside.remove());
             },
             BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
+                if (DLL.IsNeko) return;  
+
                 const cookieString = document.cookie;
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
@@ -1267,7 +1368,7 @@
                         nocache: false,
                         onload: response => {
                             const Section = Syn.$$("section", {root: response.responseXML});
-                            ReactDOM.render(React.createElement(DLL.Rendering, { content: Section.innerHTML }), old_section);
+                            preact.render(preact.h(DLL.Rendering, { content: Section.innerHTML }), old_section);
                             history.pushState(null, null, link);
                         },
                         onerror: error => {GetNextPage(link)}
@@ -1402,16 +1503,16 @@
             VideoBeautify_Dependent: function () {
                 if (!this.VideoBeautify_Cache) {
                     this.VideoBeautify_Cache = function VideoRendering({ stream }) {
-                        return React.createElement("summary", {
+                        return preact.h("summary", {
                                 className: "video-title"
-                            } , React.createElement("video", {
+                            } , preact.h("video", {
                                 key: "video",
                                 controls: true,
                                 preload: "auto",
                                 "data-setup": JSON.stringify({}),
                                 className: "post-video",
                             },
-                            React.createElement("source", {
+                            preact.h("source", {
                                 key: "source",
                                 src: stream.src,
                                 type: stream.type
@@ -1432,7 +1533,7 @@
                             onload: response => {
                                 const XML = response.responseXML;
                                 const Main = Syn.$$("main", {root: XML});
-                                ReactDOM.render(React.createElement(DLL.Rendering, { content: Main.innerHTML }), old_main); // 替換 main
+                                preact.render(preact.h(DLL.Rendering, { content: Main.innerHTML }), old_main); // 替換 main
 
                                 const Title = Syn.$$("title", {root: XML})?.textContent;
                                 history.pushState(null, null, url); // 修改連結與紀錄
@@ -1537,7 +1638,7 @@
                                 }
     
                                 // 重新渲染影片, 避免跑版
-                                ReactDOM.render(React.createElement(VideoRendering, { stream: stream }), li);
+                                preact.render(preact.h(VideoRendering, { stream: stream }), li);
                                 // 將連結元素進行插入 (確保不重複添加)
                                 li.insertBefore(node, Syn.$$("summary", {root: li}));
                             }
@@ -1599,12 +1700,12 @@
                          * Nurl 用於渲染圖片的新連結
                          */
                         ImgRendering: ({ ID, Ourl=null, Nurl }) => {
-                            return React.createElement((Ourl ? "rc" : "div"), {
+                            return preact.h((Ourl ? "rc" : "div"), {
                                 id: ID,
                                 src: Ourl,
                                 className: "Image-link"
                             },
-                            React.createElement("img", {
+                            preact.h("img", {
                                 key: "img",
                                 src: Nurl,
                                 className: "Image-loading-indicator Image-style",
@@ -1659,10 +1760,10 @@
                                         Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
 
                                         this.Request(object, hrefP, href => {
-                                            ReactDOM.render(React.createElement(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
+                                            preact.render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
                                         });
                                     } else {
-                                        ReactDOM.render(React.createElement(this.ImgRendering, { ID: `IMG-${index}`, Nurl: hrefP }), object);
+                                        preact.render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Nurl: hrefP }), object);
                                     }
 
                                 }, index * 300);
@@ -1728,10 +1829,10 @@
                                             Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
 
                                             this.Request(object, hrefP, href => {
-                                                ReactDOM.render(React.createElement(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
+                                                preact.render(preact.h(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
                                             });
                                         } else {
-                                            ReactDOM.render(React.createElement(this.ImgRendering, { ID: object.alt, Nurl: hrefP }), object);
+                                            preact.render(preact.h(this.ImgRendering, { ID: object.alt, Nurl: hrefP }), object);
                                         }
                                     }
                                 });
