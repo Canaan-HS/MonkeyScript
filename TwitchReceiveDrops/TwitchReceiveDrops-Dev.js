@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name                Twitch 自動領取掉寶 / Auto Receive Drops
+// @name                Twitch Auto Drops Claim
 // @name:zh-TW          Twitch 自動領取掉寶
 // @name:zh-CN          Twitch 自动领取掉宝
-// @name:en             Twitch Auto Claim Drops
+// @name:en             Twitch Auto Drops Claim
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
-// @version             0.0.16-Beta
+// @name:ru             Twitch Автоматическое получение дропов
+// @version             0.0.16
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -13,6 +14,7 @@
 // @description:en      Automatically claim Twitch Drops, display progress in the tab, and if not finished when the stream ends, it will automatically find another Drops-enabled stream and continue farming. Customizable settings in the code.
 // @description:ja      Twitch のドロップを自動的に受け取り、タブに進捗狀況を表示し、ストリーム終了時にまだ受け取っていない場合、自動的に別のドロップ有効なストリームを検索し、収穫を続けます。コードでのカスタマイズ可能な設定
 // @description:ko      Twitch 드롭을 자동으로 받아오고 탭에 진행 상황을 표시하며, 스트림이 종료되었을 때 아직 완료되지 않았다면 자동으로 다른 드롭 활성 스트림을 찾아 계속 수집합니다. 코드에서 사용자 정의 설정 가능합니다
+// @description:ru      Автоматически получает дропы Twitch, отображает прогресс во вкладке, и если дропы не завершены к концу трансляции, автоматически находит другую трансляцию с активированными дропами и продолжает фарминг. Настраиваемые параметры в коде.
 
 // @match        https://www.twitch.tv/drops/inventory
 // @icon         https://cdn-icons-png.flaticon.com/512/8214/8214044.png
@@ -418,36 +420,6 @@
                             Self.RestartLiveMute && Dir.LiveMute(NewWindow);
                             Self.TryStayActive && StayActive(NewWindow.document);
                             Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
-                        } else {
-                            function Language(lang) {
-                                const Word = {
-                                    Traditional: {},
-                                    Simplified: { 搜尋失敗: "搜索失败", 找不到啟用掉落的頻道: "找不到启用掉落的频道" },
-                                    Korea: { 搜尋失敗: "검색 실패", 找不到啟用掉落的頻道: "드롭이 활성화된 채널을 찾을 수 없습니다" },
-                                    Japan: { 搜尋失敗: "検索失敗", 找不到啟用掉落的頻道: "ドロップが有効なチャンネルが見つかりません" },
-                                    English: { 搜尋失敗: "Search failed", 找不到啟用掉落的頻道: "Can't find a channel with drops enabled" },
-                                }, Match = {
-                                    ko: Word.Korea,
-                                    ja: Word.Japan,
-                                    "en-US": Word.English,
-                                    "zh-CN": Word.Simplified,
-                                    "zh-SG": Word.Simplified,
-                                    "zh-TW": Word.Traditional,
-                                    "zh-HK": Word.Traditional,
-                                    "zh-MO": Word.Traditional,
-                                },
-                                    ML = Match[lang] ?? Match["en-US"];
-
-                                return {
-                                    Transl: (Str) => ML[Str] ?? Str,
-                                };
-                            }
-
-                            const Lang = Language(navigator.language);
-                            GM_notification({
-                                title: Lang.Transl("搜尋失敗"),
-                                text: Lang.Transl("找不到啟用掉落的頻道")
-                            });
                         }
                     }
                 }, 300));
