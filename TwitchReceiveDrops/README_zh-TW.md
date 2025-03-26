@@ -39,19 +39,19 @@
 
 ## **⚙️ 額外配置（代碼上方）**
 
-| **參數** | **說明** | **預設值** |
-| :----: | :----: | :----: |
-| `RestartLive` | 自動重啟直播 | `true` |
-| `EndAutoClose` | 活動完成後自動關閉窗口 | `true` |
-| `TryStayActive` | "嘗試" 讓窗口始終處於活躍狀態 | `true` |
-| `RestartLiveMute` | 重啟直播後靜音（不一定有效 or 比較慢運作） | `true` |
-| `RestartLowQuality` | 重啟直播自動最低畫質 | `false` |
-| `UpdateDisplay` | 在網頁標籤顯示檢查掉寶的間隔倒數 | `true` |
-| `ClearExpiration` | 清除過期活動的掉寶進度 | `true` |
-| `ProgressDisplay` | 在網頁標籤顯示掉寶進度 | `true` |
-| `UpdateInterval` | 掉寶檢查的間隔時間（秒） | `120` |
-| `JudgmentInterval` | 判斷重啟直播的間隔時間（分） | `6` |
-| `FindTag` | 重啟直播查找的包含 Tag 標籤 | `drops、啟用掉寶、启用掉宝、드롭활성화됨` |
+|      **參數**       |                  **說明**                  |                **預設值**                 |
+| :-----------------: | :----------------------------------------: | :---------------------------------------: |
+|    `RestartLive`    |                自動重啟直播                |                  `true`                   |
+|   `EndAutoClose`    |           活動完成後自動關閉窗口           |                  `true`                   |
+|   `TryStayActive`   |       "嘗試" 讓窗口始終處於活躍狀態        |                  `true`                   |
+|  `RestartLiveMute`  | 重啟直播後靜音（不一定有效 or 比較慢運作） |                  `true`                   |
+| `RestartLowQuality` |            重啟直播自動最低畫質            |                  `false`                  |
+|   `UpdateDisplay`   |      在網頁標籤顯示檢查掉寶的間隔倒數      |                  `true`                   |
+|  `ClearExpiration`  |           清除過期活動的掉寶進度           |                  `true`                   |
+|  `ProgressDisplay`  |           在網頁標籤顯示掉寶進度           |                  `true`                   |
+|  `UpdateInterval`   |          掉寶檢查的間隔時間（秒）          |                   `120`                   |
+| `JudgmentInterval`  |        判斷重啟直播的間隔時間（分）        |                    `6`                    |
+|      `FindTag`      |        重啟直播查找的包含 Tag 標籤         | `drops、啟用掉寶、启用掉宝、드롭활성화됨` |
 
 ---
 
@@ -71,6 +71,6 @@
 2. 修改 自動領取掉寶邏輯 (目前 時間過期的無法自動領取)
 
 ### **已知問題**
-1.目前插件的 GM_notification 有些問題，依賴該 API 的功能實現，可能無法正常運行
+1.目前插件的 `GM_notification` 有些問題，依賴該 API 的功能實現，可能無法正常運行
 
 ---
