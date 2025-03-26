@@ -43,7 +43,7 @@
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
+// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/ObjectSyntax.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/hooks.umd.min.js
 
@@ -997,9 +997,10 @@
                                         !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
                                 }
-                            }, {mark: "Dynamic_Fix", debounce: 500, subtree: false});
+                            }, {mark: "Dynamic_Fix", debounce: 100, subtree: false});
                         }
                     }
+                    Fix_Requ.Record_Cache = Fix_Requ.Get_Record(); // 初始化緩存
                     this.FixArtist_Cache = Fix_Requ;
                 };
                 return this.FixArtist_Cache;
@@ -1167,7 +1168,6 @@
                     }
                 }, { capture: true, passive: true, mark: "FixArtist" });
 
-                Func.Record_Cache = Func.Get_Record(); // 讀取修復 數據到緩存
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.IsSearch()) {
                     Syn.WaitElem(".card-list__items", null, {raf: true, timeout: 15}).then(card_items => {
