@@ -17,6 +17,33 @@
  * Syn.func()
  */
 const Syn = (() => {
+    /**
+     * * { 簡化語法, 並以更高性能 查找 }
+     * @param {string} selector - 查找元素
+     * @param {Object} [options] - 選項
+     * @param {boolean} [options.all=false] - 是否查找全部
+     * @param {Element} [options.root=document] - 查找來源
+     * @returns {Element|Element[]|null} - DOM元素
+     */
+    function $$(selector, {all = false, root = document} = {}) {
+
+        if (!all && selector[0] === '#' && selector.indexOf(' ') === -1) { // ID選擇器 (#id)
+            return document.getElementById(selector.slice(1));
+        }
+
+        if (selector[0] === '.' && selector.indexOf(' ') === -1) { // 類選擇器 (.class)
+            const collection = root.getElementsByClassName(selector.slice(1));
+            return all ? [...collection] : collection[0];
+        }
+
+        if (!/[ #.\[:]/.test(selector)) { // 標籤選擇器 (tag)
+            const collection = root.getElementsByTagName(selector);
+            return all ? [...collection] : collection[0];
+        }
+
+        return all ? root.querySelectorAll(selector) : root.querySelector(selector); // 複雜選擇器
+    };
+
     const
         Mark = {}, // Observer() & StoreListen()
         Parser = new DOMParser(), // DomParse()
@@ -31,11 +58,11 @@ const Syn = (() => {
         },
         WaitCore = { // WaitElem()
             queryMap: (selector) => {
-                const result = selector.map(select => document.querySelector(select));
+                const result = selector.map(select => $$(select));
                 return result.every(Boolean) && result;
             },
             queryElement: (selector, all) => {
-                const result = all ? document.querySelectorAll(selector) : document.querySelector(selector);
+                const result = $$(selector, {all});
                 return (all ? result.length > 0 : result) && result;
             }
         },
@@ -76,6 +103,7 @@ const Syn = (() => {
 
     return {
         /* ========== 通用常用函數 ========== */
+        $$,
         Type,
         Device: {
             sX: () => window.scrollX,
@@ -94,33 +122,6 @@ const Syn = (() => {
                     : (this._Type = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen) || this.iW < 768
                         ? "Mobile" : "Desktop");
             }
-        },
-
-        /**
-         * * { 簡化語法, 並以更高性能 查找 }
-         * @param {string} selector - 查找元素
-         * @param {Object} [options] - 選項
-         * @param {boolean} [options.all=false] - 是否查找全部
-         * @param {Element} [options.root=document] - 查找來源
-         * @returns {Element|Element[]|null} - DOM元素
-         */
-        $$: (selector, {all = false, root = document} = {}) => {
-
-            if (!all && selector[0] === '#' && selector.indexOf(' ') === -1) { // ID選擇器 (#id)
-                return document.getElementById(selector.slice(1));
-            }
-
-            if (selector[0] === '.' && selector.indexOf(' ') === -1) { // 類選擇器 (.class)
-                const collection = root.getElementsByClassName(selector.slice(1));
-                return all ? [...collection] : collection[0];
-            }
-
-            if (!/[ #.\[:]/.test(selector)) { // 標籤選擇器 (tag)
-                const collection = root.getElementsByTagName(selector);
-                return all ? [...collection] : collection[0];
-            }
-
-            return all ? root.querySelectorAll(selector) : root.querySelector(selector); // 複雜選擇器
         },
 
         /**
