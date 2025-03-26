@@ -61,13 +61,9 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.16-Beta**
+**Release Version: 0.0.16**
 
-### **Update Contents**
-1. Removed early exit judgment
-2. Modified the auto-receiving drop logic (currently, expired drops cannot be automatically claimed)
-
-### **Known Issues**
-1. The `GM_notification` API used in the plugin has some issues, which may prevent certain functions from working correctly.
+### **Updates**
+1. Removed `GM_notification`
 
 ---
