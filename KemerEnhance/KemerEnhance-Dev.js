@@ -47,8 +47,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/hooks.umd.min.js
 
-// @resource     loading https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/images/loading.gif
-// @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/svg-with-js.min.css
+// @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/svg-with-js.min.css
 // ==/UserScript==
 
 (async () => {
@@ -389,21 +388,6 @@
             },
             Preview: async () => { // 帖子預覽頁所需
                 Syn.AddStyle(`
-                    .gif-overlay {
-                        top: 45%;
-                        left: 50%;
-                        width: 60%;
-                        height: 60%;
-                        opacity: 0.5;
-                        z-index: 9999;
-                        position: absolute;
-                        border-radius: 50%;
-                        background-size: contain;
-                        background-position: center;
-                        background-repeat: no-repeat;
-                        transform: translate(-50%, -50%);
-                        background-image: url("${GM_getResourceURL('loading')}");
-                    }
                     .card-list__items {
                         gap: 0.5em;
                         display: flex;
@@ -689,19 +673,19 @@
         // 呼叫順序
         const Order = {
             Global: [
+                "BlockAds",
                 "SidebarCollapse",
                 "DeleteNotice",
-                "BlockAds",
                 "TextToLink",
                 "FixArtist",
                 "BackToTop",
                 "KeyScroll"
             ],
             Preview: [
-                "NewTabOpens",
-                "QuickPostToggle",
                 "CardZoom",
-                "CardText"
+                "CardText",
+                "NewTabOpens",
+                "QuickPostToggle"
             ],
             Content: [
                 "LinkBeautify",
@@ -777,9 +761,10 @@
     Enhance.Run();
     Syn.AddListener(window, "urlchange", change => {
         Url = change.url;
-        setTimeout(() => { // 不延遲有時會有問題
-            Enhance.Run(); // Url 變更後重新呼叫
-        }, 800)
+        // ! 實驗性, 可能不只有一個 Frame
+        requestAnimationFrame(()=> {
+            Enhance.Run();
+        })
     });
 
     /* ==================== 全域功能 ==================== */
@@ -1001,33 +986,18 @@
                                 });
                             } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */}
                         },
-                        Dynamic_Fix: async function (Listen, Operat,  Config=null) {
-                            let observer, options;
+                        Dynamic_Fix: async function (Listen, Element) {
                             Syn.Observer(Listen, ()=> {
                                 this.Record_Cache = this.Get_Record(); // 觸發時重新抓取
-                                const wait = setInterval(()=> { // 為了確保找到 Operat 元素
-                                    const operat = typeof Operat === "string" ? Syn.$$(Operat) : Operat;
-                                    if (operat) {
-                                        clearInterval(wait);
-                                        switch (Config) {
-                                            case 1: // 針對 QuickPostToggle 的動態監聽 (也可以直接在 QuickPost 寫初始化呼叫)
-                                                this.Other_Fix(operat);
-                                                setTimeout(()=> { // 修復後延遲一下, 斷開原先觀察對象, 設置為子元素, 原因是因為 react 渲染造成 dom 的修改, 需重新設置
-                                                    observer.disconnect();
-                                                    observer.observe(Listen.children[0], options);
-                                                }, 300);
-                                                break;
-                                            default: // 針對搜尋頁的動態監聽
-                                                for (const items of Syn.$$("a", {all: true, root: operat})) {
-                                                    !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
-                                                }
-                                        }
+                                const element = typeof Element === "string" ? Syn.$$(Element) : Element;
+                                console.log("查找中");
+                                if (element) {
+                                    // 針對搜尋頁的動態監聽
+                                    for (const items of Syn.$$("a", {all: true, root: element})) {
+                                        !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
-                                })
-                            }, {subtree: false}, back => {
-                                observer = back.ob;
-                                options = back.op;
-                            });
+                                }
+                            }, {mark: "Dynamic_Fix", debounce: 500, subtree: false});
                         }
                     }
                     this.FixArtist_Cache = Fix_Requ;
@@ -1209,8 +1179,7 @@
                                 Func.Search_Fix(items);
                             }
 
-                            Url.endsWith("new") && Func.Dynamic_Fix(card_items, card_items); // 針對 links/new 頁面的 card
-                        } else { //! 還需要測試
+                        } else {
                             Func.Dynamic_Fix(card_items, card_items);
                             GM_addElement(card_items, "fix-trigger", {style: "display: none;"});
                         }
@@ -1220,20 +1189,13 @@
                     Syn.WaitElem([
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
-                    ], null, {raf: true, timeout: 15}).then(found => {
-                        const [title, artist] = found;
+                    ], null, {raf: true, timeout: 15}).then(([title, artist]) => {
                         Func.Other_Fix(artist, title, artist.href, "<fix_cont>");
                     });
 
                 } else { // 預覽頁面
                     Syn.WaitElem("span[itemprop='name']", null, {raf: true, timeout: 15}).then(artist => {
                         Func.Other_Fix(artist);
-
-                        if (User_Config.Preview.QuickPostToggle.enable && DLL.IsNeko) { // 啟用該功能才需要動態監聽
-                            setTimeout(()=> {
-                                Func.Dynamic_Fix(Syn.$$("section"), "span[itemprop='name']", 1);
-                            }, 300);
-                        }
                     });
                 }
             },
@@ -1350,17 +1312,9 @@
 
                 if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
 
-                // 監聽觸發 獲取下一頁數據
-                Syn.AddListener(document.body, "click", event => {
-                    const target = event.target.closest("menu a");
-                    target && (event.preventDefault(), GetNextPage(target.href));
-                }, {capture: true, mark: "QuickPostToggle"});
-
                 // Todo - 修正對於 Neko 換頁的問題
                 async function GetNextPage(link) {
                     const old_card = Syn.$$(".card-list");
-                    const items = Syn.$$(".card-list__items"); // 用於載入 加載圖示
-                    requestAnimationFrame(()=> {GM_addElement(items, "img", {class: "gif-overlay"})});
                     GM_xmlhttpRequest({
                         method: "GET",
                         url: link,
@@ -1373,6 +1327,15 @@
                         onerror: error => {GetNextPage(link)}
                     });
                 }
+
+                // 監聽觸發 獲取下一頁數據
+                Syn.AddListener(Syn.$$("section"), "click", event => {
+                    const target = event.target.closest("menu a");
+                    if (target) {
+                        event.preventDefault();
+                        GetNextPage(target.href);
+                    }
+                }, {capture: true, mark: "QuickPostToggle"});
             },
             CardZoom: async (Config) => { /* 帖子預覽卡縮放效果 */
                 switch (Config.mode) {
@@ -1395,7 +1358,6 @@
                         `, "CardZoom_Effects_2", false);
                     default:
                         Syn.AddStyle(`
-                            * { --card-size: 13vw; }
                             .post-card { margin: .3vw; }
                             .post-card a img { border-radius: 8px; }
                             .post-card a {
@@ -1403,6 +1365,7 @@
                                 border: 3px solid #fff6;
                                 transition: transform 0.4s;
                             }
+                            section:not(:has(#add-new-link)):not(:has(#search-form)) * { --card-size: 13vw; }
                         `, "CardZoom_Effects", false);
                 }
             },
@@ -2176,7 +2139,7 @@
 
     // 透過 innerHTML 實現 react 的覆蓋渲染
     function render(element, container) {
-        container.innerHTML = '';
+        container.innerHTML = ""; // 雖然這樣性能不是最好的, 但通用性最高
         preact.render(element, container);
     }
 })();
