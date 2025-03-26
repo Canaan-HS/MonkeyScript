@@ -990,14 +990,13 @@
                             Syn.Observer(Listen, ()=> {
                                 this.Record_Cache = this.Get_Record(); // 觸發時重新抓取
                                 const element = typeof Element === "string" ? Syn.$$(Element) : Element;
-                                console.log("查找中");
                                 if (element) {
                                     // 針對搜尋頁的動態監聽
                                     for (const items of Syn.$$("a", {all: true, root: element})) {
                                         !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
                                 }
-                            }, {mark: "Dynamic_Fix", debounce: 100, subtree: false});
+                            }, {mark: "Dynamic_Fix", debounce: 50, subtree: false});
                         }
                     }
                     Fix_Requ.Record_Cache = Fix_Requ.Get_Record(); // 初始化緩存
