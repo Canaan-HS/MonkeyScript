@@ -97,23 +97,6 @@ const Syn = (() => {
         },
 
         /**
-         * * { 簡化查找語法 }
-         * @param {string} selector - 查找元素
-         * @param {boolean} {all}   - 是否查找全部
-         * @param {element} {root}  - 查找來源
-         * @returns {element}       - DOM 元素
-         *
-         * @example
-         * $$("查找元素", {all: true, root: 查找來源})
-         */
-        $$: (selector, {all = false, root = document} = {}) => {
-            const type = !Query.Match(selector)
-                ? "tag" : Query.Match(selector.slice(1))
-                    ? "default" : selector[0];
-            return Query[type](root, selector, all);
-        },
-
-        /**
          * * { 簡化語法, 並以更高性能 查找 }
          * @param {string} selector - 查找元素
          * @param {Object} [options] - 選項
