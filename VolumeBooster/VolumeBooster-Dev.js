@@ -1,11 +1,14 @@
 // ==UserScript==
 // @name         媒體音量增強器
+// @name:zh-TW   媒體音量增強器
+// @name:zh-CN   媒体音量增强器
+// @name:en      Media Volume Booster
 // @version      0.0.38
 // @author       Canaan HS
-// @description  增強媒體音量最高至 20 倍，可記住增強設置後自動應用，部分網站可能無效或無聲，可選擇禁用。
-// @description:zh-TW 增強媒體音量最高至 20 倍，可記住增強設置後自動應用，部分網站可能無效或無聲，可選擇禁用。
-// @description:zh-CN 增强媒体音量最高至 20 倍，可记住增强设置后自动应用，部分网站可能无效或无声，可选择禁用。
-// @description:en Boost media volume up to 20 times, automatically apply saved settings, may not work or have no sound on some sites, can disable if needed.
+// @description         增強媒體音量最高至 20 倍，可記住增強設置後自動應用，部分網站可能無效或無聲，可選擇禁用。
+// @description:zh-TW   增強媒體音量最高至 20 倍，可記住增強設置後自動應用，部分網站可能無效或無聲，可選擇禁用。
+// @description:zh-CN   增强媒体音量最高至 20 倍，可记住增强设置后自动应用，部分网站可能无效或无声，可选择禁用。
+// @description:en      Boost media volume up to 20 times, automatically apply saved settings, may not work or have no sound on some sites, can disable if needed.
 
 // @noframes
 // @match        *://*/*
@@ -21,7 +24,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/8298/8298181.png
-// @require      https://update.greasyfork.org/scripts/487608/1456525/ClassSyntax_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1558817/ClassSyntax_min.js
 // ==/UserScript==
 
 (async () => {
