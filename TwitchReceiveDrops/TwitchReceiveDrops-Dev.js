@@ -24,7 +24,6 @@
 
 // @run-at       document-body
 // @grant        window.close
-// @grant        GM_notification
 // ==/UserScript==
 
 (async () => {
