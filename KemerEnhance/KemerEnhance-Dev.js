@@ -41,7 +41,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
-// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/ObjectSyntax.js
+// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/Syntax.js
 // ==/UserScript==
 
 (async () => {
