@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta8
+// @version      0.0.49-Beta9
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -873,11 +873,12 @@
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        Fix_Update_Ui: async function (href, id, name_onj, tag_obj, text) { // 修復後更新 UI
+                        Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
                             const edit = GM_addElement("fix_edit", { id: id, class: "edit_artist", textContent: "Edit" });
-                            name_onj.parentNode.insertBefore(edit, name_onj);
-                            name_onj.outerHTML = `<fix_name jump="${href}">${text.trim()}</fix_name>`;
+
+                            name_obj.parentNode.insertBefore(edit, name_obj);
+                            name_obj.outerHTML = `<fix_name jump="${href}">${text.trim()}</fix_name>`;
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
@@ -1150,7 +1151,7 @@
 
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
-                            GM_addElement(card_items, "fix-trigger", {style: "display: none;"});
+                            GM_addElement(card_items, "fix-trigger", {style: "display: none;"}); // 這是用於避免沒觸發變更, 手動創建一個元素
                         }
                     });
 
@@ -1278,9 +1279,10 @@
             },
             QuickPostToggle: async (Config) => { /* 預覽換頁 快速切換 */
 
-                if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
+                if (!DLL.IsNeko) return; // ! 暫時只支援 Neko    
 
                 Syn.WaitElem("menu", null, {all: true, timeout: 5}).then(menu => {
+                    DLL.IsNeko = false; // 防止重複執行
 
                     function Rendering({ href, className, textContent }) {
                         return preact.h("a", { href, className },
@@ -1550,7 +1552,7 @@
             },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent: function() {
-                // ! 這個函數目前只支援 nekohouse
+                // ! 這個函數目前只有 nekohouse 需要
                 if (!this.ExtraButton_Cache) {
                     this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
                         GM_xmlhttpRequest({
@@ -1560,7 +1562,7 @@
                             onload: response => {
                                 const XML = response.responseXML;
                                 const Main = Syn.$$("main", {root: XML});
-                                old_main.innerHTML = Main.innerHTML; // 替換 main
+                                old_main.replaceChildren(...Main.childNodes);
 
                                 history.pushState(null, null, url); // 修改連結與紀錄
                                 const Title = Syn.$$("title", {root: XML})?.textContent;
