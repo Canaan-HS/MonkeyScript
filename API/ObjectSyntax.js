@@ -27,21 +27,26 @@ const Syn = (() => {
      */
     function $$(selector, {all = false, root = document} = {}) {
 
-        if (!all && selector[0] === '#' && selector.indexOf(' ') === -1) { // ID選擇器 (#id)
-            return document.getElementById(selector.slice(1));
+        const head = selector[0];
+        const headless = selector.slice(1);
+        const complicated = /[ #.\[:]/.test(headless);
+
+        if (complicated) {
+            return all ? root.querySelectorAll(selector) : root.querySelector(selector);
         }
 
-        if (selector[0] === '.' && selector.indexOf(' ') === -1) { // 類選擇器 (.class)
-            const collection = root.getElementsByClassName(selector.slice(1));
+        if (!all && head === '#') { // ID選擇器 (#id)
+            return document.getElementById(headless);
+        }
+
+        if (selector[0] === '.') { // 類選擇器 (.class)
+            const collection = root.getElementsByClassName(headless);
             return all ? [...collection] : collection[0];
         }
 
-        if (!/[ #.\[:]/.test(selector)) { // 標籤選擇器 (tag)
-            const collection = root.getElementsByTagName(selector);
-            return all ? [...collection] : collection[0];
-        }
-
-        return all ? root.querySelectorAll(selector) : root.querySelector(selector); // 複雜選擇器
+        // 標籤選擇器 (tag)
+        const collection = root.getElementsByTagName(selector);
+        return all ? [...collection] : collection[0];
     };
 
     const
