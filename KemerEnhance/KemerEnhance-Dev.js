@@ -93,7 +93,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Syn.Device.Url;
+    let Url = Syn.$url;
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -233,24 +233,24 @@
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
-        }[Syn.Device.Host.split(".")[0]];
+        }[Syn.$domain.split(".")[0]];
 
         const SaveKey = {Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint"};
         // 導入使用者設定
         const UserSet = {
             MenuSet: () => {
-                return Syn.Store("g", SaveKey.Menu) ?? {
+                return Syn.gV(SaveKey.Menu, {
                     Top: "10vh",
                     Left: "10vw"
-                };
+                });
             },
             ImgSet: () => {
-                return Syn.Store("g", SaveKey.Img) ?? {
+                return Syn.gV(SaveKey.Img, {
                     Width: "auto",
                     Height: "auto",
                     Spacing: "0px",
                     MaxWidth: "100%",
-                };
+                });
             }
         };
 
@@ -383,7 +383,7 @@
             Postview: async () => { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
-                const width = Syn.Device.iW() / 2;
+                const width = Syn.iW() / 2;
                 Syn.AddStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -420,7 +420,7 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Syn.$$("#Image-Custom-Style")?.sheet.cssRules;
+                ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
             },
             PostExtra: async () => { // 觀看帖子頁圖示
                 Syn.AddStyle(`
@@ -606,7 +606,7 @@
                         margin: 0px;
                     }
                 `, "Menu-Custom-Style", false);
-                MenuRule = Syn.$$("#Menu-Custom-Style")?.sheet.cssRules;
+                MenuRule = Syn.$q("#Menu-Custom-Style")?.sheet.cssRules;
 
                 // 全局修改功能
                 Syn.StoreListen(Object.values(SaveKey), call => {
@@ -628,10 +628,10 @@
             IsAnnouncement: ()=> Announcement.test(Url),
             IsSearch: ()=> Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: ()=> Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.Device.Host.startsWith("nekohouse"),
+            IsNeko: Syn.$domain.startsWith("nekohouse"),
 
             Language: () => {
-                const Log = Syn.Store("g", SaveKey.Lang);
+                const Log = Syn.gV(SaveKey.Lang);
                 const ML = Match[Log] ?? Match["en-US"];
 
                 return {
@@ -646,7 +646,7 @@
     const Enhance = (() => {
         // 配置參數驗證 (避免使用者配置錯誤)
         const Validate = (Bool, Num) => {
-            return Bool && Syn.Type(Bool) == "Boolean" && Syn.Type(Num) == "Number"
+            return Bool && typeof Bool === "boolean" && typeof Num === "number"
                 ? true : false;
         };
         // 呼叫順序
@@ -725,7 +725,7 @@
 
     /* ==================== 主運行 ==================== */
     Enhance.Run();
-    Syn.AddListener(window, "urlchange", change => {
+    window.$onEvent("urlchange", change => {
         Url = change.url;
         // ? 不設置延遲的話, 功能重新調用時, 如果 Ajex 還沒渲染完成, 就會調用失敗
         setTimeout(()=> {
@@ -751,7 +751,7 @@
                                 {
                                     acceptNode: (node) => {
                                         this.URL_F.lastIndex = 0;
-                                        const content = node.textContent.trim();
+                                        const content = node.$text();
                                         if (!content || this.Exclusion_F.test(content)) return NodeFilter.FILTER_REJECT;
                                         return this.URL_F.test(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                     }
@@ -771,25 +771,25 @@
                             });
                         },
                         Process: async function(pre) { // 處理只有 pre
-                            const Text = pre.textContent;
+                            const Text = pre.$text();
                             this.URL_F.test(Text) && this.ParseModify(pre, Text);
                         },
                         Multiprocessing: async function(root) { // 處理有 p 和 a 的狀況
                             if (DLL.IsNeko) {
-                                const Text = root.textContent;
+                                const Text = root.$q();
                                 this.URL_F.test(Text) && this.ParseModify(root, Text);
                                 return;
                             };
 
                             let p;
-                            for (p of Syn.$$("p", {all: true, root: root})) {
-                                const Text = p.textContent;
+                            for (p of root.$qa("p")) {
+                                const Text = p.$text();
                                 this.URL_F.test(Text) && this.ParseModify(p, Text);
                             }
 
                             let a; // 先宣告在運行, 速度會更快
-                            for (a of Syn.$$("a", {all: true, root: root})) {
-                                !a.href && this.ParseModify(a, a.textContent);
+                            for (a of root.$qa("a")) {
+                                !a.href && this.ParseModify(a, a.$text());
                             }
                         },
                         JumpTrigger: async (root) => { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
@@ -799,7 +799,7 @@
                                 Config.newtab_insert ?? false,
                             ];
 
-                            Syn.AddListener(root, "click", event => {
+                            root.$onEvent("click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
                                 if (!target ||target.hasAttribute("download")) return;
 
@@ -820,11 +820,10 @@
                         Record_Cache: undefined, // 讀取修復紀錄 用於緩存
                         Fix_Cache: new Map(), // 修復後 用於緩存
                         Register_Eement: new Map(), // 用於存放以被註冊的元素
-                        Get_Record: () => Syn.Storage("fix_record_v2", { type: localStorage, error: new Map() }),
+                        Get_Record: () => Syn.Local("fix_record_v2", { error: new Map() }),
                         Save_Record: async function (save) {
-                            await Syn.Storage("fix_record_v2",
+                            await Syn.Local("fix_record_v2",
                                 {
-                                    type: localStorage,
                                     value: new Map([...this.Get_Record(), ...save]) // 取得完整數據並合併
                                 }
                             );
@@ -882,7 +881,7 @@
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
-                                tag_obj.textContent,
+                                tag_obj.$text(),
                                 this.Fix_Tag_Support.ID,
                                 this.Fix_Tag_Support.NAME
                             ];
@@ -906,12 +905,12 @@
                                 this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                             } else {
                                 if (this.Fix_Name_Support.has(Website)) {
-                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.textContent;
+                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.$text();
                                     this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                                     this.Fix_Cache.set(TailId, Record); // 添加數據
                                     this.Save_Work(); // 呼叫保存工作
                                 } else {
-                                    Record = NameObject.textContent;
+                                    Record = NameObject.$text();
                                     this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                                 }
                             }
@@ -921,7 +920,7 @@
                             items.setAttribute("fix", true); // 添加修復標籤
 
                             const url = items.href;
-                            const img = Syn.$$("img", {root: items});
+                            const img = items.$q("img");
                             const parse = this.Fix_Url(url);
 
                             img.setAttribute("jump", url); // 圖片設置跳轉連結
@@ -931,8 +930,8 @@
                                 Url: url, // 跳轉連結
                                 TailId: parse[1], // 尾部 id 標號
                                 Website: parse[0], // 網站
-                                NameObject: Syn.$$(".user-card__name", {root: items}), // 名稱物件
-                                TagObject: Syn.$$(".user-card__service", {root: items}) // 標籤物件
+                                NameObject: items.$q(".user-card__name"), // 名稱物件
+                                TagObject: items.$q(".user-card__service") // 標籤物件
                             });
                         },
                         Other_Fix: async function (artist, tag="", href=null, reTag="<fix_view>") { // 針對其餘頁面的修復
@@ -960,10 +959,10 @@
 
                             Syn.Observer(Listen, ()=> {
                                 this.Record_Cache = this.Get_Record(); // 觸發時重新抓取
-                                const element = typeof Element === "string" ? Syn.$$(Element) : Element;
+                                const element = typeof Element === "string" ? Syn.$q(Element) : Element;
                                 if (element) {
                                     // 針對搜尋頁的動態監聽
-                                    for (const items of Syn.$$("a", {all: true, root: element})) {
+                                    for (const items of element.$qa("a")) {
                                         !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
                                 }
@@ -979,7 +978,7 @@
 
         return {
             SidebarCollapse: async (Config) => { /* 收縮側邊攔 */
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
 
                 Syn.AddStyle(`
                     .global-sidebar {
@@ -1020,7 +1019,7 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        document.cookie = `${key}=${value}; domain=.${Syn.Device.Host}; path=/; expires=${expires};`;
+                        document.cookie = `${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`;
                     }
                 };
 
@@ -1055,29 +1054,29 @@
                         Func.JumpTrigger(body);
 
                         const [article, content] = [
-                            Syn.$$("article", {root: body}),
-                            Syn.$$(".post__content, .scrape__content", {root: body})
+                            body.$q("article"),
+                            body.$q(".post__content, .scrape__content")
                         ];
 
                         if (article) {
                             let span;
-                            for (span of Syn.$$("span.choice-text", {all: true, root: article})) {
-                                Func.ParseModify(span, span.textContent);
+                            for (span of article.$qa("span.choice-text")) {
+                                Func.ParseModify(span, span.$text());
                             }
                         } else if (content) {
                             Func.getTextNodes(content).forEach(node => {
-                                Func.ParseModify(node, node.textContent);
+                                Func.ParseModify(node, node.$text());
                             })
                         }
                     });
 
                 } else if (DLL.IsAnnouncement()) {
                     Syn.WaitElem(".card-list__items pre", null, {raf: true}).then(() => {
-                        const items = Syn.$$(".card-list__items");
+                        const items = Syn.$q(".card-list__items");
 
                         Func.JumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
-                            Func.ParseModify(node, node.textContent);
+                            Func.ParseModify(node, node.$text());
                         });
                     })
                 }
@@ -1088,13 +1087,13 @@
 
                 // 監聽點擊事件
                 const [Device, Newtab, Active, Insert] = [
-                    Syn.Device.Type(),
+                    Syn.Platform(),
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.AddListener(document.body, "click", event=> {
+                document.body.$onEvent("click", event=> {
                     const target = event.target;
 
                     if (target.matches("fix_edit")) {
@@ -1106,7 +1105,7 @@
                             style: `height: ${display.scrollHeight + 10}px;`,
                         });
 
-                        const original_name = display.textContent;
+                        const original_name = display.$text();
                         text.value = original_name.trim();
                         display.parentNode.insertBefore(text, target);
 
@@ -1114,10 +1113,10 @@
                         setTimeout(() => {
                             text.focus() // 設置焦點
                             setTimeout(() => { // 避免還沒設置好焦點就觸發
-                                Syn.Listen(text, "blur", ()=> {
+                                text.$one("blur", ()=> {
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
-                                        display.textContent = change_name; // 修改顯示名
+                                        display.$text(change_name); // 修改顯示名
                                         Func.Save_Record(new Map([[target.id, change_name]])); // 保存修改名
                                     }
                                     text.remove();
@@ -1142,10 +1141,10 @@
                 if (DLL.IsSearch()) {
                     Syn.WaitElem(".card-list__items", null, {raf: true, timeout: 10}).then(card_items => {
                         if (DLL.Link.test(Url)) {
-                            const artist = Syn.$$("span[itemprop='name']");
+                            const artist = Syn.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist); // 預覽頁的 名稱修復
 
-                            for (const items of Syn.$$("a", {all: true, root: card_items})) { // 針對 links 頁面的 card
+                            for (const items of card_items.$qa("a")) { // 針對 links 頁面的 card
                                 Func.Search_Fix(items);
                             }
 
@@ -1170,12 +1169,12 @@
                 }
             },
             BackToTop: async (Config) => { /* 翻頁後回到頂部 */
-                Syn.AddListener(document.body, "pointerup", event=> {
-                    event.target.closest("#paginator-bottom") && Syn.$$("#paginator-top").scrollIntoView();
+                document.body.$onEvent("pointerup", event=> {
+                    event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
             KeyScroll: async (Config) => { /* 快捷自動滾動 */
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
 
                 // 滾動配置
                 const Scroll_Requ = {
@@ -1188,11 +1187,11 @@
 
                 const [TopDetected, BottomDetected] = [ // 到頂 和 到底 的檢測
                     Syn.Throttle(() => {
-                        Up_scroll = Syn.Device.sY() == 0
+                        Up_scroll = Syn.sY() == 0
                         ? false : true
                     }, 600),
                     Syn.Throttle(() => {
-                        Down_scroll = Syn.Device.sY() + Syn.Device.iH() >= document.documentElement.scrollHeight
+                        Down_scroll = Syn.sY() + Syn.iH() >= document.documentElement.scrollHeight
                         ? false : true
                     }, 600)
                 ];
@@ -1228,7 +1227,7 @@
                         }
                 }
 
-                Syn.AddListener(window, "keydown", Syn.Throttle(event => {
+                window.$onEvent("keydown", Syn.Throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1266,7 +1265,7 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.AddListener(document.body, "click", event => {
+                document.body.$onEvent("click", event => {
                     const target = event.target.closest("article a");
 
                     target && (
@@ -1290,7 +1289,7 @@
                         )
                     };
 
-                    const pages = Math.ceil(+(menu[0].previousElementSibling.textContent.split("of")[1].trim()) / 50); // 這種方式雖然比較慢, 但比較穩定
+                    const pages = Math.ceil(+(menu[0].previousElementSibling.$text().split("of")[1].trim()) / 50); // 這種方式雖然比較慢, 但比較穩定
                     const links = [Url, ...Array(pages - 1).fill().map((_, i) => `${Url}?o=${(i + 1) * 50}`)];
 
                     // 渲染元素列表
@@ -1345,7 +1344,7 @@
                     }
 
                     // 獲取下一頁
-                    const old_card = Syn.$$(".card-list--legacy");
+                    const old_card = Syn.$q(".card-list--legacy");
                     async function GetNextPage(link) {
                         return new Promise((resolve, reject) => {
                             GM_xmlhttpRequest({
@@ -1353,7 +1352,7 @@
                                 url: link,
                                 nocache: false,
                                 onload: response => {
-                                    const card = Syn.$$(".card-list--legacy", {root: response.responseXML});
+                                    const card = response.responseXML.$q(".card-list--legacy");
                                     old_card.replaceChildren(...card.childNodes);
                                     resolve();
                                 },
@@ -1363,12 +1362,12 @@
                     }
 
                     let request_lock = false;
-                    Syn.AddListener(Syn.$$("section"), "click", event => {
+                    Syn.$q("section").$onEvent("click", event => {
                         const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                         if (!target || request_lock) return;
 
                         event.preventDefault();
-                        const text = target.textContent;
+                        const text = target.$text();
 
                         // 確定當前和另一個菜單
                         const currentMenu = target.closest("menu");
@@ -1443,7 +1442,7 @@
                 }
             },
             CardText: async (Config) => { /* 帖子說明文字效果 */
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
 
                 switch (Config.mode) {
                     case 2:
@@ -1490,19 +1489,19 @@
 
                             // 初始化
                             Browse.style.position = "relative"; // 修改樣式避免跑版
-                            Syn.$$(".View", {root: Browse})?.remove(); // 查找是否存在 View 元素, 先將其刪除
+                            Browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
 
                             GM_xmlhttpRequest({
                                 method: "GET",
                                 url: URL,
                                 onload: response => {
                                     if (DLL.IsNeko) {
-                                        const Main = Syn.$$("main", {root: response.responseXML});
+                                        const Main = response.responseXML.$q("main");
                                         const View = GM_addElement("View", {class: "View"});
                                         const Buffer = document.createDocumentFragment();
-                                        for (const br of Syn.$$("br", {all: true, root: Main})) { // 取得 br 數據
+                                        for (const br of Main.$qa("br")) { // 取得 br 數據
                                             Buffer.append( // 將以下元素都添加到 Buffer
-                                                document.createTextNode(br.previousSibling.textContent.trim()),
+                                                document.createTextNode(br.previousSibling.$text()),
                                                 br
                                             );
                                         }
@@ -1561,27 +1560,27 @@
                             nocache: false,
                             onload: response => {
                                 const XML = response.responseXML;
-                                const Main = Syn.$$("main", {root: XML});
+                                const Main = XML.$q("main");
                                 old_main.replaceChildren(...Main.childNodes);
 
                                 history.pushState(null, null, url); // 修改連結與紀錄
-                                const Title = Syn.$$("title", {root: XML})?.textContent;
+                                const Title = XML.$q("title")?.$text();
                                 Title && (document.title = Title); // 修改標題
 
                                 setTimeout(()=> {
                                     Syn.WaitElem(".post__content, .scrape__content", null, {raf: true, timeout: 10}).then(post => {
                                         // 刪除所有只有 br 標籤的元素
-                                        Syn.$$("p", {all: true, root: post}).forEach(p=> {
+                                        post.$qa("p").forEach(p=> {
                                             p.childNodes.forEach(node=>{node.nodeName == "BR" && node.parentNode.remove()});
                                         });
 
                                         // 刪除所有是圖片連結的 a
-                                        Syn.$$("a", {all: true, root: post}).forEach(a=> {
+                                        post.$qa("a").forEach(a=> {
                                             /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove()
                                         });
                                     });
 
-                                    Syn.$$(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
+                                    Syn.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
                                 }, 300);
                             },
                             onerror: error => {GetNextPage(url, old_main)}
@@ -1620,7 +1619,7 @@
                     for (const link of post) {
                         link.setAttribute("download", ""); // 修改標籤字樣
                         link.href = decodeURIComponent(link.href); // 解碼 url, 並替代原 url
-                        link.textContent = link.textContent.replace("Download", "").trim();
+                        link.$text(link.$text().replace("Download", ""));
 
                         const Browse = link.nextElementSibling; // 查找是否含有 Browse 元素
                         if (!Browse) continue;
@@ -1648,8 +1647,8 @@
                             for (li of parents) {
                                 let [node, title, stream] = [
                                     undefined,
-                                    Syn.$$("summary", {root: li}),
-                                    Syn.$$("source", {root: li})
+                                    li.$q("summary"),
+                                    li.$q("source")
                                 ];
 
                                 if (!title || !stream) continue;
@@ -1657,7 +1656,7 @@
 
                                 let link;
                                 for (link of post) {
-                                    if (link.textContent.includes(title.textContent)) {
+                                    if (link.$text().includes(title.$text())) {
                                         switch (Config.mode) {
                                             case 2: // 因為移動節點 需要刪除再去複製 因此不使用 break
                                                 link.parentNode.remove();
@@ -1670,7 +1669,7 @@
                                 // 重新渲染影片, 避免跑版
                                 render(preact.h(VideoRendering, { stream: stream }), li);
                                 // 將連結元素進行插入 (確保不重複添加)
-                                li.insertBefore(node, Syn.$$("summary", {root: li}));
+                                li.insertBefore(node, li.$q("summary"));
                             }
 
                         });
@@ -1685,7 +1684,7 @@
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = (element) => {
                         const Uri = element.href || element.getAttribute("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.Device.Orig}${Uri}`;
+                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
                     };
 
                     /**
@@ -1712,7 +1711,7 @@
                         },
                         FailedClick: async () => {
                             //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (監聽對象 需要測試)
-                            Syn.Listen(Syn.$$(".post__files, .scrape__files"), "click", event => {
+                            Syn.$q(".post__files, .scrape__files").$one("click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -1740,10 +1739,10 @@
                                 src: Nurl,
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
-                                    Syn.$$(`#${ID} img`).classList.remove("Image-loading-indicator");
+                                    Syn.$q(`#${ID} img`).classList.remove("Image-loading-indicator");
                                 },
                                 onError: function () {
-                                    Origina_Requ.Reload(Syn.$$(`#${ID} img`), 10);
+                                    Origina_Requ.Reload(Syn.$q(`#${ID} img`), 10);
                                 }
                             })
                         )},
@@ -1764,7 +1763,7 @@
                                 responseType: "blob",
                                 onprogress: progress => {
                                     const done = ((progress.done / progress.total) * 100).toFixed(1);
-                                    indicator.textContent = `${done}%`;
+                                    indicator.$text(`${done}%`);
                                 },
                                 onload: response => {
                                     const blob = response.response;
@@ -1780,11 +1779,11 @@
                                 setTimeout(()=> {
                                     object.removeAttribute("class");
 
-                                    const a = Syn.$$(LinkObj, {root: object});
+                                    const a = object.$q(LinkObj);
                                     const hrefP = HrefParse(a);
 
                                     if (Config.experiment) {
-                                        Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
+                                        a.$q("img").classList.add("Image-loading-indicator-experiment");
 
                                         this.Request(object, hrefP, href => {
                                             render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
@@ -1801,10 +1800,10 @@
                             const object = thumbnail[index];
                             object.removeAttribute("class");
 
-                            const a = Syn.$$(LinkObj, {root: object});
+                            const a = object.$q(LinkObj);
                             const hrefP = HrefParse(a);
 
-                            const img = Syn.$$("img", {root: a});
+                            const img = a.$q("img");
 
                             const replace_core = (Nurl, Ourl=null) => {
 
@@ -1849,11 +1848,11 @@
                                         observer.unobserve(object);
                                         object.removeAttribute("class");
 
-                                        const a = Syn.$$(LinkObj, {root: object});
+                                        const a = object.$q(LinkObj);
                                         const hrefP = HrefParse(a);
 
                                         if (Config.experiment) {
-                                            Syn.$$("img", {root: a}).classList.add("Image-loading-indicator-experiment");
+                                            a.$q("img").classList.add("Image-loading-indicator-experiment");
 
                                             this.Request(object, hrefP, href => {
                                                 render(preact.h(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
@@ -1893,8 +1892,8 @@
                 Syn.WaitElem("h2.site-section__subheading", null, {raf: true, timeout: 5}).then(comments => {
 
                     const [Prev, Next, Svg, Span, Buffer] = [
-                        Syn.$$(".post__nav-link.prev, .scrape__nav-link.prev"),
-                        Syn.$$(".post__nav-link.next, .scrape__nav-link.next"),
+                        Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"),
+                        Syn.$q(".post__nav-link.next, .scrape__nav-link.next"),
                         document.createElement("svg"),
                         document.createElement("span"),
                         document.createDocumentFragment()
@@ -1918,16 +1917,16 @@
                     Span.appendChild(Next_btn);
 
                     // 點擊回到上方的按鈕
-                    Syn.Listen(Svg, "click", () => {
-                        Syn.$$("header").scrollIntoView();
+                    Svg.$one("click", () => {
+                        Syn.$q("header").scrollIntoView();
                     }, { capture: true, passive: true });
 
                     // 點擊切換下一頁按鈕
-                    Syn.Listen(Next_btn, "click", ()=> {
+                    Next_btn.$one("click", ()=> {
                         if (DLL.IsNeko) {
                             GetNextPage(
                                 Next_btn.getAttribute("jump"),
-                                Syn.$$("main")
+                                Syn.$q("main")
                             );
                         } else {
                             Svg.remove();
@@ -1937,7 +1936,7 @@
                     }, { capture: true, once: true });
 
                     // 避免多次創建 Bug
-                    if (!Syn.$$("#To_top") && !Syn.$$("#Next_box")) {
+                    if (!Syn.$q("#To_top") && !Syn.$q("#Next_box")) {
                         Buffer.append(Svg, Span);
                         comments.appendChild(Buffer);
                     }
@@ -1978,7 +1977,7 @@
     }
     function Create_Menu(Log, Transl) {
         const shadowID = "shadow";
-        if (Syn.$$(`#${shadowID}`)) return;
+        if (Syn.$q(`#${shadowID}`)) return;
 
         const set = DLL.ImgSet();
         const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing]; // 這樣寫是為了讓讀取保存設置可以按照順序 (菜單有索引問題)
@@ -1989,10 +1988,10 @@
         const shadow = GM_addElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({mode: "open"});
 
-        const script = GM_addElement("script", { id: "Img-Script", textContent: Syn.$$("#Menu-Settings").textContent });
+        const script = GM_addElement("script", { id: "Img-Script", textContent: Syn.$q("#Menu-Settings").$text() });
         shadowRoot.appendChild(script);
 
-        const style = GM_addElement("style", { id: "Menu-Style", textContent: Syn.$$("#Menu-Custom-Style").textContent });
+        const style = GM_addElement("style", { id: "Menu-Style", textContent: Syn.$q("#Menu-Custom-Style").$text() });
         shadowRoot.appendChild(style);
 
         // 調整選項
@@ -2096,7 +2095,7 @@
             Menu_Save: () => { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                Syn.Store("s", DLL.SaveKey.Menu, {Top: top, Left: left}); // 保存設置數據
+                Syn.sV(DLL.SaveKey.Menu, {Top: top, Left: left}); // 保存設置數據
                 // 設置到樣式表內 不用重整可以直接改變
                 DLL.Style_Pointer.Top(top);
                 DLL.Style_Pointer.Left(left);
@@ -2111,7 +2110,7 @@
                     else {set_value = `${img_input.val()}${img_select.val()}`}
                     save_cache[img_input.attr("id")] = set_value;
                 });
-                Syn.Store("s", DLL.SaveKey.Img, save_cache); // 保存設置數據
+                Syn.sV(DLL.SaveKey.Img, save_cache); // 保存設置數據
             },
             ImageSettings: async () => {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
@@ -2144,7 +2143,7 @@
             $language.off("input change");
 
             const value = $(this).val(); // 取得選擇
-            Syn.Store("s", DLL.SaveKey.Lang, value);
+            Syn.sV(DLL.SaveKey.Lang, value);
 
             Menu_Requ.Menu_Save();
             Menu_Requ.Menu_Close();
