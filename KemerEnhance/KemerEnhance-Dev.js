@@ -33,21 +33,15 @@
 // @grant        GM_getValue
 // @grant        GM_openInTab
 // @grant        GM_addElement
-// @grant        GM_deleteValue
-// @grant        GM_getResourceURL
 // @grant        GM_xmlhttpRequest
-// @grant        GM_getResourceText
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1560532/ObjectSyntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/hooks.umd.min.js
-
-// @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/svg-with-js.min.css
+// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/ObjectSyntax.js
 // ==/UserScript==
 
 (async () => {
@@ -386,19 +380,6 @@
                     }
                 `, "Global-Effects", false);
             },
-            Preview: async () => { // 帖子預覽頁所需
-                Syn.AddStyle(`
-                    .card-list__items {
-                        gap: 0.5em;
-                        display: flex;
-                        grid-gap: 0.5em;
-                        position: relative;
-                        align-items: var(--local-align);
-                        flex-flow: var(--local-flex-flow);
-                        justify-content: var(--local-justify);
-                    }
-                `, "Preview-Effects", false);
-            },
             Postview: async () => { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
@@ -441,16 +422,18 @@
                 `, "Image-Custom-Style", false);
                 ImgRule = Syn.$$("#Image-Custom-Style")?.sheet.cssRules;
             },
-            Awesome: async () => { // 觀看帖子頁圖示
+            PostExtra: async () => { // 觀看帖子頁圖示
                 Syn.AddStyle(`
-                    ${GM_getResourceText("font-awesome")}
+                    #main section {
+                        width: 100%;
+                    }
                     #next_box a {
                         cursor: pointer;
                     }
                     #next_box a:hover {
                         background-color: ${Color};
                     }
-            `, "Font-awesome", false);
+            `, "Post-Extra", false);
             },
             Menu: () => {
                 const set = UserSet.MenuSet();
@@ -655,11 +638,7 @@
                     Log: Log,
                     Transl: (Str) => ML[Str] ?? Str
                 }
-            },
-            Rendering: ({ content }) => preact.h("div", { dangerouslySetInnerHTML: { __html: content } }),
-
-            ...UserSet, Style, Color, SaveKey, Style_Pointer,
-            Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
+            }, ...UserSet, Style, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
         };
     })();
 
@@ -713,15 +692,6 @@
                 return this.Content_Cache;
             }
         };
-        // 用於 Extra 翻頁後初始化
-        const Global_Initial = {
-            FixArtist: {
-                ...User_Config.Global.FixArtist
-            },
-            TextToLink: {
-                ...User_Config.Global.TextToLink
-            }
-        };
 
         // 解析配置調用對應功能
         let Ord;
@@ -749,10 +719,6 @@
                     DLL.Style.Menu(); // 導入 菜單樣式
                     MenuTrigger(); // 創建菜單
                 }
-            },
-            ExtraInitial: async () => {
-                Call("Global", Global_Initial);
-                Call("Content");
             }
         }
     })();
@@ -761,10 +727,10 @@
     Enhance.Run();
     Syn.AddListener(window, "urlchange", change => {
         Url = change.url;
-        // ! 實驗性, 可能不只有一個 Frame
-        requestAnimationFrame(()=> {
+        // ? 不設置延遲的話, 功能重新調用時, 如果 Ajex 還沒渲染完成, 就會調用失敗
+        setTimeout(()=> {
             Enhance.Run();
-        })
+        }, 500);
     });
 
     /* ==================== 全域功能 ==================== */
@@ -1084,7 +1050,7 @@
                 const Func = LoadFunc.TextToLink_Dependent(Config);
 
                 if (DLL.IsContent()) {
-                    Syn.WaitElem(".post__body, .scrape__body", null, {debounce: 50, timeout: 5}).then(body => {
+                    Syn.WaitElem(".post__body, .scrape__body", null, {raf: true}).then(body => {
                         Func.JumpTrigger(body);
 
                         const [article, content] = [
@@ -1105,7 +1071,7 @@
                     });
 
                 } else if (DLL.IsAnnouncement()) {
-                    Syn.WaitElem(".card-list__items pre", null, {debounce: 50, timeout: 5}).then(() => {
+                    Syn.WaitElem(".card-list__items pre", null, {raf: true}).then(() => {
                         const items = Syn.$$(".card-list__items");
 
                         Func.JumpTrigger(items);
@@ -1311,37 +1277,135 @@
                 }, {capture: true, mark: "NewTabOpens"});
             },
             QuickPostToggle: async (Config) => { /* 預覽換頁 快速切換 */
-                DLL.Style.Preview(); // 導入 Preview 頁面樣式
 
                 if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
 
-                // Todo - 修正對於 Neko 換頁的問題
-                Syn.WaitElem(".paginator", null, {all: true, timeout: 5}).then(paginator => {
-                    // console.log(paginator);
+                Syn.WaitElem("menu", null, {all: true, timeout: 5}).then(menu => {
 
-                    // 監聽觸發 獲取下一頁數據
-                    Syn.AddListener(Syn.$$("section"), "click", event => {
-                        const target = event.target.closest("menu a");
-                        if (target) {
-                            event.preventDefault();
-                            GetNextPage(target.href);
-                        }
-                    }, {capture: true, mark: "QuickPostToggle"});
+                    function Rendering({ href, className, textContent }) {
+                        return preact.h("a", { href, className },
+                            preact.h("b", null, textContent)
+                        )
+                    };
 
+                    const pages = Math.ceil(+(menu[0].previousElementSibling.textContent.split("of")[1].trim()) / 50); // 這種方式雖然比較慢, 但比較穩定
+                    const links = [Url, ...Array(pages - 1).fill().map((_, i) => `${Url}?o=${(i + 1) * 50}`)];
+
+                    // 渲染元素列表
+                    const elements = [
+                        preact.h(Rendering, { className: "pagination-button-disabled", textContent: "<" }),
+                        ...links.map((link, index) =>
+                            preact.h(Rendering, {
+                                href: link,
+                                textContent: index + 1,
+                                className: index === 0 ? "pagination-button-disabled pagination-button-current" : ""
+                            })
+                        ),
+                        preact.h(Rendering, { textContent: ">" })
+                    ];
+
+                    // 使fragment
+                    const fragment1 = document.createDocumentFragment();
+                    const fragment2 = document.createDocumentFragment();
+
+                    // 渲染到兩個不同的 fragment
+                    preact.render([...elements], fragment1);
+                    preact.render([...elements], fragment2);
+
+                    // 覆蓋 UI
+                    requestAnimationFrame(() => {
+                        menu[0].replaceChildren(fragment1);
+                        menu[1].replaceChildren(fragment2);
+                    });
+
+                    // 更新分頁狀態
+                    function UpdatePagination(currentButtons, otherButtons, newActiveIndex) {
+                        // 清除所有按鈕的當前狀態
+                        [currentButtons, otherButtons].flat().forEach(btn => {
+                            btn.classList.remove("pagination-button-current", "pagination-button-disabled");
+                        });
+
+                        // 設置新的活動按鈕
+                        currentButtons[newActiveIndex].classList.add("pagination-button-current", "pagination-button-disabled");
+                        otherButtons[newActiveIndex].classList.add("pagination-button-current", "pagination-button-disabled");
+
+                        // 處理前後導航按鈕狀態
+                        const isFirstPage = newActiveIndex === 1;
+                        const isLastPage = newActiveIndex === currentButtons.length - 2;
+
+                        // 設置前一頁按鈕狀態
+                        const prevButtons = [currentButtons[0], otherButtons[0]];
+                        prevButtons.forEach(btn => btn.classList.toggle("pagination-button-disabled", isFirstPage));
+
+                        // 設置下一頁按鈕狀態
+                        const nextButtons = [currentButtons[currentButtons.length - 1], otherButtons[otherButtons.length - 1]];
+                        nextButtons.forEach(btn => btn.classList.toggle("pagination-button-disabled", isLastPage));
+                    }
+
+                    // 獲取下一頁
+                    const old_card = Syn.$$(".card-list--legacy");
                     async function GetNextPage(link) {
-                        const old_card = Syn.$$(".card-list");
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: link,
-                            nocache: false,
-                            onload: response => {
-                                const card = Syn.$$(".card-list", {root: response.responseXML});
-                                render(preact.h(DLL.Rendering, { content: card.innerHTML }), old_card);
-                                history.pushState(null, null, link);
-                            },
-                            onerror: error => {GetNextPage(link)}
+                        return new Promise((resolve, reject) => {
+                            GM_xmlhttpRequest({
+                                method: "GET",
+                                url: link,
+                                nocache: false,
+                                onload: response => {
+                                    const card = Syn.$$(".card-list--legacy", {root: response.responseXML});
+                                    old_card.replaceChildren(...card.childNodes);
+                                    resolve();
+                                },
+                                onerror: error => {reject()}
+                            });
                         });
                     }
+
+                    let request_lock = false;
+                    Syn.AddListener(Syn.$$("section"), "click", event => {
+                        const target = event.target.closest("menu a:not(.pagination-button-disabled)");
+                        if (!target || request_lock) return;
+
+                        event.preventDefault();
+                        const text = target.textContent;
+
+                        // 確定當前和另一個菜單
+                        const currentMenu = target.closest("menu");
+                        const menuIndex = [...menu].indexOf(currentMenu);
+                        const otherMenu = menu[menuIndex === 0 ? 1 : 0];
+
+                        // 獲取所有按鈕
+                        const currentButtons = [...currentMenu.querySelectorAll("a")];
+                        const otherButtons = [...otherMenu.querySelectorAll("a")];
+
+                        // 找出當前選中的按鈕
+                        const currentActive = currentMenu.querySelector(".pagination-button-current");
+                        const currentActiveIndex = currentActive ? currentButtons.indexOf(currentActive) : -1;
+
+                        // 確定新的活動按鈕索引
+                        let newIndex;
+                        if (text === "<" && currentActiveIndex > 1) {
+                            newIndex = currentActiveIndex - 1;
+                        } else if (text === ">" && currentActiveIndex < currentButtons.length - 2) {
+                            newIndex = currentActiveIndex + 1;
+                        } else if (!isNaN(parseInt(text))) {
+                            newIndex = currentButtons.indexOf(target);
+                        } else {
+                            return; // 無效點擊
+                        }
+
+                        const href = currentButtons[newIndex].href;
+                        request_lock = true;
+                        GetNextPage(href).then(() => {
+                            request_lock = false;
+                            UpdatePagination(currentButtons, otherButtons, newIndex);
+                            // 更新分頁狀態
+                            requestAnimationFrame(() => { // 更新網址
+                                history.pushState(null, null, href);
+                            })
+                        }).catch(() => {
+                            request_lock = false;
+                        });
+                    }, { capture: true, mark: "QuickPostToggle" });
                 });
             },
             CardZoom: async (Config) => { /* 帖子預覽卡縮放效果 */
@@ -1383,33 +1447,26 @@
                     case 2:
                         Syn.AddStyle(`
                             .post-card__header, .post-card__footer {
-                                opacity: 0.4;
+                                opacity: 0.4 !important;
                                 transition: opacity 0.3s;
                             }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1;
+                                opacity: 1 !important;
                             }
                         `, "CardText_Effects_2", false); break;
                     default:
                         Syn.AddStyle(`
-                            .post-card__header {
-                                opacity: 0;
+                            .post-card__header, .post-card__footer {
+                                opacity: 0 !important;
                                 z-index: 1;
                                 padding: 5px;
                                 pointer-events: none;
                                 transform: translateY(-6vh);
                             }
-                            .post-card__footer {
-                                opacity: 0;
-                                z-index: 1;
-                                padding: 5px;
-                                pointer-events: none;
-                                transform: translateY(6vh);
-                            }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1;
+                                opacity: 1 !important;
                                 pointer-events: auto;
                                 transform: translateY(0vh);
                                 transition: transform 0.4s, opacity 0.6s;
@@ -1493,6 +1550,7 @@
             },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent: function() {
+                // ! 這個函數目前只支援 nekohouse
                 if (!this.ExtraButton_Cache) {
                     this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
                         GM_xmlhttpRequest({
@@ -1502,24 +1560,25 @@
                             onload: response => {
                                 const XML = response.responseXML;
                                 const Main = Syn.$$("main", {root: XML});
-                                render(preact.h(DLL.Rendering, { content: Main.innerHTML }), old_main); // 替換 main
+                                old_main.innerHTML = Main.innerHTML; // 替換 main
 
-                                const Title = Syn.$$("title", {root: XML})?.textContent;
                                 history.pushState(null, null, url); // 修改連結與紀錄
+                                const Title = Syn.$$("title", {root: XML})?.textContent;
                                 Title && (document.title = Title); // 修改標題
 
                                 setTimeout(()=> {
-                                    Enhance.ExtraInitial(); // 重新呼叫增強
                                     Syn.WaitElem(".post__content, .scrape__content", null, {raf: true, timeout: 10}).then(post => {
                                         // 刪除所有只有 br 標籤的元素
                                         Syn.$$("p", {all: true, root: post}).forEach(p=> {
                                             p.childNodes.forEach(node=>{node.nodeName == "BR" && node.parentNode.remove()});
                                         });
+
                                         // 刪除所有是圖片連結的 a
                                         Syn.$$("a", {all: true, root: post}).forEach(a=> {
                                             /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove()
                                         });
                                     });
+
                                     Syn.$$(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
                                 }, 300);
                             },
@@ -1553,7 +1612,7 @@
                     a:hover .View { display: block }
                 `, "Link_Effects", false);
 
-                Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {all: true, debounce: 50, timeout: 5}).then(post => {
+                Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {raf: true, all: true, timeout: 5}).then(post => {
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
 
                     for (const link of post) {
@@ -1575,12 +1634,12 @@
                 `, "Video_Effects", false);
 
                 if (DLL.IsNeko) {
-                    Syn.WaitElem(".scrape__files video", null, {all: true, debounce: 50, timeout: 5}).then(video => {
+                    Syn.WaitElem(".scrape__files video", null, {raf: true, all: true, timeout: 5}).then(video => {
                         video.forEach(media => media.setAttribute("preload", "auto"));
                     });
                 } else {
-                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {all: true, timeout: 5}).then(parents => {
-                        Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {all: true, timeout: 5}).then(post => {
+                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {raf: true, all: true, timeout: 5}).then(parents => {
+                        Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {raf: true, all: true, timeout: 5}).then(post => {
                             const VideoRendering = LoadFunc.VideoBeautify_Dependent();
 
                             let li;
@@ -1695,10 +1754,7 @@
                          * Result 回傳圖片連結
                          */
                         Request: async function(Container, Url, Result) {
-                            const progressLabel = document.createElement("div");
-                            progressLabel.className = "progress-indicator";
-                            progressLabel.textContent = "0%";
-                            Container.appendChild(progressLabel);
+                            const indicator = GM_addElement(Container, "div", {class: "progress-indicator", textContent: "0%"});
 
                             GM_xmlhttpRequest({
                                 url: Url,
@@ -1706,7 +1762,7 @@
                                 responseType: "blob",
                                 onprogress: progress => {
                                     const done = ((progress.done / progress.total) * 100).toFixed(1);
-                                    progressLabel.textContent = `${done}%`;
+                                    indicator.textContent = `${done}%`;
                                 },
                                 onload: response => {
                                     const blob = response.response;
@@ -1830,7 +1886,7 @@
                 });
             },
             ExtraButton: async function (Config) { /* 下方額外擴充按鈕 */
-                DLL.Style.Awesome(); // 導入 Awesome 需求樣式
+                DLL.Style.PostExtra(); // 導入需求樣式
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
                 Syn.WaitElem("h2.site-section__subheading", null, {raf: true, timeout: 5}).then(comments => {
 
@@ -1851,6 +1907,7 @@
                     `;
 
                     const Next_btn = Next?.cloneNode(true) ?? document.createElement("div");
+                    Next_btn.style = `color: ${DLL.Color};`;
                     Next_btn.setAttribute("jump", Next_btn.href);
                     Next_btn.removeAttribute("href");
 
