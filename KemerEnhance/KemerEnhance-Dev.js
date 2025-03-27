@@ -32,7 +32,6 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
-// @grant        GM_addElement
 // @grant        GM_xmlhttpRequest
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
@@ -80,7 +79,7 @@
             },
         },
         Content: {
-            ExtraButton: {mode: 0, enable: true}, // 額外的下方按鈕 (存在 Bug)
+            ExtraButton: {mode: 0, enable: true}, // 額外的下方按鈕
             LinkBeautify: {mode: 0, enable: true}, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
             CommentFormat: {mode: 0, enable: true}, // 評論區重新排版
             VideoBeautify: {mode: 1, enable: true}, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
@@ -104,129 +103,6 @@
         const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
-
-        // 展示語言
-        const Word = {
-            Traditional: {},
-            Simplified: {
-                "📝 設置選單": "📝 设置菜单",
-                "設置菜單": "设置菜单",
-                "圖像設置": "图像设置",
-                "讀取設定": "加载设置",
-                "關閉離開": "关闭",
-                "保存應用": "保存并应用",
-                "語言": "语言",
-                "英文": "英语",
-                "繁體": "繁体中文",
-                "簡體": "简体中文",
-                "日文": "日语",
-                "韓文": "韩语",
-                "俄語": "俄语",
-                "圖片高度": "图片高度",
-                "圖片寬度": "图片宽度",
-                "圖片最大寬度": "图片最大宽度",
-                "圖片間隔高度": "图片间距"
-            },
-            Japan: {
-                "📝 設置選單": "📝 設定メニュー",
-                "設置菜單": "設定メニュー",
-                "圖像設置": "画像設定",
-                "讀取設定": "設定を読み込む",
-                "關閉離開": "閉じる",
-                "保存應用": "保存して適用",
-                "語言": "言語",
-                "英文": "英語",
-                "繁體": "繁体字中国語",
-                "簡體": "簡体字中国語",
-                "日文": "日本語",
-                "韓文": "韓国語",
-                "俄語": "ロシア語",
-                "圖片高度": "画像の高さ",
-                "圖片寬度": "画像の幅",
-                "圖片最大寬度": "画像の最大幅",
-                "圖片間隔高度": "画像の間隔"
-            },
-            Korea: {
-                "📝 設置選單": "📝 설정 메뉴",
-                "設置菜單": "설정 메뉴",
-                "圖像設置": "이미지 설정",
-                "讀取設定": "설정 불러오기",
-                "關閉離開": "닫기",
-                "保存應用": "저장 및 적용",
-                "語言": "언어",
-                "英文": "영어",
-                "繁體": "번체 중국어",
-                "簡體": "간체 중국어",
-                "日文": "일본어",
-                "韓文": "한국어",
-                "俄語": "러시아어",
-                "圖片高度": "이미지 높이",
-                "圖片寬度": "이미지 너비",
-                "圖片最大寬度": "이미지 최대 너비",
-                "圖片間隔高度": "이미지 간격"
-            },
-            Russia: {
-                "📝 設置選單": "📝 Меню настроек",
-                "設置菜單": "Меню настроек",
-                "圖像設置": "Настройки изображений",
-                "讀取設定": "Загрузить настройки",
-                "關閉離開": "Закрыть",
-                "保存應用": "Сохранить и применить",
-                "語言": "Язык",
-                "英文": "Английский",
-                "繁體": "Традиционный китайский",
-                "簡體": "Упрощенный китайский",
-                "日文": "Японский",
-                "韓文": "Корейский",
-                "俄語": "Русский",
-                "圖片高度": "Высота изображения",
-                "圖片寬度": "Ширина изображения",
-                "圖片最大寬度": "Максимальная ширина",
-                "圖片間隔高度": "Интервал между изображениями"
-            },
-            English: {
-                "📝 設置選單": "📝 Settings Menu",
-                "設置菜單": "Settings Menu",
-                "圖像設置": "Image Settings",
-                "讀取設定": "Load Settings",
-                "關閉離開": "Close & Exit",
-                "保存應用": "Save & Apply",
-                "語言": "Language",
-                "英文": "English",
-                "繁體": "Traditional Chinese",
-                "簡體": "Simplified Chinese",
-                "日文": "Japanese",
-                "韓文": "Korean",
-                "俄語": "Russian",
-                "圖片高度": "Image Height",
-                "圖片寬度": "Image Width",
-                "圖片最大寬度": "Max Image Width",
-                "圖片間隔高度": "Image Spacing"
-            }
-        }, Match = {
-            "ko": Word.Korea,
-            "ko-KR": Word.Korea,
-            "ja": Word.Japan,
-            "ja-JP": Word.Japan,
-            "ru": Word.Russia,
-            "ru-RU": Word.Russia,
-            "en": Word.English,
-            "en-US": Word.English,
-            "en-GB": Word.English,
-            "en-AU": Word.English,
-            "en-CA": Word.English,
-            "en-NZ": Word.English,
-            "en-IE": Word.English,
-            "en-ZA": Word.English,
-            "en-IN": Word.English,
-            "zh": Word.Simplified,
-            "zh-CN": Word.Simplified,
-            "zh-SG": Word.Simplified,
-            "zh-MY": Word.Simplified,
-            "zh-TW": Word.Traditional,
-            "zh-HK": Word.Traditional,
-            "zh-MO": Word.Traditional
-        };
 
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const Color = {
@@ -623,6 +499,106 @@
             }
         };
 
+        // 展示語言
+        const Word = {
+            Traditional: {},
+            Simplified: {
+                "📝 設置選單": "📝 设置菜单",
+                "設置菜單": "设置菜单",
+                "圖像設置": "图像设置",
+                "讀取設定": "加载设置",
+                "關閉離開": "关闭",
+                "保存應用": "保存并应用",
+                "語言": "语言",
+                "英文": "英语",
+                "繁體": "繁体中文",
+                "簡體": "简体中文",
+                "日文": "日语",
+                "韓文": "韩语",
+                "俄語": "俄语",
+                "圖片高度": "图片高度",
+                "圖片寬度": "图片宽度",
+                "圖片最大寬度": "图片最大宽度",
+                "圖片間隔高度": "图片间距"
+            },
+            Japan: {
+                "📝 設置選單": "📝 設定メニュー",
+                "設置菜單": "設定メニュー",
+                "圖像設置": "画像設定",
+                "讀取設定": "設定を読み込む",
+                "關閉離開": "閉じる",
+                "保存應用": "保存して適用",
+                "語言": "言語",
+                "英文": "英語",
+                "繁體": "繁体字中国語",
+                "簡體": "簡体字中国語",
+                "日文": "日本語",
+                "韓文": "韓国語",
+                "俄語": "ロシア語",
+                "圖片高度": "画像の高さ",
+                "圖片寬度": "画像の幅",
+                "圖片最大寬度": "画像の最大幅",
+                "圖片間隔高度": "画像の間隔"
+            },
+            Korea: {
+                "📝 設置選單": "📝 설정 메뉴",
+                "設置菜單": "설정 메뉴",
+                "圖像設置": "이미지 설정",
+                "讀取設定": "설정 불러오기",
+                "關閉離開": "닫기",
+                "保存應用": "저장 및 적용",
+                "語言": "언어",
+                "英文": "영어",
+                "繁體": "번체 중국어",
+                "簡體": "간체 중국어",
+                "日文": "일본어",
+                "韓文": "한국어",
+                "俄語": "러시아어",
+                "圖片高度": "이미지 높이",
+                "圖片寬度": "이미지 너비",
+                "圖片最大寬度": "이미지 최대 너비",
+                "圖片間隔高度": "이미지 간격"
+            },
+            Russia: {
+                "📝 設置選單": "📝 Меню настроек",
+                "設置菜單": "Меню настроек",
+                "圖像設置": "Настройки изображений",
+                "讀取設定": "Загрузить настройки",
+                "關閉離開": "Закрыть",
+                "保存應用": "Сохранить и применить",
+                "語言": "Язык",
+                "英文": "Английский",
+                "繁體": "Традиционный китайский",
+                "簡體": "Упрощенный китайский",
+                "日文": "Японский",
+                "韓文": "Корейский",
+                "俄語": "Русский",
+                "圖片高度": "Высота изображения",
+                "圖片寬度": "Ширина изображения",
+                "圖片最大寬度": "Максимальная ширина",
+                "圖片間隔高度": "Интервал между изображениями"
+            },
+            English: {
+                "📝 設置選單": "📝 Settings Menu",
+                "設置菜單": "Settings Menu",
+                "圖像設置": "Image Settings",
+                "讀取設定": "Load Settings",
+                "關閉離開": "Close & Exit",
+                "保存應用": "Save & Apply",
+                "語言": "Language",
+                "英文": "English",
+                "繁體": "Traditional Chinese",
+                "簡體": "Simplified Chinese",
+                "日文": "Japanese",
+                "韓文": "Korean",
+                "俄語": "Russian",
+                "圖片高度": "Image Height",
+                "圖片寬度": "Image Width",
+                "圖片最大寬度": "Max Image Width",
+                "圖片間隔高度": "Image Spacing"
+            }
+        };
+
         return {
             IsContent: ()=> Content.test(Url),
             IsAnnouncement: ()=> Announcement.test(Url),
@@ -632,7 +608,7 @@
 
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
-                const ML = Match[Log] ?? Match["en-US"];
+                const ML = Syn.TranslMatcher(Word, Log);
 
                 return {
                     Log: Log,
@@ -765,10 +741,10 @@
                         ParseModify: async function (father, content) { // 解析後轉換網址
                             if (this.Exclusion_F.test(content)) return;
 
-                            father.innerHTML = content.replace(this.URL_F, url => {
+                            father.$iHtml(content.replace(this.URL_F, url => {
                                 const decode = decodeURIComponent(url).trim();
                                 return `<a href="${decode.replace(this.Protocol_F, "https://")}">${decode}</a>`;
-                            });
+                            }));
                         },
                         Process: async function(pre) { // 處理只有 pre
                             const Text = pre.$text();
@@ -801,9 +777,9 @@
 
                             root.$onEvent("click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
-                                if (!target ||target.hasAttribute("download")) return;
-
+                                if (!target ||target.$hAttr("download")) return;
                                 event.preventDefault();
+
                                 !Newtab
                                     ? location.assign(target.href)
                                     : GM_openInTab(target.href, { active: Active, insert: Insert });
@@ -874,10 +850,10 @@
                         },
                         Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
-                            const edit = GM_addElement("fix_edit", { id: id, class: "edit_artist", textContent: "Edit" });
+                            const edit = Syn.$createElement("fix_edit", { id, class: "edit_artist", text: "Edit" });
 
                             name_obj.parentNode.insertBefore(edit, name_obj);
-                            name_obj.outerHTML = `<fix_name jump="${href}">${text.trim()}</fix_name>`;
+                            name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
@@ -887,13 +863,13 @@
                             ];
 
                             if (support_id.test(tag_text)) {
-                                tag_obj.innerHTML = tag_text.replace(support_id, tag => {
+                                tag_obj.$iHtml(tag_text.replace(support_id, tag => {
                                     return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", id)}">${tag}</fix_tag>`;
-                                });
+                                }));
                             } else if (support_name.test(tag_text)) {
-                                tag_obj.innerHTML = tag_text.replace(support_name, tag => {
+                                tag_obj.$iHtml(tag_text.replace(support_name, tag => {
                                     return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", id)}">${tag}</fix_tag>`;
-                                });
+                                }));
                             }
                         },
                         Fix_Trigger: async function (object) { // 觸發修復
@@ -917,14 +893,14 @@
                         },
                         /* ===== 前置處理觸發 ===== */
                         Search_Fix: async function (items) { // 針對 搜尋頁, 那種有許多用戶卡的
-                            items.setAttribute("fix", true); // 添加修復標籤
+                            items.$sAttr("fix", true); // 添加修復標籤
 
                             const url = items.href;
                             const img = items.$q("img");
                             const parse = this.Fix_Url(url);
 
-                            img.setAttribute("jump", url); // 圖片設置跳轉連結
-                            items.removeAttribute("href"); // 刪除原始跳轉連結
+                            img.$sAttr("jump", url); // 圖片設置跳轉連結
+                            items.$dAttr("href"); // 刪除原始跳轉連結
 
                             this.Fix_Trigger({
                                 Url: url, // 跳轉連結
@@ -963,7 +939,7 @@
                                 if (element) {
                                     // 針對搜尋頁的動態監聽
                                     for (const items of element.$qa("a")) {
-                                        !items.getAttribute("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
+                                        !items.$gAttr("fix") && this.Search_Fix(items); // 沒有修復標籤的才修復
                                     }
                                 }
                             }, {subtree: false, debounce: 50});
@@ -1004,7 +980,7 @@
             BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
-                const cookieString = document.cookie;
+                const cookieString = Syn.$cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
 
@@ -1019,7 +995,7 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        document.cookie = `${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`;
+                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
                     }
                 };
 
@@ -1093,14 +1069,14 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                document.body.$onEvent("click", event=> {
+                Syn.$body.$onEvent("click", event=> {
                     const target = event.target;
 
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
 
                         const display = target.nextElementSibling; // 取得下方的 name 元素
-                        const text = GM_addElement("textarea", {
+                        const text = Syn.$createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`,
                         });
@@ -1126,7 +1102,7 @@
                     } else if (target.matches("fix_name") || target.matches("fix_tag") || target.matches("img.fancy-image__image")) {
                         event.stopImmediatePropagation();
 
-                        const jump = target.getAttribute("jump");
+                        const jump = target.$gAttr("jump");
                         if (!target.parentNode.matches("fix_cont") && jump) {
                             !Newtab || DLL.IsSearch() && Device == "Mobile"
                                 ? location.assign(jump)
@@ -1150,7 +1126,8 @@
 
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
-                            GM_addElement(card_items, "fix-trigger", {style: "display: none;"}); // 這是用於避免沒觸發變更, 手動創建一個元素
+                            // 這是用於避免沒觸發變更, 手動創建一個元素
+                            Syn.$createElement(card_items, "fix-trigger", {style: "display: none;"});
                         }
                     });
 
@@ -1169,7 +1146,7 @@
                 }
             },
             BackToTop: async (Config) => { /* 翻頁後回到頂部 */
-                document.body.$onEvent("pointerup", event=> {
+                Syn.$body.$onEvent("pointerup", event=> {
                     event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
@@ -1191,7 +1168,7 @@
                         ? false : true
                     }, 600),
                     Syn.Throttle(() => {
-                        Down_scroll = Syn.sY() + Syn.iH() >= document.documentElement.scrollHeight
+                        Down_scroll = Syn.sY() + Syn.iH() >= Syn.$html.scrollHeight
                         ? false : true
                     }, 600)
                 ];
@@ -1265,7 +1242,7 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                document.body.$onEvent("click", event => {
+                Syn.$body.$onEvent("click", event => {
                     const target = event.target.closest("article a");
 
                     target && (
@@ -1278,7 +1255,7 @@
             },
             QuickPostToggle: async (Config) => { /* 預覽換頁 快速切換 */
 
-                if (!DLL.IsNeko) return; // ! 暫時只支援 Neko    
+                if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
 
                 Syn.WaitElem("menu", null, {all: true, timeout: 5}).then(menu => {
                     DLL.IsNeko = false; // 防止重複執行
@@ -1305,9 +1282,8 @@
                         preact.h(Rendering, { textContent: ">" })
                     ];
 
-                    // 使fragment
-                    const fragment1 = document.createDocumentFragment();
-                    const fragment2 = document.createDocumentFragment();
+                    const fragment1 = Syn.$createFragment();
+                    const fragment2 = Syn.$createFragment();
 
                     // 渲染到兩個不同的 fragment
                     preact.render([...elements], fragment1);
@@ -1497,8 +1473,8 @@
                                 onload: response => {
                                     if (DLL.IsNeko) {
                                         const Main = response.responseXML.$q("main");
-                                        const View = GM_addElement("View", {class: "View"});
-                                        const Buffer = document.createDocumentFragment();
+                                        const View = Syn.$createElement("View", {class: "View"});
+                                        const Buffer = Syn.$createFragment();
                                         for (const br of Main.$qa("br")) { // 取得 br 數據
                                             Buffer.append( // 將以下元素都添加到 Buffer
                                                 document.createTextNode(br.previousSibling.$text()),
@@ -1508,11 +1484,11 @@
                                         View.appendChild(Buffer);
                                         Browse.appendChild(View);
                                     } else {
-                                        const View = GM_addElement("View", {class: "View"});
-                                        const Buffer = document.createDocumentFragment();
+                                        const View = Syn.$createElement("View", {class: "View"});
+                                        const Buffer = Syn.$createFragment();
                                         for (const text of JSON.parse(response.responseText)['archive']['file_list']) { // 取得 br 數據
                                             Buffer.append( // 將以下元素都添加到 Buffer
-                                                document.createTextNode(text), GM_addElement("br")
+                                                document.createTextNode(text), Syn.$createElement("br")
                                             );
                                         }
 
@@ -1565,7 +1541,7 @@
 
                                 history.pushState(null, null, url); // 修改連結與紀錄
                                 const Title = XML.$q("title")?.$text();
-                                Title && (document.title = Title); // 修改標題
+                                Title && (Syn.$title(Title)); // 修改標題
 
                                 setTimeout(()=> {
                                     Syn.WaitElem(".post__content, .scrape__content", null, {raf: true, timeout: 10}).then(post => {
@@ -1617,7 +1593,7 @@
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
 
                     for (const link of post) {
-                        link.setAttribute("download", ""); // 修改標籤字樣
+                        link.$sAttr("download", ""); // 修改標籤字樣
                         link.href = decodeURIComponent(link.href); // 解碼 url, 並替代原 url
                         link.$text(link.$text().replace("Download", ""));
 
@@ -1636,7 +1612,7 @@
 
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, {raf: true, all: true, timeout: 5}).then(video => {
-                        video.forEach(media => media.setAttribute("preload", "auto"));
+                        video.forEach(media => media.$sAttr("preload", "auto"));
                     });
                 } else {
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {raf: true, all: true, timeout: 5}).then(parents => {
@@ -1661,7 +1637,7 @@
                                             case 2: // 因為移動節點 需要刪除再去複製 因此不使用 break
                                                 link.parentNode.remove();
                                             default:
-                                                node = link.cloneNode(true);
+                                                node = link.$copy(true);
                                         }
                                     }
                                 }
@@ -1683,7 +1659,7 @@
                      */
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = (element) => {
-                        const Uri = element.href || element.getAttribute("href");
+                        const Uri = element.href || element.$gAttr("href");
                         return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
                     };
 
@@ -1698,7 +1674,9 @@
                         Reload: async (Img, Retry) => { // 載入原圖 (死圖重試)
                             if (Retry > 0) {
                                 setTimeout(() => {
-                                    const src = Img.src;
+                                    const src = Img?.src;
+                                    if (!src) return;
+
                                     Img.src = "";
                                     Object.assign(Img, {
                                         src: src,
@@ -1739,7 +1717,7 @@
                                 src: Nurl,
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
-                                    Syn.$q(`#${ID} img`).classList.remove("Image-loading-indicator");
+                                    Syn.$q(`#${ID} img`)?.classList.remove("Image-loading-indicator");
                                 },
                                 onError: function () {
                                     Origina_Requ.Reload(Syn.$q(`#${ID} img`), 10);
@@ -1755,7 +1733,7 @@
                          * Result 回傳圖片連結
                          */
                         Request: async function(Container, Url, Result) {
-                            const indicator = GM_addElement(Container, "div", {class: "progress-indicator", textContent: "0%"});
+                            const indicator = Syn.$createElement(Container, "div", {className: "progress-indicator", text: "0%"});
 
                             GM_xmlhttpRequest({
                                 url: Url,
@@ -1777,7 +1755,7 @@
                             this.FailedClick();
                             thumbnail.forEach((object, index) => {
                                 setTimeout(()=> {
-                                    object.removeAttribute("class");
+                                    object.$dAttr("class");
 
                                     const a = object.$q(LinkObj);
                                     const hrefP = HrefParse(a);
@@ -1798,7 +1776,7 @@
                         SlowAuto: async function(index) {
                             if (index == thumbnail.length) return;
                             const object = thumbnail[index];
-                            object.removeAttribute("class");
+                            object.$dAttr("class");
 
                             const a = object.$q(LinkObj);
                             const hrefP = HrefParse(a);
@@ -1808,7 +1786,7 @@
                             const replace_core = (Nurl, Ourl=null) => {
 
                                 const container = document.createElement((Ourl ? "rc" : "div"));
-                                Ourl && container.setAttribute("src", Ourl); // 當存在時進行設置
+                                Ourl && container.$sAttr("src", Ourl); // 當存在時進行設置
 
                                 Object.assign(container, {
                                     id: `IMG-${index}`,
@@ -1826,7 +1804,7 @@
                                     Origina_Requ.SlowAuto(++index);
                                 };
 
-                                object.innerHTML = ""; // 清空物件元素
+                                object.$iHtml(""); // 清空物件元素
                                 container.appendChild(img);
                                 object.appendChild(container);
                             };
@@ -1846,7 +1824,7 @@
                                     if (entry.isIntersecting) {
                                         const object = entry.target;
                                         observer.unobserve(object);
-                                        object.removeAttribute("class");
+                                        object.$dAttr("class");
 
                                         const a = object.$q(LinkObj);
                                         const hrefP = HrefParse(a);
@@ -1896,21 +1874,21 @@
                         Syn.$q(".post__nav-link.next, .scrape__nav-link.next"),
                         document.createElement("svg"),
                         document.createElement("span"),
-                        document.createDocumentFragment()
+                        Syn.$createFragment()
                     ];
 
                     Svg.id = "To_top";
-                    Svg.innerHTML = `
+                    Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
                             <style>svg{fill: ${DLL.Color}}</style>
                             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
                         </svg>
-                    `;
+                    `);
 
-                    const Next_btn = Next?.cloneNode(true) ?? document.createElement("div");
+                    const Next_btn = Next?.$copy(true) ?? document.createElement("div");
                     Next_btn.style = `color: ${DLL.Color};`;
-                    Next_btn.setAttribute("jump", Next_btn.href);
-                    Next_btn.removeAttribute("href");
+                    Next_btn.$sAttr("jump", Next_btn.href);
+                    Next_btn.$dAttr("href");
 
                     Span.id = "Next_box";
                     Span.style = "float: right; cursor: pointer;";
@@ -1925,7 +1903,7 @@
                     Next_btn.$one("click", ()=> {
                         if (DLL.IsNeko) {
                             GetNextPage(
-                                Next_btn.getAttribute("jump"),
+                                Next_btn.$gAttr("jump"),
                                 Syn.$q("main")
                             );
                         } else {
@@ -1985,14 +1963,11 @@
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
 
         // 創建陰影環境
-        const shadow = GM_addElement("div", { id: shadowID });
+        const fragment = Syn.$createFragment();
+        const shadow = Syn.$createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({mode: "open"});
-
-        const script = GM_addElement("script", { id: "Img-Script", textContent: Syn.$q("#Menu-Settings").$text() });
-        shadowRoot.appendChild(script);
-
-        const style = GM_addElement("style", { id: "Menu-Style", textContent: Syn.$q("#Menu-Custom-Style").$text() });
-        shadowRoot.appendChild(style);
+        const script = Syn.$createElement("script", { id: "Img-Script", text: Syn.$q("#Menu-Settings").$text()});
+        const style = Syn.$createElement("style", { id: "Menu-Style", text: Syn.$q("#Menu-Custom-Style").$text()});
 
         // 調整選項
         const UnitOptions = `
@@ -2007,7 +1982,7 @@
         `;
 
         // 添加菜單樣式
-        shadowRoot.innerHTML += `
+        shadowRoot.$iHtml(`
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -2056,9 +2031,11 @@
                                             <select id="language">
                                                 <option value="" disabled selected>${Transl("語言")}</option>
                                                 <option value="en-US">${Transl("英文")}</option>
+                                                <option value="ru">${Transl("俄語")}</option>
                                                 <option value="zh-TW">${Transl("繁體")}</option>
                                                 <option value="zh-CN">${Transl("簡體")}</option>
                                                 <option value="ja">${Transl("日文")}</option>
+                                                <option value="ko">${Transl("韓文")}</option>
                                             </select>
                                             <button id="readsettings" class="button-options" disabled>${Transl("讀取設定")}</button>
                                             <span class="button-space"></span>
@@ -2073,10 +2050,13 @@
                     </table>
                 </div>
             </div>
-        `;
+        `);
+
+        fragment.append(script, style);
+        shadowRoot.appendChild(fragment);
 
         // 添加到 dom, 並緩存對象
-        $(document.body).append(shadow);
+        $(Syn.$body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
@@ -2095,10 +2075,11 @@
             Menu_Save: () => { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                Syn.sV(DLL.SaveKey.Menu, {Top: top, Left: left}); // 保存設置數據
-                // 設置到樣式表內 不用重整可以直接改變
+
+                //! 設置到樣式表內 不用重整可以直接改變 (但總有奇怪 Bug, 時而正常時而不行)
                 DLL.Style_Pointer.Top(top);
                 DLL.Style_Pointer.Left(left);
+                Syn.sV(DLL.SaveKey.Menu, {Top: top, Left: left}); // 保存設置數據
             },
             Img_Save: () => {
                 img_set = $imageSet.find("p"); // 獲取設定 DOM 參數
@@ -2202,9 +2183,9 @@
 
     /* ==================== 額外封裝函數 ==================== */
 
-    // 透過 innerHTML 實現 react 的覆蓋渲染
+    // 透過 $iHtml() 實現 react 的覆蓋渲染
     function render(element, container) {
-        container.innerHTML = ""; // 雖然這樣性能不是最好的, 但通用性最高
+        container.$iHtml(""); // 雖然這樣性能不是最好的, 但通用性最高
         preact.render(element, container);
     }
 })();
