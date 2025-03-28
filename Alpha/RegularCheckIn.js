@@ -129,23 +129,17 @@
             (8.64e7), (3.6e6), (6e4)
         ];
 
-        /**
-         * @param {Date} now - 現在時間
-         * @param {Date} old - 上次時間
-         * @example
-         * TimeDiff(now) 回傳當前時間到簽到時間差異 (毫秒)
-         * TimeDiff(now, old) 回傳上次簽到時間到現在時間差異 (毫秒) (天數)
-         */
-        function TimeDiff(now, old=null) {
-            if (old) {
-                const diff = now - old;
-                return { ms: diff, day: Math.floor(diff / day_ms)};
-            }
-
+        function TimeDiff(newDate) {
             const tomorrow = new Date(); // 設置隔天時間
-            tomorrow.setDate(now.getDate() + 5); // 00:05
+            tomorrow.setDate(newDate.getDate() + 5); // 00:05
             tomorrow.setHours(0, 0, 0, 0);
-            return (tomorrow - now);
+            return (tomorrow - newDate);
+        };
+
+        function isPrevious(newDate, oldDate) {
+            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
+            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+            return oldMs < newMs;
         };
 
         // 格式化時間
@@ -208,15 +202,14 @@
             Register: (task_name, task_func) => {
                 if (Timers.has(task_name)) return; // 禁止重複註冊
 
-                const now = new Date();
+                const newDate = new Date(); // 取得當前日期
+                const oldDate = new Date(GM_getValue(task_name, newDate)); // 嘗試取得舊任務紀錄
 
                 const task_delay = Timers.size * 2e3; // 根據註冊數量 + 2 秒
-                const wait_diff = (Config.Dev ? 1e4 : TimeDiff(now)) + task_delay; // 取得差時 (開發模式差時為 10 秒)
-                const old_record = new Date(GM_getValue(task_name, now)); // 嘗試取得舊任務紀錄
+                const wait_diff = (Config.Dev ? 1e4 : TimeDiff(newDate)) + task_delay; // 取得差時 (開發模式差時為 10 秒)
 
                 // 當先前紀錄過期, 註冊延遲後觸發
-                const diff = TimeDiff(now, old_record);
-                if (diff.day >= 1 || diff.ms >= wait_diff) {
+                if (isPrevious(newDate, oldDate) || (newDate - oldDate) >= wait_diff) {
                     setTimeout(task_func, task_delay); // 觸發後的延遲, 只設置任務延遲, 避免一次性觸發全部
                 };
 
@@ -234,7 +227,7 @@
                 };
 
                 // 紀錄新的時間
-                GM_setValue(task_name, TimeFormat(now));
+                GM_setValue(task_name, TimeFormat(newDate));
 
                 // 註冊新的監聽器
                 Listener(task_name);
