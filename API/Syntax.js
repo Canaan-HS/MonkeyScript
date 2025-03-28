@@ -12,23 +12,16 @@ const Syn = (() => {
     const Mark = {};
     const Parser = new DOMParser();
     const ListenerRecord = new Map();
-    const createFragment = () => document.createDocumentFragment();
     const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const DeviceCall = {
         sX: () => window.scrollX,
         sY: () => window.scrollY,
         iW: () => window.innerWidth,
         iH: () => window.innerHeight,
-        _Type: undefined,
-        Url: location.href,
-        Orig: location.origin,
-        Host: location.hostname,
-        Path: location.pathname,
-        Lang: navigator.language,
-        Agen: navigator.userAgent,
-        Type: function () {
-            return this._Type = this._Type ? this._Type
-                : (this._Type = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen) || this.iW < 768
+        _Cache: undefined,
+        Platform: function () {
+            return this._Cache = this._Cache ? this._Cache
+                : (this._Cache = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen) || this.iW < 768
                     ? "Mobile" : "Desktop");
         }
     };
@@ -41,25 +34,23 @@ const Syn = (() => {
      * @example
      * 基本上和原生的調用方式類似
      *
-     * $("#id")
-     * $(".class")
-     * $all("tag")
-     * $("element").$all("tag")
+     * $q("#id")
+     * 元素.$q("tag")
+     * $qa(".class")
+     * 元素.$qa("元素")
      *
      * 不支援鏈式
-     * $all("div").$all("span")
+     * $qa("div").$qa("span")
      */
-    [Document.prototype, Element.prototype].forEach(proto => {
-        proto.$ = function(selector) {
-            return $query(selector, false, this);
+    [Document.prototype, Element.prototype].forEach(proto => { // 註冊 document & element 原型
+        proto.$q = function(selector) {
+            return Selector(this, selector, false);
         };
-        proto.$all = function(selector) {
-            return $query(selector, true, this);
+        proto.$qa = function(selector) {
+            return Selector(this, selector, true);
         };
     });
-    const $ = document.$.bind(document);
-    const $all = document.$all.bind(document);
-    function $query(selector, all, root=document) {
+    function Selector(root=document, selector, all) {
         const head = selector[0];
         const headless = selector.slice(1);
         const complicated = /[ #.\[:]/.test(headless);
@@ -80,6 +71,171 @@ const Syn = (() => {
         // 標籤選擇器 (tag)
         const collection = root.getElementsByTagName(selector);
         return all ? [...collection] : collection[0];
+    };
+
+    // Window 註冊
+    const $Window = {
+        $q: document.$q.bind(document),
+        $qa: document.$qa.bind(document),
+        $html: document.documentElement,
+        $head: document.head,
+        $body: document.body,
+        $img: document.images,
+        $link: document.links,
+        $script: document.scripts,
+        $style: document.styleSheets,
+        $url: location.href,
+        $origin: location.origin,
+        $domain: location.hostname,
+        $lang: navigator.language,
+        $agen: navigator.userAgent,
+        $title: (value=null) => value ? (document.title = value) : document.title,
+        $cookie: (value=null) => value ? (document.cookie = value) : document.cookie,
+        $createFragment: () => document.createDocumentFragment(),
+        $createElement: (tag, value = {}) => {
+            const { 
+              id, className, textContent, title, style = {}, attributes = {}, root = null, ...args
+            } = value;
+
+            const element = document.createElement(tag);
+
+            if (id) element.id = id;
+            if (className) element.className = className;
+            if (textContent) element.textContent = textContent;
+            if (title) element.title = title;
+
+            // 設置常見屬性
+            ['href', 'src', 'alt', 'type', 'value', 'placeholder', 'checked'].forEach(prop => {
+                if (args[prop] !== undefined) element[prop] = args[prop];
+            });
+
+            // 處理特殊命名的屬性
+            if (args.rowspan !== undefined) element.rowSpan = args.rowspan;
+            if (args.colspan !== undefined) element.colSpan = args.colspan;
+
+            // 設置樣式
+            if (Object.keys(style).length) Object.assign(element.style, style);
+
+            // 設置自定義屬性
+            if (Object.keys(attributes).length) {
+              Object.entries(attributes).forEach(([key, val]) => element.setAttribute(key, val));
+            }
+
+            // 如果有 root，將元素添加到 root
+            if (root instanceof HTMLElement) root.appendChild(element);
+            return element;
+        },
+    };
+
+    // Element 註冊
+    const $Element = {
+        $text(value=null) {
+            return value ? (this.textContent = value.trim()) : this.textContent.trim();
+        },
+        $iHtml(value=null) {
+            return value ? (this.innerHTML = value.innerHTML) : this.innerHTML;
+        },
+        $oHtml(value=null) {
+            return value ? (this.outerHTML = value.outerHTML) : this.outerHTML;
+        },
+        $sAttr(name, value) {
+            this.setAttribute(name, value);
+        },
+        $dAttr(name) {
+            this.removeAttribute(name);
+        },
+        $gAttr(name) {
+            return this.getAttribute(name);
+        },
+        $hAttr(value) {
+            return this.hasAttribute(value);
+        },
+        $copy(deep=true) {
+            return this.cloneNode(deep);
+        },
+    };
+
+    // Event 註冊
+    const $Event = {
+        /**
+         * * { 簡化版監聽器 (不可刪除, 不檢測是否重複添加, 但可回傳註冊狀態) }
+         * @param {string} element - 添加元素
+         * @param {string} type    - 監聽器類型
+         * @param {*} listener     - 監聽後操作
+         * @param {object} add     - 附加功能
+         * @returns {boolean}      - 回傳添加狀態
+         *
+         * @example
+         * 監聽元素.$one("監聽類型", 觸發 => {
+         *      觸發... 其他操作
+         * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
+         *      console.log(註冊狀態)
+         * })
+         */
+        $one(type, listener, add={}, resolve=null) {
+            try {
+                this.addEventListener(type, listener, add);
+                resolve && resolve(true);
+            } catch { resolve && resolve(false) }
+        },
+
+        /**
+         * * { 添加監聽器 (可刪除, element 和 type 不能有完全重複的, 否則會被排除) }
+         * @param {string} type    - 監聽器類型
+         * @param {Function} listener - 監聽後執行的函數
+         * @param {object} options - 附加功能 (可選)
+         *
+         * @example
+         * element.$onEvent("click", (event) => {
+         *      觸發執行
+         * }, {
+         *    capture: true,
+         *    once: true,
+         *    passive: true,
+         *    mark: "自定鍵值" // 因為有自定所以不能使用 WeakMap
+         * });
+         */
+        $onEvent(type, listener, options = {}) {
+            const { mark, ...opts } = options;
+            const key = mark ?? this;
+            const record = ListenerRecord.get(key);
+
+            if (record.has(type)) return;
+            this.addEventListener(type, listener, opts);
+
+            if (!record) ListenerRecord.set(key, new Map());
+            ListenerRecord.get(key).set(type, listener);
+        },
+
+        /**
+         * * { 移除監聽器 }
+         * @param {string} type - 監聽類型
+         *
+         * @example
+         * element.$offEvent("click")
+         */
+        $offEvent(type, mark) {
+            const key = mark ?? this;
+            const listen = ListenerRecord.get(key)?.get(type);
+            if (listen) {
+                this.removeEventListener(type, listen);
+                ListenerRecord.get(key).delete(type);
+            }
+        }
+    };
+
+    // Object.keys($Window).forEach(key => { // 註冊 window
+        // window[key] = $Window[key];
+    // });
+
+    Object.assign(Element.prototype, $Element); // 註冊 element 原型
+    Object.assign(EventTarget.prototype, $Event); // 註冊 event 原型
+
+    /* 額外給 工廠函數調用 */
+    const $Call = {
+        ...$Window,
+        ElementFunctions: Object.keys($Element),
+        EventFunctions: Object.keys($Event),
     };
 
     /**
@@ -121,12 +277,12 @@ const Syn = (() => {
      * @param {boolean} RepeatAdd - 是否重複添加
      *
      * @example
-     * Style(Rule, ID, RepeatAdd)
-     * Script(Rule, ID, RepeatAdd)
+     * AddStyle(Rule, ID, RepeatAdd)
+     * AddScript(Rule, ID, RepeatAdd)
      */
     const AddCall = {
-        Style: (rule, id, repeatAdd=true)=> AddHead("style", rule, id, repeatAdd),
-        Script: (rule, id, repeatAdd=true)=> AddHead("script", rule, id, repeatAdd),
+        AddStyle: (rule, id, repeatAdd=true)=> AddHead("style", rule, id, repeatAdd),
+        AddScript: (rule, id, repeatAdd=true)=> AddHead("script", rule, id, repeatAdd),
     };
     async function AddHead(type, rule, id, repeatAdd) {
         let element = document.getElementById(id);
@@ -136,72 +292,6 @@ const Syn = (() => {
             document.head.appendChild(element);
         } else if (!repeatAdd) return;
         element.textContent += rule;
-    };
-
-    /**
-     * * { 簡化版監聽器 (不可刪除, 不檢測是否重複添加, 但可回傳註冊狀態) }
-     * @param {string} element - 添加元素
-     * @param {string} type    - 監聽器類型
-     * @param {*} listener     - 監聽後操作
-     * @param {object} add     - 附加功能
-     * @returns {boolean}      - 回傳添加狀態
-     *
-     * @example
-     * Listen("監聽元素", "監聽類型", 觸發 => {
-     *      觸發... 其他操作
-     * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
-     *      console.log(註冊狀態)
-     * })
-     */
-    async function Listen(element, type, listener, add={}, resolve=null) {
-        try {
-            element.addEventListener(type, listener, add);
-            resolve && resolve(true);
-        } catch { resolve && resolve(false) }
-    };
-
-    /**
-     * * { 添加監聽器 (可刪除, element 和 type 不能有完全重複的, 將會被排除) }
-     * @param {string} element - 添加元素
-     * @param {string} type    - 監聽器類型
-     * @param {*} listener     - 監聽後操作
-     * @param {object} add     - 附加功能
-     *
-     * @example
-     * 可附加的 add 選項
-     * {
-     *   once: true,
-     *   passive: true,
-     *   capture: true,
-     *   mark: "自訂檢測 key" (預設是由 element 作為 key)
-     * }
-     */
-    async function AddListener(element, type, listener, add={}) {
-        const { mark, ...options } = add;
-        const key = mark ?? element;
-        const Record = ListenerRecord.get(key);
-
-        if (Record?.has(type)) return;
-        element.addEventListener(type, listener, options);
-
-        if (!Record) ListenerRecord.set(key, new Map());
-        ListenerRecord.get(key).set(type, listener);
-    };
-
-    /**
-     * * { 刪除 監聽器 }
-     * @param {string} element - 添加元素
-     * @param {string} type    - 監聽器類型
-     * 
-     * @example
-     * RemovListener("監聽的物件" or "自訂 key", "監聽的類型")
-     */
-    function RemovListener(element, type) {
-        const Listen = ListenerRecord.get(element)?.get(type);
-        if (Listen) {
-            element.removeEventListener(type, Listen);
-            ListenerRecord.get(element).delete(type);
-        }
     };
 
     /**
@@ -728,7 +818,7 @@ const Syn = (() => {
     };
 
     /**
-     ** { 操作存储空間 (精簡版) }
+     ** { 操作存儲空間 (精簡版) }
      *
      * @grant GM_setValue
      * @grant GM_getValue
@@ -784,10 +874,9 @@ const Syn = (() => {
     };
 
     return {
-        ...DeviceCall, ...AddCall, ...StorageCall, ...StoreCall,
-        createFragment, Type, $, $all, Log, Listen, AddListener, RemovListener,
-        Observer, WaitElem, Throttle, Debounce, ScopeParsing, FormatTemplate,
-        OutputTXT, OutputJson, Runtime, GetDate, Menu, StoreListen,
+        ...DeviceCall, ...$Call, ...AddCall, ...StorageCall, ...StoreCall,
+        Type, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
+        FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, Menu, StoreListen,
 
         /**
          * * { 創建 Worker 工作文件 }
