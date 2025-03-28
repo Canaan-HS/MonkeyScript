@@ -126,11 +126,22 @@
         const [
             day_ms, minute_ms, seconds_ms
         ] = [
-            (24 * 60 ** 2 * 1e3), (60 ** 2 * 1e3), (60 * 1e3)
+            (8.64e7), (3.6e6), (6e4)
         ];
 
-        // 計算當前 到凌晨的差時
-        function TimeDiff(now) {
+        /**
+         * @param {Date} now - 現在時間
+         * @param {Date} old - 上次時間
+         * @example
+         * TimeDiff(now) 回傳當前時間到簽到時間差異 (毫秒)
+         * TimeDiff(now, old) 回傳上次簽到時間到現在時間差異 (毫秒) (天數)
+         */
+        function TimeDiff(now, old=null) {
+            if (old) {
+                const diff = now - old;
+                return { ms: diff, day: Math.floor(diff / day_ms)};
+            }
+
             const tomorrow = new Date(); // 設置隔天時間
             tomorrow.setDate(now.getDate() + 5); // 00:05
             tomorrow.setHours(0, 0, 0, 0);
@@ -202,15 +213,12 @@
                 const task_delay = Timers.size * 2e3; // 根據註冊數量 + 2 秒
                 const wait_diff = (Config.Dev ? 1e4 : TimeDiff(now)) + task_delay; // 取得差時 (開發模式差時為 10 秒)
                 const old_record = new Date(GM_getValue(task_name, now)); // 嘗試取得舊任務紀錄
-                const new_record = new Date(now + wait_diff);
 
                 // 當先前紀錄過期, 註冊延遲後觸發
-                if ((now - old_record) >= wait_diff) {
-                    setTimeout(task_func, task_delay);
+                const diff = TimeDiff(now, old_record);
+                if (diff.day >= 1 || diff.ms >= wait_diff) {
+                    setTimeout(task_func, task_delay); // 觸發後的延遲, 只設置任務延遲, 避免一次性觸發全部
                 };
-
-                // 紀錄新的時間
-                GM_setValue(task_name, TimeFormat(new_record));
 
                 // 創建計時器並保存
                 Timers.set(task_name, setTimeout(()=> {
@@ -224,6 +232,9 @@
                     console.log(TriggerTime(wait_diff));
                     console.groupEnd();
                 };
+
+                // 紀錄新的時間
+                GM_setValue(task_name, TimeFormat(now));
 
                 // 註冊新的監聽器
                 Listener(task_name);
