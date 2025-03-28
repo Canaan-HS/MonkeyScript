@@ -20,10 +20,12 @@
 ### **Settings Menu (Only for Posts)**
 - Set the original image, width, height, and spacing, with real-time previews of changes.
 - Menu language support (default is English):
-    - Traditional Chinese
-    - Simplified Chinese
-    - Japanese
-    - English
+  - Traditional Chinese
+  - Simplified Chinese
+  - Japanese
+  - English
+  - Korean
+  - Russian
 
 ## **⚙️ Additional Configuration (Located at the top of the code)**
 
@@ -91,11 +93,20 @@ Originally, the preview image would be replaced directly, and the original image
 
 ---
 
-## **📦 Version Information**
+## **📦 Version Details**
 
-**Release Version: 0.0.49-Beta8**
+**Release Version: 0.0.49-Beta9**
 
-### **Update Contents**
-1. Fixed ad-blocking issues.
+### **Updates**
+1. Added language support
+2. Removed redundant imports and navigation icons
+3. Implemented feature adaptations for Nekohouse
+4. Fixed known bugs and layout issues
+5. Optimized API and syntax to improve script performance
+6. Modified `QuickPostToggle` to fix Nekohouse page navigation issues
+
+### **Known Issues**
+1. Due to AJAX rendering on Kemono and Coomer, functionality may fail to load if rendering is incomplete when the script finishes running. This can be resolved by refreshing the page. A 0.5-second loading delay has been implemented, but issues may still occur. Adding more delay could negatively impact user experience
+2. After modifying menu positions, changes may be visible during debugging but require a page refresh to take effect in actual use
 
 ---
