@@ -1,15 +1,19 @@
 // ==UserScript==
-// @name         Kemer 增強
+// @name         Kemer Enhance
 // @name:zh-TW   Kemer 增強
 // @name:zh-CN   Kemer 增强
 // @name:ja      Kemer 強化
-// @name:en      Kemer Enhancement
-// @version      0.0.49-Beta8
+// @name:ko      Kemer 강화
+// @name:ru      Kemer Улучшение
+// @name:en      Kemer Enhance
+// @version      0.0.49-Beta9
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-CN  美化界面和重新排版，包括移除广告和多余的横幅，修正画师名称和编辑相关的资讯保存，自动载入原始图像，菜单设置图像大小间距，快捷键触发自动滚动，解析文本中的链接并转换为可点击的链接，快速的页面切换和跳转功能，并重新定向到新分頁
 // @description:ja     インターフェイスの美化と再配置、広告や余分なバナーの削除、イラストレーター名の修正と関連情報の保存の編集、オリジナル画像の自動読み込み、メニューでの画像のサイズと間隔の設定、ショートカットキーによる自動スクロールのトリガー、テキスト内のリンクの解析とクリック可能なリンクへの変換、高速なページ切り替えとジャンプ機能、新しいタブへのリダイレクト
+// @description:ko     인터페이스 미화 및 재배치, 광고 및 불필요한 배너 제거, 아티스트 이름 수정 및 관련 정보 저장 편집, 원본 이미지 자동 로드, 메뉴에서 이미지 크기 및 간격 설정, 단축키로 자동 스크롤 트리거, 텍스트 내 링크 분석 및 클릭 가능한 링크로 변환, 빠른 페이지 전환 및 점프 기능, 새 탭으로 리디렉션
+// @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
 // @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
 
 // @match        *://kemono.su/*
@@ -28,34 +32,27 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
-// @grant        GM_addElement
-// @grant        GM_deleteValue
-// @grant        GM_getResourceURL
 // @grant        GM_xmlhttpRequest
-// @grant        GM_getResourceText
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1551581/ObjectSyntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js
+// @require      https://update.greasyfork.org/scripts/487608/1561380/SyntaxLite_min.js
 
-// @resource     loading https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.3/images/loading.gif
-// @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/svg-with-js.min.css
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
 // ==/UserScript==
 
 (async () => {
     /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
     const User_Config = {
         Global: {
-            BlockAds: { mode: 0, enable: true }, // 阻擋廣告
-            BackToTop: { mode: 0, enable: true }, // 翻頁後回到頂部
-            KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
-            DeleteNotice: { mode: 0, enable: true }, // 刪除上方公告
-            SidebarCollapse: { mode: 0, enable: true }, // 側邊攔摺疊
+            BlockAds: {mode: 0, enable: true}, // 阻擋廣告
+            BackToTop: {mode: 0, enable: true}, // 翻頁後回到頂部
+            KeyScroll: {mode: 1, enable: true}, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
+            DeleteNotice: {mode: 0, enable: true}, // 刪除上方公告
+            SidebarCollapse: {mode: 0, enable: true}, // 側邊攔摺疊
             FixArtist: { // 修復作者名稱
                 mode: 0,
                 enable: true,
@@ -72,10 +69,10 @@
             },
         },
         Preview: {
-            CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
-            CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (部份網站失效)
-            NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟 (部份網站失效)
+            CardZoom: {mode: 2, enable: true}, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
+            CardText: {mode: 2, enable: true}, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
+            QuickPostToggle: {mode: 0, enable: true}, // 快速切換帖子 (僅支援 nekohouse)
+            NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
                 enable: true,
                 newtab_active: false,
@@ -83,10 +80,10 @@
             },
         },
         Content: {
-            ExtraButton: { mode: 0, enable: true }, // 額外的下方按鈕 (存在 Bug)
-            LinkBeautify: { mode: 0, enable: true }, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
-            CommentFormat: { mode: 0, enable: true }, // 評論區重新排版
-            VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
+            ExtraButton: {mode: 0, enable: true}, // 額外的下方按鈕
+            LinkBeautify: {mode: 0, enable: true}, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
+            CommentFormat: {mode: 0, enable: true}, // 評論區重新排版
+            VideoBeautify: {mode: 1, enable: true}, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
                 enable: true,
@@ -94,7 +91,7 @@
             }
         }
     };
-    let Url = Syn.Device.Url;
+    let Url = Syn.$url;
     const DLL = (() => {
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
         const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
@@ -104,73 +101,11 @@
         const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
-        const Display_Lang = {
-            Traditional: {},
-            Simplified: {
-                "📝 設置選單": "📝 设置菜单",
-                "設置菜單": "设置菜单",
-                "圖像設置": "图像设置",
-                "讀取設定": "读取设置",
-                "關閉離開": "关闭退出",
-                "保存應用": "保存应用",
-                "語言": "语言",
-                "英文": "英文",
-                "繁體": "繁体",
-                "簡體": "简体",
-                "日文": "日文",
-                "圖片高度": "图片高度",
-                "圖片寬度": "图片宽度",
-                "圖片最大寬度": "图片最大宽度",
-                "圖片間隔高度": "图片间隔高度"
-            },
-            Japan: {
-                "📝 設置選單": "📝 設定メニュー",
-                "設置菜單": "設定メニュー",
-                "圖像設置": "画像設定",
-                "讀取設定": "設定の読み込み",
-                "關閉離開": "閉じて終了する",
-                "保存應用": "保存して適用する",
-                "語言": "言語",
-                "英文": "英語",
-                "繁體": "繁体字",
-                "簡體": "簡体字",
-                "日文": "日本語",
-                "圖片高度": "画像の高さ",
-                "圖片寬度": "画像の幅",
-                "圖片最大寬度": "画像の最大幅",
-                "圖片間隔高度": "画像の間隔の高さ"
-            },
-            English: {
-                "📝 設置選單": "📝 Settings Menu",
-                "設置菜單": "Settings Menu",
-                "圖像設置": "Image Settings",
-                "讀取設定": "Load Settings",
-                "關閉離開": "Close and Exit",
-                "保存應用": "Save and Apply",
-                "語言": "Language",
-                "英文": "English",
-                "繁體": "Traditional Chinese",
-                "簡體": "Simplified Chinese",
-                "日文": "Japanese",
-                "圖片高度": "Image Height",
-                "圖片寬度": "Image Width",
-                "圖片最大寬度": "Maximum Image Width",
-                "圖片間隔高度": "Image Spacing Height"
-            }
-        }, Match = {
-            "zh-TW": Display_Lang.Traditional,
-            "zh-HK": Display_Lang.Traditional,
-            "zh-MO": Display_Lang.Traditional,
-            "zh-CN": Display_Lang.Simplified,
-            "zh-SG": Display_Lang.Simplified,
-            "en-US": Display_Lang.English,
-            ja: Display_Lang.Japan
-        };
         const Color = {
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
             nekohouse: "#bb91ff !important"
-        }[Syn.Device.Host.split(".")[0]];
+        }[Syn.$domain.split(".")[0]];
         const SaveKey = {
             Img: "ImgStyle",
             Lang: "Language",
@@ -178,18 +113,18 @@
         };
         const UserSet = {
             MenuSet: () => {
-                return Syn.Store("g", SaveKey.Menu) ?? {
+                return Syn.gV(SaveKey.Menu, {
                     Top: "10vh",
                     Left: "10vw"
-                };
+                });
             },
             ImgSet: () => {
-                return Syn.Store("g", SaveKey.Img) ?? {
+                return Syn.gV(SaveKey.Img, {
                     Width: "auto",
                     Height: "auto",
                     Spacing: "0px",
                     MaxWidth: "100%"
-                };
+                });
             }
         };
         let ImgRule, MenuRule;
@@ -237,7 +172,7 @@
                     }
                     .edit_artist {
                         position: absolute;
-                        top: 36%;
+                        top: 85px;
                         right: 8%;
                         color: #fff;
                         display: none;
@@ -282,7 +217,7 @@
                         transition: background-color 0.3s ease;
                     }
                     fix_view .edit_artist {
-                        top: 40%;
+                        top: 65px;
                         right: 5%;
                         transform: translateY(-80%);
                     }
@@ -304,8 +239,8 @@
                         display: inline-block;
                     }
                     fix_cont .edit_artist {
-                        top: 95%;
-                        right: -10%;
+                        top: 200px;
+                        right: -5%;
                     }
                     fix_cont:hover fix_name {
                         background-color: #fff;
@@ -315,37 +250,9 @@
                     }
                 `, "Global-Effects", false);
             },
-            Preview: async () => {
-                Syn.AddStyle(`
-                    .gif-overlay {
-                        top: 45%;
-                        left: 50%;
-                        width: 60%;
-                        height: 60%;
-                        opacity: 0.5;
-                        z-index: 9999;
-                        position: absolute;
-                        border-radius: 50%;
-                        background-size: contain;
-                        background-position: center;
-                        background-repeat: no-repeat;
-                        transform: translate(-50%, -50%);
-                        background-image: url("${GM_getResourceURL("loading")}");
-                    }
-                    .card-list__items {
-                        gap: 0.5em;
-                        display: flex;
-                        grid-gap: 0.5em;
-                        position: relative;
-                        align-items: var(--local-align);
-                        flex-flow: var(--local-flex-flow);
-                        justify-content: var(--local-justify);
-                    }
-                `, "Preview-Effects", false);
-            },
             Postview: async () => {
                 const set = UserSet.ImgSet();
-                const width = Syn.Device.iW() / 2;
+                const width = Syn.iW() / 2;
                 Syn.AddStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -382,18 +289,20 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Syn.$$("#Image-Custom-Style")?.sheet.cssRules;
+                ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
             },
-            Awesome: async () => {
+            PostExtra: async () => {
                 Syn.AddStyle(`
-                    ${GM_getResourceText("font-awesome")}
+                    #main section {
+                        width: 100%;
+                    }
                     #next_box a {
                         cursor: pointer;
                     }
                     #next_box a:hover {
                         background-color: ${Color};
                     }
-            `, "Font-awesome", false);
+            `, "Post-Extra", false);
             },
             Menu: () => {
                 const set = UserSet.MenuSet();
@@ -566,7 +475,7 @@
                         margin: 0px;
                     }
                 `, "Menu-Custom-Style", false);
-                MenuRule = Syn.$$("#Menu-Custom-Style")?.sheet.cssRules;
+                MenuRule = Syn.$q("#Menu-Custom-Style")?.sheet.cssRules;
                 Syn.StoreListen(Object.values(SaveKey), call => {
                     if (call.far) {
                         if (Syn.Type(call.nv) == "String") {
@@ -580,27 +489,118 @@
                 });
             }
         };
+        const Word = {
+            Traditional: {},
+            Simplified: {
+                "📝 設置選單": "📝 设置菜单",
+                "設置菜單": "设置菜单",
+                "圖像設置": "图像设置",
+                "讀取設定": "加载设置",
+                "關閉離開": "关闭",
+                "保存應用": "保存并应用",
+                "語言": "语言",
+                "英文": "英语",
+                "繁體": "繁体中文",
+                "簡體": "简体中文",
+                "日文": "日语",
+                "韓文": "韩语",
+                "俄語": "俄语",
+                "圖片高度": "图片高度",
+                "圖片寬度": "图片宽度",
+                "圖片最大寬度": "图片最大宽度",
+                "圖片間隔高度": "图片间距"
+            },
+            Japan: {
+                "📝 設置選單": "📝 設定メニュー",
+                "設置菜單": "設定メニュー",
+                "圖像設置": "画像設定",
+                "讀取設定": "設定を読み込む",
+                "關閉離開": "閉じる",
+                "保存應用": "保存して適用",
+                "語言": "言語",
+                "英文": "英語",
+                "繁體": "繁体字中国語",
+                "簡體": "簡体字中国語",
+                "日文": "日本語",
+                "韓文": "韓国語",
+                "俄語": "ロシア語",
+                "圖片高度": "画像の高さ",
+                "圖片寬度": "画像の幅",
+                "圖片最大寬度": "画像の最大幅",
+                "圖片間隔高度": "画像の間隔"
+            },
+            Korea: {
+                "📝 設置選單": "📝 설정 메뉴",
+                "設置菜單": "설정 메뉴",
+                "圖像設置": "이미지 설정",
+                "讀取設定": "설정 불러오기",
+                "關閉離開": "닫기",
+                "保存應用": "저장 및 적용",
+                "語言": "언어",
+                "英文": "영어",
+                "繁體": "번체 중국어",
+                "簡體": "간체 중국어",
+                "日文": "일본어",
+                "韓文": "한국어",
+                "俄語": "러시아어",
+                "圖片高度": "이미지 높이",
+                "圖片寬度": "이미지 너비",
+                "圖片最大寬度": "이미지 최대 너비",
+                "圖片間隔高度": "이미지 간격"
+            },
+            Russia: {
+                "📝 設置選單": "📝 Меню настроек",
+                "設置菜單": "Меню настроек",
+                "圖像設置": "Настройки изображений",
+                "讀取設定": "Загрузить настройки",
+                "關閉離開": "Закрыть",
+                "保存應用": "Сохранить и применить",
+                "語言": "Язык",
+                "英文": "Английский",
+                "繁體": "Традиционный китайский",
+                "簡體": "Упрощенный китайский",
+                "日文": "Японский",
+                "韓文": "Корейский",
+                "俄語": "Русский",
+                "圖片高度": "Высота изображения",
+                "圖片寬度": "Ширина изображения",
+                "圖片最大寬度": "Максимальная ширина",
+                "圖片間隔高度": "Интервал между изображениями"
+            },
+            English: {
+                "📝 設置選單": "📝 Settings Menu",
+                "設置菜單": "Settings Menu",
+                "圖像設置": "Image Settings",
+                "讀取設定": "Load Settings",
+                "關閉離開": "Close & Exit",
+                "保存應用": "Save & Apply",
+                "語言": "Language",
+                "英文": "English",
+                "繁體": "Traditional Chinese",
+                "簡體": "Simplified Chinese",
+                "日文": "Japanese",
+                "韓文": "Korean",
+                "俄語": "Russian",
+                "圖片高度": "Image Height",
+                "圖片寬度": "Image Width",
+                "圖片最大寬度": "Max Image Width",
+                "圖片間隔高度": "Image Spacing"
+            }
+        };
         return {
             IsContent: () => Content.test(Url),
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.Device.Host.startsWith("nekohouse"),
+            IsNeko: Syn.$domain.startsWith("nekohouse"),
             Language: () => {
-                const Log = Syn.Store("g", SaveKey.Lang);
-                const ML = Match[Log] ?? Match["en-US"];
+                const Log = Syn.gV(SaveKey.Lang);
+                const ML = Syn.TranslMatcher(Word, Log);
                 return {
                     Log: Log,
                     Transl: Str => ML[Str] ?? Str
                 };
             },
-            Rendering: ({
-                content
-            }) => React.createElement("div", {
-                dangerouslySetInnerHTML: {
-                    __html: content
-                }
-            }),
             ...UserSet,
             Style: Style,
             Color: Color,
@@ -618,11 +618,11 @@
     })();
     const Enhance = (() => {
         const Validate = (Bool, Num) => {
-            return Bool && Syn.Type(Bool) == "Boolean" && Syn.Type(Num) == "Number" ? true : false;
+            return Bool && typeof Bool === "boolean" && typeof Num === "number" ? true : false;
         };
         const Order = {
-            Global: ["SidebarCollapse", "DeleteNotice", "BlockAds", "TextToLink", "FixArtist", "BackToTop", "KeyScroll"],
-            Preview: ["NewTabOpens", "QuickPostToggle", "CardZoom", "CardText"],
+            Global: ["BlockAds", "SidebarCollapse", "DeleteNotice", "TextToLink", "FixArtist", "BackToTop", "KeyScroll"],
+            Preview: ["CardZoom", "CardText", "NewTabOpens", "QuickPostToggle"],
             Content: ["LinkBeautify", "VideoBeautify", "OriginalImage", "ExtraButton", "CommentFormat"]
         };
         const LoadFunc = {
@@ -640,14 +640,6 @@
             Content: function () {
                 if (!this.Content_Cache) this.Content_Cache = Content_Function();
                 return this.Content_Cache;
-            }
-        };
-        const Global_Initial = {
-            FixArtist: {
-                ...User_Config.Global.FixArtist
-            },
-            TextToLink: {
-                ...User_Config.Global.TextToLink
             }
         };
         let Ord;
@@ -676,19 +668,15 @@
                     DLL.Style.Menu();
                     MenuTrigger();
                 }
-            },
-            ExtraInitial: async () => {
-                Call("Global", Global_Initial);
-                Call("Content");
             }
         };
     })();
     Enhance.Run();
-    Syn.AddListener(window, "urlchange", change => {
+    window.$onEvent("urlchange", change => {
         Url = change.url;
         setTimeout(() => {
             Enhance.Run();
-        }, 800);
+        }, 500);
     });
     function Global_Function() {
         const LoadFunc = {
@@ -704,7 +692,7 @@
                             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                                 acceptNode: node => {
                                     this.URL_F.lastIndex = 0;
-                                    const content = node.textContent.trim();
+                                    const content = node.$text();
                                     if (!content || this.Exclusion_F.test(content)) return NodeFilter.FILTER_REJECT;
                                     return this.URL_F.test(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
@@ -716,42 +704,36 @@
                         },
                         ParseModify: async function (father, content) {
                             if (this.Exclusion_F.test(content)) return;
-                            father.innerHTML = content.replace(this.URL_F, url => {
+                            father.$iHtml(content.replace(this.URL_F, url => {
                                 const decode = decodeURIComponent(url).trim();
                                 return `<a href="${decode.replace(this.Protocol_F, "https://")}">${decode}</a>`;
-                            });
+                            }));
                         },
                         Process: async function (pre) {
-                            const Text = pre.textContent;
+                            const Text = pre.$text();
                             this.URL_F.test(Text) && this.ParseModify(pre, Text);
                         },
                         Multiprocessing: async function (root) {
                             if (DLL.IsNeko) {
-                                const Text = root.textContent;
+                                const Text = root.$q();
                                 this.URL_F.test(Text) && this.ParseModify(root, Text);
                                 return;
                             }
                             let p;
-                            for (p of Syn.$$("p", {
-                                all: true,
-                                root: root
-                            })) {
-                                const Text = p.textContent;
+                            for (p of root.$qa("p")) {
+                                const Text = p.$text();
                                 this.URL_F.test(Text) && this.ParseModify(p, Text);
                             }
                             let a;
-                            for (a of Syn.$$("a", {
-                                all: true,
-                                root: root
-                            })) {
-                                !a.href && this.ParseModify(a, a.textContent);
+                            for (a of root.$qa("a")) {
+                                !a.href && this.ParseModify(a, a.$text());
                             }
                         },
                         JumpTrigger: async root => {
                             const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                            Syn.AddListener(root, "click", event => {
+                            root.$onEvent("click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
-                                if (!target || target.hasAttribute("download")) return;
+                                if (!target || target.$hAttr("download")) return;
                                 event.preventDefault();
                                 !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
                                     active: Active,
@@ -771,13 +753,12 @@
                     const Fix_Requ = {
                         Record_Cache: undefined,
                         Fix_Cache: new Map(),
-                        Get_Record: () => Syn.Storage("fix_record_v2", {
-                            type: localStorage,
+                        Register_Eement: new Map(),
+                        Get_Record: () => Syn.Local("fix_record_v2", {
                             error: new Map()
                         }),
                         Save_Record: async function (save) {
-                            await Syn.Storage("fix_record_v2", {
-                                type: localStorage,
+                            await Syn.Local("fix_record_v2", {
                                 value: new Map([...this.Get_Record(), ...save])
                             });
                             this.Fix_Cache.clear();
@@ -824,23 +805,23 @@
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        Fix_Update_Ui: async function (href, id, name_onj, tag_obj, text) {
-                            const edit = GM_addElement("fix_edit", {
+                        Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) {
+                            const edit = Syn.$createElement("fix_edit", {
                                 id: id,
                                 class: "edit_artist",
-                                textContent: "Edit"
+                                text: "Edit"
                             });
-                            name_onj.parentNode.insertBefore(edit, name_onj);
-                            name_onj.outerHTML = `<fix_name jump="${href}">${text.trim()}</fix_name>`;
-                            const [tag_text, support_id, support_name] = [tag_obj.textContent, this.Fix_Tag_Support.ID, this.Fix_Tag_Support.NAME];
+                            name_obj.parentNode.insertBefore(edit, name_obj);
+                            name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
+                            const [tag_text, support_id, support_name] = [tag_obj.$text(), this.Fix_Tag_Support.ID, this.Fix_Tag_Support.NAME];
                             if (support_id.test(tag_text)) {
-                                tag_obj.innerHTML = tag_text.replace(support_id, tag => {
+                                tag_obj.$iHtml(tag_text.replace(support_id, tag => {
                                     return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", id)}">${tag}</fix_tag>`;
-                                });
+                                }));
                             } else if (support_name.test(tag_text)) {
-                                tag_obj.innerHTML = tag_text.replace(support_name, tag => {
+                                tag_obj.$iHtml(tag_text.replace(support_name, tag => {
                                     return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", id)}">${tag}</fix_tag>`;
-                                });
+                                }));
                             }
                         },
                         Fix_Trigger: async function (object) {
@@ -856,35 +837,29 @@
                                 this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                             } else {
                                 if (this.Fix_Name_Support.has(Website)) {
-                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.textContent;
+                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.$text();
                                     this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                                     this.Fix_Cache.set(TailId, Record);
                                     this.Save_Work();
                                 } else {
-                                    Record = NameObject.textContent;
+                                    Record = NameObject.$text();
                                     this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
                                 }
                             }
                         },
                         Search_Fix: async function (items) {
-                            items.setAttribute("fix", true);
+                            items.$sAttr("fix", true);
                             const url = items.href;
-                            const img = Syn.$$("img", {
-                                root: items
-                            });
+                            const img = items.$q("img");
                             const parse = this.Fix_Url(url);
-                            img.setAttribute("jump", url);
-                            items.removeAttribute("href");
+                            img.$sAttr("jump", url);
+                            items.$dAttr("href");
                             this.Fix_Trigger({
                                 Url: url,
                                 TailId: parse[1],
                                 Website: parse[0],
-                                NameObject: Syn.$$(".user-card__name", {
-                                    root: items
-                                }),
-                                TagObject: Syn.$$(".user-card__service", {
-                                    root: items
-                                })
+                                NameObject: items.$q(".user-card__name"),
+                                TagObject: items.$q(".user-card__service")
                             });
                         },
                         Other_Fix: async function (artist, tag = "", href = null, reTag = "<fix_view>") {
@@ -906,41 +881,24 @@
                                 });
                             } catch { }
                         },
-                        Dynamic_Fix: async function (Listen, Operat, Config = null) {
-                            let observer, options;
+                        Dynamic_Fix: async function (Listen, Element) {
+                            if (this.Register_Eement.has(Listen)) return;
+                            this.Register_Eement.set(Listen, true);
                             Syn.Observer(Listen, () => {
                                 this.Record_Cache = this.Get_Record();
-                                const wait = setInterval(() => {
-                                    const operat = typeof Operat === "string" ? Syn.$$(Operat) : Operat;
-                                    if (operat) {
-                                        clearInterval(wait);
-                                        switch (Config) {
-                                            case 1:
-                                                this.Other_Fix(operat);
-                                                setTimeout(() => {
-                                                    observer.disconnect();
-                                                    observer.observe(Listen.children[0], options);
-                                                }, 300);
-                                                break;
-
-                                            default:
-                                                for (const items of Syn.$$("a", {
-                                                    all: true,
-                                                    root: operat
-                                                })) {
-                                                    !items.getAttribute("fix") && this.Search_Fix(items);
-                                                }
-                                        }
+                                const element = typeof Element === "string" ? Syn.$q(Element) : Element;
+                                if (element) {
+                                    for (const items of element.$qa("a")) {
+                                        !items.$gAttr("fix") && this.Search_Fix(items);
                                     }
-                                });
+                                }
                             }, {
-                                subtree: false
-                            }, back => {
-                                observer = back.ob;
-                                options = back.op;
+                                subtree: false,
+                                debounce: 50
                             });
                         }
                     };
+                    Fix_Requ.Record_Cache = Fix_Requ.Get_Record();
                     this.FixArtist_Cache = Fix_Requ;
                 }
                 return this.FixArtist_Cache;
@@ -948,7 +906,7 @@
         };
         return {
             SidebarCollapse: async Config => {
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
                 Syn.AddStyle(`
                     .global-sidebar {
                         opacity: 0;
@@ -969,12 +927,12 @@
             },
             DeleteNotice: async Config => {
                 Syn.WaitElem("aside", null, {
-                    object: document,
                     timeout: 5
                 }).then(aside => aside.remove());
             },
             BlockAds: async Config => {
-                const cookieString = document.cookie;
+                if (DLL.IsNeko) return;
+                const cookieString = Syn.$cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
                 if (!hasCookies) {
@@ -986,7 +944,7 @@
                         [required[1]]: 1
                     };
                     for (const [key, value] of Object.entries(cookies)) {
-                        document.cookie = `${key}=${value}; domain=.${Syn.Device.Host}; path=/; expires=${expires};`;
+                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
                     }
                 }
                 Syn.AddStyle(`
@@ -1015,38 +973,29 @@
                 const Func = LoadFunc.TextToLink_Dependent(Config);
                 if (DLL.IsContent()) {
                     Syn.WaitElem(".post__body, .scrape__body", null, {
-                        raf: true,
-                        timeout: 10
+                        raf: true
                     }).then(body => {
                         Func.JumpTrigger(body);
-                        const [article, content] = [Syn.$$("article", {
-                            root: body
-                        }), Syn.$$(".post__content, .scrape__content", {
-                            root: body
-                        })];
+                        const [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
                             let span;
-                            for (span of Syn.$$("span.choice-text", {
-                                all: true,
-                                root: article
-                            })) {
-                                Func.ParseModify(span, span.textContent);
+                            for (span of article.$qa("span.choice-text")) {
+                                Func.ParseModify(span, span.$text());
                             }
                         } else if (content) {
                             Func.getTextNodes(content).forEach(node => {
-                                Func.ParseModify(node, node.textContent);
+                                Func.ParseModify(node, node.$text());
                             });
                         }
                     });
                 } else if (DLL.IsAnnouncement()) {
                     Syn.WaitElem(".card-list__items pre", null, {
-                        raf: true,
-                        timeout: 10
+                        raf: true
                     }).then(() => {
-                        const items = Syn.$$(".card-list__items");
+                        const items = Syn.$q(".card-list__items");
                         Func.JumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
-                            Func.ParseModify(node, node.textContent);
+                            Func.ParseModify(node, node.$text());
                         });
                     });
                 }
@@ -1054,27 +1003,27 @@
             FixArtist: async Config => {
                 DLL.Style.Global();
                 const Func = LoadFunc.FixArtist_Dependent();
-                const [Device, Newtab, Active, Insert] = [Syn.Device.Type(), Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.AddListener(document.body, "click", event => {
+                const [Device, Newtab, Active, Insert] = [Syn.Platform(), Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                Syn.$body.$onEvent("click", event => {
                     const target = event.target;
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
                         const display = target.nextElementSibling;
-                        const text = GM_addElement("textarea", {
+                        const text = Syn.$createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`
                         });
-                        const original_name = display.textContent;
+                        const original_name = display.$text();
                         text.value = original_name.trim();
                         display.parentNode.insertBefore(text, target);
                         text.scrollTop = 0;
                         setTimeout(() => {
                             text.focus();
                             setTimeout(() => {
-                                Syn.Listen(text, "blur", () => {
+                                text.$one("blur", () => {
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
-                                        display.textContent = change_name;
+                                        display.$text(change_name);
                                         Func.Save_Record(new Map([[target.id, change_name]]));
                                     }
                                     text.remove();
@@ -1086,7 +1035,7 @@
                         }, 300);
                     } else if (target.matches("fix_name") || target.matches("fix_tag") || target.matches("img.fancy-image__image")) {
                         event.stopImmediatePropagation();
-                        const jump = target.getAttribute("jump");
+                        const jump = target.$gAttr("jump");
                         if (!target.parentNode.matches("fix_cont") && jump) {
                             !Newtab || DLL.IsSearch() && Device == "Mobile" ? location.assign(jump) : GM_openInTab(jump, {
                                 active: Active,
@@ -1101,25 +1050,20 @@
                     passive: true,
                     mark: "FixArtist"
                 });
-                Func.Record_Cache = Func.Get_Record();
                 if (DLL.IsSearch()) {
                     Syn.WaitElem(".card-list__items", null, {
                         raf: true,
-                        timeout: 15
+                        timeout: 10
                     }).then(card_items => {
                         if (DLL.Link.test(Url)) {
-                            const artist = Syn.$$("span[itemprop='name']");
+                            const artist = Syn.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist);
-                            for (const items of Syn.$$("a", {
-                                all: true,
-                                root: card_items
-                            })) {
+                            for (const items of card_items.$qa("a")) {
                                 Func.Search_Fix(items);
                             }
-                            Url.endsWith("new") && Func.Dynamic_Fix(card_items, card_items);
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
-                            GM_addElement(card_items, "fix-trigger", {
+                            Syn.$createElement(card_items, "fix-trigger", {
                                 style: "display: none;"
                             });
                         }
@@ -1127,28 +1071,22 @@
                 } else if (DLL.IsContent()) {
                     Syn.WaitElem(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
                         raf: true,
-                        timeout: 15
-                    }).then(found => {
-                        const [title, artist] = found;
+                        timeout: 10
+                    }).then(([title, artist]) => {
                         Func.Other_Fix(artist, title, artist.href, "<fix_cont>");
                     });
                 } else {
                     Syn.WaitElem("span[itemprop='name']", null, {
                         raf: true,
-                        timeout: 15
+                        timeout: 10
                     }).then(artist => {
                         Func.Other_Fix(artist);
-                        if (User_Config.Preview.QuickPostToggle.enable && DLL.IsNeko) {
-                            setTimeout(() => {
-                                Func.Dynamic_Fix(Syn.$$("section"), "span[itemprop='name']", 1);
-                            }, 300);
-                        }
                     });
                 }
             },
             BackToTop: async Config => {
-                Syn.AddListener(document.body, "pointerup", event => {
-                    event.target.closest("#paginator-bottom") && Syn.$$("#paginator-top").scrollIntoView();
+                Syn.$body.$onEvent("pointerup", event => {
+                    event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, {
                     capture: true,
                     passive: true,
@@ -1156,7 +1094,7 @@
                 });
             },
             KeyScroll: async Config => {
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
                     Scroll_Interval: 800
@@ -1164,9 +1102,9 @@
                 const UP_ScrollSpeed = Scroll_Requ.Scroll_Pixels * -1;
                 let Scroll, Up_scroll = false, Down_scroll = false;
                 const [TopDetected, BottomDetected] = [Syn.Throttle(() => {
-                    Up_scroll = Syn.Device.sY() == 0 ? false : true;
+                    Up_scroll = Syn.sY() == 0 ? false : true;
                 }, 600), Syn.Throttle(() => {
-                    Down_scroll = Syn.Device.sY() + Syn.Device.iH() >= document.documentElement.scrollHeight ? false : true;
+                    Down_scroll = Syn.sY() + Syn.iH() >= Syn.$html.scrollHeight ? false : true;
                 }, 600)];
                 switch (Config.mode) {
                     case 2:
@@ -1198,7 +1136,7 @@
                             }
                         };
                 }
-                Syn.AddListener(window, "keydown", Syn.Throttle(event => {
+                window.$onEvent("keydown", Syn.Throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1231,7 +1169,7 @@
         return {
             NewTabOpens: async Config => {
                 const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.AddListener(document.body, "click", event => {
+                Syn.$body.$onEvent("click", event => {
                     const target = event.target.closest("article a");
                     target && (event.preventDefault(), !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
                         active: Active,
@@ -1243,41 +1181,112 @@
                 });
             },
             QuickPostToggle: async Config => {
-                DLL.Style.Preview();
                 if (!DLL.IsNeko) return;
-                Syn.AddListener(document.body, "click", event => {
-                    const target = event.target.closest("menu a");
-                    target && (event.preventDefault(), GetNextPage(target.href));
-                }, {
-                    capture: true,
-                    mark: "QuickPostToggle"
-                });
-                async function GetNextPage(link) {
-                    const old_section = Syn.$$("section");
-                    const items = Syn.$$(".card-list__items");
+                Syn.WaitElem("menu", null, {
+                    all: true,
+                    timeout: 5
+                }).then(menu => {
+                    DLL.IsNeko = false;
+                    function Rendering({
+                        href,
+                        className,
+                        textContent
+                    }) {
+                        return preact.h("a", {
+                            href: href,
+                            className: className
+                        }, preact.h("b", null, textContent));
+                    }
+                    const pages = Math.ceil(+menu[0].previousElementSibling.$text().split("of")[1].trim() / 50);
+                    const links = [Url, ...Array(pages - 1).fill().map((_, i) => `${Url}?o=${(i + 1) * 50}`)];
+                    const elements = [preact.h(Rendering, {
+                        className: "pagination-button-disabled",
+                        textContent: "<"
+                    }), ...links.map((link, index) => preact.h(Rendering, {
+                        href: link,
+                        textContent: index + 1,
+                        className: index === 0 ? "pagination-button-disabled pagination-button-current" : ""
+                    })), preact.h(Rendering, {
+                        textContent: ">"
+                    })];
+                    const fragment1 = Syn.$createFragment();
+                    const fragment2 = Syn.$createFragment();
+                    preact.render([...elements], fragment1);
+                    preact.render([...elements], fragment2);
                     requestAnimationFrame(() => {
-                        GM_addElement(items, "img", {
-                            class: "gif-overlay"
+                        menu[0].replaceChildren(fragment1);
+                        menu[1].replaceChildren(fragment2);
+                    });
+                    function UpdatePagination(currentButtons, otherButtons, newActiveIndex) {
+                        [currentButtons, otherButtons].flat().forEach(btn => {
+                            btn.classList.remove("pagination-button-current", "pagination-button-disabled");
                         });
-                    });
-                    GM_xmlhttpRequest({
-                        method: "GET",
-                        url: link,
-                        nocache: false,
-                        onload: response => {
-                            const Section = Syn.$$("section", {
-                                root: response.responseXML
+                        currentButtons[newActiveIndex].classList.add("pagination-button-current", "pagination-button-disabled");
+                        otherButtons[newActiveIndex].classList.add("pagination-button-current", "pagination-button-disabled");
+                        const isFirstPage = newActiveIndex === 1;
+                        const isLastPage = newActiveIndex === currentButtons.length - 2;
+                        const prevButtons = [currentButtons[0], otherButtons[0]];
+                        prevButtons.forEach(btn => btn.classList.toggle("pagination-button-disabled", isFirstPage));
+                        const nextButtons = [currentButtons[currentButtons.length - 1], otherButtons[otherButtons.length - 1]];
+                        nextButtons.forEach(btn => btn.classList.toggle("pagination-button-disabled", isLastPage));
+                    }
+                    const old_card = Syn.$q(".card-list--legacy");
+                    async function GetNextPage(link) {
+                        return new Promise((resolve, reject) => {
+                            GM_xmlhttpRequest({
+                                method: "GET",
+                                url: link,
+                                nocache: false,
+                                onload: response => {
+                                    const card = response.responseXML.$q(".card-list--legacy");
+                                    old_card.replaceChildren(...card.childNodes);
+                                    resolve();
+                                },
+                                onerror: error => {
+                                    reject();
+                                }
                             });
-                            ReactDOM.render(React.createElement(DLL.Rendering, {
-                                content: Section.innerHTML
-                            }), old_section);
-                            history.pushState(null, null, link);
-                        },
-                        onerror: error => {
-                            GetNextPage(link);
+                        });
+                    }
+                    let request_lock = false;
+                    Syn.$q("section").$onEvent("click", event => {
+                        const target = event.target.closest("menu a:not(.pagination-button-disabled)");
+                        if (!target || request_lock) return;
+                        event.preventDefault();
+                        const text = target.$text();
+                        const currentMenu = target.closest("menu");
+                        const menuIndex = [...menu].indexOf(currentMenu);
+                        const otherMenu = menu[menuIndex === 0 ? 1 : 0];
+                        const currentButtons = [...currentMenu.querySelectorAll("a")];
+                        const otherButtons = [...otherMenu.querySelectorAll("a")];
+                        const currentActive = currentMenu.querySelector(".pagination-button-current");
+                        const currentActiveIndex = currentActive ? currentButtons.indexOf(currentActive) : -1;
+                        let newIndex;
+                        if (text === "<" && currentActiveIndex > 1) {
+                            newIndex = currentActiveIndex - 1;
+                        } else if (text === ">" && currentActiveIndex < currentButtons.length - 2) {
+                            newIndex = currentActiveIndex + 1;
+                        } else if (!isNaN(parseInt(text))) {
+                            newIndex = currentButtons.indexOf(target);
+                        } else {
+                            return;
                         }
+                        const href = currentButtons[newIndex].href;
+                        request_lock = true;
+                        GetNextPage(href).then(() => {
+                            request_lock = false;
+                            UpdatePagination(currentButtons, otherButtons, newIndex);
+                            requestAnimationFrame(() => {
+                                history.pushState(null, null, href);
+                            });
+                        }).catch(() => {
+                            request_lock = false;
+                        });
+                    }, {
+                        capture: true,
+                        mark: "QuickPostToggle"
                     });
-                }
+                });
             },
             CardZoom: async Config => {
                 switch (Config.mode) {
@@ -1301,7 +1310,6 @@
 
                     default:
                         Syn.AddStyle(`
-                            * { --card-size: 13vw; }
                             .post-card { margin: .3vw; }
                             .post-card a img { border-radius: 8px; }
                             .post-card a {
@@ -1309,44 +1317,38 @@
                                 border: 3px solid #fff6;
                                 transition: transform 0.4s;
                             }
+                            .card-list--legacy * { --card-size: 13vw; }
                         `, "CardZoom_Effects", false);
                 }
             },
             CardText: async Config => {
-                if (Syn.Device.Type() === "Mobile") return;
+                if (Syn.Platform() === "Mobile") return;
                 switch (Config.mode) {
                     case 2:
                         Syn.AddStyle(`
                             .post-card__header, .post-card__footer {
-                                opacity: 0.4;
+                                opacity: 0.4 !important;
                                 transition: opacity 0.3s;
                             }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1;
+                                opacity: 1 !important;
                             }
                         `, "CardText_Effects_2", false);
                         break;
 
                     default:
                         Syn.AddStyle(`
-                            .post-card__header {
-                                opacity: 0;
+                            .post-card__header, .post-card__footer {
+                                opacity: 0 !important;
                                 z-index: 1;
                                 padding: 5px;
                                 pointer-events: none;
                                 transform: translateY(-6vh);
                             }
-                            .post-card__footer {
-                                opacity: 0;
-                                z-index: 1;
-                                padding: 5px;
-                                pointer-events: none;
-                                transform: translateY(6vh);
-                            }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1;
+                                opacity: 1 !important;
                                 pointer-events: auto;
                                 transform: translateY(0vh);
                                 transition: transform 0.4s, opacity 0.6s;
@@ -1364,36 +1366,29 @@
                     this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
                         const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts", "api/v1/posts");
                         Browse.style.position = "relative";
-                        Syn.$$(".View", {
-                            root: Browse
-                        })?.remove();
+                        Browse.$q(".View")?.remove();
                         GM_xmlhttpRequest({
                             method: "GET",
                             url: URL,
                             onload: response => {
                                 if (DLL.IsNeko) {
-                                    const Main = Syn.$$("main", {
-                                        root: response.responseXML
-                                    });
-                                    const View = GM_addElement("View", {
+                                    const Main = response.responseXML.$q("main");
+                                    const View = Syn.$createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = document.createDocumentFragment();
-                                    for (const br of Syn.$$("br", {
-                                        all: true,
-                                        root: Main
-                                    })) {
-                                        Buffer.append(document.createTextNode(br.previousSibling.textContent.trim()), br);
+                                    const Buffer = Syn.$createFragment();
+                                    for (const br of Main.$qa("br")) {
+                                        Buffer.append(document.createTextNode(br.previousSibling.$text()), br);
                                     }
                                     View.appendChild(Buffer);
                                     Browse.appendChild(View);
                                 } else {
-                                    const View = GM_addElement("View", {
+                                    const View = Syn.$createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = document.createDocumentFragment();
+                                    const Buffer = Syn.$createFragment();
                                     for (const text of JSON.parse(response.responseText)["archive"]["file_list"]) {
-                                        Buffer.append(document.createTextNode(text), GM_addElement("br"));
+                                        Buffer.append(document.createTextNode(text), Syn.$createElement("br"));
                                     }
                                     View.appendChild(Buffer);
                                     Browse.appendChild(View);
@@ -1413,15 +1408,15 @@
                     this.VideoBeautify_Cache = function VideoRendering({
                         stream
                     }) {
-                        return React.createElement("summary", {
+                        return preact.h("summary", {
                             className: "video-title"
-                        }, React.createElement("video", {
+                        }, preact.h("video", {
                             key: "video",
                             controls: true,
                             preload: "auto",
                             "data-setup": JSON.stringify({}),
                             className: "post-video"
-                        }, React.createElement("source", {
+                        }, preact.h("source", {
                             key: "source",
                             src: stream.src,
                             type: stream.type
@@ -1440,39 +1435,26 @@
                             nocache: false,
                             onload: response => {
                                 const XML = response.responseXML;
-                                const Main = Syn.$$("main", {
-                                    root: XML
-                                });
-                                ReactDOM.render(React.createElement(DLL.Rendering, {
-                                    content: Main.innerHTML
-                                }), old_main);
-                                const Title = Syn.$$("title", {
-                                    root: XML
-                                })?.textContent;
+                                const Main = XML.$q("main");
+                                old_main.replaceChildren(...Main.childNodes);
                                 history.pushState(null, null, url);
-                                Title && (document.title = Title);
+                                const Title = XML.$q("title")?.$text();
+                                Title && Syn.$title(Title);
                                 setTimeout(() => {
-                                    Enhance.ExtraInitial();
                                     Syn.WaitElem(".post__content, .scrape__content", null, {
                                         raf: true,
-                                        timeout: 5
+                                        timeout: 10
                                     }).then(post => {
-                                        Syn.$$("p", {
-                                            all: true,
-                                            root: post
-                                        }).forEach(p => {
+                                        post.$qa("p").forEach(p => {
                                             p.childNodes.forEach(node => {
                                                 node.nodeName == "BR" && node.parentNode.remove();
                                             });
                                         });
-                                        Syn.$$("a", {
-                                            all: true,
-                                            root: post
-                                        }).forEach(a => {
+                                        post.$qa("a").forEach(a => {
                                             /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove();
                                         });
                                     });
-                                    Syn.$$(".post__title, .scrape__title").scrollIntoView();
+                                    Syn.$q(".post__title, .scrape__title").scrollIntoView();
                                 }, 300);
                             },
                             onerror: error => {
@@ -1512,9 +1494,9 @@
                 }).then(post => {
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
                     for (const link of post) {
-                        link.setAttribute("download", "");
+                        link.$sAttr("download", "");
                         link.href = decodeURIComponent(link.href);
-                        link.textContent = link.textContent.replace("Download", "").trim();
+                        link.$text(link.$text().replace("Download", ""));
                         const Browse = link.nextElementSibling;
                         if (!Browse) continue;
                         ShowBrowse(Browse);
@@ -1532,7 +1514,7 @@
                         all: true,
                         timeout: 5
                     }).then(video => {
-                        video.forEach(media => media.setAttribute("preload", "auto"));
+                        video.forEach(media => media.$sAttr("preload", "auto"));
                     });
                 } else {
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
@@ -1548,31 +1530,25 @@
                             const VideoRendering = LoadFunc.VideoBeautify_Dependent();
                             let li;
                             for (li of parents) {
-                                let [node, title, stream] = [undefined, Syn.$$("summary", {
-                                    root: li
-                                }), Syn.$$("source", {
-                                    root: li
-                                })];
+                                let [node, title, stream] = [undefined, li.$q("summary"), li.$q("source")];
                                 if (!title || !stream) continue;
                                 if (title.previousElementSibling) continue;
                                 let link;
                                 for (link of post) {
-                                    if (link.textContent.includes(title.textContent)) {
+                                    if (link.$text().includes(title.$text())) {
                                         switch (Config.mode) {
                                             case 2:
                                                 link.parentNode.remove();
 
                                             default:
-                                                node = link.cloneNode(true);
+                                                node = link.$copy(true);
                                         }
                                     }
                                 }
-                                ReactDOM.render(React.createElement(VideoRendering, {
+                                render(preact.h(VideoRendering, {
                                     stream: stream
                                 }), li);
-                                li.insertBefore(node, Syn.$$("summary", {
-                                    root: li
-                                }));
+                                li.insertBefore(node, li.$q("summary"));
                             }
                         });
                     });
@@ -1582,18 +1558,19 @@
                 Syn.WaitElem(".post__thumbnail, .scrape__thumbnail", null, {
                     raf: true,
                     all: true,
-                    timeout: 6
+                    timeout: 5
                 }).then(thumbnail => {
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = element => {
-                        const Uri = element.href || element.getAttribute("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.Device.Orig}${Uri}`;
+                        const Uri = element.href || element.$gAttr("href");
+                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
                     };
                     const Origina_Requ = {
                         Reload: async (Img, Retry) => {
                             if (Retry > 0) {
                                 setTimeout(() => {
-                                    const src = Img.src;
+                                    const src = Img?.src;
+                                    if (!src) return;
                                     Img.src = "";
                                     Object.assign(Img, {
                                         src: src,
@@ -1609,7 +1586,7 @@
                             }
                         },
                         FailedClick: async () => {
-                            Syn.Listen(Syn.$$(".post__files, .scrape__files"), "click", event => {
+                            Syn.$q(".post__files, .scrape__files").$one("click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -1626,34 +1603,34 @@
                             Ourl = null,
                             Nurl
                         }) => {
-                            return React.createElement(Ourl ? "rc" : "div", {
+                            return preact.h(Ourl ? "rc" : "div", {
                                 id: ID,
                                 src: Ourl,
                                 className: "Image-link"
-                            }, React.createElement("img", {
+                            }, preact.h("img", {
                                 key: "img",
                                 src: Nurl,
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
-                                    Syn.$$(`#${ID} img`).classList.remove("Image-loading-indicator");
+                                    Syn.$q(`#${ID} img`)?.classList.remove("Image-loading-indicator");
                                 },
                                 onError: function () {
-                                    Origina_Requ.Reload(Syn.$$(`#${ID} img`), 10);
+                                    Origina_Requ.Reload(Syn.$q(`#${ID} img`), 10);
                                 }
                             }));
                         },
                         Request: async function (Container, Url, Result) {
-                            const progressLabel = document.createElement("div");
-                            progressLabel.className = "progress-indicator";
-                            progressLabel.textContent = "0%";
-                            Container.appendChild(progressLabel);
+                            const indicator = Syn.$createElement(Container, "div", {
+                                class: "progress-indicator",
+                                text: "0%"
+                            });
                             GM_xmlhttpRequest({
                                 url: Url,
                                 method: "GET",
                                 responseType: "blob",
                                 onprogress: progress => {
                                     const done = (progress.done / progress.total * 100).toFixed(1);
-                                    progressLabel.textContent = `${done}%`;
+                                    indicator.$text(`${done}%`);
                                 },
                                 onload: response => {
                                     const blob = response.response;
@@ -1666,24 +1643,20 @@
                             this.FailedClick();
                             thumbnail.forEach((object, index) => {
                                 setTimeout(() => {
-                                    object.removeAttribute("class");
-                                    const a = Syn.$$(LinkObj, {
-                                        root: object
-                                    });
+                                    object.$dAttr("class");
+                                    const a = object.$q(LinkObj);
                                     const hrefP = HrefParse(a);
                                     if (Config.experiment) {
-                                        Syn.$$("img", {
-                                            root: a
-                                        }).classList.add("Image-loading-indicator-experiment");
+                                        a.$q("img").classList.add("Image-loading-indicator-experiment");
                                         this.Request(object, hrefP, href => {
-                                            ReactDOM.render(React.createElement(this.ImgRendering, {
+                                            render(preact.h(this.ImgRendering, {
                                                 ID: `IMG-${index}`,
                                                 Ourl: hrefP,
                                                 Nurl: href
                                             }), object);
                                         });
                                     } else {
-                                        ReactDOM.render(React.createElement(this.ImgRendering, {
+                                        render(preact.h(this.ImgRendering, {
                                             ID: `IMG-${index}`,
                                             Nurl: hrefP
                                         }), object);
@@ -1694,17 +1667,13 @@
                         SlowAuto: async function (index) {
                             if (index == thumbnail.length) return;
                             const object = thumbnail[index];
-                            object.removeAttribute("class");
-                            const a = Syn.$$(LinkObj, {
-                                root: object
-                            });
+                            object.$dAttr("class");
+                            const a = object.$q(LinkObj);
                             const hrefP = HrefParse(a);
-                            const img = Syn.$$("img", {
-                                root: a
-                            });
+                            const img = a.$q("img");
                             const replace_core = (Nurl, Ourl = null) => {
                                 const container = document.createElement(Ourl ? "rc" : "div");
-                                Ourl && container.setAttribute("src", Ourl);
+                                Ourl && container.$sAttr("src", Ourl);
                                 Object.assign(container, {
                                     id: `IMG-${index}`,
                                     className: "Image-link"
@@ -1718,7 +1687,7 @@
                                     img.classList.remove("Image-loading-indicator");
                                     Origina_Requ.SlowAuto(++index);
                                 };
-                                object.innerHTML = "";
+                                object.$iHtml("");
                                 container.appendChild(img);
                                 object.appendChild(container);
                             };
@@ -1736,24 +1705,20 @@
                                     if (entry.isIntersecting) {
                                         const object = entry.target;
                                         observer.unobserve(object);
-                                        object.removeAttribute("class");
-                                        const a = Syn.$$(LinkObj, {
-                                            root: object
-                                        });
+                                        object.$dAttr("class");
+                                        const a = object.$q(LinkObj);
                                         const hrefP = HrefParse(a);
                                         if (Config.experiment) {
-                                            Syn.$$("img", {
-                                                root: a
-                                            }).classList.add("Image-loading-indicator-experiment");
+                                            a.$q("img").classList.add("Image-loading-indicator-experiment");
                                             this.Request(object, hrefP, href => {
-                                                ReactDOM.render(React.createElement(this.ImgRendering, {
+                                                render(preact.h(this.ImgRendering, {
                                                     ID: object.alt,
                                                     Ourl: hrefP,
                                                     Nurl: href
                                                 }), object);
                                             });
                                         } else {
-                                            ReactDOM.render(React.createElement(this.ImgRendering, {
+                                            render(preact.h(this.ImgRendering, {
                                                 ID: object.alt,
                                                 Nurl: hrefP
                                             }), object);
@@ -1785,35 +1750,36 @@
                 });
             },
             ExtraButton: async function (Config) {
-                DLL.Style.Awesome();
+                DLL.Style.PostExtra();
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
                 Syn.WaitElem("h2.site-section__subheading", null, {
                     raf: true,
-                    timeout: 10
+                    timeout: 5
                 }).then(comments => {
-                    const [Prev, Next, Svg, Span, Buffer] = [Syn.$$(".post__nav-link.prev, .scrape__nav-link.prev"), Syn.$$(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), document.createDocumentFragment()];
+                    const [Prev, Next, Svg, Span, Buffer] = [Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Syn.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Syn.$createFragment()];
                     Svg.id = "To_top";
-                    Svg.innerHTML = `
+                    Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
                             <style>svg{fill: ${DLL.Color}}</style>
                             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
                         </svg>
-                    `;
-                    const Next_btn = Next?.cloneNode(true) ?? document.createElement("div");
-                    Next_btn.setAttribute("jump", Next_btn.href);
-                    Next_btn.removeAttribute("href");
+                    `);
+                    const Next_btn = Next?.$copy(true) ?? document.createElement("div");
+                    Next_btn.style = `color: ${DLL.Color};`;
+                    Next_btn.$sAttr("jump", Next_btn.href);
+                    Next_btn.$dAttr("href");
                     Span.id = "Next_box";
                     Span.style = "float: right; cursor: pointer;";
                     Span.appendChild(Next_btn);
-                    Syn.AddListener(Svg, "click", () => {
-                        Syn.$$("header").scrollIntoView();
+                    Svg.$one("click", () => {
+                        Syn.$q("header").scrollIntoView();
                     }, {
                         capture: true,
                         passive: true
                     });
-                    Syn.AddListener(Next_btn, "click", () => {
+                    Next_btn.$one("click", () => {
                         if (DLL.IsNeko) {
-                            GetNextPage(Next_btn.getAttribute("jump"), Syn.$$("main"));
+                            GetNextPage(Next_btn.$gAttr("jump"), Syn.$q("main"));
                         } else {
                             Svg.remove();
                             Span.remove();
@@ -1823,7 +1789,7 @@
                         capture: true,
                         once: true
                     });
-                    if (!Syn.$$("#To_top") && !Syn.$$("#Next_box")) {
+                    if (!Syn.$q("#To_top") && !Syn.$q("#Next_box")) {
                         Buffer.append(Svg, Span);
                         comments.appendChild(Buffer);
                     }
@@ -1872,26 +1838,25 @@
     }
     function Create_Menu(Log, Transl) {
         const shadowID = "shadow";
-        if (Syn.$$(`#${shadowID}`)) return;
+        if (Syn.$q(`#${shadowID}`)) return;
         const set = DLL.ImgSet();
         const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing];
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
-        const shadow = GM_addElement("div", {
+        const fragment = Syn.$createFragment();
+        const shadow = Syn.$createElement("div", {
             id: shadowID
         });
         const shadowRoot = shadow.attachShadow({
             mode: "open"
         });
-        const script = GM_addElement("script", {
+        const script = Syn.$createElement("script", {
             id: "Img-Script",
-            textContent: Syn.$$("#Menu-Settings").textContent
+            text: Syn.$q("#Menu-Settings").$text()
         });
-        shadowRoot.appendChild(script);
-        const style = GM_addElement("style", {
+        const style = Syn.$createElement("style", {
             id: "Menu-Style",
-            textContent: Syn.$$("#Menu-Custom-Style").textContent
+            text: Syn.$q("#Menu-Custom-Style").$text()
         });
-        shadowRoot.appendChild(style);
         const UnitOptions = `
             <select class="Image-input-settings" style="margin-left: 1rem;">
                 <option value="px" selected>px</option>
@@ -1902,7 +1867,7 @@
                 <option value="auto">auto</option>
             </select>
         `;
-        shadowRoot.innerHTML += `
+        shadowRoot.$iHtml(`
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -1951,9 +1916,11 @@
                                             <select id="language">
                                                 <option value="" disabled selected>${Transl("語言")}</option>
                                                 <option value="en-US">${Transl("英文")}</option>
+                                                <option value="ru">${Transl("俄語")}</option>
                                                 <option value="zh-TW">${Transl("繁體")}</option>
                                                 <option value="zh-CN">${Transl("簡體")}</option>
                                                 <option value="ja">${Transl("日文")}</option>
+                                                <option value="ko">${Transl("韓文")}</option>
                                             </select>
                                             <button id="readsettings" class="button-options" disabled>${Transl("讀取設定")}</button>
                                             <span class="button-space"></span>
@@ -1968,8 +1935,10 @@
                     </table>
                 </div>
             </div>
-        `;
-        $(document.body).append(shadow);
+        `);
+        fragment.append(script, style);
+        shadowRoot.appendChild(fragment);
+        $(Syn.$body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
@@ -1987,12 +1956,12 @@
             Menu_Save: () => {
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                Syn.Store("s", DLL.SaveKey.Menu, {
+                DLL.Style_Pointer.Top(top);
+                DLL.Style_Pointer.Left(left);
+                Syn.sV(DLL.SaveKey.Menu, {
                     Top: top,
                     Left: left
                 });
-                DLL.Style_Pointer.Top(top);
-                DLL.Style_Pointer.Left(left);
             },
             Img_Save: () => {
                 img_set = $imageSet.find("p");
@@ -2008,7 +1977,7 @@
                     }
                     save_cache[img_input.attr("id")] = set_value;
                 });
-                Syn.Store("s", DLL.SaveKey.Img, save_cache);
+                Syn.sV(DLL.SaveKey.Img, save_cache);
             },
             ImageSettings: async () => {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
@@ -2035,7 +2004,7 @@
             event.stopPropagation();
             $language.off("input change");
             const value = $(this).val();
-            Syn.Store("s", DLL.SaveKey.Lang, value);
+            Syn.sV(DLL.SaveKey.Lang, value);
             Menu_Requ.Menu_Save();
             Menu_Requ.Menu_Close();
             MenuTrigger(Updata => {
@@ -2080,5 +2049,9 @@
                 Menu_Requ.Menu_Close();
             }
         });
+    }
+    function render(element, container) {
+        container.$iHtml("");
+        preact.render(element, container);
     }
 })();
