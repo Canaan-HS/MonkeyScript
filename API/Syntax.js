@@ -73,7 +73,6 @@ const Syn = (() => {
         return all ? [...collection] : collection[0];
     };
 
-    // Window 註冊
     const $Window = {
         $q: document.$q.bind(document),
         $qa: document.$qa.bind(document),
@@ -89,54 +88,45 @@ const Syn = (() => {
         $domain: location.hostname,
         $lang: navigator.language,
         $agen: navigator.userAgent,
-        $title: (value=null) => value ? (document.title = value) : document.title,
-        $cookie: (value=null) => value ? (document.cookie = value) : document.cookie,
+        $title: (value=null) => value !== null ? (document.title = value) : document.title,
+        $cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
         $createFragment: () => document.createDocumentFragment(),
-        $createElement: (tag, value = {}) => {
-            const { 
-              id, className, textContent, title, style = {}, attributes = {}, root = null, ...args
+        $createElement: (arg1, arg2, arg3) => {
+            const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
+            if (!tag) return;
+
+            const {
+                id = "", class: className = "", text = "", title = "",
+                style = {}, attributes = {}, rowspan, colspan, ...props
             } = value;
 
-            const element = document.createElement(tag);
+            const element = Object.assign(document.createElement(tag), { id, className, textContent: text, title });
 
-            if (id) element.id = id;
-            if (className) element.className = className;
-            if (textContent) element.textContent = textContent;
-            if (title) element.title = title;
+            if (rowspan !== undefined) element.rowSpan = rowspan;
+            if (colspan !== undefined) element.colSpan = colspan;
 
-            // 設置常見屬性
-            ['href', 'src', 'alt', 'type', 'value', 'placeholder', 'checked'].forEach(prop => {
-                if (args[prop] !== undefined) element[prop] = args[prop];
-            });
+            // 批量賦值常見屬性
+            Object.assign(element, props);
 
-            // 處理特殊命名的屬性
-            if (args.rowspan !== undefined) element.rowSpan = args.rowspan;
-            if (args.colspan !== undefined) element.colSpan = args.colspan;
-
-            // 設置樣式
-            if (Object.keys(style).length) Object.assign(element.style, style);
+            // 設置樣式，支持字串或物件
+            Object.assign(element.style, typeof style === "string" ? { cssText: style } : style);
 
             // 設置自定義屬性
-            if (Object.keys(attributes).length) {
-              Object.entries(attributes).forEach(([key, val]) => element.setAttribute(key, val));
-            }
+            Object.entries(attributes).forEach(([key, val]) => element.setAttribute(key, val));
 
-            // 如果有 root，將元素添加到 root
-            if (root instanceof HTMLElement) root.appendChild(element);
-            return element;
+            return root instanceof HTMLElement ? root.appendChild(element) : element;
         },
     };
 
-    // Element 註冊
-    const $Element = {
+    const $Node = {
         $text(value=null) {
-            return value ? (this.textContent = value.trim()) : this.textContent.trim();
+            return value !== null ? (this.textContent = value?.trim()) : this.textContent?.trim();
         },
         $iHtml(value=null) {
-            return value ? (this.innerHTML = value.innerHTML) : this.innerHTML;
+            return value !== null ? (this.innerHTML = value) : this.innerHTML;
         },
         $oHtml(value=null) {
-            return value ? (this.outerHTML = value.outerHTML) : this.outerHTML;
+            return value !== null ? (this.outerHTML = value) : this.outerHTML;
         },
         $sAttr(name, value) {
             this.setAttribute(name, value);
@@ -155,7 +145,6 @@ const Syn = (() => {
         },
     };
 
-    // Event 註冊
     const $Event = {
         /**
          * * { 簡化版監聽器 (不可刪除, 不檢測是否重複添加, 但可回傳註冊狀態) }
@@ -200,7 +189,7 @@ const Syn = (() => {
             const key = mark ?? this;
             const record = ListenerRecord.get(key);
 
-            if (record.has(type)) return;
+            if (record?.has(type)) return;
             this.addEventListener(type, listener, opts);
 
             if (!record) ListenerRecord.set(key, new Map());
@@ -224,18 +213,25 @@ const Syn = (() => {
         }
     };
 
-    // Object.keys($Window).forEach(key => { // 註冊 window
-        // window[key] = $Window[key];
-    // });
+    // 原型註冊
+    Object.assign(window, $Event);
+    Object.assign(Node.prototype, $Node);
+    Object.assign(EventTarget.prototype, $Event);
 
-    Object.assign(Element.prototype, $Element); // 註冊 Element 原型
-    Object.assign(window, $Event); // 註冊 window
-    Object.assign(EventTarget.prototype, $Event); // 註冊 EventTarget 原型
+    // 處理可能的空值
+    const $text = Object.keys($Node)[0];
+    Object.defineProperty(Object.prototype, $text, {
+        value: function(value = null) {
+            return $Node[$text].call(this, value);
+        },
+        writable: true,
+        configurable: true
+    });
 
     /* 額外給 工廠函數調用 */
     const $Call = {
         ...$Window,
-        ElementFunctions: Object.keys($Element),
+        ElementFunctions: Object.keys($Node),
         EventFunctions: Object.keys($Event),
     };
 
@@ -244,7 +240,7 @@ const Syn = (() => {
      * @param {*} group - 打印元素標籤盒
      * @param {*} label - 打印的元素
      * @param {string} type - 要打印的類型 ("log", "warn", "error", "count")
-     * 
+     *
      * {
      * dev: true, - 開發人員設置打印
      * type="log", - 打印的類型
@@ -314,7 +310,7 @@ const Syn = (() => {
      * Observer(document.body, () => {
      *     console.log("DOM發生變化");
      * }, {
-     *     mark: "bodyObserver", 
+     *     mark: "bodyObserver",
      *     debounce: 200
      * }, ({ ob, op }) => {
      *    ob.disconnect(); // 關閉觀察器
@@ -385,11 +381,11 @@ const Syn = (() => {
      */
     const WaitCore = {
         queryMap: (selector) => {
-            const result = selector.map(select => $Window.$q(select));
+            const result = selector.map(select => Selector(document, select));
             return result.every(Boolean) && result;
         },
         queryElement: (selector, all) => {
-            const result = $Window.$qa(selector);
+            const result = Selector(document, selector, all);
             return (all ? result.length > 0 : result) && result;
         }
     };
@@ -472,7 +468,7 @@ const Syn = (() => {
             };
 
             if (document.visibilityState === "hidden") {
-                Listen(document, "visibilitychange", () => Core(), { once: true });
+                document.$one("visibilitychange", () => Core(), { once: true });
             } else Core();
         })
     };
@@ -636,7 +632,7 @@ const Syn = (() => {
      *
      * const template {
      *      Title: "一個標題",
-     *      Name: ()=> 處理邏輯 
+     *      Name: ()=> 處理邏輯
      * };
      *
      * const format = "{Title} {Name} {Title}";
@@ -746,7 +742,7 @@ const Syn = (() => {
      * let start = Runtime();
      * let end = Runtime(start, {log: false});
      * console.log(end);
-     * 
+     *
      * let start = Runtime();
      * Runtime(start);
      */
@@ -785,6 +781,52 @@ const Syn = (() => {
         return generate(typeof format === "string" ? format : defaultFormat);
     };
 
+    /**
+     * * { 匹配翻譯對照 }
+     * @param {object} word - 翻譯的字詞
+     * @param {string} lang - 翻譯的語言
+     * @param {string} defaultLang - 預設翻譯語言
+     * @returns {object} - 匹配到的字詞
+     * @example
+     * 需要是對照的 Key, 沒有就會找到預設翻譯
+     * const Word = {
+     *      Traditional: {},
+     *      Simplified: {},
+     *      Japan: {},
+     *      Russia: {},
+     *      English: {}
+     * }
+     */
+    const TranslUtils = {
+        'ko': 'Korea',
+        'ko-KR': 'Korea',
+        'ja': 'Japan',
+        'ja-JP': 'Japan',
+        'ru': 'Russia',
+        'ru-RU': 'Russia',
+        'en': 'English',
+        'en-US': 'English',
+        'en-GB': 'English',
+        'en-AU': 'English',
+        'en-CA': 'English',
+        'en-NZ': 'English',
+        'en-IE': 'English',
+        'en-ZA': 'English',
+        'en-IN': 'English',
+        'zh': 'Simplified',
+        'zh-CN': 'Simplified',
+        'zh-SG': 'Simplified',
+        'zh-MY': 'Simplified',
+        'zh-TW': 'Traditional',
+        'zh-HK': 'Traditional',
+        'zh-MO': 'Traditional'
+    };
+    function TranslMatcher(word, lang, defaultLang="en-US") {
+        return word[TranslUtils[lang]]
+            ?? word[TranslUtils[defaultLang]]
+            ?? word[TranslUtils["en-US"]];
+    };
+
     /* ========== 油猴 API ========== */
 
     /**
@@ -796,7 +838,7 @@ const Syn = (() => {
      * @param {string} ID    - 創建菜單的 ID
      * @param {number} Index - 創建菜單的 ID 的 編號 (設置從多少開始)
      * @example
-     * 
+     *
      * Menu({
      *      "菜單1": {
      *          desc: "菜單描述",
@@ -877,7 +919,8 @@ const Syn = (() => {
     return {
         ...DeviceCall, ...$Call, ...AddCall, ...StorageCall, ...StoreCall,
         Type, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
-        FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, Menu, StoreListen,
+        FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
+        Menu, StoreListen,
 
         /**
          * * { 創建 Worker 工作文件 }
