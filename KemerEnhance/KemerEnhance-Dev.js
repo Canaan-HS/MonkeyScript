@@ -37,10 +37,11 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
+// @require      https://update.greasyfork.org/scripts/487608/1561380/SyntaxLite_min.js
+
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
-// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/Syntax.js
 // ==/UserScript==
 
 (async () => {
@@ -1413,7 +1414,7 @@
                                 border: 3px solid #fff6;
                                 transition: transform 0.4s;
                             }
-                            section:not(:has(#add-new-link)):not(:has(#search-form)) * { --card-size: 13vw; }
+                            .card-list--legacy * { --card-size: 13vw; }
                         `, "CardZoom_Effects", false);
                 }
             },
@@ -1733,7 +1734,7 @@
                          * Result 回傳圖片連結
                          */
                         Request: async function(Container, Url, Result) {
-                            const indicator = Syn.$createElement(Container, "div", {className: "progress-indicator", text: "0%"});
+                            const indicator = Syn.$createElement(Container, "div", {class: "progress-indicator", text: "0%"});
 
                             GM_xmlhttpRequest({
                                 url: Url,
