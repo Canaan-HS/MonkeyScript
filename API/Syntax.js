@@ -228,8 +228,9 @@ const Syn = (() => {
         // window[key] = $Window[key];
     // });
 
-    Object.assign(Element.prototype, $Element); // 註冊 element 原型
-    Object.assign(EventTarget.prototype, $Event); // 註冊 event 原型
+    Object.assign(Element.prototype, $Element); // 註冊 Element 原型
+    Object.assign(window, $Event); // 註冊 window
+    Object.assign(EventTarget.prototype, $Event); // 註冊 EventTarget 原型
 
     /* 額外給 工廠函數調用 */
     const $Call = {
@@ -384,11 +385,11 @@ const Syn = (() => {
      */
     const WaitCore = {
         queryMap: (selector) => {
-            const result = selector.map(select => $(select));
+            const result = selector.map(select => $Window.$q(select));
             return result.every(Boolean) && result;
         },
         queryElement: (selector, all) => {
-            const result = $all(selector);
+            const result = $Window.$qa(selector);
             return (all ? result.length > 0 : result) && result;
         }
     };
