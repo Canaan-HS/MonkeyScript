@@ -129,6 +129,7 @@
             (8.64e7), (3.6e6), (6e4)
         ];
 
+        // 計算當前時間, 到明日 00:05 的差時 (ms)
         function TimeDiff(newDate) {
             const tomorrow = new Date(); // 設置隔天時間
             tomorrow.setDate(newDate.getDate() + 5); // 00:05
@@ -136,6 +137,7 @@
             return (tomorrow - newDate);
         };
 
+        // 判斷是否為先前日期
         function isPrevious(newDate, oldDate) {
             const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
             const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
