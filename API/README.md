@@ -299,6 +299,32 @@ const data = GM_listValues()
 GM_deleteValue("索引 Key")
 ```
 
+**`@grant GM_addValueChangeListener`**
+```JavaScript
+監聽保存值變化
+
+// @grant GM_addValueChangeListener
+
+GM_addValueChangeListener("索引 Key", function (key, old_value, new_value, remote) {
+    if (remote) { // 代表來自其他分頁的修改
+        console.log({
+            "被修改的 Key": key,
+            "原始的 Value": old_value,
+            "修改的 Value": new_value
+        });
+    }
+})
+```
+
+**`@grant GM_removeValueChangeListener`**
+```JavaScript
+刪除監聽器
+
+// @grant GM_removeValueChangeListener
+
+GM_removeValueChangeListener("索引 Key")
+```
+
 <div id="getResource"></div>
 
 **`@grant GM_getResourceText`**
@@ -415,11 +441,12 @@ download.abort(); // 停止下載
 
 // @grant GM_xmlhttpRequest
 
-參數:
-method: [GET, HEAD, POST]
+參數 (非全部參數, 更多看文檔):
+method: [GET, HEAD, POST, PUT, DELETE]
 url: 請求URL
 headers: 請求頭
 data: 發送字串
+fetch: 是否改用 fetch 而不是 xmlhttpRequest
 cookie: 附帶 cookie (通常會自己獲取)
 nocache: 是否使用緩存
 revalidate: 是否重新驗證緩存
