@@ -349,14 +349,18 @@ GM_setClipboard("將這段文本添加到剪貼簿, 當你使用貼上就會看�
 ```JavaScript
 // @grant GM_registerMenuCommand
 
-GM_registerMenuCommand(菜單名稱, 呼叫函數, {
+GM_registerMenuCommand(菜單名稱, 函數, {
     id: 再次創建時, 同樣 id 的會進行覆蓋
     title: 當滑鼠在菜單上時, 提示該菜單功能
     accessKey: 設置快捷鍵用於開啟菜單
     autoClose: 點擊菜單後是否自動關閉
 });
 
-GM_registerMenuCommand(菜單名稱, function() {函數()});
+GM_registerMenuCommand(菜單名稱, () => {
+    操作
+});
+
+GM_registerMenuCommand(菜單名稱, () => 函數());
 ```
 
 **`@grant GM_unregisterMenuCommand`**
