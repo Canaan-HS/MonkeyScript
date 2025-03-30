@@ -16,6 +16,7 @@
 // @description:ru      E/Ex - Вход в общий аккаунт, автоматическое получение cookies, ручной ввод cookies, локальное резервное копирование и просмотр резервных копий, автоматическое определение входа
 // @description:en      E/Ex - Shared account login, automatic cookie retrieval, manual cookie input, local backup, and backup viewing, automatic login detection
 
+// @noframes
 // @connect      *
 // @match        *://e-hentai.org/*
 // @match        *://exhentai.org/*
