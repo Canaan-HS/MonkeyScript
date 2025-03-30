@@ -90,20 +90,21 @@ const Syn = (() => {
         $agen: navigator.userAgent,
         $title: (value=null) => value !== null ? (document.title = value) : document.title,
         $cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
+        $createUrl: (object) => URL.createObjectURL(object),
         $createFragment: () => document.createDocumentFragment(),
         $createElement: (arg1, arg2, arg3) => {
             const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
             if (!tag) return;
 
             const {
-                id = "", class: className = "", text = "", title = "",
-                style = {}, attributes = {}, rowspan, colspan, ...props
+                id = "", title = "", class: className = "", text: textContent = "",
+                rows: rowSpan, cols: colSpan, style = {}, attr = {}, ...props
             } = value;
 
-            const element = Object.assign(document.createElement(tag), { id, className, textContent: text, title });
+            const element = Object.assign(document.createElement(tag), {id, className, textContent, title });
 
-            if (rowspan !== undefined) element.rowSpan = rowspan;
-            if (colspan !== undefined) element.colSpan = colspan;
+            if (rowSpan !== undefined) element.rowSpan = rowSpan;
+            if (colSpan !== undefined) element.colSpan = colSpan;
 
             // 批量賦值常見屬性
             Object.assign(element, props);
@@ -112,7 +113,7 @@ const Syn = (() => {
             Object.assign(element.style, typeof style === "string" ? { cssText: style } : style);
 
             // 設置自定義屬性
-            Object.entries(attributes).forEach(([key, val]) => element.setAttribute(key, val));
+            Object.entries(attr).forEach(([key, val]) => element.setAttribute(key, val));
 
             return root instanceof HTMLElement ? root.appendChild(element) : element;
         },
@@ -121,6 +122,9 @@ const Syn = (() => {
     const $Node = {
         $text(value=null) {
             return value !== null ? (this.textContent = value?.trim()) : this.textContent?.trim();
+        },
+        $copy(deep=true) {
+            return this.cloneNode(deep);
         },
         $iHtml(value=null) {
             return value !== null ? (this.innerHTML = value) : this.innerHTML;
@@ -140,8 +144,20 @@ const Syn = (() => {
         $hAttr(value) {
             return this.hasAttribute(value);
         },
-        $copy(deep=true) {
-            return this.cloneNode(deep);
+        $addClass(...names) {
+            this.classList.add(...names);
+        },
+        $delClass(...names) {
+            this.classList.remove(...names);
+        },
+        $toggleClass(name, force) {
+            this.classList.toggle(name, force);
+        },
+        $replaceClass(oldName, newName) {
+            this.classList.replace(oldName, newName);
+        },
+        $hasClass(name) {
+            return this.classList.contains(name);
         },
     };
 
