@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      0.0.33
+// @version      0.0.34-Beta
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
@@ -28,16 +28,15 @@
 // @run-at       document-start
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @grant        GM_notification
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
+// @require      https://update.greasyfork.org/scripts/487608/1563101/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.js
@@ -45,185 +44,8 @@
 // ==/UserScript==
 
 (async () => {
-    const uri = location.href;
-    const post = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/;
-    const favorites = /https:\/\/[^\/]+\/favorites.php/;
-
-    if (post.test(uri)) {
-        Syn.WaitElem("#gd2", gd2 => {
-            const path = location.pathname;
-            const save_key = md5(path);
-
-            const Favorites = GM_getValue("Favorites", {});
-            const favorite = Favorites[save_key];
-
-            const customFavor = document.createElement("div");
-            customFavor.className = "customFavor";
-            customFavor.style = `
-                float: left;
-                cursor: pointer;
-                font-size: 1.8rem;
-                padding: 10px 0 0 20px;
-            `;
-
-            customFavor.innerHTML = favorite ? "💘 取消喜歡" : "💖 添加喜歡";
-            gd2.appendChild(customFavor);
-
-            customFavor.addEventListener("click", () => {
-                const Favorites = GM_getValue("Favorites", {});
-
-                if (Favorites[save_key]) {
-                    const yes = confirm("是否刪除喜歡?");
-
-                    if (yes) {
-                        delete Favorites[save_key];
-                        GM_setValue("Favorites", Favorites);
-                        customFavor.innerHTML = "💖 添加喜歡";
-                    }
-
-                    return;
-                }
-
-                const id = path.match(/\/g\/([^\/]+)\/([^\/]+)\//);
-                const gid = id[1];
-                const t = id[2];
-
-                const gm = document.querySelector(".gm");
-                const title = document.querySelector("#gn").textContent;
-
-                const img = getComputedStyle(gm.querySelector("#gd1 div"));
-                const width = img.width;
-                const height = img.height;
-                const imgurl = img.background.match(/url\(["']?(.*?)["']?\)/)[1];
-
-                const info = document.querySelector("#gd3");
-
-                const icon = info.querySelector("div").cloneNode(true);
-                const innerDiv = icon.querySelector("div");
-                innerDiv.className = innerDiv.className.replace("cs", "cn");
-                innerDiv.removeAttribute("onclick");
-
-                const artist = info.querySelector("#gdn");
-
-                const detail = info.querySelector("#gdd");
-                const posted = detail.querySelector("tr:nth-child(1) .gdt2").textContent.trim();
-                const length = detail.querySelector("tr:nth-child(6) .gdt2").textContent.trim();
-
-                const taglist = document.querySelector("#taglist").cloneNode(true);
-                const links = taglist.querySelectorAll("td div a");
-
-                links.forEach(link => {
-                    const text = link.innerHTML;
-                    link.replaceWith(text);
-                });
-
-                const html = `
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td class="gl1e" style="width:250px">
-                                    <div style="height:340px; width:${width};">
-                                        <a href="${uri}">
-                                            <img style="height:${height}; width:${width}; top:-7px"
-                                            alt="${title}"
-                                            title="${title}"
-                                            src="${imgurl}">
-                                        </a>
-                                    </div>
-                                </td>
-                                <td class="gl2e">
-                                    <div>
-                                        <div class="gl3e">
-                                            ${icon.innerHTML}
-                                            <div style="border-color:#000; background-color:rgba(0,0,0,.1)"
-                                                onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${gid}&amp;t=${t}&amp;act=addfav',675,415)"
-                                                id="posted_${gid}"
-                                                title="Favorites 0">
-                                                ${posted}
-                                            </div>
-                                            <div class="ir" style="background-position:0px -21px;"></div>
-                                            <div> ${artist.innerHTML} </div>
-                                            <div> ${length} </div>
-                                            <div class="gldown">
-                                                <a href="https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}"
-                                                    onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}',610,590)"
-                                                    rel="nofollow">
-                                                    <img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
-                                                </a>
-                                            </div>
-                                            <div><p>Favorited:</p><p>添加時間</p></div>
-                                        </div>
-                                        <div>
-                                            <a href="${uri}">
-                                                <div class="gl4e glname" style="min-height:348px">
-                                                    <div class="glink"> ${title} </div>
-                                                    <div> ${taglist.innerHTML} </div>
-                                                </div>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="unfavorite" style="text-align:center; padding: 12px; font-size: 2.2rem;">
-                                    <span id="${save_key}" style="cursor: pointer;">💔</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                `.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
-
-                GM_setValue("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(html, 9) }));
-
-                customFavor.innerHTML = "💘 已經喜歡";
-            });
-        })
-    }
-
-    if (favorites.test(uri)) {
-        const Favorites = GM_getValue("Favorites");
-
-        if (Favorites && Object.keys(Favorites).length > 0) {
-            const parser = new DOMParser();
-
-            Syn.WaitElem(".ido", ido => {
-                let tbody = ido.querySelector("tbody");
-
-                if (!tbody) {
-                    const form = `
-                        <form id="favform" name="favform" action="" method="post">
-                            <table class="itg glte">
-                                <tbody>
-                                </tbody>
-                            </table>
-                        </form>
-                    `;
-                    const doc = parser.parseFromString(form, 'text/html');
-                    ido.lastElementChild.replaceWith(doc.body.querySelector("form"));
-                    tbody = ido.querySelector("tbody");
-                }
-
-                for (const html of Object.values(Favorites)) {
-                    const htmlString = LZString.decompress(html);
-                    const doc = parser.parseFromString(htmlString, 'text/html');
-                    tbody.appendChild(doc.body.querySelector("tr"));
-                }
-    
-                ido.addEventListener("click", event => {
-                    const target = event.target;
-                    if (target.closest(".unfavorite")) {
-                        const yes = confirm("是否刪除喜歡?");
-                        if (yes) {
-                            const Favorites = GM_getValue("Favorites");
-                            delete Favorites[target.id];
-                            GM_setValue("Favorites", Favorites);
-                            target.closest("tr").remove();
-                        };
-                    }
-                }) 
-            });
-        }
-    }
-
-    const domain = Syn.Device.Host;
+    const domain = Syn.$domain;
+    const Transl = Language(Syn.$lang).Transl;
 
     (async function ImportStyle() {
         let show_style, button_style, button_hover, jGrowl_style, acc_style;
@@ -360,10 +182,695 @@
                 margin: 0.4rem;
                 font-size: 0.9rem;
             }
-        `);
+            .customFavor {
+                float: left;
+                cursor: pointer;
+                font-size: 1.8rem;
+                padding: 10px 0 0 20px;
+                transition: transform 0.2s ease;
+            }
+            .customFavor:hover {
+                animation: heartbeat 1.5s infinite;
+            }
+            @keyframes heartbeat {
+                0% {
+                    transform: scale(1);
+                }
+                25% {
+                    transform: scale(1.1);
+                }
+                50% {
+                    transform: scale(1);
+                }
+                75% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+            .unFavorite {
+                padding: 12px;
+                text-align: center;
+                font-size: 2.2rem;
+            }
+            .unFavorite span {
+                cursor: pointer;
+                display: inline-block;
+                transition: transform 0.2s ease;
+            }
+            .unFavorite span:hover {
+                animation: shake 0.8s ease-in-out infinite;
+            }
+            @keyframes shake {
+                0% {
+                    transform: translateX(0);
+                }
+                25% {
+                    transform: translateX(-5px);
+                }
+                50% {
+                    transform: translateX(5px);
+                }
+                75% {
+                    transform: translateX(-5px);
+                }
+                100% {
+                    transform: translateX(0);
+                }
+            }
+        `, "AutoLogin-Style");
     })();
 
-    const Lang = ((lang) => {
+    (async function Main($Cookie, $Shared) {
+        let Modal = null; // 保存模態
+        let Share = Syn.gV("Share", {});
+
+        // 頁面匹配
+        const url = Syn.$url;
+        const Post_Page = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/;
+        const Favorites_Page = /https:\/\/[^\/]+\/favorites.php/;
+
+        /* ---------- 菜單切換與創建 ---------- */
+
+        /* 創建菜單前檢測 (刪除重創) */
+        const CreateDetection = () => {
+            Syn.$q(".modal-background")?.remove();
+        };
+
+        /* 創建菜單 */
+        const CreateMenu = async () => {
+            $(Syn.$body).append(Modal);
+            requestAnimationFrame(()=> {
+                $(".modal-background").css({
+                    "opacity": "1",
+                    "background-color": "rgba(0,0,0,0.7)",
+                    "transform": "translate(-50%, -50%) scale(1)"
+                })
+            })
+        };
+
+        /* 刪除菜單 */
+        const DeleteMenu = async () => {
+            const modal = $(".modal-background");
+            modal.css({
+                "opacity": "0",
+                "pointer-events": "none",
+                "background-color": "rgba(0,0,0,0)",
+                "transform": "translate(-50%, -50%) scale(0)"
+            });
+            setTimeout(()=> {modal.remove()}, 1300);
+        };
+
+        /* 創建延伸菜單 */
+        const Expand = async () => {
+            Syn.Menu({
+                [Transl("📜 自動獲取")]: {func: ()=> AutoGetCookie() },
+                [Transl("📝 手動輸入")]: {func: ()=> ManualSetting() },
+                [Transl("🔍 查看保存")]: {func: ()=> ViewSaveCookie() },
+                [Transl("🔃 手動注入")]: {func: ()=> CookieInjection() },
+                [Transl("🗑️ 清除登入")]: {func: ()=> ClearLogin() },
+            }, "Expand")
+        };
+
+        /* 刪除延伸菜單 */
+        const Collapse = async () => {
+            for (let i=1; i <= 5; i++) {GM_unregisterMenuCommand("Expand-" + i)}
+        };
+
+        /* 切換開合菜單 */
+        const MenuToggle = async () => {
+            const state = Syn.gV("Expand", false),
+            disp = state ? Transl("📁 摺疊菜單") : Transl("📂 展開菜單");
+
+            Syn.Menu({
+                [disp]: {func: ()=> {
+                    state
+                        ? Syn.sV("Expand", false)
+                        : Syn.sV("Expand", true);
+                    MenuToggle();
+                }, hotkey: "c", close: false}
+            }, "Switch");
+
+            //? 開合需要比切換菜單晚創建, 不然會跑版
+            state ? Expand() : Collapse();
+        };
+
+        /* ---------- 登入檢測 與 入口點 ---------- */
+
+        /* 自動檢測登陸 */
+        const LoginToggle = async () => {
+            const cookie = Boolean(Syn.gJV("E/Ex_Cookies"));
+            const state = Syn.gV("Login", cookie); // 有 Cookie 預設為啟用
+            const disp = state ? Transl("🟢 啟用檢測") : Transl("🔴 禁用檢測");
+
+            Syn.Menu({
+                [disp]: {func: ()=> {
+                    if (state) Syn.sV("Login", false)
+                    else if (cookie) Syn.sV("Login", true)
+                    else {
+                        alert(Transl("無保存的 Cookie, 無法啟用自動登入"));
+                        return;
+                    };
+
+                    LoginToggle();
+                }, close: false}
+            }, "Check");
+
+            //? 選擇檢測狀態後, 會重新創建選單, 避免跑板因此同樣重新創建下方菜單 (兼容舊版本插件的寫法)
+            Syn.Menu({[Transl("🍪 共享登入")]: {func: ()=> SharedLogin()}});
+            MenuToggle();
+        };
+
+        /* 監聽選單切換, 全局套用 */
+        const GlobalMenuToggle = async () => {
+            Syn.StoreListen(["Login", "Expand"], listen => {
+                listen.far && LoginToggle();
+            })
+        };
+
+        /* 入口注射 */
+        async function Injection() {
+            const cookie = Syn.gJV("E/Ex_Cookies"); // 嘗試取得 Cookie
+            const login = Syn.gV("Login", Boolean(cookie)); // 取得是否自動登入
+
+            if (login && cookie) {
+                let CurrentTime = new Date();
+                let DetectionTime = Syn.Local("DetectionTime");
+
+                DetectionTime = DetectionTime ? new Date(DetectionTime) : new Date(CurrentTime.getTime() + 11 * 60 * 1000);
+
+                const Conversion = Math.abs(DetectionTime - CurrentTime) / (1000 * 60); // 轉換時間 (舊版相容, 使用 abs)
+                if (Conversion >= 10) $Cookie.Verify(cookie); // 隔 10 分鐘檢測
+            }
+
+            if (Post_Page.test(url)) CreateFavoritesButton();
+            else if (Favorites_Page.test(url)) AddCustomFavorites();
+
+            /* 創建選單 */
+            LoginToggle();
+            GlobalMenuToggle();
+        };
+
+        /* ---------- 菜單核心功能 ---------- */
+
+        /* 共享號登入 */
+        async function SharedLogin() {
+            CreateDetection();
+            const Igneous = $Cookie.Get().igneous; // 取得當前登入的帳號
+            const AccountQuantity = Object.keys(Share).length; // 取得共享號數量
+
+            // 創建選項模板
+            let Select = $(`<select id="account-select" class="acc-select"></select>`), Value;
+            for (let i = 1; i <= AccountQuantity; i++) { // 判斷選擇值
+                if (Share[i][0].value === Igneous) Value = i;
+                Select.append($("<option>").attr({value: i}).text(`${Transl("帳戶")} ${i}`));
+            }
+
+            // 創建菜單模板
+            Modal = $(`
+                <div class="modal-background">
+                    <div class="acc-modal">
+                        <h1>${Transl("帳戶選擇")}</h1>
+                        <div class="acc-select-flex">${Select.prop("outerHTML")}</div>
+                        <div class="acc-button-flex">
+                            <button class="modal-button" id="update">${Transl("更新")}</button>
+                            <button class="modal-button" id="login">${Transl("登入")}</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            CreateMenu();
+
+            // 如果有選擇值, 就進行選取
+            Value && $("#account-select").val(Value);
+            $(".modal-background").on("click", function(click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+
+                if (target.id === "login") {
+                    $Cookie.ReAdd(Share[+$("#account-select").val()]);
+                } else if (target.id === "update") {
+                    $Shared.Update().then(result => {
+                        if (result) {
+                            Share = Syn.gV("Share", {});
+                            setTimeout(SharedLogin, 600);
+                        }
+                    })
+                } else if (target.className === "modal-background") {
+                    DeleteMenu();
+                }
+            })
+        };
+
+        /* 展示自動獲取 Cookies */
+        async function Cookie_Show(cookies){
+            CreateDetection();
+            Modal = `
+                <div class="modal-background">
+                    <div class="show-modal">
+                    <h1 style="text-align: center;">${Transl("確認選擇的 Cookies")}</h1>
+                        <pre><b>${cookies}</b></pre>
+                        <div style="text-align: right;">
+                            <button class="modal-button" id="save">${Transl("確認保存")}</button>
+                            <button class="modal-button" id="close">${Transl("取消退出")}</button>
+                        </div>
+                    </div>
+                </div>
+            `
+            CreateMenu();
+
+            $(".modal-background").on("click", function(click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+
+                if (target.id === "save") {
+                    Syn.sV("E/Ex_Cookies", cookies);
+                    Growl(Transl("保存成功!"), "jGrowl", 1500);
+                    DeleteMenu();
+                } else if (target.className === "modal-background" || target.id === "close") {
+                    DeleteMenu();
+                }
+            });
+        };
+
+        /* 自動獲取 Cookies */
+        async function AutoGetCookie() {
+            let cookie_box = [];
+
+            for (const [name, value] of Object.entries($Cookie.Get())) {
+                cookie_box.push({"name": name, "value" : value});
+            }
+
+            cookie_box.length > 1
+                ? Cookie_Show(JSON.stringify(cookie_box, null, 4))
+                : alert(Transl("未獲取到 Cookies !!\n\n請先登入帳戶"));
+        };
+
+        /* 手動設置 Cookies */
+        async function ManualSetting() {
+            CreateDetection();
+            Modal = `
+                <div class="modal-background">
+                    <div class="set-modal">
+                    <h1>${Transl("設置 Cookies")}</h1>
+                        <form id="set_cookies">
+                            <div id="input_cookies" class="set-box">
+                                <label>[igneous]：</label><input class="set-list" type="text" name="igneous" placeholder="${Transl("要登入 Ex 才需要填寫")}"><br>
+                                <label>[ipb_member_id]：</label><input class="set-list" type="text" name="ipb_member_id" placeholder="${Transl("必填項目")}" required><br>
+                                <label>[ipb_pass_hash]：</label><input class="set-list" type="text" name="ipb_pass_hash" placeholder="${Transl("必填項目")}" required><hr>
+                                <h3>${Transl("下方選填 也可不修改")}</h3>
+                                <label>[sl]：</label><input class="set-list" type="text" name="sl" value="dm_2"><br>
+                                <label>[sk]：</label><input class="set-list" type="text" name="sk"><br>
+                            </div>
+                            <button type="submit" class="modal-button" id="save">${Transl("確認保存")}</button>
+                            <button class="modal-button" id="close">${Transl("退出選單")}</button>
+                        </form>
+                    </div>
+                </div>
+            `
+            CreateMenu();
+
+            let cookie;
+            const textarea = $("<textarea>").attr({
+                style: "margin: 1.15rem auto 0 auto",
+                rows: 18,
+                cols: 40,
+                readonly: true
+            })
+
+            $("#set_cookies").on("submit", function(submit) {
+                submit.preventDefault();
+                submit.stopImmediatePropagation();
+
+                const cookie_list = Array.from($("#set_cookies .set-list")).map(function(input) {
+                    const value = $(input).val();
+                    return value.trim() !== "" ? { name: $(input).attr("name"), value: value } : null;
+                }).filter(Boolean);
+
+                cookie = JSON.stringify(cookie_list, null, 4);
+                textarea.val(cookie);
+                $("#set_cookies div").append(textarea);
+
+                Growl(Transl("[確認輸入正確] 按下退出選單保存"), "jGrowl", 2500);
+            })
+
+            $(".modal-background").on("click", function(click) {
+                click.stopImmediatePropagation();
+
+                const target = click.target;
+                if (target.className === "modal-background" || target.id === "close") {
+                    click.preventDefault();
+                    cookie && Syn.sV("E/Ex_Cookies", cookie);
+                    DeleteMenu();
+                }
+            })
+        };
+
+        /* 查看保存的 Cookies */
+        async function ViewSaveCookie() {
+            CreateDetection();
+            Modal = `
+                <div class="modal-background">
+                    <div class="set-modal">
+                    <h1>${Transl("當前設置 Cookies")}</h1>
+                        <div id="view_cookies" style="margin: 0.6rem"></div>
+                        <button class="modal-button" id="save">${Transl("更改保存")}</button>
+                        <button class="modal-button" id="close">${Transl("退出選單")}</button>
+                    </div>
+                </div>
+            `
+            CreateMenu();
+
+            const cookie = Syn.gJV("E/Ex_Cookies");
+            const textarea = $("<textarea>").attr({
+                rows: 20,
+                cols: 50,
+                id: "view_SC",
+                style: "margin-top: 1.25rem;"
+            })
+
+            textarea.val(JSON.stringify(cookie , null, 4));
+            $("#view_cookies").append(textarea);
+
+            $(".modal-background").on("click", function(click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+
+                if (target.id === "save") {
+                    Syn.sJV("E/Ex_Cookies", JSON.parse($("#view_SC").val()));
+                    Growl(Transl("已保存變更"), "jGrowl", 1500);
+                    DeleteMenu();
+                } else if (target.className === "modal-background" || target.id === "close") {
+                    DeleteMenu();
+                }
+            })
+        };
+
+        /* 手動注入 Cookies 登入 */
+        async function CookieInjection() {
+            try {
+                $Cookie.ReAdd(Syn.gJV("E/Ex_Cookies"));
+            } catch (error) {
+                alert(Transl("未檢測到可注入的 Cookies !!\n\n請從選單中進行設置"));
+            }
+        };
+
+        /* 清除登入狀態 */
+        async function ClearLogin() {
+            $Cookie.Delete();
+            location.reload();
+        };
+
+        /* ---------- 自定收藏核心 ---------- */
+
+        /* 創建收藏按鈕 */
+        async function CreateFavoritesButton() {
+            Syn.WaitElem("#gd2", gd2 => {
+                const path = location.pathname;
+                const save_key = md5(path);
+
+                const Favorites = Syn.gV("Favorites", {});
+                const favorite = Favorites[save_key];
+
+                const customFavor = document.createElement("div");
+                customFavor.className = "customFavor";
+
+                customFavor.innerHTML = favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏");
+                gd2.appendChild(customFavor);
+
+                customFavor.addEventListener("click", () => {
+                    const Favorites = Syn.gV("Favorites", {});
+
+                    if (Favorites[save_key]) {
+                        delete Favorites[save_key];
+                        Syn.sV("Favorites", Favorites);
+                        customFavor.textContent = Transl("💖 添加收藏");
+                        return;
+                    }
+
+                    const id = path.match(/\/g\/([^\/]+)\/([^\/]+)\//);
+                    const gid = id[1];
+                    const t = id[2];
+
+                    const gm = document.querySelector(".gm");
+                    const title = document.querySelector("#gn").textContent;
+
+                    const img = getComputedStyle(gm.querySelector("#gd1 div"));
+                    const width = img.width;
+                    const height = img.height;
+                    const imgurl = img.background.match(/url\(["']?(.*?)["']?\)/)[1];
+
+                    const info = document.querySelector("#gd3");
+
+                    const icon = info.querySelector("div").cloneNode(true);
+                    const innerDiv = icon.querySelector("div");
+                    innerDiv.className = innerDiv.className.replace("cs", "cn");
+                    innerDiv.removeAttribute("onclick");
+
+                    const artist = info.querySelector("#gdn");
+
+                    const detail = info.querySelector("#gdd");
+                    const posted = detail.querySelector("tr:nth-child(1) .gdt2").textContent.trim();
+                    const length = detail.querySelector("tr:nth-child(6) .gdt2").textContent.trim();
+
+                    const taglist = document.querySelector("#taglist").cloneNode(true);
+                    const links = taglist.querySelectorAll("td div a");
+
+                    links.forEach(link => {
+                        const text = link.innerHTML;
+                        link.replaceWith(text);
+                    });
+
+                    const html = `
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td class="gl1e" style="width:250px">
+                                        <div style="height:340px; width:${width};">
+                                            <a href="${url}">
+                                                <img style="height:${height}; width:${width}; top:-7px"
+                                                alt="${title}"
+                                                title="${title}"
+                                                src="${imgurl}">
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="gl2e">
+                                        <div>
+                                            <div class="gl3e">
+                                                ${icon.innerHTML}
+                                                <div style="border-color:#000; background-color:rgba(0,0,0,.1)"
+                                                    onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${gid}&amp;t=${t}&amp;act=addfav',675,415)"
+                                                    id="posted_${gid}"
+                                                    title="Favorites 0">
+                                                    ${posted}
+                                                </div>
+                                                <div class="ir" style="background-position:0px -21px;"></div>
+                                                <div> ${artist.innerHTML} </div>
+                                                <div> ${length} </div>
+                                                <div class="gldown">
+                                                    <a href="https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}"
+                                                        onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}',610,590)"
+                                                        rel="nofollow">
+                                                        <img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
+                                                    </a>
+                                                </div>
+                                                <div>
+                                                    <p>Favorited:</p>
+                                                    <p>${Syn.GetDate("{year}-{month}-{date} {hour}:{minute}")}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <a href="${url}">
+                                                    <div class="gl4e glname" style="min-height:348px">
+                                                        <div class="glink"> ${title} </div>
+                                                        <div> ${taglist.innerHTML} </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="unFavorite"><span id="${save_key}">💔</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
+
+                    Syn.sV("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(html, 9) }));
+
+                    customFavor.textContent = Transl("💘 取消收藏");
+                });
+            })
+        };
+
+        /* 添加自定義收藏夾 */
+        async function AddCustomFavorites() {
+            const Favorites = Syn.gV("Favorites");
+
+            if (Favorites && Object.keys(Favorites).length > 0) {
+                const parser = new DOMParser();
+
+                Syn.WaitElem(".ido", ido => {
+                    let tbody = ido.querySelector("tbody");
+
+                    if (!tbody) {
+                        const form = `
+                            <form id="favform" name="favform" action="" method="post">
+                                <table class="itg glte">
+                                    <tbody></tbody>
+                                </table>
+                            </form>
+                        `;
+                        const doc = parser.parseFromString(form, 'text/html');
+                        ido.lastElementChild.replaceWith(doc.body.querySelector("form"));
+                        tbody = ido.querySelector("tbody");
+                    }
+
+                    for (const html of Object.values(Favorites)) {
+                        const htmlString = LZString.decompress(html);
+                        const doc = parser.parseFromString(htmlString, 'text/html');
+                        tbody.appendChild(doc.body.querySelector("tr"));
+                    }
+
+                    ido.addEventListener("click", event => {
+                        const target = event.target;
+                        if (target.closest(".unFavorite")) {
+                            const Favorites = Syn.gV("Favorites");
+                            delete Favorites[target.id];
+                            Syn.sV("Favorites", Favorites);
+                            target.closest("tr").remove();
+                        }
+                    })
+                })
+            }
+        };
+
+        return { Injection };
+    })(CookieFactory(), SharedFactory()).then(Main => {
+        Main.Injection();
+    });
+
+    /* 通知展示 */
+    async function Growl(message, theme, life) {
+        $.jGrowl(`&emsp;&emsp;${message}&emsp;&emsp;`, {
+            theme: theme,
+            life: life,
+            speed: "slow"
+        })
+    };
+
+    /* 共享數據操作 */
+    function SharedFactory() {
+
+        /* 請求共享數據 */
+        async function Get() {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    responseType: "json",
+                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/main/Share/ExShare.json",
+                    onload: response => {
+                        if (response.status === 200) {
+                            const data = response.response;
+                            if (typeof data === "object" && Object.keys(data).length > 0) {
+                                resolve(data);
+                            } else {
+                                console.error(Transl("請求為空數據"));
+                                resolve({});
+                            }
+                        } else {
+                            console.error(Transl("連線異常，更新地址可能是錯的"));
+                            resolve({});
+                        }
+                    },
+                    onerror: error => {
+                        console.error(Transl("請求錯誤: "), error);
+                        resolve({});
+                    }
+                })
+            })
+        };
+
+        /* 更新共享數據 */
+        async function Update() {
+            const Shared = await Get();
+
+            if (Object.keys(Shared).length > 0) {
+                const localHash = md5(JSON.stringify(Syn.gV("Share", {})));
+                const remoteHash = md5(JSON.stringify(Shared));
+
+                if (localHash !== remoteHash) {
+                    Syn.sV("Share", Shared);
+                    Growl(Transl("共享數據更新完成"), "jGrowl", 1500);
+
+                    return true;
+                } else {
+                    Growl(Transl("共享數據無需更新"), "jGrowl", 1500);
+                }
+            } else {
+                Syn.sV("Share", {});
+                Growl(Transl("共享數據獲取失敗"), "jGrowl", 2500);
+            }
+
+            return false;
+        };
+
+        return { Update };
+    };
+
+    /* Cookie 操作 */
+    function CookieFactory() {
+        const Today = new Date();
+        Today.setFullYear(Today.getFullYear() + 1);
+
+        const Expires = Today.toUTCString(); // 設置一年的過期時間
+        const UnixUTC = new Date(0).toUTCString();
+
+        let RequiredCookie = ["ipb_member_id", "ipb_pass_hash"];
+        if (domain == "exhentai.org") RequiredCookie.unshift("igneous");
+
+        return {
+            Get: () => { /* 取得 cookie */
+                return Syn.$cookie().split("; ").reduce((acc, cookie) => {
+                    const [name, value] = cookie.split("=");
+                    acc[decodeURIComponent(name)] = decodeURIComponent(value);
+                    return acc;
+                }, {});
+            },
+            Add: function (CookieObject) { /* 添加 cookie */
+                Syn.Local("DetectionTime", {value: Syn.GetDate()});
+                for (const Cookie of CookieObject) {
+                    Syn.$cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
+                };
+                location.reload();
+            },
+            Delete: function () { /* 刪除 cookie (避免意外使用兩種清除) */
+                Object.keys(this.Get()).forEach(Name => {
+                    Syn.$cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
+                    Syn.$cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
+                });
+            },
+            ReAdd: function (Cookies) { /* 重新添加 */
+                this.Delete();
+                this.Add(Cookies);
+            },
+            Verify: function (Cookies) { /* 驗證所需 cookie */
+                const Cookie = this.Get();
+                const VCookie = new Set(Object.keys(Cookie));
+                const Result = RequiredCookie.every(key => VCookie.has(key) && Cookie[key] !== "mystery"); // 避免有意外參數
+
+                if (!Result) {
+                    this.ReAdd(Cookies);
+                } else {
+                    Syn.Local("DetectionTime", {value: Syn.GetDate()});
+                }
+            }
+        }
+    };
+
+    /* 語言支援 */
+    function Language(lang) {
         const Word = {
             Traditional: {},
             Simplified: {
@@ -386,7 +893,6 @@
                 "退出選單": "关闭菜单",
                 "保存成功!": "保存成功！",
                 "更改保存": "保存更改",
-                "變更通知": "更改通知",
                 "已保存變更": "更改已保存",
                 "設置 Cookies": "设置 Cookies",
                 "要登入 Ex 才需要填寫": "仅登录 Ex 时需要填写",
@@ -425,7 +931,6 @@
                 "退出選單": "メニューを終了",
                 "保存成功!": "保存に成功しました！",
                 "更改保存": "変更を保存",
-                "變更通知": "変更通知",
                 "已保存變更": "変更が保存されました",
                 "設置 Cookies": "Cookieを設定",
                 "要登入 Ex 才需要填寫": "Exログインにのみ必要",
@@ -464,7 +969,6 @@
                 "退出選單": "메뉴 종료",
                 "保存成功!": "저장 성공!",
                 "更改保存": "변경사항 저장",
-                "變更通知": "변경 알림",
                 "已保存變更": "변경사항이 저장되었습니다",
                 "設置 Cookies": "쿠키 설정",
                 "要登入 Ex 才需要填寫": "Ex 로그인에만 필요",
@@ -503,7 +1007,6 @@
                 "退出選單": "Выйти из меню",
                 "保存成功!": "Сохранение успешно!",
                 "更改保存": "Сохранить изменения",
-                "變更通知": "Уведомление об изменениях",
                 "已保存變更": "Изменения сохранены",
                 "設置 Cookies": "Настройка Cookies",
                 "要登入 Ex 才需要填寫": "Требуется только для входа в Ex",
@@ -542,7 +1045,6 @@
                 "退出選單": "Exit Menu",
                 "保存成功!": "Save Successful!",
                 "更改保存": "Save Changes",
-                "變更通知": "Change Notification",
                 "已保存變更": "Changes Saved",
                 "設置 Cookies": "Set Cookies",
                 "要登入 Ex 才需要填寫": "Required for Ex Login Only",
@@ -561,479 +1063,12 @@
                 "連線異常，更新地址可能是錯的": "Connection Error - Update Address May Be Incorrect",
                 "請求錯誤: ": "Request Error: "
             }
-        }, Match = {
-            "ko": Word.Korea,
-            "ko-KR": Word.Korea,
-            "ja": Word.Japan,
-            "ja-JP": Word.Japan,
-            "ru": Word.Russia,
-            "ru-RU": Word.Russia,
-            "en": Word.English,
-            "en-US": Word.English,
-            "en-GB": Word.English,
-            "en-AU": Word.English,
-            "en-CA": Word.English,
-            "en-NZ": Word.English,
-            "en-IE": Word.English,
-            "en-ZA": Word.English,
-            "en-IN": Word.English,
-            "zh": Word.Simplified,
-            "zh-CN": Word.Simplified,
-            "zh-SG": Word.Simplified,
-            "zh-MY": Word.Simplified,
-            "zh-TW": Word.Traditional,
-            "zh-HK": Word.Traditional,
-            "zh-MO": Word.Traditional
-        }, ML = Match[lang] ?? Match["en-US"];
+        };
+
+        const translator = Syn.TranslMatcher(Word, lang);
         return {
-            Transl: (Str) => ML[Str] ?? Str
+            Transl: (Str) => translator[Str] ?? Str
         };
-    })(Syn.Device.Lang);
+    };
 
-    const Ckop = (() => {
-        let Cookie = undefined;
-
-        const Today = new Date();
-        Today.setFullYear(Today.getFullYear() + 1);
-
-        const Expires = Today.toUTCString(); // 設置一年的過期時間
-        const UnixUTC = new Date(0).toUTCString();
-
-        let RequiredCookie = ["ipb_member_id", "ipb_pass_hash"];
-        if (domain == "exhentai.org") RequiredCookie.unshift("igneous");
-
-        return {
-            Get: () => { /* 取得 cookie */
-                return document.cookie.split("; ").reduce((acc, cookie) => {
-                    const [name, value] = cookie.split("=");
-                    acc[decodeURIComponent(name)] = decodeURIComponent(value);
-                    return acc;
-                }, {});
-            },
-            Add: function (CookieObject) { /* 添加 cookie */
-                Syn.Storage("DetectionTime", {type: localStorage, value: new Date().getTime()});
-                for (Cookie of CookieObject) {
-                    document.cookie = `${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`;
-                };
-                location.reload();
-            },
-            Delete: function () { /* 刪除 cookie (避免意外使用兩種清除) */
-                Object.keys(this.Get()).forEach(Name => {
-                    document.cookie = `${Name}=; expires=${UnixUTC}; path=/;`;
-                    document.cookie = `${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`;
-                });
-            },
-            ReAdd: function (Cookies) { /* 重新添加 */
-                this.Delete();
-                this.Add(Cookies);
-            },
-            Verify: function (Cookies) { /* 驗證所需 cookie */
-                const Cookie = this.Get();
-                const VCookie = new Set(Object.keys(Cookie));
-                const Result = RequiredCookie.every(key => VCookie.has(key) && Cookie[key] !== "mystery"); // 避免有意外參數
-
-                if (!Result) {
-                    this.ReAdd(Cookies);
-                } else {
-                    // 檢測存在需要 Cookie, 更新時間戳
-                    Syn.Storage("DetectionTime", {type: localStorage, value: new Date().getTime()});
-                }
-            }
-        }
-    })();
-
-    (new class AutoLogin {
-        constructor() {
-            this.modal = null;
-
-            /* 共享帳號 */
-            this.Share = Syn.Store("g", "Share") ?? this.UpdateShared();
-
-            /* 添加監聽器 */
-            this.on = async(element, type, listener) => {
-                $(element).on(type, listener);
-            };
-
-            /* 通知展示 */
-            this.Growl = async(message, theme, life) => {
-                $.jGrowl(`&emsp;&emsp;${message}&emsp;&emsp;`, {
-                    theme: theme, life: life
-                });
-            };
-
-            /* 創建選單前檢測 (刪除重創) */
-            this.CreateDetection = () => {
-                const detection = $(".modal-background");
-                detection[0] && detection.remove();
-            };
-
-            /* 創建菜單 */
-            this.CreateMenu = async() => {
-                $(document.body).append(this.modal);
-                requestAnimationFrame(()=> {
-                    $(".modal-background").css({
-                        "opacity": "1",
-                        "background-color": "rgba(0,0,0,0.7)",
-                        "transform": "translate(-50%, -50%) scale(1)"
-                    });
-                });
-            };
-
-            /* 刪除菜單 */
-            this.DeleteMenu = async() => {
-                const modal = $(".modal-background");
-                modal.css({
-                    "opacity": "0",
-                    "pointer-events": "none",
-                    "background-color": "rgba(0,0,0,0)",
-                    "transform": "translate(-50%, -50%) scale(0)"
-                });
-                setTimeout(()=> {modal.remove()}, 1300);
-            };
-
-            /* 監聽選單切換, 全局套用 */
-            this.GlobalMenuToggle = async() => {
-                Syn.StoreListen(["Login", "Expand"], listen=> {
-                    listen.far && this.LoginToggle();
-                });
-            };
-
-            /* 自動檢測登陸 */
-            this.LoginToggle = async() => {
-                const cookie = Boolean(Syn.Store("gj", "E/Ex_Cookies"));
-                const state = Syn.Store("g", "Login", cookie); // 有 Cookie 預設為啟用
-                const disp = state ? Lang.Transl("🟢 啟用檢測") : Lang.Transl("🔴 禁用檢測");
-
-                Syn.Menu({
-                    [disp]: {func: ()=> {
-                        if (state) Syn.Store("s", "Login", false)
-                        else if (cookie) Syn.Store("s", "Login", true)
-                        else {
-                            alert(Lang.Transl("無保存的 Cookie, 無法啟用自動登入"));
-                            return;
-                        };
-
-                        this.LoginToggle();
-                    }, close: false}
-                }, "Check");
-
-                //? 選擇檢測狀態後, 會重新創建選單, 避免跑板因此同樣重新創建下方菜單 (兼容舊版本插件的寫法)
-                Syn.Menu({[Lang.Transl("🍪 共享登入")]: {func: ()=> this.SharedLogin()}});
-                this.MenuToggle();
-            };
-
-            /* 切換開合選單 */
-            this.MenuToggle = async() => {
-                const state = Syn.Store("g", "Expand", false),
-                disp = state ? Lang.Transl("📁 摺疊菜單") : Lang.Transl("📂 展開菜單");
-                Syn.Menu({
-                    [disp]: {func: ()=> {
-                        state
-                            ? Syn.Store("s", "Expand", false)
-                            : Syn.Store("s", "Expand", true);
-                        this.MenuToggle();
-                    }, hotkey: "c", close: false}
-                }, "Switch");
-
-                //? 開合需要比切換菜單晚創建, 不然會跑版
-                state ? this.Expand() : this.Collapse();
-            };
-
-            /* 創建延伸選單 */
-            this.Expand = async() => {
-                Syn.Menu({
-                    [Lang.Transl("📜 自動獲取")]: {func: ()=> this.GetCookieAutomatically() },
-                    [Lang.Transl("📝 手動輸入")]: {func: ()=> this.ManualSetting() },
-                    [Lang.Transl("🔍 查看保存")]: {func: ()=> this.ViewSaveCookie() },
-                    [Lang.Transl("🔃 手動注入")]: {func: ()=> this.CookieInjection() },
-                    [Lang.Transl("🗑️ 清除登入")]: {func: ()=> this.ClearLogin() },
-                }, "Expand");
-            };
-
-            /* 刪除延伸選單 */
-            this.Collapse = async() => {
-                for (let i=1; i <= 5; i++) {GM_unregisterMenuCommand("Expand-" + i)}
-            };
-        };
-
-        /* 主要調用 */
-        async Main() {
-            const cookie = Syn.Store("gj", "E/Ex_Cookies"); // 嘗試取得 Cookie
-            const login = Syn.Store("g", "Login", Boolean(cookie)); // 取得是否自動登入
-
-            if (login && cookie) {
-                let CurrentTime = new Date(), DetectionTime = Syn.Storage("DetectionTime", {type: localStorage});
-                DetectionTime = DetectionTime ? new Date(DetectionTime) : new Date(CurrentTime.getTime() + 11 * 60 * 1000);
-
-                const Conversion = Math.abs(DetectionTime - CurrentTime) / (1000 * 60); // 轉換時間 (舊版相容, 使用 abs)
-                if (Conversion >= 10) Ckop.Verify(cookie); // 隔 10 分鐘檢測
-            };
-
-            /* 創建選單 */
-            this.LoginToggle();
-            this.GlobalMenuToggle();
-        };
-
-        /* 請求共享數據 */
-        async GetSharedDict() {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: "GET",
-                    responseType: "json",
-                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/main/Share/ExShare.json",
-                    onload: response => {
-                        if (response.status === 200) {
-                            const data = response.response;
-                            if (typeof data === "object" && Object.keys(data).length > 0) {
-                                resolve(data);
-                            } else {
-                                console.error(Lang.Transl("請求為空數據"));
-                                resolve({});
-                            }
-                        } else {
-                            console.error(Lang.Transl("連線異常，更新地址可能是錯的"));
-                            resolve({});
-                        }
-                    },
-                    onerror: error => {
-                        console.error(Lang.Transl("請求錯誤: "), error);
-                        resolve({});
-                    }
-                })
-            })
-        };
-
-        /* 更新共享數據 */
-        async UpdateShared() {
-            const Shared = await this.GetSharedDict();
-
-            if (Object.keys(Shared).length > 0) {
-                const localHash = md5(JSON.stringify(Syn.Store("g", "Share", {})));
-                const remoteHash = md5(JSON.stringify(Shared));
-
-                if (localHash !== remoteHash) {
-                    this.Share = Shared;
-                    Syn.Store("s", "Share", Shared);
-                    this.Growl(Lang.Transl("共享數據更新完成"), "jGrowl", 1500);
-
-                    const modal = Syn.$$(".modal-background");
-                    if (modal) {
-                        setTimeout(()=> {
-                            modal.remove();
-                            this.SharedLogin();
-                        }, 600);
-                    };
-                } else {
-                    this.Growl(Lang.Transl("共享數據無需更新"), "jGrowl", 1500);
-                }
-            } else {
-                Syn.Store("s", "Share", {}); // 避免多次請求
-                this.Growl(Lang.Transl("共享數據獲取失敗"), "jGrowl", 1500);
-            }
-        };
-
-        /* 共享號登入 */
-        async SharedLogin() {
-            this.CreateDetection();
-            const Share = this.Share, AccountQuantity = Object.keys(Share).length, Igneous = Ckop.Get().igneous;
-
-            // 創建選項模板
-            let Select = $(`<select id="account-select" class="acc-select"></select>`), Value;
-            for (let i = 1; i <= AccountQuantity; i++) { // 判斷選擇值
-                if (Share[i][0].value == Igneous) {
-                    Value = i;
-                }
-                Select.append($("<option>").attr({value: i}).text(`${Lang.Transl("帳戶")} ${i}`));
-            }
-
-            // 創建菜單模板
-            this.modal = $(`
-                <div class="modal-background">
-                    <div class="acc-modal">
-                        <h1>${Lang.Transl("帳戶選擇")}</h1>
-                        <div class="acc-select-flex">${Select.prop("outerHTML")}</div>
-                        <div class="acc-button-flex">
-                            <button class="modal-button" id="update">${Lang.Transl("更新")}</button>
-                            <button class="modal-button" id="login">${Lang.Transl("登入")}</button>
-                        </div>
-                    </div>
-                </div>
-            `);
-
-            // 創建菜單
-            this.CreateMenu();
-            // 如果有選擇值, 就進行選取
-            Value && $("#account-select").val(Value);
-
-            const self = this;
-            self.on(".modal-background", "click", function(click) {
-                click.stopImmediatePropagation();
-
-                const target = click.target;
-                if (target.id == "login") {
-                    Ckop.ReAdd(Share[+$("#account-select").val()]);
-                } else if (target.id == "update") {
-                    self.UpdateShared();
-                } else if (target.className == "modal-background") {
-                    self.DeleteMenu();
-                }
-            });
-        };
-
-        /* 自動獲取 Cookies */
-        async GetCookieAutomatically() {
-            let cookie_box = [];
-            for (const [name, value] of Object.entries(Ckop.Get())) {
-                cookie_box.push({"name": name, "value" : value});
-            }
-            cookie_box.length > 1
-            ? this.Cookie_Show(JSON.stringify(cookie_box, null, 4))
-            : alert(Lang.Transl("未獲取到 Cookies !!\n\n請先登入帳戶"));
-        };
-        /* 展示自動獲取 Cookies */
-        async Cookie_Show(cookies){
-            this.CreateDetection();
-            this.modal = `
-                <div class="modal-background">
-                    <div class="show-modal">
-                    <h1 style="text-align: center;">${Lang.Transl("確認選擇的 Cookies")}</h1>
-                        <pre><b>${cookies}</b></pre>
-                        <div style="text-align: right;">
-                            <button class="modal-button" id="save">${Lang.Transl("確認保存")}</button>
-                            <button class="modal-button" id="close">${Lang.Transl("取消退出")}</button>
-                        </div>
-                    </div>
-                </div>
-            `
-            this.CreateMenu();
-            const self = this;
-            self.on(".modal-background", "click", function(click) {
-                click.stopImmediatePropagation();
-                const target = click.target;
-                if (target.id == "save") {
-                    Syn.Store("s", "E/Ex_Cookies", cookies);
-                    self.Growl(Lang.Transl("保存成功!"), "jGrowl", 1500);
-                    self.DeleteMenu();
-                } else if (target.className == "modal-background" || target.id == "close") {
-                    self.DeleteMenu();
-                }
-            });
-        };
-
-        /* 手動設置 Cookies */
-        async ManualSetting() {
-            this.CreateDetection();
-            this.modal = `
-                <div class="modal-background">
-                    <div class="set-modal">
-                    <h1>${Lang.Transl("設置 Cookies")}</h1>
-                        <form id="set_cookies">
-                            <div id="input_cookies" class="set-box">
-                                <label>[igneous]：</label><input class="set-list" type="text" name="igneous" placeholder="${Lang.Transl("要登入 Ex 才需要填寫")}"><br>
-                                <label>[ipb_member_id]：</label><input class="set-list" type="text" name="ipb_member_id" placeholder="${Lang.Transl("必填項目")}" required><br>
-                                <label>[ipb_pass_hash]：</label><input class="set-list" type="text" name="ipb_pass_hash" placeholder="${Lang.Transl("必填項目")}" required><hr>
-                                <h3>${Lang.Transl("下方選填 也可不修改")}</h3>
-                                <label>[sl]：</label><input class="set-list" type="text" name="sl" value="dm_2"><br>
-                                <label>[sk]：</label><input class="set-list" type="text" name="sk"><br>
-                            </div>
-                            <button type="submit" class="modal-button" id="save">${Lang.Transl("確認保存")}</button>
-                            <button class="modal-button" id="close">${Lang.Transl("退出選單")}</button>
-                        </form>
-                    </div>
-                </div>
-            `
-            this.CreateMenu();
-
-            let cookie;
-            const textarea = $("<textarea>").attr({
-                style: "margin: 1.15rem auto 0 auto",
-                rows: 18,
-                cols: 40,
-                readonly: true
-
-            }), self = this;
-
-            self.on("#set_cookies", "submit", function(submit) {
-                submit.preventDefault();
-                submit.stopImmediatePropagation();
-                const cookie_list = Array.from($("#set_cookies .set-list")).map(function(input) {
-                    const value = $(input).val();
-                    return value.trim() !== "" ? { name: $(input).attr("name"), value: value } : null;
-                }).filter(Boolean);
-
-                cookie = JSON.stringify(cookie_list, null, 4);
-                textarea.val(cookie);
-                $("#set_cookies div").append(textarea);
-                self.Growl(Lang.Transl("[確認輸入正確] 按下退出選單保存"), "jGrowl", 3000);
-            });
-
-            self.on(".modal-background", "click", function(click) {
-                click.stopImmediatePropagation();
-                const target = click.target;
-                if (target.className == "modal-background" || target.id == "close") {
-                    click.preventDefault();
-                    cookie && Syn.Store("s", "E/Ex_Cookies", cookie);
-                    self.DeleteMenu();
-                }
-            });
-        };
-
-        /* 查看保存的 Cookies */
-        async ViewSaveCookie() {
-            this.CreateDetection();
-            this.modal = `
-                <div class="modal-background">
-                    <div class="set-modal">
-                    <h1>${Lang.Transl("當前設置 Cookies")}</h1>
-                        <div id="view_cookies" style="margin: 0.6rem"></div>
-                        <button class="modal-button" id="save">${Lang.Transl("更改保存")}</button>
-                        <button class="modal-button" id="close">${Lang.Transl("退出選單")}</button>
-                    </div>
-                </div>
-            `
-            this.CreateMenu();
-            const cookie = Syn.Store("gj", "E/Ex_Cookies");
-            const textarea = $("<textarea>").attr({
-                rows: 20,
-                cols: 50,
-                id: "view_SC",
-                style: "margin-top: 1.25rem;"
-
-            }), self = this;
-            textarea.val(JSON.stringify(cookie , null, 4));
-            $("#view_cookies").append(textarea);
-
-            self.on(".modal-background", "click", function(click) {
-                click.stopImmediatePropagation();
-                const target = click.target;
-                if (target.id == "save") { // 保存改變
-                    GM_notification({
-                        title: Lang.Transl("變更通知"),
-                        text: Lang.Transl("已保存變更"),
-                        image: "https://cdn-icons-png.flaticon.com/512/5234/5234222.png",
-                        timeout: 3000
-                    });
-                    Syn.Store("sj", "E/Ex_Cookies", JSON.parse($("#view_SC").val()));
-                    self.DeleteMenu();
-                } else if (target.className == "modal-background" || target.id == "close") {
-                    self.DeleteMenu();
-                }
-            });
-        };
-
-        /* 手動注入 Cookies 登入 */
-        async CookieInjection() {
-            try {
-                Ckop.ReAdd(Syn.Store("gj", "E/Ex_Cookies"));
-            } catch (error) {
-                alert(Lang.Transl("未檢測到可注入的 Cookies !!\n\n請從選單中進行設置"));
-            }
-        };
-
-        /* 清除登入狀態 */
-        async ClearLogin() {
-            Ckop.Delete();
-            location.reload();
-        };
-    }).Main();
 })();
