@@ -97,12 +97,15 @@ const Syn = (() => {
             if (!tag) return;
 
             const {
-                id = "", title = "", class: className = "", text: textContent = "",
+                id, title, class: className, text: textContent = "",
                 rows: rowSpan, cols: colSpan, style = {}, attr = {}, ...props
             } = value;
 
-            const element = Object.assign(document.createElement(tag), {id, className, textContent, title });
+            const element = Object.assign(document.createElement(tag), {textContent});
 
+            if (id) element.id = id;
+            if (title) element.title = title;
+            if (className) element.className = className;
             if (rowSpan !== undefined) element.rowSpan = rowSpan;
             if (colSpan !== undefined) element.colSpan = colSpan;
 
