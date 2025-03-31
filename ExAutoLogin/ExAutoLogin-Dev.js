@@ -34,14 +34,194 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 // @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
+
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.js
 // @resource     jgrowl-css https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.css
 // ==/UserScript==
 
 (async () => {
+    const uri = location.href;
+    const post = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/;
+    const favorites = /https:\/\/[^\/]+\/favorites.php/;
+
+    if (post.test(uri)) {
+        Syn.WaitElem("#gd2", gd2 => {
+            const path = location.pathname;
+            const save_key = md5(path);
+
+            const Favorites = GM_getValue("Favorites", {});
+            const favorite = Favorites[save_key];
+
+            const customFavor = document.createElement("div");
+            customFavor.className = "customFavor";
+            customFavor.style = `
+                float: left;
+                cursor: pointer;
+                font-size: 1.8rem;
+                padding: 10px 0 0 20px;
+            `;
+
+            customFavor.innerHTML = favorite ? "💘 取消喜歡" : "💖 添加喜歡";
+            gd2.appendChild(customFavor);
+
+            customFavor.addEventListener("click", () => {
+                const Favorites = GM_getValue("Favorites", {});
+
+                if (Favorites[save_key]) {
+                    const yes = confirm("是否刪除喜歡?");
+
+                    if (yes) {
+                        delete Favorites[save_key];
+                        GM_setValue("Favorites", Favorites);
+                        customFavor.innerHTML = "💖 添加喜歡";
+                    }
+
+                    return;
+                }
+
+                const id = path.match(/\/g\/([^\/]+)\/([^\/]+)\//);
+                const gid = id[1];
+                const t = id[2];
+
+                const gm = document.querySelector(".gm");
+                const title = document.querySelector("#gn").textContent;
+
+                const img = getComputedStyle(gm.querySelector("#gd1 div"));
+                const width = img.width;
+                const height = img.height;
+                const imgurl = img.background.match(/url\(["']?(.*?)["']?\)/)[1];
+
+                const info = document.querySelector("#gd3");
+
+                const icon = info.querySelector("div").cloneNode(true);
+                const innerDiv = icon.querySelector("div");
+                innerDiv.className = innerDiv.className.replace("cs", "cn");
+                innerDiv.removeAttribute("onclick");
+
+                const artist = info.querySelector("#gdn");
+
+                const detail = info.querySelector("#gdd");
+                const posted = detail.querySelector("tr:nth-child(1) .gdt2").textContent.trim();
+                const length = detail.querySelector("tr:nth-child(6) .gdt2").textContent.trim();
+
+                const taglist = document.querySelector("#taglist").cloneNode(true);
+                const links = taglist.querySelectorAll("td div a");
+
+                links.forEach(link => {
+                    const text = link.innerHTML;
+                    link.replaceWith(text);
+                });
+
+                const html = `
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td class="gl1e" style="width:250px">
+                                    <div style="height:340px; width:${width};">
+                                        <a href="${uri}">
+                                            <img style="height:${height}; width:${width}; top:-7px"
+                                            alt="${title}"
+                                            title="${title}"
+                                            src="${imgurl}">
+                                        </a>
+                                    </div>
+                                </td>
+                                <td class="gl2e">
+                                    <div>
+                                        <div class="gl3e">
+                                            ${icon.innerHTML}
+                                            <div style="border-color:#000; background-color:rgba(0,0,0,.1)"
+                                                onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${gid}&amp;t=${t}&amp;act=addfav',675,415)"
+                                                id="posted_${gid}"
+                                                title="Favorites 0">
+                                                ${posted}
+                                            </div>
+                                            <div class="ir" style="background-position:0px -21px;"></div>
+                                            <div> ${artist.innerHTML} </div>
+                                            <div> ${length} </div>
+                                            <div class="gldown">
+                                                <a href="https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}"
+                                                    onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${gid}&amp;t=${t}',610,590)"
+                                                    rel="nofollow">
+                                                    <img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
+                                                </a>
+                                            </div>
+                                            <div><p>Favorited:</p><p>添加時間</p></div>
+                                        </div>
+                                        <div>
+                                            <a href="${uri}">
+                                                <div class="gl4e glname" style="min-height:348px">
+                                                    <div class="glink"> ${title} </div>
+                                                    <div> ${taglist.innerHTML} </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="unfavorite" style="text-align:center; padding: 12px; font-size: 2.2rem;">
+                                    <span id="${save_key}" style="cursor: pointer;">💔</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
+
+                GM_setValue("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(html, 9) }));
+
+                customFavor.innerHTML = "💘 已經喜歡";
+            });
+        })
+    }
+
+    if (favorites.test(uri)) {
+        const Favorites = GM_getValue("Favorites");
+
+        if (Favorites && Object.keys(Favorites).length > 0) {
+            const parser = new DOMParser();
+
+            Syn.WaitElem(".ido", ido => {
+                let tbody = ido.querySelector("tbody");
+
+                if (!tbody) {
+                    const form = `
+                        <form id="favform" name="favform" action="" method="post">
+                            <table class="itg glte">
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </form>
+                    `;
+                    const doc = parser.parseFromString(form, 'text/html');
+                    ido.lastElementChild.replaceWith(doc.body.querySelector("form"));
+                    tbody = ido.querySelector("tbody");
+                }
+
+                for (const html of Object.values(Favorites)) {
+                    const htmlString = LZString.decompress(html);
+                    const doc = parser.parseFromString(htmlString, 'text/html');
+                    tbody.appendChild(doc.body.querySelector("tr"));
+                }
+    
+                ido.addEventListener("click", event => {
+                    const target = event.target;
+                    if (target.closest(".unfavorite")) {
+                        const yes = confirm("是否刪除喜歡?");
+                        if (yes) {
+                            const Favorites = GM_getValue("Favorites");
+                            delete Favorites[target.id];
+                            GM_setValue("Favorites", Favorites);
+                            target.closest("tr").remove();
+                        };
+                    }
+                }) 
+            });
+        }
+    }
+
     const domain = Syn.Device.Host;
 
     (async function ImportStyle() {
