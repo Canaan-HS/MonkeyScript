@@ -202,12 +202,12 @@
                 console.log(`任務 ${task_name} 已被停止`);
             },
             Register: (task_name, task_func) => {
-                if (Timers.has(task_name)) return; // 禁止重複註冊
+                if (Timers.has(task_name) || !navigator.onLine) return; // 禁止重複 與 離線註冊
 
                 const newDate = new Date(); // 取得當前日期
                 const oldDate = new Date(GM_getValue(task_name, newDate)); // 嘗試取得舊任務紀錄
 
-                const task_delay = Timers.size * 2e3; // 根據註冊數量 + 2 秒
+                const task_delay = Math.max(1, Timers.size * 2000);; // 根據註冊數量 + 2 秒
                 const wait_diff = (Config.Dev ? 1e4 : TimeDiff(newDate)) + task_delay; // 取得差時 (開發模式差時為 10 秒)
 
                 // 當先前紀錄過期, 註冊延遲後觸發
@@ -217,6 +217,8 @@
 
                 // 創建計時器並保存
                 Timers.set(task_name, setTimeout(()=> {
+                    if (!navigator.onLine) return; // 禁止離線觸發
+
                     task_func(); // 調用任務
                     RemoveListeners(task_name);
                     RemoveTimers(task_name, true);
