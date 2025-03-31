@@ -228,9 +228,10 @@ const Syn = (() => {
         configurable: true
     });
 
-    /* 額外給 工廠函數調用 */
+    /* 工廠函數調用 */
     const $Call = {
         ...$Window,
+        // 以下只有展示
         ElementFunctions: Object.keys($Node),
         EventFunctions: Object.keys($Event),
     };
