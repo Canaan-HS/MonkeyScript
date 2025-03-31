@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/03/28
+// @version      2025/03/31
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
