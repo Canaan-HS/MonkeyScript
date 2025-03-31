@@ -250,7 +250,6 @@
     })();
 
     (async function Main($Cookie, $Shared) {
-        let Modal = null; // 保存模態
         let Share = Syn.gV("Share", {});
 
         // 頁面匹配
@@ -260,14 +259,10 @@
 
         /* ---------- 菜單切換與創建 ---------- */
 
-        /* 創建菜單前檢測 (刪除重創) */
-        const CreateDetection = () => {
-            Syn.$q(".modal-background")?.remove();
-        };
-
         /* 創建菜單 */
-        const CreateMenu = async () => {
-            $(Syn.$body).append(Modal);
+        const CreateMenu = async (Modal) => {
+            Syn.$q(".modal-background")?.remove();
+            $(Syn.$body).append(Modal.replace(/>\s+</g, '><'));
             requestAnimationFrame(() => {
                 $(".modal-background").css({
                     "opacity": "1",
@@ -387,7 +382,6 @@
 
         /* 共享號登入 */
         async function SharedLogin() {
-            CreateDetection();
             const Igneous = $Cookie.Get().igneous; // 取得當前登入的帳號
             const AccountQuantity = Object.keys(Share).length; // 取得共享號數量
 
@@ -398,8 +392,7 @@
                 Select.append($("<option>").attr({ value: i }).text(`${Transl("帳戶")} ${i}`));
             }
 
-            // 創建菜單模板
-            Modal = $(`
+            CreateMenu(`
                 <div class="modal-background">
                     <div class="acc-modal">
                         <h1>${Transl("帳戶選擇")}</h1>
@@ -411,7 +404,6 @@
                     </div>
                 </div>
             `);
-            CreateMenu();
 
             // 如果有選擇值, 就進行選取
             Value && $("#account-select").val(Value);
@@ -436,8 +428,7 @@
 
         /* 展示自動獲取 Cookies */
         async function Cookie_Show(cookies) {
-            CreateDetection();
-            Modal = `
+            CreateMenu(`
                 <div class="modal-background">
                     <div class="show-modal">
                     <h1 style="text-align: center;">${Transl("確認選擇的 Cookies")}</h1>
@@ -448,8 +439,7 @@
                         </div>
                     </div>
                 </div>
-            `
-            CreateMenu();
+            `);
 
             $(".modal-background").on("click", function (click) {
                 click.stopImmediatePropagation();
@@ -480,8 +470,7 @@
 
         /* 手動設置 Cookies */
         async function ManualSetting() {
-            CreateDetection();
-            Modal = `
+            CreateMenu(`
                 <div class="modal-background">
                     <div class="set-modal">
                     <h1>${Transl("設置 Cookies")}</h1>
@@ -499,8 +488,7 @@
                         </form>
                     </div>
                 </div>
-            `
-            CreateMenu();
+            `);
 
             let cookie;
             const textarea = $("<textarea>").attr({
@@ -540,8 +528,7 @@
 
         /* 查看保存的 Cookies */
         async function ViewSaveCookie() {
-            CreateDetection();
-            Modal = `
+            CreateMenu(`
                 <div class="modal-background">
                     <div class="set-modal">
                     <h1>${Transl("當前設置 Cookies")}</h1>
@@ -550,8 +537,7 @@
                         <button class="modal-button" id="close">${Transl("退出選單")}</button>
                     </div>
                 </div>
-            `
-            CreateMenu();
+            `);
 
             const cookie = Syn.gJV("E/Ex_Cookies");
             const textarea = $("<textarea>").attr({
@@ -598,7 +584,7 @@
         /* 創建收藏按鈕 */
         function CreateFavoritesButton() {
             // 縮圖, 按鈕容器, 標題, 其他資訊
-            Syn.WaitElem(["#gd1 div", "#gd2", "#gn", "#gmid"], ([thumbnail, container, title, info]) => {
+            Syn.WaitElem(["#gd1 div", "#gd2", "#gmid"], ([thumbnail, container, info]) => {
                 const path = location.pathname;
                 const save_key = md5(path);
 
@@ -619,32 +605,28 @@
                         favoriteButton.$text(Transl("💖 添加收藏"));
                         favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
                         return;
-                    }
+                    };
 
                     const img = getComputedStyle(thumbnail); // 縮略圖樣式
                     const score = getComputedStyle(info.$q(".ir")); // 評分
                     const icon = info.$q("#gdc div"); // 類型 icon
                     const artist = info.$q("#gdn a"); // 藝術家連結
+                    const title = container.$q("#gj") ?? container.$q("#gn") // 標題 (優先找日文)
                     const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//); // 解析 id
                     const detail = info.$q("#gdd"); // 資訊內容
                     const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
                     const length = detail.$q("tr:nth-child(6) .gdt2").$text();
 
+                    // 獲取標籤
                     const tagData = new Map();
-                    const tagList = info.$qa("#taglist tr"); // 標籤資訊
-                    for (const tr of tagList) { // 解析標籤
-                        let tagName = "";
-                        for (const td of tr.$qa("td")) {
-                            if (td.className === "tc") tagName = td.$text();
-                            else {
-                                tagData.set(tagName, td.$qa("a").map(a => a.$text()));
-                            }
-                        }
+                    for (const a of info.$qa("#taglist tr a")) {
+                        const tags = a.id.slice(3).replace(/[_]/g, " ").split(":"); // 去除開頭 ta_ , 分出 類別 與 標籤
+                        if (!tagData.has(tags[0])) tagData.set(tags[0], []);
+                        tagData.get(tags[0]).push(tags[1]); 
                     };
 
                     const data = JSON.stringify({
-                        gid, tid,
-                        posted, length,
+                        gid, tid, domain,posted, length,
                         key: save_key,
                         tags: [...tagData],
                         score: score.backgroundPosition,
@@ -663,7 +645,21 @@
                     favoriteButton.$text(Transl("💘 取消收藏"));
                     favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
                 });
-            }, {raf: true})
+            }, {raf: true});
+        };
+
+        /* 請求數據 */
+        function httpRequest(url, func) {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: url,
+                responseType: "document",
+                onload: response => {
+                    if (response.status === 200) {
+                        func(response.response);
+                    }
+                }
+            })
         };
 
         /* 添加自定義收藏夾 */
@@ -671,6 +667,14 @@
             const Favorites = Syn.gV("Favorites");
 
             if (Favorites && Object.keys(Favorites).length > 0) {
+                /* 刪除收藏 */
+                const DeleteFavorites = async function (key, element) {
+                    const Favorites = Syn.gV("Favorites");
+                    delete Favorites[key];
+                    Syn.sV("Favorites", Favorites);
+
+                    element.remove();
+                };
 
                 Syn.WaitElem(".ido", ido => {
                     let delete_object = "tr";
@@ -688,118 +692,126 @@
 
                     if (mode === "t") delete_object = ".gl1t";
 
+                    // ! 模板沒問題就不要修改, 很容易壞掉
                     for (const data of Object.values(Favorites)) {
                         const json = JSON.parse(LZString.decompress(data));
+
+                        /* ----- 常用模板 ----- */
+
+                        const Pages = `<div>${json.length}</div>`;
+                        const PostUrl = `<a href="https://${json.domain}/g/${json.gid}/${json.tid}/">`; // 需要對應 </a>
+                        const PostName = `<div class="glink">${json.post_title}</div>`;
+
+                        const Glfnote = `<div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>`;
+
+                        const Thumbnail = `<div class="${json.icon_class}">${json.icon_text}</div>`;
+                        const ThumbnailCN = Thumbnail.replace('class="cs', 'class="cn');
+
+                        const Position = `<div class="ir" style="background-position:${json.score};opacity:1"></div>`;
+                        const PreviewImg = `<img style="height:${json.img_height}; width:${json.img_width};" alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">`;
+                        const FullPreview = `
+                            <div class="glcut" id="ic${json.gid}"></div>
+                                <div class="glthumb" id="it${json.gid}" style="top:-179px;height:400px">
+                                <div>${PreviewImg}</div>
+                        `; // 需要對應 </div>
+
+                        const Posted = `
+                            <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
+                                onclick="popUp('https://${json.domain}/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
+                                id="posted_${json.gid}" title="Favorites 0">${json.posted}
+                            </div>
+                        `;
+                        const Postedpop = Posted.replace("posted_", "postedpop_");
+
+                        const Gldown = `
+                            <div class="gldown">
+                                <a href="https://${json.domain}/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
+                                    onclick="return popUp('https://${json.domain}/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
+                                    rel="nofollow"><img src="https://${json.domain}/img/t.png" alt="T" title="Show torrents">
+                                </a>
+                            </div>
+                        `;
+
+                        const unFavorite = `
+                            <div class="lc">
+                                <div id="${json.key}" class="unFavorite">💔</div>
+                            </div>
+                        `;
+
+                        /* ----- 後續按照模式個別生成 ----- */
 
                         if (mode === "m" || mode === "p") {
                             const tr = Syn.$createElement("tr");
                             tr.$iHtml(`
-                                <td class="gl1m glcat">
-                                    <div class="${json.icon_class}">${json.icon_text}</div>
-                                </td>
+                                <td class="gl1m glcat">${Thumbnail}</td>
                                 <td class="gl2m">
-                                    <div class="glcut" id="ic${json.gid}"></div>
-                                    <div class="glthumb" id="it${json.gid}" style="top:-179px;height:400px">
-                                        <div><img style="height:${json.img_height}; width:${json.img_width};top:-7px"
-                                                alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">
-                                        </div>
+                                    ${FullPreview}
                                         <div>
                                             <div>
-                                                <div class="${json.icon_class}">${json.icon_text}</div>
-                                                <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                                    onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                                    id="postedpop_${json.gid}" title="Favorites 0">${json.posted}</div>
+                                                ${Thumbnail}
+                                                ${Postedpop}
                                             </div>
                                             <div>
-                                                <div class="ir" style="background-position:${json.score};opacity:1"></div>
-                                                <div>${json.length}</div>
+                                                ${Position}
+                                                ${Pages}
                                             </div>
                                         </div>
                                     </div>
-                                    <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                        onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                        id="posted_${json.gid}" title="Favorites 0">${json.posted}</div>
+                                    ${Posted}
                                 </td>
-                                <td class="gl6m">
-                                    <div class="gldown">
-                                        <a href="https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
-                                            onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
-                                            rel="nofollow"><img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
-                                        </a>
-                                    </div>
-                                </td>
+                                <td class="gl6m">${Gldown}</td>
                                 <td class="gl3m glname" onmouseover="show_image_pane(${json.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                    <a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
-                                        <div class="glink">${json.post_title}</div>
-                                        <div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>
+                                    ${PostUrl}
+                                        ${PostName}
+                                        ${Glfnote}
                                     </a>
                                 </td>
                                 <td class="gl4m">
-                                    <div class="ir" style="background-position:${json.score};opacity:1"></div>
+                                    ${Position}
                                 </td>
                                 <td class="glfm glfav">${json.favorited_time}</td>
                                 <td class="glfm" style="text-align:center; padding-left:3px">
-                                    <div class="lc">
-                                        <div id="${json.key}" class="unFavorite">💔</div>
-                                    </div>
+                                    ${unFavorite}
                                 </td>
                             `.replace(/>\s+</g, '><'));
-                            fragment.appendChild(tr);
+                            fragment.prepend(tr);
                         } else if (mode === "l") {
                             const tr = Syn.$createElement("tr");
-                            const icon_class = json.icon_class.replace("cs", "cn");
                             const posted = json.posted.split(" ");
                             tr.$iHtml(`
                                 <tr>
-                                    <td class="gl1c glcat">
-                                        <div class="${icon_class}">${json.icon_text}</div>
-                                    </td>
+                                    <td class="gl1c glcat">${ThumbnailCN}</td>
                                     <td class="gl2c">
-                                        <div class="glcut" id="ic${json.gid}"></div>
-                                        <div class="glthumb" id="it${json.gid}" style="top:-179px;height:400px">
-                                            <div><img style="height:${json.img_height}; width:${json.img_width};top:-7px"
-                                                alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">
-                                            </div>
+                                        ${FullPreview}
                                             <div>
                                                 <div>
-                                                    <div class="${icon_class}">${json.icon_text}</div>
-                                                    <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                                        onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                                        id="postedpop_${json.gid}" title="Favorites 0">${json.posted}
-                                                    </div>
+                                                    ${ThumbnailCN}
+                                                    ${Postedpop}
                                                 </div>
                                                 <div>
-                                                    <div class="ir" style="background-position:${json.score};opacity:1"></div>
-                                                    <div>${json.length}</div>
+                                                    ${Position}
+                                                    ${Pages}
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                                onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                                id="posted_${json.gid}" title="Favorites 0">${json.posted}
-                                            </div>
-                                            <div class="ir" style="background-position:${json.score};opacity:1"></div>
-                                            <div class="gldown">
-                                                <a href="https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
-                                                    onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
-                                                    rel="nofollow"><img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
-                                                </a>
-                                            </div>
+                                            ${Posted}
+                                            ${Position}
+                                            ${Gldown}
                                         </div>
                                     </td>
                                     <td class="gl3c glname" onmouseover="show_image_pane(${json.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                        <a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
-                                            <div class="glink">${json.post_title}</div>
+                                        ${PostUrl}
+                                            ${PostName}
                                             <div>
                                                 ${
                                                     (() => {
                                                         let count = 0;
                                                         let result = '';
-                                                        for (const [key, values] of json.tags) {
-                                                            for (const tag of values) {
+                                                        for (const [tagCategory, tagList] of json.tags) {
+                                                            for (const tag of tagList) {
                                                                 if (count >= 10) break;
-                                                                result += `<div class="gt" title="${key}${tag}">${tag}</div>`;
+                                                                result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
                                                                 count++;
                                                             }
                                                             if (count >= 10) break;
@@ -808,7 +820,7 @@
                                                     })()
                                                 }
                                             </div>
-                                            <div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>
+                                            ${Glfnote}
                                         </a>
                                     </td>
                                     <td class="glfc glfav">
@@ -816,63 +828,50 @@
                                         <p>${posted[1]}</p>
                                     </td>
                                     <td class="glfc" style="text-align:center; padding-left:3px">
-                                        <label class="lc">
-                                            <div id="${json.key}" class="unFavorite">💔</div>
-                                        </label>
+                                        ${unFavorite}
                                     </td>
                                 </tr>
                             `.replace(/>\s+</g, '><'));
-                            fragment.appendChild(tr);
+                            fragment.prepend(tr);
                         } else if (mode === "e") {
                             const tr = Syn.$createElement("tr");
-                            const icon_class = json.icon_class.replace("cs", "cn");
                             tr.$iHtml(`
                                 <tr>
                                     <td class="gl1e" style="width:250px">
-                                        <div style="height:340px;width:250px">
-                                            <a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
-                                                <img style="height:${json.img_height}; width:${json.img_width};top:-7px"
-                                                    alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">
+                                        <div style="height: ${json.img_height}; width:250px">
+                                            ${PostUrl}
+                                                ${PreviewImg}
                                             </a>
                                         </div>
                                     </td>
                                     <td class="gl2e">
                                         <div>
                                             <div class="gl3e">
-                                                <div class="${icon_class}">${json.icon_text}</div>
-                                                <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                                    onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                                    id="posted_${json.gid}" title="Favorites 0">${json.posted}
-                                                </div>
-                                                <div class="ir" style="background-position:${json.score};opacity:1">
-                                                </div>
-                                                <div>
-                                                    <a href="${json.artist_link}">${json.artist_text}</a>
-                                                </div>
-                                                <div>${json.length}</div>
-                                                <div class="gldown"><a
-                                                        href="https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
-                                                        onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
-                                                        rel="nofollow"><img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
-                                                    </a>
-                                                </div>
-                                                <div>
-                                                    <p>Favorited:</p>
-                                                    <p>${json.favorited_time}</p>
-                                                </div>
-                                            </div><a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
+                                                ${ThumbnailCN}
+                                                ${Posted}
+                                                ${Position}
+                                                <div><a href="${json.artist_link}">${json.artist_text}</a></div>
+                                                ${Pages}
+                                                ${Gldown}
+                                            <div>
+                                                <p>Favorited:</p><p>${json.favorited_time}</p>
+                                            </div>
+                                            </div>
+                                            ${PostUrl}
                                                 <div class="gl4e glname" style="min-height:${json.img_height}">
-                                                    <div class="glink">${json.post_title}</div>
+                                                    ${PostName}
                                                     <div>
                                                         <table>
                                                             <tbody>
                                                                 ${
-                                                                    json.tags.map(([key, values]) => {
+                                                                    json.tags.map(([tagCategory, tagList]) => {
                                                                         return `
                                                                             <tr>
-                                                                                <td class="tc">${key}</td>
+                                                                                <td class="tc">${tagCategory}</td>
                                                                                 <td>
-                                                                                    ${values.map(value => `<div class="gtl" title="${key}${value}">${value}</div>`).join('')}
+                                                                                    ${
+                                                                                        tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')
+                                                                                    }
                                                                                 </td>
                                                                             </tr>
                                                                         `;
@@ -881,79 +880,87 @@
                                                             </tbody>
                                                         </table>
                                                     </div>
-                                                    <div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>
+                                                    ${Glfnote}
                                                 </div>
                                             </a>
                                         </div>
                                     </td>
                                     <td class="glfe" style="text-align:center; padding-left:8px">
-                                        <label class="lc">
-                                            <div id="${json.key}" class="unFavorite">💔</div>
-                                        </label>
+                                        ${unFavorite}
                                     </td>
                                 </tr>
                             `.replace(/>\s+</g, '><'));
-                            fragment.appendChild(tr);
+                            fragment.prepend(tr);
                         } else if (mode === "t") {
                             const div = Syn.$createElement("div", {class: "gl1t"});
                             div.$iHtml(`
                                 <div class="gl4t glname glft">
                                     <div>
-                                        <a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
+                                        ${PostUrl}
                                             <span class="glink">${json.post_title}</span>
                                         </a>
                                     </div>
                                     <div>
-                                        <label class="lc">
-                                            <div id="${json.key}" class="unFavorite">💔</div>
-                                        </label>
+                                        ${unFavorite}
                                     </div>
                                 </div>
-                                <div class="gl3t" style="height:340px;width:250px">
-                                    <a href="https://exhentai.org/g/${json.gid}/${json.tid}/">
-                                        <img style="height:${json.img_height}; width:${json.img_width};top:-7px"
-                                                alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">
+                                <div class="gl3t" style="height: ${json.img_height}; width:250px">
+                                    ${PostUrl}
+                                        ${PreviewImg}
                                     </a>
                                 </div>
-                                <div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>
+                                ${Glfnote}
                                 <div class="gl5t">
                                     <div>
-                                        <div class="${json.icon_class}">${json.icon_text}</div>
-                                        <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                            onclick="popUp('https://exhentai.org/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
-                                            id="posted_${json.gid}" title="Favorites 0">${json.posted}</div>
+                                        ${Thumbnail}
+                                        ${Posted}
                                     </div>
                                     <div>
-                                        <div class="ir" style="background-position:${json.score};opacity:1"></div>
-                                        <div>${json.length}</div>
-                                        <div class="gldown">
-                                            <a href="https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
-                                                onclick="return popUp('https://exhentai.org/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
-                                                rel="nofollow"><img src="https://exhentai.org/img/t.png" alt="T" title="Show torrents">
-                                            </a>
-                                        </div>
+                                        ${Position}
+                                        ${Pages}
+                                        ${Gldown}
                                     </div>
                                 </div>
-                            `);
-                            fragment.appendChild(div);
+                            `.replace(/>\s+</g, '><'));
+                            fragment.prepend(div);
                         }
                     };
 
-                    requestAnimationFrame(() => {
-                        if (fragment) {
-                            ido.$q("tbody")?.appendChild(fragment);
-                            ido.$q("#favform .gld")?.appendChild(fragment);
-                        }
-                    });
+                    if (fragment) {
+                        ido.$q("tbody")?.prepend(fragment);
+                        ido.$q("#favform .gld")?.prepend(fragment);
+
+                        requestAnimationFrame(() => {
+
+                            // 添加完才添加標籤 (避免請求失敗, 導致卡住)
+                            httpRequest("https://exhentai.org/mytags", root => {
+                                const usertags = {};
+                                for (const user of root.$qa("div[id^='usertag_']:not(#usertag_0)")) {
+                                    const input = user.$q("div:nth-of-type(2) input");
+
+                                    if (input.checked) {
+                                        const tag = user.$q("div.gt");
+                                        usertags[tag.title] = tag.style;
+                                    }
+                                }
+
+                                Syn.$qa(".glname tr td:nth-of-type(2)").forEach(td => {
+                                    td.childNodes.forEach(node => {
+                                        const tags = usertags[node.title];
+                                        tags && (node.style.cssText = tags.cssText);
+                                    })
+                                })
+                            });
+
+                            Syn.$q("#nb")?.scrollIntoView();
+                        })
+                    };
 
                     ido.$onEvent("click", event => {
                         const target = event.target;
 
                         if (target.className === "unFavorite") {
-                            const Favorites = Syn.gV("Favorites");
-                            delete Favorites[target.id];
-                            Syn.sV("Favorites", Favorites);
-                            target.closest(delete_object).remove();
+                            DeleteFavorites(target.id, target.closest(delete_object));
                         }
                     })
                 })
