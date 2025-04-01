@@ -611,7 +611,7 @@
                     const score = getComputedStyle(info.$q(".ir")); // 評分
                     const icon = info.$q("#gdc div"); // 類型 icon
                     const artist = info.$q("#gdn a"); // 藝術家連結
-                    const title = container.$q("#gj") ?? container.$q("#gn") // 標題 (優先找日文)
+                    const title = container.$q("#gj").$text() || container.$q("#gn").$text() // 標題 (優先找日文)
                     const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//); // 解析 id
                     const detail = info.$q("#gdd"); // 資訊內容
                     const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
@@ -630,7 +630,7 @@
                         key: save_key,
                         tags: [...tagData],
                         score: score.backgroundPosition,
-                        post_title: title.$text(),
+                        post_title: title,
                         artist_link: artist.href,
                         artist_text: artist.$text(),
                         icon_text: icon.$text(),
