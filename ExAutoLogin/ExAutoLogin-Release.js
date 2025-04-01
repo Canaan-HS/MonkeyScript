@@ -99,180 +99,30 @@
         let f, m, n, k, l; "e-hentai.org" == K ? (n = "color: #8f4701;", k = "background-color: #5C0D12; color: #fefefe;", f = "background-color: #fefefe; border: 3px ridge #34353b;", l = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;", m = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;") : "exhentai.org" == K && (n = "color: #989898;", k = "background-color: #fefefe; color: #5C0D12;", f = "background-color: #34353b; border: 2px ridge #5C0D12;", l = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;",
             m = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;", Syn.AddStyle("body {    padding: 2px;    color: #f1f1f1;    text-align: center;    background: #34353b;}\n            ")); Syn.AddStyle(`
             ${GM_getResourceText("jgrowl-css")}
-            .jGrowl {
-                ${k}
-                top: 2rem;
-                left: 50%;
-                width: auto;
-                z-index: 9999;
-                font-size: 1.3rem;
-                border-radius: 2px;
-                text-align: center;
-                white-space: nowrap;
-                transform: translateX(-50%);
-            }
-            .modal-background {
-                top: 50%;
-                left: 50%;
-                opacity: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 8888;
-                overflow: auto;
-                position: fixed;
-                transition: 0.6s ease;
-                background-color: rgba(0,0,0,0);
-                transform: translate(-50%, -50%) scale(0.3);
-            }
-            .acc-modal {
-                ${f}
-                width: 18%;
-                overflow: auto;
-                margin: 11rem auto;
-                border-radius: 10px;
-            }
-            .acc-select-flex {
-                display: flex;
-                align-items: center;
-                flex-direction: initial;
-                justify-content: space-around;
-            }
-            .acc-button-flex {
-                display: flex;
-                padding: 0 0 15px 0;
-                justify-content: center;
-            }
-            .acc-select {
-                ${l}
-                width: 10rem;
-                padding: 4px;
-                margin: 1.1rem 1.4rem 1.5rem 1.4rem;
-                font-weight: bold;
-                cursor: pointer;
-                font-size: 1.2rem;
-                text-align: center;
-                border-radius: 5px;
-            }
-            .show-modal {
-                ${f}
-                width: 25%;
-                padding: 1.5rem;
-                overflow: auto;
-                margin: 5rem auto;
-                text-align: left;
-                border-radius: 10px;
-                border-collapse: collapse;
-            }
-            .modal-button {
-                ${m}
-                top: 0;
-                margin: 3% 2%;
-                font-size: 14px;
-                font-weight: bold;
-                border-radius: 3px;
-            }
-            .modal-button:hover, .modal-button:focus {
-                ${n}
-                cursor: pointer;
-                text-decoration: none;
-            }
-            .set-modal {
-                ${f}
-                width: 30%;
-                padding: 0.3rem;
-                overflow: auto;
-                border-radius: 10px;
-                text-align: center;
-                border-collapse: collapse;
-                margin: 2% auto 8px auto;
-            }
-            .set-box {
-                display: flex;
-                margin: 0.6rem;
-                font-weight: bold;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .set-list {
-                width: 95%;
-                font-weight: 550;
-                font-size: 1.1rem;
-                text-align: center;
-            }
-            hr {
-                width: 98%;
-                opacity: 0.2;
-                border: 1px solid;
-                margin-top: 1.3rem;
-            }
-            label {
-                margin: 0.4rem;
-                font-size: 0.9rem;
-            }
-            .cancelFavorite {
-                float: left;
-                cursor: pointer;
-                font-size: 1.7rem;
-                padding: 10px 0 0 20px;
-            }
-            .cancelFavorite:hover {
-                opacity: 0.5;
-            }
-            .addFavorite {
-                float: left;
-                cursor: pointer;
-                font-size: 1.7rem;
-                padding: 10px 0 0 20px;
-                transition: transform 0.2s ease;
-            }
-            .addFavorite:hover {
-                animation: heartbeat 1.5s infinite;
-            }
-            @keyframes heartbeat {
-                0% {
-                    transform: scale(1);
-                }
-                25% {
-                    transform: scale(1.1);
-                }
-                50% {
-                    transform: scale(1);
-                }
-                75% {
-                    transform: scale(1.1);
-                }
-                100% {
-                    transform: scale(1);
-                }
-            }
-            .lc {
-                padding: 1rem 0 !important;
-            }
-            .unFavorite {
-                font-size: 2rem;
-                display: inline-block;
-                transition: transform 0.2s ease;
-            }
-            .unFavorite:hover {
-                animation: shake 0.8s ease-in-out infinite;
-            }
+            .jGrowl {${k}top: 2rem;left: 50%;width: auto;z-index: 9999;font-size: 1.3rem;border-radius: 2px;text-align: center;white-space: nowrap;transform: translateX(-50%);}
+            .modal-background {top: 50%;left: 50%;opacity: 0;width: 100%;height: 100%;z-index: 8888;overflow: auto;position: fixed;transition: 0.6s ease;background-color: rgba(0,0,0,0);transform: translate(-50%, -50%) scale(0.3);}
+            .acc-modal {${f}width: 18%;overflow: auto;margin: 11rem auto;border-radius: 10px;}
+            .acc-select-flex {display: flex;align-items: center;flex-direction: initial;justify-content: space-around;}
+            .acc-button-flex {display: flex;padding: 0 0 15px 0;justify-content: center;}
+            .acc-select {${l}width: 10rem;padding: 4px;margin: 1.1rem 1.4rem 1.5rem 1.4rem;font-weight: bold;cursor: pointer;font-size: 1.2rem;text-align: center;border-radius: 5px;}
+            .show-modal {${f}width: 25%;padding: 1.5rem;overflow: auto;margin: 5rem auto;text-align: left;border-radius: 10px;border-collapse: collapse;}
+            .modal-button {${m}top: 0;margin: 3% 2%;font-size: 14px;font-weight: bold;border-radius: 3px;}
+            .modal-button:hover, .modal-button:focus {${n}cursor: pointer;text-decoration: none;}
+            .set-modal {${f}width: 30%;padding: 0.3rem;overflow: auto;border-radius: 10px;text-align: center;border-collapse: collapse;margin: 2% auto 8px auto;}
+            .set-box {display: flex;margin: 0.6rem;font-weight: bold;flex-direction: column;align-items: flex-start;}
+            .set-list {width: 95%;font-weight: 550;font-size: 1.1rem;text-align: center;}
+            hr {width: 98%;opacity: 0.2;border: 1px solid;margin-top: 1.3rem;}
+            label {margin: 0.4rem;font-size: 0.9rem;}
+            .cancelFavorite {float: left;cursor: pointer;font-size: 1.7rem;padding: 10px 0 0 20px;}
+            .cancelFavorite:hover {opacity: 0.5;}
+            .addFavorite {float: left;cursor: pointer;font-size: 1.7rem;padding: 10px 0 0 20px;transition: transform 0.2s ease;}
+            .addFavorite:hover {animation: heartbeat 1.5s infinite;}
+            @keyframes heartbeat {0% {transform: scale(1);}25% {transform: scale(1.1);}50% {transform: scale(1);}75% {transform: scale(1.1);}100% {transform: scale(1);}}
+            .lc {padding: 1rem 0 !important;}
+            .unFavorite {font-size: 2rem;display: inline-block;transition: transform 0.2s ease;}
+            .unFavorite:hover {animation: shake 0.8s ease-in-out infinite;}
             @keyframes shake {
-                0% {
-                    transform: translateX(0);
-                }
-                25% {
-                    transform: translateX(-5px);
-                }
-                50% {
-                    transform: translateX(5px);
-                }
-                75% {
-                    transform: translateX(-5px);
-                }
-                100% {
-                    transform: translateX(0);
-                }
-            }
+            0% {transform: translateX(0);}25% {transform: translateX(-5px);}50% {transform: translateX(5px);}75% {transform: translateX(-5px);}100% {transform: translateX(0);}}
         `, "AutoLogin-Style")
     })(); (async (f, m) => {
         async function n() {
@@ -384,174 +234,19 @@
                         let x = "tr"; var Q, q = Syn.$createFragment(), r = c.$q(".searchnav div:last-of-type select option[selected='selected']"), u = r ? r.value : "t"; r || ((r = Syn.$createElement("form", { id: "favform", name: "favform", action: "", method: "post" })).$iHtml('<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>'),
                             c.appendChild(r)); "t" === u && (x = ".gl1t"); for (Q of Object.values(h)) {
                                 let a = JSON.parse(LZString.decompress(Q)); r = `<div>${a.length}</div>`; var w = `<a href="https://${a.domain}/g/${a.gid}/${a.tid}/">`, M = `<div class="glink">${a.post_title}</div>`, E = `<div class="glfnote" style="display:none" id="favnote_${a.gid}"></div>`, y = `<div class="${a.icon_class}">${a.icon_text}</div>`, N = y.replace('class="cs', 'class="cn'), z = `<div class="ir" style="background-position:${a.score};opacity:1"></div>`, F = `<img style="height:${a.img_height}; width:${a.img_width};" alt="${a.post_title}" title="${a.post_title}" src="${a.img_url}">`,
-                                    A = `
-                            <div class="glcut" id="ic${a.gid}"></div>
-                                <div class="glthumb" id="it${a.gid}" style="top:-179px;height:400px">
-                                <div>${F}</div>
-                        `, H = `
-                            <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                onclick="popUp('https://${a.domain}/gallerypopups.php?gid=${a.gid}&amp;t=${a.tid}&amp;act=addfav',675,415)"
-                                id="posted_${a.gid}" title="Favorites 0">${a.posted}
-                            </div>
-                        `, I = H.replace("posted_", "postedpop_"), O = `
-                            <div class="gldown">
-                                <a href="https://${a.domain}/gallerytorrents.php?gid=${a.gid}&amp;t=${a.tid}"
-                                    onclick="return popUp('https://${a.domain}/gallerytorrents.php?gid=${a.gid}&amp;t=${a.tid}',610,590)"
-                                    rel="nofollow"><img src="https://${a.domain}/img/t.png" alt="T" title="Show torrents">
-                                </a>
-                            </div>
-                        `, B = `
-                            <div class="lc">
-                                <div id="${a.key}" class="unFavorite">\ud83d\udc94</div>
-                            </div>
-                        `; if ("m" === u || "p" === u) {
-                                    var C = Syn.$createElement("tr"); C.$iHtml(`
-                                <td class="gl1m glcat">${y}</td>
-                                <td class="gl2m">
-                                    ${A}
-                                        <div>
-                                            <div>
-                                                ${y}
-                                                ${I}
-                                            </div>
-                                            <div>
-                                                ${z}
-                                                ${r}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    ${H}
-                                </td>
-                                <td class="gl6m">${O}</td>
-                                <td class="gl3m glname" onmouseover="show_image_pane(${a.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                    ${w}
-                                        ${M}
-                                        ${E}
-                                    </a>
-                                </td>
-                                <td class="gl4m">
-                                    ${z}
-                                </td>
-                                <td class="glfm glfav">${a.favorited_time}</td>
-                                <td class="glfm" style="text-align:center; padding-left:3px">
-                                    ${B}
-                                </td>
+                                    A = `<div class="glcut" id="ic${a.gid}"></div><div class="glthumb" id="it${a.gid}" style="top:-179px;height:400px"><div>${F}</div>`,
+                                    H = `<div style="border-color:#000;background-color:rgba(0,0,0,.1)"onclick="popUp('https://${a.domain}/gallerypopups.php?gid=${a.gid}&amp;t=${a.tid}&amp;act=addfav',675,415)"id="posted_${a.gid}" title="Favorites 0">${a.posted}</div>`, I = H.replace("posted_", "postedpop_"),
+                                    O = `<div class="gldown"><a href="https://${a.domain}/gallerytorrents.php?gid=${a.gid}&amp;t=${a.tid}"onclick="return popUp('https://${a.domain}/gallerytorrents.php?gid=${a.gid}&amp;t=${a.tid}',610,590)"rel="nofollow"><img src="https://${a.domain}/img/t.png" alt="T" title="Show torrents"></a></div>`,
+                                    B = `<div class="lc"><div id="${a.key}" class="unFavorite">\ud83d\udc94</div></div>
+                            `; if ("m" === u || "p" === u) {
+                                var C = Syn.$createElement("tr"); C.$iHtml(`<td class="gl1m glcat">${y}</td><td class="gl2m">${A}<div><div>${y}${I}</div><div>${z}${r}</div></div></div>${H}</td><td class="gl6m">${O}</td><td class="gl3m glname" onmouseover="show_image_pane(${a.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">${w}${M}${E}</a></td><td class="gl4m">${z}</td><td class="glfm glfav">${a.favorited_time}</td><td class="glfm" style="text-align:center; padding-left:3px">${B}</td>
                             `.replace(/>\s+</g, "><")); q.prepend(C)
                                 } else "l" === u ? (y = Syn.$createElement("tr"), F = a.posted.split(" "), y.$iHtml(`
-                                <tr>
-                                    <td class="gl1c glcat">${N}</td>
-                                    <td class="gl2c">
-                                        ${A}
-                                            <div>
-                                                <div>
-                                                    ${N}
-                                                    ${I}
-                                                </div>
-                                                <div>
-                                                    ${z}
-                                                    ${r}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            ${H}
-                                            ${z}
-                                            ${O}
-                                        </div>
-                                    </td>
-                                    <td class="gl3c glname" onmouseover="show_image_pane(${a.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                        ${w}
-                                            ${M}
-                                            <div>
-                                                ${(() => { let t = 0, D = ""; var p, S; for ([p, S] of a.tags) { for (var R of S) { if (10 <= t) break; D += `<div class="gt" title="${p}:${R}">${R}</div>`; t++ } if (10 <= t) break } return D })()}
-                                            </div>
-                                            ${E}
-                                        </a>
-                                    </td>
-                                    <td class="glfc glfav">
-                                        <p>${F[0]}</p>
-                                        <p>${F[1]}</p>
-                                    </td>
-                                    <td class="glfc" style="text-align:center; padding-left:3px">
-                                        ${B}
-                                    </td>
-                                </tr>
+                                <tr><td class="gl1c glcat">${N}</td><td class="gl2c">${A}<div><div>${N}${I}</div><div>${z}${r}</div></div></div><div>${H}${z}${O}</div></td><td class="gl3c glname" onmouseover="show_image_pane(${a.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">${w}${M}<div>${(() => { let t = 0, D = ""; var p, S; for ([p, S] of a.tags) { for (var R of S) { if (10 <= t) break; D += `<div class="gt" title="${p}:${R}">${R}</div>`; t++ } if (10 <= t) break } return D })()}</div>${E}</a></td><td class="glfc glfav"><p>${F[0]}</p><p>${F[1]}</p></td><td class="glfc" style="text-align:center; padding-left:3px">${B}</td></tr>
                             `.replace(/>\s+</g, "><")), q.prepend(y)) : "e" === u ? (A = Syn.$createElement("tr"), A.$iHtml(`
-                                <tr>
-                                    <td class="gl1e" style="width:250px">
-                                        <div style="height: ${a.img_height}; width:250px">
-                                            ${w}
-                                                ${F}
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td class="gl2e">
-                                        <div>
-                                            <div class="gl3e">
-                                                ${N}
-                                                ${H}
-                                                ${z}
-                                                <div><a href="${a.artist_link}">${a.artist_text}</a></div>
-                                                ${r}
-                                                ${O}
-                                            <div>
-                                                <p>Favorited:</p><p>${a.favorited_time}</p>
-                                            </div>
-                                            </div>
-                                            ${w}
-                                                <div class="gl4e glname" style="min-height:${a.img_height}">
-                                                    ${M}
-                                                    <div>
-                                                        <table>
-                                                            <tbody>
-                                                                ${a.tags.map(([t, D]) => `
-                                                                            <tr>
-                                                                                <td class="tc">${t}</td>
-                                                                                <td>
-                                                                                    ${D.map(p => `<div class="gtl" title="${t}:${p}">${p}</div>`).join("")}
-                                                                                </td>
-                                                                            </tr>
-                                                                        `).join("")}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                    ${E}
-                                                </div>
-                                            </a>
-                                        </div>
-                                    </td>
-                                    <td class="glfe" style="text-align:center; padding-left:8px">
-                                        ${B}
-                                    </td>
-                                </tr>
+                                <tr><td class="gl1e" style="width:250px"><div style="height: ${a.img_height}; width:250px">${w}${F}</a></div></td><td class="gl2e"><div><div class="gl3e">${N}${H}${z}<div><a href="${a.artist_link}">${a.artist_text}</a></div>${r}${O}<div><p>Favorited:</p><p>${a.favorited_time}</p></div></div>${w}<div class="gl4e glname" style="min-height:${a.img_height}">${M}<div><table><tbody>${a.tags.map(([t, D]) => `<tr><td class="tc">${t}</td><td>${D.map(p => `<div class="gtl" title="${t}:${p}">${p}</div>`).join("")}</td></tr>`).join("")}</tbody></table></div>${E}</div></a></div></td><td class="glfe" style="text-align:center; padding-left:8px">${B}</td></tr>
                             `.replace(/>\s+</g, "><")), q.prepend(A)) : "t" === u && ((C = Syn.$createElement("div", { class: "gl1t" })).$iHtml(`
-                                <div class="gl4t glname glft">
-                                    <div>
-                                        ${w}
-                                            <span class="glink">${a.post_title}</span>
-                                        </a>
-                                    </div>
-                                    <div>
-                                        ${B}
-                                    </div>
-                                </div>
-                                <div class="gl3t" style="height: ${a.img_height}; width:250px">
-                                    ${w}
-                                        ${F}
-                                    </a>
-                                </div>
-                                ${E}
-                                <div class="gl5t">
-                                    <div>
-                                        ${y}
-                                        ${H}
-                                    </div>
-                                    <div>
-                                        ${z}
-                                        ${r}
-                                        ${O}
-                                    </div>
-                                </div>
+                                <div class="gl4t glname glft"><div>${w}<span class="glink">${a.post_title}</span></a></div><div>${B}</div></div><div class="gl3t" style="height: ${a.img_height}; width:250px">${w}${F}</a></div>${E}<div class="gl5t"><div>${y}${H}</div><div>${z}${r}${O}</div></div>
                             `.replace(/>\s+</g, "><")), q.prepend(C))
                             } q && (c.$q("tbody")?.prepend(q), c.$q("#favform .gld")?.prepend(q), requestAnimationFrame(() => {
                                 var a = t => { let D = {}; for (var p of t.$qa("div[id^='usertag_']:not(#usertag_0)")) p.$q("div:nth-of-type(2) input").checked && (p = p.$q("div.gt"), D[p.title] = p.style); Syn.$qa(".glname tr td:nth-of-type(2)").forEach(S => { S.childNodes.forEach(R => { var V = D[R.title]; V && (R.style.cssText = V.cssText) }) }) }; GM_xmlhttpRequest({
