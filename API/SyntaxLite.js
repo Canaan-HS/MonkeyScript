@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/03/31
+// @version      2025/04/01
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
