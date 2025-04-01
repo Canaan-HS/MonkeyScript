@@ -1,39 +1,45 @@
-# **[Eh/Ex] Cookie Login**
+# **[ Eh/Ex ] Cookie Login**
 
 ---
 
-## **👻 Usage**
+## **👻 How to Use**
 
-1. Install a browser script manager (e.g., [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)).
-2. [Install the script](https://update.greasyfork.org/scripts/470710/%5BEEx-Hentai%5D%20AutoLogin.user.js).
-3. Visit [e-hentai](https://e-hentai.org/) or [exhentai](https://exhentai.org/).
+1. Install a browser script manager (such as [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))
+2. [Install the script](https://update.greasyfork.org/scripts/470710/%5BEEx-Hentai%5D%20AutoLogin.user.js)
+3. Visit [e-hentai](https://e-hentai.org/) or [exhentai](https://exhentai.org/)
 
 ---
 
-## **👀 Feature Demo**
+## **👀 Feature Demonstration**
 
-- **Version 0.0.20 Demo**: [Youtube](https://www.youtube.com/watch?v=NOidYkgINY8)
+- **0.0.20 Demo**: [Youtube](https://www.youtube.com/watch?v=NOidYkgINY8)
+
 
 ## **📜 Feature Overview**
 
 ### **Automatic Login Detection**
-- ❗️ Requires local Cookie setup to function.
-- Once enabled, it automatically checks the login status and logs you in every 10 minutes when you visit the website.
+- ❗️ Requires local Cookie setup to use
+- When enabled, automatically checks login status every 10 minutes when entering the site and performs automatic login
 
 ### **Shared Account Login**
-- Logs in using a shared Cookie I provide (Updated on 2025-2-1 | A total of 5 accounts available). [Report if expired]
+- Login using Cookie provided by me personally (2025-2-1 shared account update | 5 sets in total) [ Please provide feedback if invalid ]
+
+### **Local Favorites**
+- Add custom favorites in posts and view them on the favorites page (display only, site search function not supported)
+- Display style follows the website's original style without additional adjustments; if other scripts modify the style, layout issues may occur
+- Recommended to keep at least one native website favorite to avoid layout problems
 
 ### **Local Cookie Setup**
-- Shared between e-hentai and exhentai.
-- Automatically obtained after login.
-- Manual input option available.
+- Settings are shared between both sites
+- Automatically acquired after login
+- Manual input
 
 ### **Local Cookie Operations**
-- View saved cookies (can be modified here).
-- Manually inject cookies.
-- Clear login status (does not affect saved cookies 🍪).
+- View saved cookies (can be modified here)
+- Manual injection
+- Clear login (clears current login status, not the saved 🍪)
 
-### **Language Adaptation**
+### **Language Auto-adaptation**
 - **🌐 Supported Languages**: Automatically adapts to the following languages based on browser settings:
   - Traditional Chinese
   - Simplified Chinese
@@ -53,11 +59,17 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.33**
+**Release Version: 0.0.34-Beta**
 
-### **Updates**
-1. API updates
-2. Added language support
-3. Modified some translations
+### **Update Content**
+1. API update
+2. Optimized partial implementation
+3. Added personal favorites (mainly for shared accounts)
+
+### **⭐ Favorites Function**
+1. Supports tag coloring (using account settings)
+2. Supports website native view mode (without any native favorites, displayed as Thumbnail)
+3. Does not support the search function on the favorites page
+4. Does not support favorites categorization (all categories will appear)
 
 ---
