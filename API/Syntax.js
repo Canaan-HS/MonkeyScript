@@ -896,7 +896,7 @@ const Syn = (() => {
      * sJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
      * gJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
      */
-    const StoreVerify = (val) => val !== void 0 ? val : "";
+    const StoreVerify = (val) => val === void 0 || val === null ? null : val;
     const StoreCall = {
         dV: key => GM_deleteValue(key),
         lV: () => StoreVerify(GM_listValues()),
