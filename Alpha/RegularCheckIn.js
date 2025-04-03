@@ -129,6 +129,9 @@
 
     const ListenerRecord = new WeakMap();
     Object.assign(EventTarget.prototype, {
+        one(type, listener, add={}) {
+            this.addEventListener(type, listener, add);
+        },
         onEvent(type, listener, options = {}) {
             const record = ListenerRecord.get(this);
             if (record?.has(type)) return;
@@ -233,6 +236,13 @@
 
         // 任務詢輪
         function Query(newDate = new Date()) {
+            /*
+                Todo: 將 RecordTime 紀錄移除, 保留 CheckInTime
+                Todo: 將 CheckInTime 的格式改成 {CheckInTime: {"時間戳": ["任務"], "時間戳2": ["任務2"]}}, 已自定個別任務時間
+                * 檢查時所有的時間戳都會被檢查, 然後當有命中的時間戳, 紀錄的任務必須同時命中, 此處的任務表 與 有在任務列表內的, 如果沒特定時間
+                * 將會被設置為 {"時間戳": ["All"]}, 輪詢始終只創建一個
+                * 可能的定義與解析: const time = "01:05:30".split(":").map(value => parseInt(value));
+            */
             if (Stop) return;
 
             const Tasks = GM_getValue(Config.TaskKey, []); // 取得任務列表
@@ -257,7 +267,7 @@
             };
 
             try {
-                const TaskTimer = GM_getValue(Config.TimerKey); // 取得任務時間
+                const TaskTimer = GM_getValue(Config.TimerKey); // 取得時間戳
 
                 if (TaskTimer) {
                     const CheckInDate = TaskTimer['CheckInTime']; // 主要驗證
@@ -391,7 +401,9 @@
             }
         };
 
-        EnableTask();
+        if (document.visibilityState === "hidden") {
+            document.one("visibilitychange", () => EnableTask(), { once: true });
+        } else EnableTask();
     })();
 
 })();
