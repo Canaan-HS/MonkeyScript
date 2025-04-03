@@ -189,7 +189,7 @@ GM_getResourceURL(我的圖標)
 ```JavaScript
 // @grant GM_info
 
-console.log(`腳本資訊: ${GM_info()}`);
+console.log(`腳本資訊: ${GM_info}`);
 ```
 
 **`@grant unsafeWindow`**
