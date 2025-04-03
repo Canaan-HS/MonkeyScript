@@ -244,7 +244,7 @@
                     const RecordDate = TaskTimer['RecordTime']; // 附加驗證 (非必要)
 
                     if (
-                        newDate > new Date(CheckInDate) // 判斷當前時間 > 簽到時間
+                        navigator.onLine && newDate > new Date(CheckInDate) // 有網路時, 當前時間 > 簽到時間
                         || RecordDate && isPrevious(newDate, new Date(RecordDate)) // 判斷紀錄時間是前一天
                     ) { // 執行簽到
                         let Index = 0;
