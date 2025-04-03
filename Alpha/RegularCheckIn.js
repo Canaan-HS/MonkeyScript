@@ -27,6 +27,13 @@
 
 (async ()=> {
 
+    const Config = {
+        Dev: true,
+        TaskKey: "RunTasks", // 任務列表 Key
+        TimerKey: "TaskTimer", // 時間戳 Key
+        RegisterKey: "RegisterTime", // 註冊時間 Key
+    };
+
     const Task_List = [
         {
             Name: "GenshInimpact", // 任務名
@@ -52,14 +59,14 @@
                 retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
-        {
-            Name: "ZenlessZoneZero",
-            API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-            Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-            verifyStatus: (Name, { retcode }) => {
-                retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
-        },
+        // {
+        //     Name: "ZenlessZoneZero",
+        //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
+        //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
+        //     verifyStatus: (Name, { retcode }) => {
+        //         retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
+        //     }
+        // },
         {
             Name: "LeveCheckIn",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
@@ -78,12 +85,7 @@
         }
     ];
 
-    const Config = {
-        Dev: true,
-        TaskKey: "RunTasks", // 任務列表 Key
-        TimerKey: "TaskTimer", // 時間戳 Key
-        RegisterKey: "RegisterTime", // 註冊時間 Key
-    };
+    'use strict';
 
     // 建立簽到請求
     function CreateRequest({ Name, API, verifyStatus }) {
@@ -125,6 +127,23 @@
         }
     };
 
+    const ListenerRecord = new WeakMap();
+    Object.assign(EventTarget.prototype, {
+        onEvent(type, listener, options = {}) {
+            const record = ListenerRecord.get(this);
+            if (record?.has(type)) return;
+            this.addEventListener(type, listener, options);
+            if (!record) ListenerRecord.set(this, new Map());
+            ListenerRecord.get(this).set(type, listener);
+        },
+        offEvent(type) {
+            const listen = ListenerRecord.get(this)?.get(type);
+            if (!listen) return;
+            this.removeEventListener(type, listen);
+            ListenerRecord.get(this).delete(type);
+        }
+    });
+
     const RegisterTask = (()=> {
         let Stop = false;
         let Registered = false;
@@ -136,6 +155,7 @@
         async function DestroyReset() {
             Stop = true;
             clearTimeout(Timers);
+            document.offEvent("visibilitychange");
             GM_removeValueChangeListener(Listeners);
 
             // 恢復預設狀態
@@ -278,8 +298,8 @@
                 Listener(Config.RegisterKey); // 監聽註冊時間變化
                 Query(); // 開始檢測
 
-                document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible') {
+                document.onEvent("visibilitychange", () => {
+                    if (document.visibilityState === "visible") {
                         clearTimeout(Timers); // 清除舊的定時器
                         Query(); // 重新檢測
                     }
