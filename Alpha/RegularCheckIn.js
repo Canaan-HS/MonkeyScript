@@ -13,6 +13,7 @@
 // @icon         https://cdn-icons-png.flaticon.com/512/10233/10233926.png
 
 // @run-at       document-start
+// @grant        GM_info
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -29,54 +30,48 @@
     const Task_List = [
         {
             Name: "GenshInimpact", // 任務名
-            verifyLogin: "Hoyolab_Verified", // 驗證登入狀態
             API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481", // 簽到 API
-            Url: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
+            Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
             verifyStatus: (Name, { retcode }) => { // 驗證邏輯 Name: 任務名, { 要解構物件的值 }
                 retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
         {
             Name: "HonkaiStarRail",
-            verifyLogin: "Hoyolab_Verified",
             API: "https://sg-public-api.hoyolab.com/event/luna/os/sign?act_id=e202303301540311",
-            Url: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
+            Page: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
             verifyStatus: (Name, { retcode }) => {
                 retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
         {
             Name: "HonkaiImpact3rd",
-            verifyLogin: "Hoyolab_Verified",
             API: "https://sg-public-api.hoyolab.com/event/mani/sign?act_id=e202110291205111",
-            Url: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
+            Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
             verifyStatus: (Name, { retcode }) => {
                 retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
         {
             Name: "ZenlessZoneZero",
-            verifyLogin: "Hoyolab_Verified",
             API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-            Url: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
+            Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
             verifyStatus: (Name, { retcode }) => {
                 retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
         {
             Name: "LeveCheckIn",
-            verifyLogin: "Levelinfinite_Verified",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
-            Url: "https://pass.levelinfinite.com/rewards?points=/points/",
+            Page: "https://pass.levelinfinite.com/rewards?points=/points/",
             verifyStatus: (Name, { code }) => {
                 code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
         },
         {
             Name: "LeveStageCheckIn",
-            verifyLogin: "Levelinfinite_Verified",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
-            Url: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
+            Page: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
             verifyStatus: (Name, { code }) => {
                 code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 || code === 1002007 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
@@ -84,35 +79,46 @@
     ];
 
     const Config = {
-        Dev: false, // 正常使用不要開啟
-        Console: true
+        Dev: true,
+        TaskKey: "RunTasks", // 任務列表 Key
+        TimerKey: "TaskTimer", // 時間戳 Key
+        RegisterKey: "RegisterTime", // 註冊時間 Key
     };
 
+    // 建立簽到請求
     function CreateRequest({ Name, API, verifyStatus }) {
+
+        const deBug = (Result) => {
+            console.table(Object.assign({name: Name}, Result));
+        };
+
         return {
-            Request: () => {
-                const CheckIn = Qmsg.loading(`${Name} 簽到中`);
+            Run: () => {
+                let CheckIn = undefined;
+
+                try {
+                    CheckIn = Qmsg.loading(`${Name} 簽到中`);
+                } catch (error) {}
 
                 GM_xmlhttpRequest({
                     method: "POST",
                     url: API,
                     onload: (response) => {
-                        CheckIn.close();
-                        const result = JSON.parse(response.response);
+                        const Result = JSON.parse(response.response);
+                        deBug(Result);
 
+                        CheckIn?.close();
                         if (response.status === 200) {
-                            verifyStatus(Name, result);
+                            verifyStatus(Name, Result);
                         } else {
                             Qmsg.error(`${Name} 簽到失敗`);
                         }
-
-                        console.table(Object.assign({name: Name}, result));
                     },
                     onerror: (response) => {
-                        CheckIn.close();
-                        Qmsg.error(`${Name} 簽到失敗`);
+                        deBug(JSON.parse(response.response));
 
-                        console.table(Object.assign({name: Name}, JSON.parse(response.response)));
+                        CheckIn?.close();
+                        Qmsg.error(`${Name} 簽到失敗`);
                     }
                 })
             }
@@ -120,28 +126,55 @@
     };
 
     const RegisterTask = (()=> {
-        const Timers = new Map(); // 任務定時器
-        const Listeners = new Map(); // 變化監聽器
+        let Stop = false;
+        let Registered = false;
 
-        const [
-            day_ms, minute_ms, seconds_ms
-        ] = [
-            (8.64e7), (3.6e6), (6e4)
-        ];
+        let Timers = null; // 任務定時器
+        let Listeners = null; // 變化監聽器
 
-        // 計算當前時間, 到明日 00:05 的差時 (ms)
-        function TimeDiff(newDate) {
-            const tomorrow = new Date(); // 設置隔天時間
-            tomorrow.setDate(newDate.getDate() + 5); // 00:05
-            tomorrow.setHours(0, 0, 0, 0);
-            return (tomorrow - newDate);
+        // 銷毀所有定時器與詢輪, 並重置註冊狀態
+        async function DestroyReset() {
+            Stop = true;
+            clearTimeout(Timers);
+            GM_removeValueChangeListener(Listeners);
+
+            // 恢復預設狀態
+            requestIdleCallback(()=> {
+                Stop = false;
+                Registered = false;
+            })
         };
 
-        // 判斷是否為先前日期
-        function isPrevious(newDate, oldDate) {
-            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
-            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-            return oldMs < newMs;
+        // 註冊變化監聽器
+        async function Listener(name) {
+            Listeners = GM_addValueChangeListener(name, function(key, old_value, new_value, remote) {
+                if (remote) { // 來自其他窗口修改
+                    DestroyReset();
+                    console.log("舊詢輪已被停止");
+                }
+            })
+        };
+
+        // 顯示觸發時間
+        function DisplayTrigger(newDate, CheckInDate) {
+            if (!Config.Dev) return;
+
+            const ms = CheckInDate - newDate;
+            const [
+                day_ms, minute_ms, seconds_ms
+            ] = [
+                (8.64e7), (3.6e6), (6e4)
+            ];
+
+            const [
+                hour, minute, seconds,
+            ] = [
+                Math.floor((ms % day_ms) / minute_ms),
+                Math.floor((ms % minute_ms) / seconds_ms),
+                Math.floor((ms % seconds_ms) / 1e3)
+            ];
+
+            console.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`);
         };
 
         // 格式化時間
@@ -152,136 +185,190 @@
             const hour = `${time.getHours()}`.padStart(2, "0");
             const minute = `${time.getMinutes()}`.padStart(2, "0");
             const second = `${time.getSeconds()}`.padStart(2, "0");
-            return `${year}-${month}-${date} ${hour}:${minute}:${second}`;
+            return `${year}/${month}/${date} ${hour}:${minute}:${second}`;
         };
 
-        // 計算觸發時間
-        function TriggerTime(ms) {
-            const [
-                hour, minute, seconds,
-            ] = [
-                Math.floor((ms % day_ms) / minute_ms),
-                Math.floor((ms % minute_ms) / seconds_ms),
-                Math.floor((ms % seconds_ms) / 1e3)
-            ];
-
-            return `任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`;
+        // 判斷是否是前一天
+        function isPrevious(newDate, oldDate) {
+            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
+            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+            return oldMs < newMs;
         };
 
-        // 刪除定時器, 刪除註冊值 (可選)
-        async function RemoveTimers(task_name, delValue = false) {
-            clearTimeout(Timers.get(task_name));
-            Timers.delete(task_name);
-            delValue && GM_deleteValue(task_name);
+        // 計算簽到時間
+        function CheckInTime(newDate) {
+            const tomorrow = new Date();
+            tomorrow.setDate(newDate.getDate() + 1); // 設置隔天時間
+            tomorrow.setHours(0, 0, 3, 0); // 00:03
+            return tomorrow;
         };
 
-        // 刪除變化監聽器
-        async function RemoveListeners(task_name) {
-            GM_removeValueChangeListener(Listeners.get(task_name));
-            Listeners.delete(task_name);
-        };
-
-        // 註冊變化監聽器
-        async function Listener(task_name) {
-            const listener = GM_addValueChangeListener(task_name, function(key, old_value, new_value, remote) {
-                if (remote) { // 來自其他窗口修改
-                    // 銷毀先前的定時器
-                    RemoveTimers(task_name);
-                    RemoveListeners(task_name);
-                    console.log(`任務 ${task_name} 已被清除`);
-                }
+        // 更新記錄
+        function SetNewRecord(newDate) {
+            GM_setValue(Config.TimerKey, {
+                RecordTime: TimeFormat(newDate),
+                CheckInTime: TimeFormat(CheckInTime(newDate))
             })
+        };
 
-            Listeners.set(task_name, listener);
+        // 任務詢輪
+        function Query(newDate = new Date()) {
+            if (Stop) return;
+
+            const Tasks = GM_getValue(Config.TaskKey, []); // 取得任務列表
+
+            // 料表類型錯誤, 直接複寫空陣列
+            if (!Array.isArray(Tasks)) {
+                GM_setValue(Config.TaskKey, []);
+
+                Config.Dev && console.log("錯誤的任務列表, 詢輪已被停止");
+                return;
+            };
+
+            // 沒有任務不執行 (並清除不需要的值)
+            if (Tasks.length === 0) {
+                GM_deleteValue(Config.TaskKey);
+                GM_deleteValue(Config.TimerKey);
+                GM_deleteValue(Config.RegisterKey);
+
+                DestroyReset();
+                Config.Dev && console.log("沒有任務, 詢輪已被停止");
+                return;
+            };
+
+            try {
+                const TaskTimer = GM_getValue(Config.TimerKey); // 取得任務時間
+
+                if (TaskTimer) {
+                    const CheckInDate = TaskTimer['CheckInTime']; // 主要驗證
+                    const RecordDate = TaskTimer['RecordTime']; // 附加驗證 (非必要)
+
+                    if (
+                        newDate > new Date(CheckInDate) // 判斷當前時間 > 簽到時間
+                        || RecordDate && isPrevious(newDate, new Date(RecordDate)) // 判斷紀錄時間是前一天
+                    ) { // 執行簽到
+                        let Index = 0;
+                        const EnabledTask = new Set(Tasks);
+
+                        for (const Task of Task_List) {
+                            if (!EnabledTask.has(Task.Name)) continue; // 判斷是否啟用
+
+                            setTimeout(() => {
+                                CreateRequest(Task).Run();
+                            }, Math.max(Index++ * 2000)); // 每個任務間隔 2 秒
+                        }
+
+                        SetNewRecord(newDate); // 更新記錄
+                    } else DisplayTrigger(newDate, new Date(CheckInDate));
+
+                } else throw new Error("沒有時間戳記錄");
+            } catch {
+                SetNewRecord(newDate);
+            };
+
+            Timers = setTimeout(Query, 1e4); // 10 秒詢輪
         };
 
         return {
-            Destroy: (task_name) => {
-                RemoveListeners(task_name);
-                RemoveTimers(task_name, true);
-                console.log(`任務 ${task_name} 已被停止`);
-            },
-            Register: (task_name, task_func) => {
-                if (Timers.has(task_name) || !navigator.onLine) return; // 禁止重複 與 離線註冊
+            Register: () => {
+                if (Registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
+                Registered = true;
 
-                const newDate = new Date(); // 取得當前日期
-                const oldDate = new Date(GM_getValue(task_name, newDate)); // 嘗試取得舊任務紀錄
+                GM_setValue(Config.RegisterKey, TimeFormat(new Date())); // 紀錄註冊時間
+                Listener(Config.RegisterKey); // 監聽註冊時間變化
+                Query(); // 開始檢測
 
-                const task_delay = Math.max(1, Timers.size * 2000);; // 根據註冊數量 + 2 秒
-                const wait_diff = (Config.Dev ? 1e4 : TimeDiff(newDate)) + task_delay; // 取得差時 (開發模式差時為 10 秒)
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        clearTimeout(Timers); // 清除舊的定時器
+                        Query(); // 重新檢測
+                    }
+                });
 
-                // 當先前紀錄過期, 註冊延遲後觸發
-                if (isPrevious(newDate, oldDate) || (newDate - oldDate) >= wait_diff) {
-                    setTimeout(task_func, task_delay); // 觸發後的延遲, 只設置任務延遲, 避免一次性觸發全部
-                };
-
-                // 創建計時器並保存
-                Timers.set(task_name, setTimeout(()=> {
-                    if (!navigator.onLine) return; // 禁止離線觸發
-
-                    task_func(); // 調用任務
-                    RemoveListeners(task_name);
-                    RemoveTimers(task_name, true);
-                }, wait_diff));
-
-                if (Config.Console) {
-                    console.group(`註冊簽到任務: ${task_name}`);
-                    console.log(TriggerTime(wait_diff));
-                    console.groupEnd();
-                };
-
-                // 紀錄新的時間
-                GM_setValue(task_name, TimeFormat(newDate));
-
-                // 註冊新的監聽器
-                Listener(task_name);
             }
         }
     })();
 
     (()=> {
 
-        // 開啟對應頁面
-        async function OpenPage(Name, Url) {
-            const yes = confirm(`是否開啟 ${Name} 簽到頁面, 確認登入狀態？`);
-            yes && window.open(Url);
+        // 判斷是否為 url
+        function isValidURL(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (error) {
+                return false;
+            }
         };
+
+        // 雙擊確認
+        function DoubleClickConfirm(callback, delay) {
+            let lastTime = 0;
+            let timerId;
+
+            return function(...args) {
+                const now = Date.now();
+                const isRapid = now - lastTime < delay;
+
+                clearTimeout(timerId);
+                lastTime = now;
+
+                if (isRapid) {
+                    return callback(true, ...args);
+                }
+
+                timerId = setTimeout(() => callback(false, ...args), delay);
+            }
+        };
+
+        // 判斷版本號
+        function isVersionGreater(version, targetVersion) {
+            const [major1, minor1, patch1] = version.split('.').map(Number);
+            const [major2, minor2, patch2] = targetVersion.split('.').map(Number);
+
+            return major1 > major2 || 
+                (major1 === major2 && minor1 > minor2) || 
+                (major1 === major2 && minor1 === minor2 && patch1 > patch2);
+        };
+
+        // 取得任務列表
+        const GetEnabledTask = () => new Set(GM_getValue(Config.TaskKey, []));
+        // 根據版本號判斷菜單是否自動關閉
+        const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
         // 透過菜單啟用任務
         async function EnableTask() {
-            for (const [index, Task] of Task_List.entries()) {
+            const EnabledTask = GetEnabledTask();
 
-                const Status = GM_getValue(`${Task.Name}_Enabled`);
-                const Icon = Status ? "🟢" : "🔴";
+            // 有任務時註冊
+            if (EnabledTask.size > 0) {
+                RegisterTask.Register();
+            };
 
-                // 啟用的, 直接註冊
-                if (Status) {
-                    RegisterTask.Register(
-                        Task.Name, CreateRequest(Task).Request
-                    )
-                };
+            for (const [Index, Task] of Task_List.entries()) {
+                const Icon = EnabledTask.has(Task.Name) ? "🟢" : "🔴";
 
-                GM_registerMenuCommand(`${Icon} ${Task.Name}`, ()=> {
-                    if (!GM_getValue(Task.verifyLogin)) { // 還未驗證的
-                        OpenPage(Task.Name, Task.Url);
-                        GM_setValue(Task.verifyLogin, true); // 註冊驗證 Key
+                GM_registerMenuCommand(`${Icon} ${Task.Name}`, DoubleClickConfirm((Open) => {
+
+                    if (Open) {
+                        const Url = Task['Page'];
+                        isValidURL(Url) && window.open(Url);
+                        return;
                     };
 
-                    const Status = GM_getValue(`${Task.Name}_Enabled`);
-                    if (Status) { // 當前啟用的, 所以進行關閉任務
-                        GM_setValue(`${Task.Name}_Enabled`, false);
-                        RegisterTask.Destroy(Task.Name);
-                    } else { // 當前未啟用的, 所以進行啟用任務
-                        GM_setValue(`${Task.Name}_Enabled`, true);
-                    }
+                    const EnabledTask = GetEnabledTask();
+                    EnabledTask.has(Task.Name)
+                        ? EnabledTask.delete(Task.Name)
+                        : EnabledTask.add(Task.Name);
+                    GM_setValue(Config.TaskKey, [...EnabledTask]);
 
                     EnableTask(); // 遞迴更新狀態
-                }, {
-                    id: `CheckIn-${index}`,
-                    autoClose: false
-                });
+                }, 200), {
+                    id: `CheckIn-${Index}`,
+                    autoClose
+                })
 
-            };
+            }
         };
 
         EnableTask();
