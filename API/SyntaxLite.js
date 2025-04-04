@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/04/01
+// @version      2025/04/04
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -731,14 +731,17 @@ const Syn = (() => {
      * sJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
      * gJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
      */
-    const StoreVerify = (val) => val !== void 0 ? val : "";
+    const StoreVerify = (val) => val === void 0 || val === null ? null : val;
     const StoreCall = {
         dV: key => GM_deleteValue(key),
         lV: () => StoreVerify(GM_listValues()),
         sV: (key, value) => GM_setValue(key, value),
         gV: (key, error) => StoreVerify(GM_getValue(key, error)),
-        sJV: (key, value) => GM_setValue(key, JSON.stringify(value, null, 4)),
-        gJV: (key, value) => JSON.parse(StoreVerify(GM_getValue(key, value)))
+        sJV: (key, value, space=0) => GM_setValue(key, JSON.stringify(value, null, space)),
+        gJV: (key, error) => {
+            try { return JSON.parse(StoreVerify(GM_getValue(key, error)))}
+            catch { return error }
+        }
     };
 
     /**
