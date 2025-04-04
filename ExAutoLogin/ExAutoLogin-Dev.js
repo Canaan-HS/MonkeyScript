@@ -28,6 +28,7 @@
 // @run-at       document-start
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
@@ -250,7 +251,16 @@
     })();
 
     (async function Main($Cookie, $Shared) {
-        let Share = Syn.gV("Share", {});
+        let Share = null;
+
+        // 版本過度, 進行舊版資料轉移
+        try {
+            Share = Syn.gJV("Share", {});
+        } catch {
+            Share = Syn.gV("Share", {});
+            Syn.dV("Share");
+            Syn.sJV("Share", Share);
+        };
 
         // 頁面匹配
         const url = Syn.$url;
@@ -414,9 +424,10 @@
                 if (target.id === "login") {
                     $Cookie.ReAdd(Share[+$("#account-select").val()]);
                 } else if (target.id === "update") {
-                    $Shared.Update().then(result => {
-                        if (result) {
-                            Share = Syn.gV("Share", {});
+                    $Shared.Update().then(Data => {
+                        if (Data) {
+                            Share = Data;
+                            Syn.sJV("Share", Data);
                             setTimeout(SharedLogin, 600);
                         }
                     })
@@ -507,7 +518,7 @@
                     return value.trim() !== "" ? { name: $(input).attr("name"), value: value } : null;
                 }).filter(Boolean);
 
-                cookie = JSON.stringify(cookie_list, null, 4);
+                cookie = JSON.stringify(cookie_list);
                 textarea.val(cookie);
                 $("#set_cookies div").append(textarea);
 
@@ -1018,19 +1029,17 @@
             const Shared = await Get();
 
             if (Object.keys(Shared).length > 0) {
-                const localHash = md5(JSON.stringify(Syn.gV("Share", {})));
+                const localHash = md5(Syn.gJV("Share", {}));
                 const remoteHash = md5(JSON.stringify(Shared));
 
                 if (localHash !== remoteHash) {
-                    Syn.sV("Share", Shared);
                     Growl(Transl("共享數據更新完成"), "jGrowl", 1500);
 
-                    return true;
+                    return Shared;
                 } else {
                     Growl(Transl("共享數據無需更新"), "jGrowl", 1500);
                 }
             } else {
-                Syn.sV("Share", {});
                 Growl(Transl("共享數據獲取失敗"), "jGrowl", 2500);
             }
 
