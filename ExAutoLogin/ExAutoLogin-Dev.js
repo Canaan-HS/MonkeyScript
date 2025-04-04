@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      0.0.34-Beta
+// @version      0.0.34-Beta1
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
@@ -1002,7 +1002,7 @@
                 GM_xmlhttpRequest({
                     method: "GET",
                     responseType: "json",
-                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/main/Share/ExShare.json",
+                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/refs/heads/main/Share/ExShare.json",
                     onload: response => {
                         if (response.status === 200) {
                             const data = response.response;
