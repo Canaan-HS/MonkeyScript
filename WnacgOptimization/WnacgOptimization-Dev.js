@@ -12,15 +12,15 @@
 // @description:ja      デスクトップ版ページでは、自動ページ送りと手動キー操作によるページ送りの切り替えができ、背景色と画像サイズをカスタマイズできます。デスクトップで開いたモバイルページ（モバイル端末では適用されません）では、背景色と画像サイズをカスタマイズできます。
 // @description:en      The desktop version supports switching between automatic page turning and manual key press page turning, with customizable background color and image size. The mobile version opened on a desktop (not applicable on mobile devices) allows for customizing the background color and image size.
 
-// @match       *://*.wnacg.com/photos-view-id-*.html
-// @match       *://*.wnacg01.ru/photos-view-id-*.html
-// @match       *://*.wnacg02.ru/photos-view-id-*.html
-// @match       *://*.wnacg03.ru/photos-view-id-*.html
+// @match       *://*.wnacg.com/photos-view-id-*
+// @match       *://*.wnacg01.ru/photos-view-id-*
+// @match       *://*.wnacg02.ru/photos-view-id-*
+// @match       *://*.wnacg03.ru/photos-view-id-*
 
-// @match       *://*.wnacg.com/photos-slist-aid-*.html
-// @match       *://*.wnacg01.ru/photos-slist-aid-*.html
-// @match       *://*.wnacg02.ru/photos-slist-aid-*.html
-// @match       *://*.wnacg03.ru/photos-slist-aid-*.html
+// @match       *://*.wnacg.com/photos-slist-aid-*
+// @match       *://*.wnacg01.ru/photos-slist-aid-*
+// @match       *://*.wnacg02.ru/photos-slist-aid-*
+// @match       *://*.wnacg03.ru/photos-slist-aid-*
 
 // @icon        https://www.wnacg.com/favicon.ico
 
