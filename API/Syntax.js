@@ -903,7 +903,7 @@ const Syn = (() => {
         sV: (key, value) => GM_setValue(key, value),
         gV: (key, error) => StoreVerify(GM_getValue(key, error)),
         sJV: (key, value, space=0) => GM_setValue(key, JSON.stringify(value, null, space)),
-        gJV: (key, value) => JSON.parse(StoreVerify(GM_getValue(key, value)))
+        gJV: (key, value, error) => JSON.parse(StoreVerify(GM_getValue(key, value, error)))
     };
 
     /**
