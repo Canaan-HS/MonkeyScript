@@ -35,7 +35,7 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/Syntax.js
+// @require      https://update.greasyfork.org/scripts/487608/1565376/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 
