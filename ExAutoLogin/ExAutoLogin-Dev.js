@@ -35,7 +35,7 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1563601/SyntaxLite_min.js
+// @require      https://raw.githubusercontent.com/Canaan-HS/MonkeyScript/refs/heads/main/API/Syntax.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 
@@ -443,7 +443,7 @@
                 <div class="modal-background">
                     <div class="show-modal">
                     <h1 style="text-align: center;">${Transl("確認選擇的 Cookies")}</h1>
-                        <pre><b>${cookies}</b></pre>
+                        <pre><b>${JSON.stringify(cookies, null, 4)}</b></pre>
                         <div style="text-align: right;">
                             <button class="modal-button" id="save">${Transl("確認保存")}</button>
                             <button class="modal-button" id="close">${Transl("取消退出")}</button>
@@ -457,7 +457,7 @@
                 const target = click.target;
 
                 if (target.id === "save") {
-                    Syn.sV("E/Ex_Cookies", cookies);
+                    Syn.sJV("E/Ex_Cookies", cookies);
                     Growl(Transl("保存成功!"), "jGrowl", 1500);
                     DeleteMenu();
                 } else if (target.className === "modal-background" || target.id === "close") {
@@ -475,7 +475,7 @@
             }
 
             cookie_box.length > 1
-                ? Cookie_Show(JSON.stringify(cookie_box, null, 4))
+                ? Cookie_Show(cookie_box)
                 : alert(Transl("未獲取到 Cookies !!\n\n請先登入帳戶"));
         };
 
@@ -513,13 +513,12 @@
                 submit.preventDefault();
                 submit.stopImmediatePropagation();
 
-                const cookie_list = Array.from($("#set_cookies .set-list")).map(function (input) {
+                cookie = Array.from($("#set_cookies .set-list")).map(function (input) {
                     const value = $(input).val();
                     return value.trim() !== "" ? { name: $(input).attr("name"), value: value } : null;
                 }).filter(Boolean);
 
-                cookie = JSON.stringify(cookie_list);
-                textarea.val(cookie);
+                textarea.val(JSON.stringify(cookie, null, 4));
                 $("#set_cookies div").append(textarea);
 
                 Growl(Transl("[確認輸入正確] 按下退出選單保存"), "jGrowl", 2500);
@@ -531,7 +530,7 @@
                 const target = click.target;
                 if (target.className === "modal-background" || target.id === "close") {
                     click.preventDefault();
-                    cookie && Syn.sV("E/Ex_Cookies", cookie);
+                    target.id === "close" && cookie && Syn.sJV("E/Ex_Cookies", cookie);
                     DeleteMenu();
                 }
             })
@@ -1030,7 +1029,7 @@
 
             if (Object.keys(Shared).length > 0) {
                 const localHash = md5(Syn.gJV("Share", {}));
-                const remoteHash = md5(JSON.stringify(Shared));
+                const remoteHash = md5(Shared);
 
                 if (localHash !== remoteHash) {
                     Growl(Transl("共享數據更新完成"), "jGrowl", 1500);
