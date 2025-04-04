@@ -224,6 +224,7 @@
             }
             .unFavorite {
                 font-size: 2rem;
+                position: relative;
                 display: inline-block;
                 transition: transform 0.2s ease;
             }
@@ -232,19 +233,19 @@
             }
             @keyframes shake {
                 0% {
-                    transform: translateX(0);
+                    left: 0;
                 }
                 25% {
-                    transform: translateX(-5px);
+                    left: -5px;
                 }
                 50% {
-                    transform: translateX(5px);
+                    left: 5px;
                 }
                 75% {
-                    transform: translateX(-5px);
+                    left: -5px;
                 }
                 100% {
-                    transform: translateX(0);
+                    left: 0;
                 }
             }
         `, "AutoLogin-Style");
@@ -255,7 +256,8 @@
 
         // 版本過度, 進行舊版資料轉移
         try {
-            Share = Syn.gJV("Share", {});
+            Share = Syn.gJV("Share");
+            if (typeof Share !== "object") throw new Error("Old version data");
         } catch {
             Share = Syn.gV("Share", {});
             Syn.dV("Share");
@@ -912,7 +914,7 @@
                                             <span class="glink">${json.post_title}</span>
                                         </a>
                                     </div>
-                                    <div>
+                                    <div style="transform: translateY(-70%);">
                                         ${unFavorite}
                                     </div>
                                 </div>
