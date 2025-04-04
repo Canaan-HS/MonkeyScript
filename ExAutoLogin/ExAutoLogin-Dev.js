@@ -549,7 +549,7 @@
                 </div>
             `);
 
-            const cookie = Syn.gJV("E/Ex_Cookies");
+            const cookie = Syn.gJV("E/Ex_Cookies", {});
             const textarea = $("<textarea>").attr({
                 rows: 20,
                 cols: 50,
@@ -577,7 +577,9 @@
         /* 手動注入 Cookies 登入 */
         async function CookieInjection() {
             try {
-                $Cookie.ReAdd(Syn.gJV("E/Ex_Cookies"));
+                const cookie = Syn.gJV("E/Ex_Cookies");
+                if (cookie === null) throw new Error("No Cookies");
+                $Cookie.ReAdd(cookie);
             } catch (error) {
                 alert(Transl("未檢測到可注入的 Cookies !!\n\n請從選單中進行設置"));
             }
