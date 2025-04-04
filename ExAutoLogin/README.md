@@ -59,7 +59,7 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.34-Beta**
+**Release Version: 0.0.34-Beta1**
 
 ### **Update Content**
 1. API update
