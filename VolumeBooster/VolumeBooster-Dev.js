@@ -85,17 +85,17 @@
                 const nodecount = this.EnhanceNodes.length; // 紀錄運行前的節點數
                 for (const media of media_object) {
 
+                    if (!media.crossOrigin) media.crossOrigin = "anonymous"; // 設置跨域
+                    if (media.mediaKeys || media.encrypted || media.textTracks.length > 0) { // 檢查媒體是否受保護
+                        continue;
+                    };
+
                     const SourceNode = this.MediaContent.createMediaElementSource(media); // 音頻來源
                     const GainNode = this.MediaContent.createGain(); // 增益節點
                     const LowFilterNode = this.MediaContent.createBiquadFilter(); // 低音慮波器
                     const MidFilterNode = this.MediaContent.createBiquadFilter(); // 中音慮波器
                     const HighFilterNode = this.MediaContent.createBiquadFilter(); // 高音濾波器
                     const CompressorNode = this.MediaContent.createDynamicsCompressor(); // 動態壓縮節點
-
-                    const Interval = setInterval(() => {
-                        media.volume = 1; // 將媒體音量設置為 100 % (有可能被其他腳本調整)
-                    }, 1e3);
-                    setTimeout(() => {clearInterval(Interval)}, 3e3); // 持續 3 秒停止
 
                     // 設置初始增量
                     GainNode.gain.value = this.Increase ** 2;
@@ -131,6 +131,11 @@
                         .connect(HighFilterNode)
                         .connect(CompressorNode)
                         .connect(this.MediaContent.destination);
+
+                    const Interval = setInterval(() => {
+                        media.volume = 1; // 將媒體音量設置為 100 % (有可能被其他腳本調整)
+                    }, 1e3);
+                    setTimeout(() => {clearInterval(Interval)}, 3e3); // 持續 3 秒停止
 
                     // 將完成的節點添加
                     this.EnhanceNodes.push(GainNode);
