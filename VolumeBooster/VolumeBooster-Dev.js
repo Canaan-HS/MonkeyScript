@@ -284,7 +284,14 @@
                         -webkit-backdrop-filter: blur(5px);
                         transition: opacity 0.4s ease;
                         background-color: rgba(0, 0, 0, 0.4);
+                    }
+
+                    Booster_Modal_Background.open {
                         animation: fadeIn 0.4s ease forwards;
+                    }
+
+                    Booster_Modal_Background.close {
+                        animation: fadeOut 0.4s ease forwards;
                     }
 
                     .Booster-Modal-Content {
@@ -307,7 +314,15 @@
                         opacity: 0;
                         max-height: 85vh;
                         transform: scale(0.9);
-                        animation: scaleIn 0.5s ease 0.1s forwards;
+                        transition: all 0.5s ease;
+                    }
+
+                    .Booster-Modal-Content.open {
+                        animation: scaleIn 0.5s ease forwards;
+                    }
+
+                    .Booster-Modal-Content.close {
+                        animation: shrinkFadeOut 0.8s ease forwards;
                     }
 
                     .Booster-Modal-Content::-webkit-scrollbar {
@@ -598,6 +613,15 @@
                             opacity: 1;
                         }
                     }
+
+                    @keyframes fadeOut {
+                        from {
+                            opacity: 1;
+                        }
+                        to {
+                            opacity: 0;
+                        }
+                    }
                     
                     @keyframes scaleIn {
                         from {
@@ -609,10 +633,21 @@
                             opacity: 1;
                         }
                     }
-                    
-                    @keyframes slideDown {
+
+                    @keyframes shrinkFadeOut {
                         from {
-                            transform: translateY(-10px);
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                        to {
+                            transform: scale(0.5);
+                            opacity: 0;
+                        }
+                    }
+
+                    @keyframes slideUp {
+                        from {
+                            transform: translateY(10px);
                             opacity: 0;
                         }
                         to {
@@ -620,10 +655,10 @@
                             opacity: 1;
                         }
                     }
-                    
-                    @keyframes slideUp {
+
+                    @keyframes slideDown {
                         from {
-                            transform: translateY(10px);
+                            transform: translateY(-10px);
                             opacity: 0;
                         }
                         to {
@@ -775,10 +810,20 @@
 
             const shadowGate = shadow.shadowRoot;
             const Modal = shadowGate.querySelector("Booster_Modal_Background");
+            const Content = shadowGate.querySelector(".Booster-Modal-Content");
+
+            // 添加開啟樣式
+            Modal.classList.add("open");
+            Content.classList.add("open");
 
             // 關閉菜單
             function DeleteMenu() {
-                shadow.remove();
+                Modal.classList.replace("open", "close");
+                Content.classList.replace("open", "close");
+
+                setTimeout(() => {
+                    shadow.remove();
+                }, 1300)
             };
 
             // 監聽主增益設定拉條
