@@ -464,10 +464,10 @@
                             const NImg = Syn.$$("img", { root: NHtml }).src;
                             ReactDOM.render(React.createElement(ReactRender, { OLink: link, src: NImg }), container.appendChild(document.createElement("div")));
 
-                            setTimeout(() => {
+                            requestAnimationFrame(() => {
                                 total_page--;
                                 NextPage(NLink);
-                            }, 500);
+                            });
                         })
                         .catch(error => {
                             NextPage(link);
