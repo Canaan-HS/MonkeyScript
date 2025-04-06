@@ -237,7 +237,7 @@
             Start: function () {
                 B.IsEnabled(p => {
                     const u = async d => { Syn.Menu({ [d]: { func: () => B.AddBanned() } }) }; if (p) {
-                        const d = Syn.Debounce(k => { const n = [...Syn.$qa("video, audio")].filter(v => !f.has(v)); 0 < n.length && k(n) }, 300); Syn.Observer(document, () => {
+                        const d = Syn.Throttle(k => { const n = [...Syn.$qa("video, audio")].filter(v => !f.has(v)); 0 < n.length && k(n) }, 300); Syn.Observer(document, () => {
                             d(k => {
                                 t.disconnect();
                                 h(k)

@@ -247,7 +247,7 @@
 
                 if (Status) {
                     // 查找媒體元素
-                    const FindMedia = Syn.Debounce((func) => {
+                    const FindMedia = Syn.Throttle((func) => {
                         const media = [...Syn.$qa("video, audio")]
                             .filter(media => !EnhancedElements.has(media));
                         media.length > 0 && func(media);
