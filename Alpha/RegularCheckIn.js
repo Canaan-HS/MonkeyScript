@@ -362,13 +362,12 @@
         };
 
         // 取得任務列表
-        const GetEnabledTask = () => new Set(GM_getValue(Config.TaskKey, []));
+        const EnabledTask = new Set(GM_getValue(Config.TaskKey, []));
         // 根據版本號判斷菜單是否自動關閉
         const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
         // 透過菜單啟用任務
         async function EnableTask() {
-            const EnabledTask = GetEnabledTask();
 
             // 有任務時註冊
             if (EnabledTask.size > 0) {
@@ -386,12 +385,11 @@
                         return;
                     };
 
-                    const EnabledTask = GetEnabledTask();
                     EnabledTask.has(Task.Name)
                         ? EnabledTask.delete(Task.Name)
                         : EnabledTask.add(Task.Name);
-                    GM_setValue(Config.TaskKey, [...EnabledTask]);
 
+                    GM_setValue(Config.TaskKey, [...EnabledTask]);
                     EnableTask(); // 遞迴更新狀態
                 }, 200), {
                     id: `CheckIn-${Index}`,
