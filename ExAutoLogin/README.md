@@ -59,12 +59,10 @@
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.34-Beta1**
+**Release Version: 0.0.34-Beta2**
 
 ### **Update Content**
-1. API update
-2. Optimized partial implementation
-3. Added personal favorites (mainly for shared accounts)
+1. Fixed bug where the share menu wouldn't open
 
 ### **⭐ Favorites Function**
 1. Supports tag coloring (using account settings)
