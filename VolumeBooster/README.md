@@ -1,36 +1,42 @@
+
 # **Media Volume Booster**
 
 ---
 
 ## **👻 How to Use**
 
-1. Install a browser script manager (such as [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))
-2. [Install the script](https://update.greasyfork.org/scripts/472190/%E5%AA%92%E9%9B%BB%E9%9F%B3%E9%87%8F%E5%A2%9E%E5%BC%B7%E5%99%A8.user.js)
-3. Visit any website with media (some websites may not be supported)
+1. Install a browser script manager (like [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))
+2. [Install the script](https://update.greasyfork.org/scripts/472190/%E5%AA%92%E9%AB%94%E9%9F%B3%E9%87%8F%E5%A2%9E%E5%BC%B7%E5%99%A8.user.js)
+3. Visit any website with media content (some websites may not be supported)
 
 ---
 
-## **🚧 Development Notes**
+## **🚧 Development Background**
 
-My personal computer's motherboard is damaged, leading to inconsistent audio levels. This script was written to address that issue.
+I created this script because my PC motherboard is damaged, causing inconsistent audio levels.
 
-Currently, it only grabs basic media nodes and does not account for differences between websites, so many websites may not be supported.
+Currently, the script only accesses basic media nodes and doesn't account for website-specific differences, so many sites may not be supported.
 
-The adjustment menu was designed by me. If you find it unattractive, I can't help much as I don't have design skills.
+The adjustment menu is my own design - I apologize if it's not visually appealing as I don't have design skills.
 
-## **⚠️ Usage Notes**
-- It may be affected by other media-related scripts, which could cause malfunctions or changes in settings.
-- If it doesn’t work on some websites, you may encounter messages like "Adjustment unchanged | No sound at all | Unable to play". In this case, disable the booster.
 
-## **📜 Feature Overview**
-- When media is present on the page, the script will apply the volume booster. After successful application, you can adjust the volume amplification or mute it completely.
-- After setting, if you choose to save, the same domain in other tabs will also apply the settings. If you want it only for a specific tab, simply click on a blank area to close the menu.
+## **⚠️ Important Notes**
+- May be affected by other media-related scripts, potentially causing malfunction or settings changes
+- When ineffective on certain websites, you may experience "no volume change | no sound | playback issues" - in these cases, disable the amplification
+
+## **👀 Menu Display**
+![Screenshot](https://github.com/user-attachments/assets/61547ac5-8653-45fb-bf26-bba4ee174f0b)
+
+
+## **📜 Features Overview**
+- When media is present on a page, the amplification node will be applied, allowing you to adjust sound amplification or completely mute it
+- After configuring, if you choose to save, the settings will apply to all tabs with the same domain. For single-tab settings, you can click on any blank area to close the menu after adjustment
 
 ### **Enable/Disable**
-- By default, it is enabled. After disabling a domain, the booster will no longer be applied.
+- Enabled by default; once disabled for a domain, amplification will not be applied
 
 ### **Settings Menu**
-- You can open the menu via the script manager's menu or by pressing (Alt + B).
+- Can be opened through the script manager menu or by pressing (Alt + B)
 
 ---
 
@@ -41,11 +47,12 @@ The adjustment menu was designed by me. If you find it unattractive, I can't hel
 
 ---
 
-## **📦 Version Information**
+## **📦 Version Info**
 
-**Release Version: 0.0.38**
+**Release Version: 0.0.39**
 
-### **Update Contents**
-1. Optimized duplicate exclusion efficiency
+### **Updates**
+1. Added filter and compression adjustments
+2. Revised menu design
 
 ---
