@@ -159,7 +159,7 @@
             const hasRelevantChanges = mutations.some(mutation => 
                 mutation.type === "childList" || mutation.type === "characterData"
             );
-            hasRelevantChanges && RunFactory() && console.log("觸發轉換"); // 監聽到變化就觸發轉換
+            hasRelevantChanges && RunFactory(); // 監聽到變化就觸發轉換
         }, 300));
 
         // 啟動觀察 (啟動時會觸發轉換)
