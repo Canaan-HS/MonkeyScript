@@ -113,27 +113,27 @@
     const Dictionary = { // 字典操作
         NormalDict: undefined,
         ReverseDict: undefined,
-        RefreshNormal: function() { // 正常字典的緩存
+        RefreshNormal: function () { // 正常字典的緩存
             this.NormalDict = Dict;
         },
-        RefreshReverse: function() { // 刷新反向字典
+        RefreshReverse: function () { // 刷新反向字典
             this.ReverseDict = Object.entries(this.NormalDict).reduce((acc, [key, value]) => {
                 acc[value] = key;
                 return acc;
             }, {});
         },
-        RefreshDict: function() { // 刷新翻譯狀態
+        RefreshDict: function () { // 刷新翻譯狀態
             TranslatedRecord = new Set(); // 刷新翻譯紀錄
             Dict = Translated
                 ? (
-                    Translated=false,
+                    Translated = false,
                     this.ReverseDict
                 ) : (
-                    Translated=true,
+                    Translated = true,
                     this.NormalDict
                 );
         },
-        DisplayMemory: function() {
+        DisplayMemory: function () {
             const [NormalSize, ReverseSize] = [objectSize(this.NormalDict), objectSize(this.ReverseDict)];
             alert(`字典緩存大小
                 \r一般字典大小: ${NormalSize.KB} KB
@@ -141,10 +141,10 @@
                 \r全部緩存大小: ${NormalSize.MB * 2 + ReverseSize.MB} MB
             `);
         },
-        ReleaseMemory: function() { // 釋放翻譯字典緩存 (不包含自定)
+        ReleaseMemory: function () { // 釋放翻譯字典緩存 (不包含自定)
             Dict = this.NormalDict = this.ReverseDict = {};
         },
-        Init: function() { // 初始化 (重新獲取完整字典, 並刷新兩種不同狀態的緩存)
+        Init: function () { // 初始化 (重新獲取完整字典, 並刷新兩種不同狀態的緩存)
             Object.assign(Dict, Customize);
             this.RefreshNormal();
             this.RefreshReverse();
@@ -155,25 +155,22 @@
     WaitElem("body", body => { // 等待頁面載入
         const RunFactory = () => Transl.Trigger(body);
 
-        const options = {
-            subtree: true,
-            childList: true,
-            characterData: true,
-        };
-        let mutation; // 監聽後續變化
-        const observer = new MutationObserver(Debounce((mutationsList, observer) => {
-            for (mutation of mutationsList) {
-                if (mutation.type === 'childList' || mutation.type === 'characterData') {
-                    RunFactory();
-                    break;
-                }
-            }
+        const observer = new MutationObserver(Debounce((mutations) => {
+            const hasRelevantChanges = mutations.some(mutation => 
+                mutation.type === "childList" || mutation.type === "characterData"
+            );
+            hasRelevantChanges && RunFactory() && console.log("觸發轉換"); // 監聽到變化就觸發轉換
         }, 300));
 
         // 啟動觀察 (啟動時會觸發轉換)
         const StartOb = () => {
             RunFactory();
-            observer.observe(body, options);
+            observer.observe(body, {
+                subtree: true, // 監視所有後代節點
+                childList: true, // 監視子節點添加或移除
+                characterData: true, // 監視文字內容變化
+                attributeFilter: ['placeholder'], // 監視屬性變化
+            })
         };
 
         // 斷開觀察
@@ -181,7 +178,7 @@
         !Dev && StartOb(); // 首次運行 (開發者模式下不會自動運行, 因為有可能轉換不回來)
 
         // 反轉 參數: (是否恢復監聽)
-        function ThePolesAreReversed(RecoverOB=true) {
+        function ThePolesAreReversed(RecoverOB = true) {
             DisOB();
             Dictionary.RefreshDict();
 
@@ -194,7 +191,7 @@
         Menu({
             "🆕 更新字典": {
                 desc: "獲取伺服器字典, 更新本地數據庫, 並在控制台打印狀態",
-                func: async ()=> {
+                func: async () => {
                     Translated = true;
                     GM_setValue("Clear", false);
 
@@ -206,9 +203,9 @@
                     ThePolesAreReversed(); // 再次觸發反轉, 並恢復觀察
                 }
             },
-            "🚮 清空字典" : {
+            "🚮 清空字典": {
                 desc: "清除本地緩存的字典",
-                func: ()=> {
+                func: () => {
                     GM_setValue("LocalWords", {});
                     GM_setValue("Clear", true);
                     location.reload();
@@ -218,12 +215,12 @@
                 hotkey: "c",
                 close: false,
                 desc: "互相反轉變更後的文本",
-                func: ()=> ThePolesAreReversed()
+                func: () => ThePolesAreReversed()
             }
         }, "Basic");
 
         if (Dev || Translation.HotKey) {
-            document.addEventListener("keydown", event=> {
+            document.addEventListener("keydown", event => {
                 if (event.altKey && event.key.toLowerCase() === "v") {
                     event.preventDefault();
                     ThePolesAreReversed();
@@ -235,33 +232,33 @@
             Translated = false;
             Menu({
                 "« 🚫 停用開發者模式 »": {
-                    desc: "關閉開發者模式", func: ()=> {
+                    desc: "關閉開發者模式", func: () => {
                         GM_setValue("Dev", false);
                         location.reload();
                     }
                 },
                 "🪧 展示匹配文本": {
                     desc: "在控制台打印匹配的文本, 建議先開啟控制台在運行",
-                    func: ()=> Transl.Dev(body),
+                    func: () => Transl.Dev(body),
                     close: false
                 },
                 "🖨️ 輸出匹配文檔": {
                     desc: "以 Json 格式輸出, 頁面上被匹配到的所有文本",
-                    func: ()=> Transl.Dev(body, false)
+                    func: () => Transl.Dev(body, false)
                 },
                 "📼 展示字典緩存": {
                     desc: "顯示當前載入的字典大小",
-                    func: ()=> Dictionary.DisplayMemory()
+                    func: () => Dictionary.DisplayMemory()
                 },
                 "🧹 釋放字典緩存": {
                     desc: "將緩存於 JavaScript 記憶體內的字典數據釋放掉",
-                    func: ()=> Dictionary.ReleaseMemory()
+                    func: () => Dictionary.ReleaseMemory()
                 }
             }, "Dev");
         } else {
             Menu({
                 "« ✅ 啟用開發者模式 »": {
-                    desc: "打開開發者模式", func: ()=> {
+                    desc: "打開開發者模式", func: () => {
                         GM_setValue("Dev", true);
                         location.reload();
                     }
@@ -270,7 +267,7 @@
         };
 
         if (!Timestamp || (Time - new Date(Timestamp).getTime()) > (36e5 * 24)) { // 24 小時更新
-            Update.Reques().then(data=> { // 不 await 的更新
+            Update.Reques().then(data => { // 不 await 的更新
                 Dict = data;
                 Dictionary.Init(); // 初始化
                 ThePolesAreReversed(false); // 反轉兩次
@@ -289,19 +286,42 @@
                 NodeFilter.SHOW_TEXT,
                 {
                     acceptNode: (node) => {
+                        // 標籤過濾
                         const tag = node.parentElement.tagName;
-                        if (tag === "STYLE" || tag === "SCRIPT") { // 過濾標籤類型是 Style 或 Script
+                        if (tag === "STYLE" || tag === "SCRIPT" || tag === "CODE" ||
+                            tag === "PRE" || tag === "NOSCRIPT" || tag === "SVG") {
                             return NodeFilter.FILTER_REJECT;
                         }
 
+                        // 檢查內容是否為空
                         const content = node.textContent.trim();
-                        if (content == '') return NodeFilter.FILTER_REJECT;
+                        if (!content) return NodeFilter.FILTER_REJECT;
 
-                        if (
-                            !/[\w\p{L}]/u.test(content) // 過濾非匹配字串
-                            || /^\d+$/.test(content) // 過濾全都是數字
-                            || /^\d+(\.\d+)?\s*[km]$/i.test(content) // 過濾統計數量類型
-                        ) {
+                        // 過濾明顯的代碼或屬性
+                        if (content.startsWith("src=") || content.startsWith("href=") ||
+                            content.startsWith("data-") || content.startsWith("function ") ||
+                            content.startsWith("const ") || content.startsWith("var ")) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 代碼符號密度檢查
+                        const codeSymbolCount = (content.match(/[{}[\]()<>]/g) || []).length;
+                        if (codeSymbolCount > content.length * 0.2) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 過濾全都是數字
+                        if (/^\d+$/.test(content)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 過濾統計數量類型
+                        if (/^\d+(\.\d+)?\s*[km]$/i.test(content)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+
+                        // 過濾非匹配字串
+                        if (!/[\w\p{L}]/u.test(content)) {
                             return NodeFilter.FILTER_REJECT;
                         }
 
@@ -321,7 +341,7 @@
             __ShortWordRegex: /[\d\p{L}]+/gu,
             __LongWordRegex: /[\d\p{L}]+(?:[^|()\[\]{}{[(\t\n])+[\d\p{L}]\.*/gu,
             __Clean: (text) => text.trim().toLowerCase(),
-            Dev_MatchObj: function(text) {
+            Dev_MatchObj: function (text) {
                 const Sresult = text?.match(this.__ShortWordRegex)?.map(Short => {
                     const Clean = this.__Clean(Short);
                     return [Clean, Dict[Clean] ?? ""];
@@ -339,13 +359,13 @@
                         return acc;
                     }, {});
             },
-            OnlyLong: function(text) {
+            OnlyLong: function (text) {
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? Long);
             },
-            OnlyShort: function(text) {
+            OnlyShort: function (text) {
                 return text?.replace(this.__ShortWordRegex, Short => Dict[this.__Clean(Short)] ?? Short);
             },
-            LongShort: function(text) { // 已長單詞為主, 不存在才去找短單詞
+            LongShort: function (text) { // 已長單詞為主, 不存在才去找短單詞
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? this.OnlyShort(Long));
             }
         };
@@ -373,13 +393,13 @@
         const ProcessingDataCore = {
             __FocusTextCore: Translation.FocusOnRecovery ? RefreshUICore.FocusTextRecovery : RefreshUICore.FocusTextTranslate,
             __FocusInputCore: Translation.FocusOnRecovery ? RefreshUICore.FocusInputRecovery : RefreshUICore.FocusInputTranslate,
-            Dev_Operation: function(root, print) {
+            Dev_Operation: function (root, print) {
                 const results = {};
                 [
                     ...getTextNodes(root).map(textNode => textNode.textContent),
                     ...[...root.querySelectorAll("input[placeholder], input[value]")].map(inputNode =>
-                    [inputNode.value, inputNode.getAttribute("placeholder")]).flat().filter(value=> value && value != '')
-                ].map(text=> Object.assign(results, TCore.Dev_MatchObj(text)));
+                        [inputNode.value, inputNode.getAttribute("placeholder")]).flat().filter(value => value && value != '')
+                ].map(text => Object.assign(results, TCore.Dev_MatchObj(text)));
 
                 if (print) console.table(results);
                 else {
@@ -387,18 +407,18 @@
                     Json.href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(results, null, 4))}`;
                     Json.download = "MatchWords.json";
                     Json.click();
-                    setTimeout(()=>{Json.remove()}, 500);
+                    setTimeout(() => { Json.remove() }, 500);
                 };
             },
-            OperationText: async function(root) {
+            OperationText: async function (root) {
                 return Promise.all(getTextNodes(root).map(textNode => {
                     if (TranslatedRecord.has(textNode)) return Promise.resolve(); // 無腦制止翻譯無限疊加狀況 (當然會導致記憶體使用更多) (會有疊加是因為監聽動態變化 反覆觸發)
                     TranslatedRecord.add(textNode);
                     return this.__FocusTextCore(textNode)
                 }));
             },
-            OperationInput: async function(root) {
-                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode=> {
+            OperationInput: async function (root) {
+                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode => {
                     if (TranslatedRecord.has(inputNode)) return Promise.resolve();
                     TranslatedRecord.add(inputNode);
                     return this.__FocusInputCore(inputNode)
@@ -407,7 +427,7 @@
         };
 
         return {
-            Dev: (root, print=true) => {
+            Dev: (root, print = true) => {
                 ProcessingDataCore.Dev_Operation(root, print);
             },
             Trigger: async (root) => {
@@ -426,19 +446,19 @@
             Url: (str) => {
                 try {
                     new URL(str); return true;
-                } catch {return false}
+                } catch { return false }
             },
-            ExtenName: (link)=> {
+            ExtenName: (link) => {
                 try {
                     return link.match(/\.([^.]+)$/)[1].toLowerCase() || "json";
-                } catch {return "json"}
+                } catch { return "json" }
             },
-            Array: (data)=> {
+            Array: (data) => {
                 data = data.filter(d => d.trim() !== ""); // 過濾空字串
-                return {State: data.length > 0, Type: "arr", Data: data}
+                return { State: data.length > 0, Type: "arr", Data: data }
             },
-            String: (data)=> {return {State: data != "", Type: "str", Data: data} },
-            Undefined: ()=> {return {State: false} },
+            String: (data) => { return { State: data != "", Type: "str", Data: data } },
+            Undefined: () => { return { State: false } },
         };
 
         // 請求字典
@@ -475,7 +495,7 @@
 
         return {
             Reques: async () => {
-                const {State, Type, Data} = Parse[ObjType(LoadDict?.Data)](LoadDict?.Data); // 解構數據 (避免可能的例外)
+                const { State, Type, Data } = Parse[ObjType(LoadDict?.Data)](LoadDict?.Data); // 解構數據 (避免可能的例外)
                 const DefaultDict = Object.assign(GM_getValue("LocalWords", {}), Customize);
 
                 // 當解構狀態為 false, 或有清理標記, 直接回傳預設字典
@@ -529,15 +549,15 @@
             cache.add(value);
             let bytes = 0;
             for (const item of iteratee(value)) {
-                bytes += Calculate[Type(item[0])] ?. (item[0], cache) ?? 0;
-                bytes += Calculate[Type(item[1])] ?. (item[1], cache) ?? 0;
+                bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
+                bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
             }
             return bytes;
         };
         const Calculate = {
-            Boolean: ()=> 4,
-            Date: ()=> 8,
-            Number: ()=> 8,
+            Boolean: () => 4,
+            Date: () => 8,
+            Number: () => 8,
             String: (value) => value.length * 2,
             RegExp: (value) => value.toString().length * 2,
             Symbol: (value) => (value.description || '').length * 2,
@@ -576,17 +596,17 @@
         };
     };
 
-    function Debounce(func, delay=100) {
+    function Debounce(func, delay = 100) {
         let timer = null;
         return (...args) => {
             clearTimeout(timer);
-            timer = setTimeout(function() {
+            timer = setTimeout(function () {
                 func(...args);
             }, delay);
         }
     };
 
-    function GetDate(format=null) {
+    function GetDate(format = null) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
 
@@ -603,9 +623,9 @@
         return generate(typeof format === "string" ? format : defaultFormat);
     };
 
-    async function Menu(Item, ID="Menu", Index=1) {
+    async function Menu(Item, ID = "Menu", Index = 1) {
         for (const [Name, options] of Object.entries(Item)) {
-            GM_registerMenuCommand(Name, ()=> {options.func()}, {
+            GM_registerMenuCommand(Name, () => { options.func() }, {
                 title: options.desc,
                 id: `${ID}-${Index++}`,
                 autoClose: options.close,
@@ -615,19 +635,31 @@
     }
 
     async function WaitElem(selector, found) {
-        const observer = new MutationObserver(Debounce(() => {
-            const element = document.querySelector(selector);
-            if (element) {
-                observer.disconnect();
-                found(element);
-            }
-        }));
+        const Core = async function () {
+            let AnimationFrame;
+            let timer, result;
 
-        observer.observe(document, {
-            subtree: true,
-            childList: true,
-            attributes: true,
-            characterData: true
-        });
+            const query = () => {
+                result = document.getElementsByTagName(selector)[0];
+
+                if (result) {
+                    cancelAnimationFrame(AnimationFrame);
+                    clearTimeout(timer);
+                    found && found(result);
+                } else {
+                    AnimationFrame = requestAnimationFrame(query);
+                }
+            };
+
+            AnimationFrame = requestAnimationFrame(query);
+
+            timer = setTimeout(() => {
+                cancelAnimationFrame(AnimationFrame);
+            }, (1000 * 8));
+        };
+
+        if (document.visibilityState === "hidden") {
+            document.addEventListener("visibilitychange", () => Core(), { once: true });
+        } else Core();
     };
 })();
