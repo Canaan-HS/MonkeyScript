@@ -467,10 +467,12 @@
                             requestAnimationFrame(() => {
                                 total_page--;
                                 NextPage(NLink);
-                            });
+                            })
                         })
                         .catch(error => {
-                            NextPage(link);
+                            setTimeout(() => {
+                                NextPage(link);
+                            }, 2e3)
                         });
                 }
             };
