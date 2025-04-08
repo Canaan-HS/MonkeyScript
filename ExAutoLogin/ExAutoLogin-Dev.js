@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      0.0.34-Beta1
+// @version      0.0.34-Beta2
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
@@ -28,7 +28,6 @@
 // @run-at       document-start
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
@@ -118,8 +117,8 @@
             }
             .acc-select {
                 ${acc_style}
-                width: 10rem;
                 padding: 4px;
+                min-width: 10rem;
                 margin: 1.1rem 1.4rem 1.5rem 1.4rem;
                 font-weight: bold;
                 cursor: pointer;
@@ -252,16 +251,11 @@
     })();
 
     (async function Main($Cookie, $Shared) {
-        let Share = null;
+        let Share = Syn.gV("Share", {});
 
-        // 版本過度, 進行舊版資料轉移
-        try {
-            Share = Syn.gJV("Share");
-            if (typeof Share !== "object") throw new Error("Old version data");
-        } catch {
-            Share = Syn.gV("Share", {});
-            Syn.dV("Share");
-            Syn.sJV("Share", Share);
+        // 新版數據轉換
+        if (typeof Share === "string") {
+            Share = JSON.parse(Share);
         };
 
         // 頁面匹配
@@ -417,8 +411,11 @@
                 </div>
             `);
 
-            // 如果有選擇值, 就進行選取
-            Value && $("#account-select").val(Value);
+            if (AccountQuantity === 0) {
+                Growl(Transl("首次使用請先更新"), "jGrowl", 2500);
+                $("#account-select").append($("<option>")).prop("disabled", true);
+            } else if (Value) $("#account-select").val(Value); // 如果有選擇值, 就進行選取
+
             $(".modal-background").on("click", function (click) {
                 click.stopImmediatePropagation();
                 const target = click.target;
@@ -1032,8 +1029,8 @@
             const Shared = await Get();
 
             if (Object.keys(Shared).length > 0) {
-                const localHash = md5(Syn.gJV("Share", {}));
-                const remoteHash = md5(Shared);
+                const localHash = md5(Syn.gV("Share", ""));
+                const remoteHash = md5(JSON.stringify(Shared));
 
                 if (localHash !== remoteHash) {
                     Growl(Transl("共享數據更新完成"), "jGrowl", 1500);
@@ -1122,6 +1119,7 @@
                 "帳戶": "账号",
                 "更新": "更新",
                 "登入": "登录",
+                "首次使用請先更新": "首次使用请先更新",
                 "確認選擇的 Cookies": "确认所选 Cookies",
                 "確認保存": "确认保存",
                 "取消退出": "取消",
@@ -1162,6 +1160,7 @@
                 "帳戶": "アカウント",
                 "更新": "更新",
                 "登入": "ログイン",
+                "首次使用請先更新": "初めてご利用の際は、先に更新してください",
                 "確認選擇的 Cookies": "選択したCookieを確認",
                 "確認保存": "保存を確認",
                 "取消退出": "終了をキャンセル",
@@ -1203,6 +1202,7 @@
                 "帳戶": "계정",
                 "更新": "업데이트",
                 "登入": "로그인",
+                "首次使用請先更新": "처음 사용하기 전에 먼저 업데이트해 주세요",
                 "確認保存": "저장 확인",
                 "取消退出": "종료 취소",
                 "退出選單": "메뉴 종료",
@@ -1242,6 +1242,7 @@
                 "帳戶": "Аккаунт",
                 "更新": "Обновить",
                 "登入": "Войти",
+                "首次使用請先更新": "Пожалуйста, обновите перед первым использованием",
                 "確認選擇的 Cookies": "Подтвердить выбранные Cookies",
                 "確認保存": "Подтвердить сохранение",
                 "取消退出": "Отменить выход",
@@ -1282,6 +1283,7 @@
                 "帳戶": "Account",
                 "更新": "Update",
                 "登入": "Login",
+                "首次使用請先更新": "Please update before first use",
                 "確認選擇的 Cookies": "Confirm Selected Cookies",
                 "確認保存": "Confirm Save",
                 "取消退出": "Cancel Exit",
