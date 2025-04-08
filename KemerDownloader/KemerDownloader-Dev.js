@@ -43,6 +43,7 @@
 // @grant        GM_unregisterMenuCommand
 
 // @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -758,7 +759,7 @@
             ]);
 
             // 抓取檔案的副檔名
-            this.Suffix = (Str) => `.${Str.match(/\.([^.]+)$/)[1].trim()}`;
+            this.Suffix = (Str) => `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
 
             // 進階抓取檔案分類 (影片與圖片文件 Array) => { video: {}, other: {} }
             this.AdvancedCategorize = (Data) => {
@@ -902,21 +903,26 @@
 
                         if (href.startsWith("https://mega.nz")) {
 
-                            let name = a.previousElementSibling?.textContent.replace(":", "").trim() || href.textContent?.trim();
+                            let name = (a.previousElementSibling?.textContent.replace(":", "") || md5(href).slice(0, 16)).trim();
                             if (name === "") continue;
 
-                            let pass = [...a.nextElementSibling.childNodes].filter(node => node.nodeType === Node.TEXT_NODE)?.[0]?.textContent ?? "";
-                            if (pass.startsWith("Pass")) {
-                                pass = pass.match(/Pass:([^<]*)/)[1].trim();
-                            }
+                            let pass = "";
+                            const nextNode = a.nextElementSibling;
 
-                            Cache[name] = {
+                            if (nextNode) {
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.textContent?.trim() ?? "";
+                                if (nodeText.startsWith("Pass")) {
+                                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
+                                }
+                            };
+
+                            Cache[name] = pass ? {
                                 [Lang.Transl("密碼")]: pass,
                                 [Lang.Transl("連結")]: href
-                            };
+                            } : href;
                         } else if (href) {
-                            const description = a.previousElementSibling?.textContent.trim() ?? "";
-                            const name = `${description} ${a.textContent}`.trim();
+                            const description = a.previousSibling?.textContent?.trim() ?? "";
+                            const name = `${description} ${a.textContent}`?.trim();
                             Cache[name] = href;
                         }
                     };
