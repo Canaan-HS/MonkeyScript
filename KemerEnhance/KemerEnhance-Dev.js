@@ -976,7 +976,7 @@
                 `, "Collapse_Effects", false);
             },
             DeleteNotice: async (Config) => { /* 刪除公告通知 */
-                Syn.WaitElem("aside", null, {timeout: 5}).then(aside => aside.remove());
+                Syn.WaitElem("aside", null, {raf: true, timeout: 5}).then(aside => aside.remove());
             },
             BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
@@ -1141,7 +1141,7 @@
                     });
 
                 } else { // 預覽頁面
-                    Syn.WaitElem("span[itemprop='name']", null, {raf: true, timeout: 10}).then(artist => {
+                    Syn.WaitElem("span[itemprop='name']", null, {raf: true, timeout: 5}).then(artist => {
                         Func.Other_Fix(artist);
                     });
                 }
@@ -1462,7 +1462,7 @@
             LinkBeautify_Dependent: function () {
                 if (!this.LinkBeautify_Cache) {
                     this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
-                            const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts", "api/v1/posts"); // 根據站點修改 API
+                            const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v2/file"); // 根據站點修改 API
 
                             // 初始化
                             Browse.style.position = "relative"; // 修改樣式避免跑版
@@ -1487,7 +1487,7 @@
                                     } else {
                                         const View = Syn.$createElement("View", {class: "View"});
                                         const Buffer = Syn.$createFragment();
-                                        for (const text of JSON.parse(response.responseText)['archive']['file_list']) { // 取得 br 數據
+                                        for (const text of JSON.parse(response.responseText)['data']['file_list']) { // 取得 br 數據
                                             Buffer.append( // 將以下元素都添加到 Buffer
                                                 document.createTextNode(text), Syn.$createElement("br")
                                             );
