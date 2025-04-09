@@ -259,7 +259,7 @@
 
                 const // 這種寫法適應於還未完全載入原圖時
                     data = [...files.children]
-                        .map(child => Syn.$$(IsNeko ? "div, rc, img" : "a, rc, img", { root: child }))
+                        .map(child => Syn.$$(IsNeko ? ".fileThumb, rc, img" : "a, rc, img", { root: child }))
                         .filter(Boolean),
                     video = Syn.$$(".post__attachment a, .scrape__attachment a", { all: true }),
                     final_data = Config.ContainsVideo ? [...data, ...video] : data;
@@ -273,6 +273,8 @@
                         ));
                     }
                 }
+
+                if (DownloadData.size == 0) Config.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
                 Syn.Log("Get Data", {
                     FolderName: folder_name,
@@ -1208,7 +1210,7 @@
             Syn.OutputTXT(Content, this.MetaDict[Lang.Transl("作者")], () => {
                 lock = false;
                 this.Worker.terminate();
-                document.title = this.TitleCache; 
+                document.title = this.TitleCache;
             })
         };
 
