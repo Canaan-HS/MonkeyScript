@@ -35,16 +35,15 @@
 // @grant        GM_getValue
 // @grant        GM_download
 // @grant        GM_openInTab
-// @grant        GM_addElement
 // @grant        GM_getResourceURL
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
+// @require      https://update.greasyfork.org/scripts/495339/1565375/Syntax_min.js
 // @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
-// @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @resource     json-processing https://cdn-icons-png.flaticon.com/512/2582/2582087.png
@@ -138,8 +137,8 @@
     /* --------------------- */
 
     let lock = false;
-    const Lang = Language(Syn.Device.Lang);
-    const IsNeko = Syn.Device.Host === "nekohouse.su"; // 臨時方案
+    const Lang = Language(Syn.$lang);
+    const IsNeko = Syn.$domain === "nekohouse.su"; // 臨時方案
 
     class Download {
         constructor(CM, MD, BT) {
@@ -152,7 +151,7 @@
 
             /* 獲取原始標題 */
             this.OriginalTitle = () => {
-                const cache = document.title;
+                const cache = Syn.$title();
                 return cache.startsWith("✓ ") ? cache.slice(2) : cache;
             };
 
@@ -236,18 +235,18 @@
 
                 this.Named_Data = { // 建立數據
                     fill: () => "fill",
-                    title: () => Syn.$$("span", { root: title }).textContent.trim(),
-                    artist: () => artist.textContent.trim(),
-                    source: () => new Date(title.querySelector(":nth-child(2)").textContent.trim()).toLocaleString(),
+                    title: () => title.$q("span").$text(),
+                    artist: () => artist.$text(),
+                    source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
                     time: () => {
                         if (IsNeko) {
-                            return Syn.$$(".timestamp")?.textContent.trim() || "";
+                            return Syn.$q(".timestamp").$text() || "";
                         };
 
-                        let published = Syn.$$(".post__published").cloneNode(true);
-                        document.querySelector(".post__published");
+                        let published = Syn.$q(".post__published").$copy();
+                        Syn.$q(".post__published");
                         published.firstElementChild.remove();
-                        return published.textContent.trim().split(" ")[0];
+                        return published.$text().split(" ")[0];
                     }
                 }
 
@@ -259,17 +258,17 @@
 
                 const // 這種寫法適應於還未完全載入原圖時
                     data = [...files.children]
-                        .map(child => Syn.$$(IsNeko ? ".fileThumb, rc, img" : "a, rc, img", { root: child }))
+                        .map(child => child.$q(IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                         .filter(Boolean),
-                    video = Syn.$$(".post__attachment a, .scrape__attachment a", { all: true }),
+                    video = Syn.$qa(".post__attachment a, .scrape__attachment a"),
                     final_data = Config.ContainsVideo ? [...data, ...video] : data;
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of final_data.entries()) {
-                    const Uri = file.src || file.href || file.getAttribute("src") || file.getAttribute("href");
+                    const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
                     if (Uri) {
                         DownloadData.set(index, (
-                            Uri.startsWith("http") ? Uri : `${Syn.Device.Orig}${Uri}`
+                            Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`
                         ));
                     }
                 }
@@ -330,8 +329,8 @@
                     }
 
                     show = `[${++progress}/${Total}]`;
-                    document.title = show;
-                    Self.Button.textContent = `${Lang.Transl("下載進度")} ${show}`;
+                    Syn.$title(show);
+                    Self.Button.$text(`${Lang.Transl("下載進度")} ${show}`);
 
                     if (progress == Total) {
                         Total = Data.size;
@@ -341,8 +340,8 @@
                         } else {
                             show = "Wait for failed re download";
                             progress = 0;
-                            document.title = show;
-                            Self.Button.textContent = show;
+                            Syn.$title(show);
+                            Self.Button.$text(show);
                             setTimeout(() => {
                                 for (const [index, url] of Data.entries()) {
                                     Self.worker.postMessage({ index: index, url: url });
@@ -382,7 +381,7 @@
             const Delay = Config.ConcurrentDelay * 1e3;
 
             // 只是顯示給使用者讓其知道 有運作 (無實際作用)
-            Self.Button.textContent = `${Lang.Transl("請求進度")} [${Total}/${Total}]`;
+            Self.Button.$text(`${Lang.Transl("請求進度")} [${Total}/${Total}]`);
 
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
@@ -410,25 +409,25 @@
                 compression: "DEFLATE",
                 compressionOptions: { level: 5 }
             }, (progress) => {
-                document.title = `${progress.percent.toFixed(1)} %`;
-                this.Button.textContent = `${Lang.Transl("封裝進度")}: ${progress.percent.toFixed(1)} %`;
+                Syn.$title(`${progress.percent.toFixed(1)} %`);
+                this.Button.$text(`${Lang.Transl("封裝進度")}: ${progress.percent.toFixed(1)} %`);
             }).then(zip => {
                 saveAs(zip, `${Name}.zip`);
-                document.title = `✓ ${Title}`;
-                this.Button.textContent = Lang.Transl("下載完成");
+                Syn.$title(`✓ ${Title}`);
+                this.Button.$text(Lang.Transl("下載完成"));
                 setTimeout(() => {
                     this.ResetButton();
                 }, 3000);
             }).catch(result => {
-                document.title = Title;
+                Syn.$title(Title);
 
                 const ErrorShow = Lang.Transl("壓縮封裝失敗");
-                this.Button.textContent = ErrorShow;
+                this.Button.$text(ErrorShow);
                 Syn.Log(ErrorShow, result, { dev: Config.Dev, type: "error", collapsed: false });
 
                 setTimeout(() => {
                     this.Button.disabled = false;
-                    this.Button.textContent = this.ModeDisplay;
+                    this.Button.$text(this.ModeDisplay);
                 }, 6000);
             })
         }
@@ -482,9 +481,9 @@
                             Syn.Log("Download Successful", link, { dev: Config.Dev, collapsed: false });
 
                             show = `[${++progress}/${Total}]`;
-                            document.title = show;
+                            Syn.$title(show);
 
-                            Self.Button.textContent = `${Lang.Transl("下載進度")} ${show}`;
+                            Self.Button.$text(`${Lang.Transl("下載進度")} ${show}`);
                             resolve();
                         }
                     };
@@ -529,8 +528,8 @@
             await Promise.allSettled(Promises);
             GM_unregisterMenuCommand("Abort-1");
 
-            document.title = `✓ ${TitleCache}`;
-            this.Button.textContent = Lang.Transl("下載完成");
+            Syn.$title(`✓ ${TitleCache}`);
+            this.Button.$text(Lang.Transl("下載完成"));
             setTimeout(() => {
                 this.ResetButton();
             }, 3000);
@@ -540,9 +539,9 @@
         async ResetButton() {
             Config.CompleteClose && window.close();
             lock = false;
-            const Button = Syn.$$("#ExDB button");
+            const Button = Syn.$q("#ExDB button");
             Button.disabled = false;
-            Button.textContent = `✓ ${this.ModeDisplay}`;
+            Button.$text(`✓ ${this.ModeDisplay}`);
         }
     }
 
@@ -552,19 +551,19 @@
             this.Genmode = true;
             this.SortMap = new Map();
             this.Source = document.URL;
-            this.TitleCache = document.title;
-            this.Section = Syn.$$("section");
+            this.TitleCache = Syn.$title();
+            this.Section = Syn.$q("section");
             this.Pages = this.progress = this.filtercache = null;
-            this.Author = Syn.$$("span[itemprop='name'], fix_name").textContent;
+            this.Author = Syn.$q("span[itemprop='name'], fix_name").$text();
             this.JsonMode = { "orlink": "set_1", "imgnb": "set_2", "videonb": "set_3", "dllink": "set_4" }
 
             /* Mega 連結解析 (測試中 有些Bug) */
             this.MegaAnalysis = (data) => {
                 let title_box = [], link_box = [], result = {}, pass;
                 for (let i = 0; i < data.length; i++) {
-                    const str = data[i].textContent.trim();
+                    const str = data[i].$text();
                     if (str.startsWith("Pass")) { // 解析密碼字串
-                        const ps = data[i].innerHTML.match(/Pass:([^<]*)/);
+                        const ps = data[i].$iHtml().match(/Pass:([^<]*)/);
                         try { pass = `Pass : ${ps[1].trim()}` } catch { pass = str }
                     } else if (str.toUpperCase() == "MEGA") {
                         link_box.push(data[i].parentElement.href);
@@ -587,7 +586,7 @@
                 url: NextPage,
                 nocache: false,
                 onload: response => {
-                    this.GetPageData(Syn.$$("section", { root: response.responseXML }));
+                    this.GetPageData(response.responseXML.$q("section"));
                 }
             })
         }
@@ -595,13 +594,13 @@
         /* 獲取主頁元素 */
         async GetPageData(section) {
             let title, link;
-            const item = Syn.$$(".card-list__items article", { all: true, root: section });
+            const item = section.$qa(".card-list__items article");
 
             // 遍歷數據
             this.progress = 0;
             for (const [index, card] of item.entries()) {
-                link = Syn.$$("a", { root: card }).href;
-                title = Syn.$$(".post-card__header", { root: card }).textContent.trim() || `Untitled_${String(this.progress + 1).padStart(2, "0")}`;
+                link = card.$q("a").href;
+                title = card.$q(".post-card__header").$text() || `Untitled_${String(this.progress + 1).padStart(2, "0")}`;
 
                 if (Config.ExperimeDownload) {
                     this.worker.postMessage({ index: index, title: title, url: link });
@@ -612,7 +611,7 @@
                 await Syn.Sleep(10);
             }
 
-            const menu = Syn.$$("a.pagination-button-after-current", { root: section });
+            const menu = section.$q("a.pagination-button-after-current");
             const ILength = item.length,
                 wait = setInterval(() => {
                     if (ILength == this.SortMap.size) {
@@ -638,11 +637,11 @@
                     const DOM = Syn.DomParse(text);
 
                     const original_link = url,
-                        pictures_number = Syn.$$("post__thumbnail, .scrape__thumbnail", { all: true, root: DOM }).length,
-                        video_number = Syn.$$(".post__body li video, .scrape__files video", { all: true, root: DOM }).length,
-                        mega_link = Syn.$$(".post__content strong, .scrape__content strong", { all: true, root: DOM });
+                        pictures_number = DOM.$qa("post__thumbnail, .scrape__thumbnail").length,
+                        video_number = DOM.$qa(".post__body li video, .scrape__files video").length,
+                        mega_link = DOM.$qa(".post__content strong, .scrape__content strong");
 
-                    Syn.$$("a.post__attachment-link, a.scrape__attachment-link", { all: true, root: DOM }).forEach(link => {
+                    DOM.$qa("a.post__attachment-link, a.scrape__attachment-link").forEach(link => {
                         const analyze = decodeURIComponent(link.href).split("?f="),
                             download_link = analyze[0],
                             download_name = analyze[1];
@@ -662,7 +661,7 @@
                     }
 
                     Syn.Log("Request Successful", this.SortMap, { dev: Config.Dev, collapsed: false });
-                    document.title = `（${this.Pages} - ${++this.progress}）`;
+                    Syn.$title(`（${this.Pages} - ${++this.progress}）`);
                 } else {
                     Syn.Log("Request Failed", { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
                     await Syn.Sleep(1500);
@@ -679,9 +678,9 @@
 
             this.TaskDict = new Map(); // 任務臨時數據
 
-            this.Host = Syn.Device.Host;
+            this.Host = Syn.$domain;
             this.SourceURL = document.URL; // 不能從 Device 取得, 會無法適應換頁
-            this.TitleCache = document.title;
+            this.TitleCache = Syn.$title();
             this.FirstURL = this.SourceURL.split("?o=")[0]; // 第一頁連結
 
             this.Pages = 1; // 預設開始抓取的頁數
@@ -900,19 +899,19 @@
                 const Cache = {};
 
                 try {
-                    for (const a of Syn.$$("body a", { all: true, root: Syn.DomParse(Data) })) {
+                    for (const a of Syn.DomParse(Data).$qa("body a")) {
                         const href = a.href;
 
                         if (href.startsWith("https://mega.nz")) {
 
-                            let name = (a.previousElementSibling?.textContent.replace(":", "") || md5(href).slice(0, 16)).trim();
+                            let name = (a.previousElementSibling.$text().replace(":", "") || md5(href).slice(0, 16)).trim();
                             if (name === "") continue;
 
                             let pass = "";
                             const nextNode = a.nextElementSibling;
 
                             if (nextNode) {
-                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.textContent?.trim() ?? "";
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE).$text() ?? "";
                                 if (nodeText.startsWith("Pass")) {
                                     pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
                                 }
@@ -923,8 +922,8 @@
                                 [Lang.Transl("連結")]: href
                             } : href;
                         } else if (href) {
-                            const description = a.previousSibling?.textContent?.trim() ?? "";
-                            const name = `${description} ${a.textContent}`?.trim();
+                            const description = a.previousSibling.$text() ?? "";
+                            const name = `${description} ${a.$text()}`;
                             Cache[name] = href;
                         }
                     };
@@ -970,14 +969,14 @@
 
         /* 入口調用函數 */
         async FetchInit() {
-            const Section = Syn.$$("section");
+            const Section = Syn.$q("section");
 
             if (Section) {
                 lock = true; // 鎖定菜單的操作, 避免重複抓取
 
                 // 取得當前頁數
-                for (const page of Syn.$$(".pagination-button-disabled b", { all: true })) {
-                    const number = Number(page.textContent);
+                for (const page of Syn.$qa(".pagination-button-disabled b")) {
+                    const number = Number(page.$text());
                     if (number) {
                         this.Pages = number;
                         break;
@@ -996,10 +995,10 @@
         async FetchRun(Section, Url) {
 
             if (IsNeko) {
-                const Item = Syn.$$(".card-list__items article", { all: true, root: Section });
+                const Item = Section.$qa(".card-list__items article");
 
                 // 下一頁連結
-                const Menu = Syn.$$("a.pagination-button-after-current", { root: Section });
+                const Menu = Section.$q("a.pagination-button-after-current");
                 if (Menu) {
                     // Menu.href
                 }
@@ -1125,7 +1124,7 @@
                                             };
 
                                             resolve();
-                                            document.title = `（${this.Pages} - ${++this.Progress}）`;
+                                            Syn.$title(`（${this.Pages} - ${++this.Progress}）`);
                                             Syn.Log("Request Successful", this.TaskDict, { dev: Config.Dev, collapsed: false });
                                         } else throw new Error("Json Parse Failed");
                                     } else {
@@ -1172,7 +1171,7 @@
                                     this.TaskDict.set(Index, { title: Title, content: Gen });
                                 };
 
-                                document.title = `（${this.Pages} - ${++this.Progress}）`;
+                                Syn.$title(`（${this.Pages} - ${++this.Progress}）`);
                                 Syn.Log("Parsed Successful", this.TaskDict, { dev: Config.Dev, collapsed: false });
                             } catch (error) {
                                 Syn.Log(error, { title: Title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
@@ -1210,7 +1209,7 @@
             Syn.OutputTXT(Content, this.MetaDict[Lang.Transl("作者")], () => {
                 lock = false;
                 this.Worker.terminate();
-                document.title = this.TitleCache;
+                Syn.$title(this.TitleCache);
             })
         };
 
@@ -1225,7 +1224,7 @@
             Syn.OutputJson(Json_data, this.MetaDict[Lang.Transl("作者")], () => {
                 lock = false;
                 this.Worker.terminate();
-                document.title = this.TitleCache;
+                Syn.$title(this.TitleCache);
             });
         };
 
@@ -1233,7 +1232,7 @@
 
     (new class Main {
         constructor() {
-            this.URL = Syn.Device.Url;
+            this.URL = Syn.$url;
             this.Page = {
                 Content: /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(this.URL),
                 Preview: /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(this.URL)
@@ -1280,44 +1279,45 @@
 
         /* 按鈕創建 */
         async ButtonCreation() {
-            Syn.$$("section").setAttribute("Download-Button-Created", true); this.AddStyle();
+            Syn.$q("section").$sAttr("Download-Button-Created", true); this.AddStyle();
             let Button, Files;
             const IntervalFind = setInterval(() => {
-                Files = Syn.$$(IsNeko ? "div.scrape__body h2" : "div.post__body h2", { all: true });
+                Files = Syn.$qa(IsNeko ? "div.scrape__body h2" : "div.post__body h2");
 
                 if (Files.length > 0) {
                     clearInterval(IntervalFind);
 
                     try {
-                        const CompressMode = Syn.Storage("Compression", { type: localStorage, error: true });
+                        const CompressMode = Syn.Local("Compression", { error: true });
                         const ModeDisplay = CompressMode ? Lang.Transl("壓縮下載") : Lang.Transl("單圖下載");
 
                         // 創建 Span (找到含有 Files 文本的對象)
-                        Files = Array.from(Files).filter(file => file.textContent.trim() == "Files");
+                        Files = Array.from(Files).filter(file => file.$text() == "Files");
                         if (Files.length == 0) {
                             return;
                         }
 
-                        const spanElement = GM_addElement(Files[0], "span", { class: "File_Span", id: "ExDB" });
+                        const spanElement = Syn.$createElement(Files[0], "span", { class: "File_Span", id: "ExDB" });
                         // 創建 Svg
-                        const setting = GM_addElement(spanElement, "svg", { class: "Setting_Button" });
-                        setting.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><style>svg {fill: hsl(0, 0%, 45%);}</style>
+                        const setting = Syn.$createElement(spanElement, "svg", { class: "Setting_Button" });
+                        setting.$iHtml(`<svg xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><style>svg {fill: hsl(0, 0%, 45%);}</style>
                         <path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>`
-                        Syn.Listen(setting, "click", () => { alert("Currently Invalid") }, { capture: true, passive: true });
+                        );
+                        setting.$one("click", () => { alert("Currently Invalid") }, { capture: true, passive: true });
                         // 創建 Button
-                        Button = GM_addElement(spanElement, "button", {
+                        Button = Syn.$createElement(spanElement, "button", {
                             class: "Download_Button",
-                            textContent: lock ? Lang.Transl("下載中鎖定") : ModeDisplay
+                            text: lock ? Lang.Transl("下載中鎖定") : ModeDisplay
                         });
                         Button.disabled = lock;
-                        Syn.Listen(Button, "click", () => {
+                        Button.$one("click", () => {
                             let Instantiate = null;
                             Instantiate = new Download(CompressMode, ModeDisplay, Button);
                             Instantiate.DownloadTrigger();
                         }, { capture: true, passive: true });
                     } catch {
                         Button.disabled = true;
-                        Button.textContent = Lang.Transl("無法下載");
+                        Button.$text(Lang.Transl("無法下載"));
                     }
                 }
             });
@@ -1325,7 +1325,7 @@
 
         /* 一鍵開啟當前所有帖子 */
         async OpenAllPages() {
-            const card = Syn.$$("article.post-card a", { all: true });
+            const card = Syn.$qa("article.post-card a");
             if (card.length == 0) { throw new Error("No links found") }
 
             let scope = prompt(`(${Lang.Transl("當前帖子數")}: ${card.length})${Lang.Transl("開帖說明")}`);
@@ -1344,10 +1344,10 @@
 
         /* 下載模式切換 */
         async DownloadModeSwitch() {
-            Syn.Storage("Compression", { type: localStorage, error: true })
-                ? Syn.Storage("Compression", { type: localStorage, value: false })
-                : Syn.Storage("Compression", { type: localStorage, value: true });
-            Syn.$$("#ExDB").remove();
+            Syn.Local("Compression", { error: true })
+                ? Syn.Local("Compression", { value: false })
+                : Syn.Local("Compression", { value: true });
+            Syn.$q("#ExDB").remove();
             this.ButtonCreation();
         }
 
@@ -1355,7 +1355,7 @@
         async Injection() {
             Syn.Observer(document, () => {
                 try {
-                    (this.Page.Content && !Syn.$$("section").hasAttribute("Download-Button-Created")) && this.ButtonCreation();
+                    (this.Page.Content && !Syn.$q("section").$hAttr("Download-Button-Created")) && this.ButtonCreation();
                 } catch { }
             }, { throttle: 300 });
 
@@ -1557,33 +1557,11 @@
                 "當前帖子數": "Current Post Count",
                 "開帖說明": "\n\n!! Without confirmation, all posts on the current page will be opened\nEnter selection range:\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10",
             }
-        }, Match = {
-            "ko": Word.Korea,
-            "ko-KR": Word.Korea,
-            "ja": Word.Japan,
-            "ja-JP": Word.Japan,
-            "ru": Word.Russia,
-            "ru-RU": Word.Russia,
-            "en": Word.English,
-            "en-US": Word.English,
-            "en-GB": Word.English,
-            "en-AU": Word.English,
-            "en-CA": Word.English,
-            "en-NZ": Word.English,
-            "en-IE": Word.English,
-            "en-ZA": Word.English,
-            "en-IN": Word.English,
-            "zh": Word.Simplified,
-            "zh-CN": Word.Simplified,
-            "zh-SG": Word.Simplified,
-            "zh-MY": Word.Simplified,
-            "zh-TW": Word.Traditional,
-            "zh-HK": Word.Traditional,
-            "zh-MO": Word.Traditional
-        }, ML = Match[lang] ?? Match["en-US"];
+        }
 
+        const translator = Syn.TranslMatcher(Word, lang);
         return {
-            Transl: (Str) => ML[Str] ?? Str,
+            Transl: (Str) => translator[Str] ?? Str,
         };
     }
 })();
