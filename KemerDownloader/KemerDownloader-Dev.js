@@ -901,10 +901,11 @@
                 try {
                     for (const a of Syn.DomParse(Data).$qa("body a")) {
                         const href = a.href;
+                        const hash = md5(href).slice(0, 16);
 
                         if (href.startsWith("https://mega.nz")) {
 
-                            let name = (a.previousElementSibling.$text().replace(":", "") || md5(href).slice(0, 16)).trim();
+                            let name = (a.previousElementSibling.$text().replace(":", "") || hash);
                             if (name === "") continue;
 
                             let pass = "";
@@ -923,8 +924,8 @@
                             } : href;
                         } else if (href) {
                             const description = a.previousSibling.$text() ?? "";
-                            const name = `${description} ${a.$text()}`;
-                            Cache[name] = href;
+                            const name = `${description} ${a.$text()}`.trim();
+                            Cache[name ? name : hash] = href;
                         }
                     };
                 } catch (error) {
@@ -1140,7 +1141,7 @@
                             }
                         };
 
-                        // 生成任務
+                        // 生成任務 (可能要做一些限速)
                         for (const [Index, Post] of Results.entries()) {
                             Tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(Index, { resolve, reject }); // 存儲解析器
