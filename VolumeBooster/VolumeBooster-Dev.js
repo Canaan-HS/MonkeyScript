@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      0.0.39
+// @version      0.0.40
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -80,18 +80,18 @@
         // 增強參數
         const Parame = {
             Gain: Config.Gain ?? 1.0,
-            LowFilterGain: Config.LowFilterGain ?? 2.2,
+            LowFilterGain: Config.LowFilterGain ?? 1.2,
             LowFilterFreq: Config.LowFilterFrequency ?? 200,
             MidFilterQ: Config.MidFilterQ ?? 1,
-            MidFilterGain: Config.MidFilterGain ?? 3,
-            MidFilterFreq: Config.MidFilterFrequency ?? 1200,
+            MidFilterGain: Config.MidFilterGain ?? 1.6,
+            MidFilterFreq: Config.MidFilterFrequency ?? 2000,
             HighFilterGain: Config.HighFilterGain ?? 1.8,
-            HighFilterFreq: Config.HighFilterFreq ?? 12000,
+            HighFilterFreq: Config.HighFilterFreq ?? 10000,
             CompressorRatio: Config.CompressorRatio ?? 3, // 壓縮率 (調低會更大聲, 但容易爆音)
-            CompressorKnee: Config.CompressorKnee ?? 6, // 壓縮過渡反應時間(越小越快)
-            CompressorThreshold: Config.CompressorThreshold ?? -9, // 壓縮閾值
+            CompressorKnee: Config.CompressorKnee ?? 4, // 壓縮過渡反應時間(越小越快)
+            CompressorThreshold: Config.CompressorThreshold ?? -8, // 壓縮閾值
             CompressorAttack: Config.CompressorAttack ?? 0.03, // 開始壓縮的速度
-            CompressorRelease: Config.CompressorRelease ?? 0.25, // 釋放壓縮的速度
+            CompressorRelease: Config.CompressorRelease ?? 0.2, // 釋放壓縮的速度
         };
 
         /* 註冊快捷鍵(開啟菜單) */
