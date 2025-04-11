@@ -87,11 +87,11 @@
             MidFilterFreq: Config.MidFilterFrequency ?? 1200,
             HighFilterGain: Config.HighFilterGain ?? 1.8,
             HighFilterFreq: Config.HighFilterFreq ?? 12000,
-            CompressorRatio: Config.CompressorRatio ?? 5.4, // 壓縮率 (調低會更大聲, 但容易爆音)
-            CompressorKnee: Config.CompressorKnee ?? 0.4, // 壓縮過渡反應時間(越小越快)
-            CompressorThreshold: Config.CompressorThreshold ?? -12, // 壓縮閾值
-            CompressorAttack: Config.CompressorAttack ?? 0.02, // 開始壓縮的速度
-            CompressorRelease: Config.CompressorRelease ?? 0.4, // 釋放壓縮的速度
+            CompressorRatio: Config.CompressorRatio ?? 3, // 壓縮率 (調低會更大聲, 但容易爆音)
+            CompressorKnee: Config.CompressorKnee ?? 6, // 壓縮過渡反應時間(越小越快)
+            CompressorThreshold: Config.CompressorThreshold ?? -9, // 壓縮閾值
+            CompressorAttack: Config.CompressorAttack ?? 0.03, // 開始壓縮的速度
+            CompressorRelease: Config.CompressorRelease ?? 0.25, // 釋放壓縮的速度
         };
 
         /* 註冊快捷鍵(開啟菜單) */
@@ -124,7 +124,7 @@
                     const CompressorNode = MediaAudioContent.createDynamicsCompressor(); // 動態壓縮節點
 
                     // 設置初始增量
-                    GainNode.gain.value = Parame.Gain ** 2;
+                    GainNode.gain.value = Parame.Gain;
 
                     /* 低音慮波增強 */
                     LowFilterNode.type = "lowshelf";
@@ -157,11 +157,6 @@
                         .connect(HighFilterNode)
                         .connect(CompressorNode)
                         .connect(MediaAudioContent.destination);
-
-                    const Interval = setInterval(() => {
-                        media.volume = 1; // 將媒體音量設置為 100 % (有可能被其他腳本調整)
-                    }, 1e3);
-                    setTimeout(() => { clearInterval(Interval) }, 3e3); // 持續 3 秒停止
 
                     // 將完成的節點添加
                     EnhancedNodes.push({
@@ -217,8 +212,6 @@
                 return {
                     SetBooster: (type, value) => { // 設置增強參數
                         Parame[type] = value; // 更新增強參數 (原始值)
-                        if (type === "Gain") value = value ** 2; // 增強倍數
-
                         EnhancedNodes.forEach(Items => {
                             Items[type].value = value;
                         })
@@ -251,7 +244,7 @@
                         const media = [...Syn.$qa("video, audio")]
                             .filter(media => !EnhancedElements.has(media));
                         media.length > 0 && func(media);
-                    }, 300);
+                    }, 150);
 
                     // 觀察者持續觸發查找
                     Syn.Observer(document, () => {
@@ -259,7 +252,7 @@
                             MediaObserver.disconnect(); // 停止觀察
                             Trigger(media);
                         })
-                    }, { mark: "Media-Booster", attributes: false, debounce: 60 }, ({ ob, op }) => {
+                    }, { mark: "Media-Booster", attributes: false, debounce: 30 }, ({ ob, op }) => {
                         MediaObserver = ob;
                         ObserverOption = op;
                         Menu(Transl("❌ 禁用增幅"));
@@ -798,7 +791,7 @@
                                 <span>${Transl("增益")}</span>
                                 <span id="LowFilterGain-Value" class="Booster-Value">${Parame.LowFilterGain}</span>
                             </div>
-                            <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="0" max="20" value="${Parame.LowFilterGain}" step="0.1">
+                            <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${Parame.LowFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -817,7 +810,7 @@
                                 <span>${Transl("增益")}</span>
                                 <span id="MidFilterGain-Value" class="Booster-Value">${Parame.MidFilterGain}</span>
                             </div>
-                            <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="0" max="20" value="${Parame.MidFilterGain}" step="0.1">
+                            <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${Parame.MidFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -833,7 +826,7 @@
                                 <span>${Transl("Q值")}</span>
                                 <span id="MidFilterQ-Value" class="Booster-Value">${Parame.MidFilterQ}</span>
                             </div>
-                            <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.1" max="10" value="${Parame.MidFilterQ}" step="0.1">
+                            <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.5" max="5" value="${Parame.MidFilterQ}" step="0.1">
                         </div>
                     </div>
 
@@ -844,7 +837,7 @@
                                 <span>${Transl("增益")}</span>
                                 <span id="HighFilterGain-Value" class="Booster-Value">${Parame.HighFilterGain}</span>
                             </div>
-                            <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="0" max="20" value="${Parame.HighFilterGain}" step="0.1">
+                            <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${Parame.HighFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -871,7 +864,7 @@
                                 <span>${Transl("過渡反應")}</span>
                                 <span id="CompressorKnee-Value" class="Booster-Value">${Parame.CompressorKnee}</span>
                             </div>
-                            <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${Parame.CompressorKnee}" step="0.1">
+                            <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${Parame.CompressorKnee}" step="1">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -879,7 +872,7 @@
                                 <span>${Transl("閾值")}</span>
                                 <span id="CompressorThreshold-Value" class="Booster-Value">${Parame.CompressorThreshold}</span>
                             </div>
-                            <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-100" max="0" value="${Parame.CompressorThreshold}" step="1">
+                            <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-60" max="0" value="${Parame.CompressorThreshold}" step="1">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -887,7 +880,7 @@
                                 <span>${Transl("起音速度")}</span>
                                 <span id="CompressorAttack-Value" class="Booster-Value">${Parame.CompressorAttack}</span>
                             </div>
-                            <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0" max="1" value="${Parame.CompressorAttack}" step="0.01">
+                            <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0.001" max="0.5" value="${Parame.CompressorAttack}" step="0.001">
                         </div>
 
                         <div class="Booster-Control-Group">
@@ -895,7 +888,7 @@
                                 <span>${Transl("釋放速度")}</span>
                                 <span id="CompressorRelease-Value" class="Booster-Value">${Parame.CompressorRelease}</span>
                             </div>
-                            <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0" max="2" value="${Parame.CompressorRelease}" step="0.1">
+                            <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0.01" max="2" value="${Parame.CompressorRelease}" step="0.01">
                         </div>
                     </div>
 
