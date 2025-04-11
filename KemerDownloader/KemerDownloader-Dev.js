@@ -684,6 +684,7 @@
             this.FirstURL = this.SourceURL.split("?o=")[0]; // 第一頁連結
 
             this.Pages = 1; // 預設開始抓取的頁數
+            this.RequestDelay = 10; // ! 請求延遲 (毫秒) [還需要測試]
             this.FinalPages = 10; // 預設最終抓取的頁數
             this.Progress = 0; // 用於顯示當前抓取進度
             this.OnlyMode = false; // 判斷獲取數據的模式
@@ -1141,12 +1142,14 @@
                             }
                         };
 
-                        // 生成任務 (可能要做一些限速)
+                        // 生成任務
                         for (const [Index, Post] of Results.entries()) {
                             Tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(Index, { resolve, reject }); // 存儲解析器
                                 this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}` });
                             }));
+
+                            await Syn.Sleep(this.RequestDelay);
                         }
 
                         // 等待所有任務
@@ -1177,6 +1180,8 @@
                             } catch (error) {
                                 Syn.Log(error, { title: Title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
                                 continue;
+                            } finally {
+                                await Syn.Sleep(this.RequestDelay);
                             }
                         }
                     }
