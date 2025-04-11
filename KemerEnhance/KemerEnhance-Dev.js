@@ -1606,9 +1606,10 @@
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
 
                     for (const link of post) {
-                        link.$sAttr("download", ""); // 修改標籤字樣
-                        link.href = decodeURIComponent(link.href); // 解碼 url, 並替代原 url
-                        link.$text(link.$text().replace("Download", ""));
+                        const text = link.$text().replace("Download", ""); // 修正原文本
+
+                        link.$sAttr("download", text); // 修改標籤
+                        link.$text(text); // 修改文本
 
                         const Browse = link.nextElementSibling; // 查找是否含有 Browse 元素
                         if (!Browse) continue;
