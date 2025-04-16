@@ -359,7 +359,6 @@
                     --highlight-color: #00e5ff;
                     --border-radius: 12px;
                 }
-
                 Booster_Modal_Background {
                     top: 0;
                     left: 0;
@@ -377,15 +376,12 @@
                     transition: opacity 0.4s ease;
                     background-color: rgba(0, 0, 0, 0.4);
                 }
-
                 Booster_Modal_Background.open {
                     animation: fadeIn 0.4s ease forwards;
                 }
-
                 Booster_Modal_Background.close {
                     animation: fadeOut 0.4s ease forwards;
                 }
-
                 .Booster-Modal-Content {
                     min-width: 420px;
                     max-width: 460px;
@@ -398,7 +394,7 @@
                     border-radius: var(--border-radius);
                     background-color: var(--background-dark);
                     border: 1px solid rgba(78, 164, 255, 0.3);
-                    box-shadow: 
+                    box-shadow:
                         inset -6px 0 10px -8px rgba(0, 0, 0, 0.5),
                         0 10px 30px rgba(0, 0, 0, 0.5),
                         0 0 15px rgba(0, 212, 255, 0.2);
@@ -408,28 +404,22 @@
                     transform: scale(0.9);
                     transition: all 0.5s ease;
                 }
-
                 .Booster-Modal-Content.open {
                     animation: scaleIn 0.5s ease forwards;
                 }
-
                 .Booster-Modal-Content.close {
                     animation: shrinkFadeOut 0.8s ease forwards;
                 }
-
                 .Booster-Modal-Content::-webkit-scrollbar {
                     width: 8px;
                 }
-
                 .Booster-Modal-Content::-webkit-scrollbar-thumb {
                     background: rgba(255, 255, 255, 0.2);
                     border-radius: 8px;
                 }
-
                 .Booster-Modal-Content::-webkit-scrollbar-track {
                     background: rgba(0, 0, 0, 0.1);
                 }
-
                 .Booster-Title {
                     margin-top: 0;
                     color: var(--secondary-color);
@@ -442,7 +432,6 @@
                     transform: translateY(-10px);
                     animation: slideDown 0.4s ease 0.3s forwards;
                 }
-
                 .Booster-Multiplier {
                     margin: 1.5rem 0;
                     font-size: 22px;
@@ -450,26 +439,22 @@
                     opacity: 0;
                     animation: fadeIn 0.5s ease 0.4s forwards;
                 }
-
                 .Booster-Multiplier img {
                     width: 24px;
                     margin-right: 8px;
                     vertical-align: middle;
                 }
-
                 .Booster-Multiplier span {
                     display: flex;
                     align-items: center;
                     justify-content: center;
                 }
-
                 #Booster-CurrentValue {
                     color: var(--highlight-color);
                     font-weight: 700;
                     margin: 0 5px;
                     font-size: 26px;
                 }
-
                 .Booster-Slider {
                     -webkit-appearance: none;
                     appearance: none;
@@ -483,7 +468,6 @@
                     opacity: 0;
                     animation: progressIn 0.8s ease 0.5s forwards;
                 }
-
                 .Booster-Slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
@@ -494,7 +478,6 @@
                     cursor: pointer;
                     box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
                 }
-
                 .Booster-Slider::-moz-range-thumb {
                     width: 16px;
                     height: 16px;
@@ -504,13 +487,11 @@
                     border: none;
                     box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
                 }
-
                 .Booster-Slider::-moz-range-progress {
                     background: var(--slider-track);
                     border-radius: 3px;
                     height: 6px;
                 }
-
                 .Booster-Buttons {
                     display: flex;
                     justify-content: flex-end;
@@ -519,7 +500,6 @@
                     opacity: 0;
                     animation: fadeIn 0.5s ease 0.7s forwards;
                 }
-
                 .Booster-Modal-Button {
                     color: var(--text-color);
                     cursor: pointer;
@@ -532,24 +512,20 @@
                     transition: all 0.2s ease;
                     outline: none;
                 }
-
                 .Booster-Modal-Button:hover {
                     background-color: rgba(58, 123, 253, 0.4);
                     box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
                     transform: translateY(-2px);
                 }
-
                 #Booster-Sound-Save {
                     background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
                     border: none;
                     position: relative;
                     overflow: hidden;
                 }
-
                 #Booster-Sound-Save:hover {
                     box-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
                 }
-                
                 #Booster-Sound-Save:after {
                     content: "";
                     position: absolute;
@@ -561,20 +537,18 @@
                     transform: rotate(30deg);
                     background: rgba(255, 255, 255, 0.13);
                     background: linear-gradient(
-                        to right, 
+                        to right,
                         rgba(255, 255, 255, 0.13) 0%,
                         rgba(255, 255, 255, 0.13) 77%,
                         rgba(255, 255, 255, 0.5) 92%,
                         rgba(255, 255, 255, 0.0) 100%
                     );
                 }
-
                 #Booster-Sound-Save:hover:after {
                     opacity: 1;
                     left: 130%;
                     transition: left 0.7s ease, opacity 0.5s ease;
                 }
-
                 .Booster-Accordion {
                     background-color: var(--background-panel);
                     color: var(--text-color);
@@ -594,23 +568,18 @@
                     opacity: 0;
                     transform: translateY(10px);
                 }
-
                 .Booster-Accordion:nth-of-type(1) {
                     animation: slideUp 0.4s ease 0.5s forwards;
                 }
-                
                 .Booster-Accordion:nth-of-type(2) {
                     animation: slideUp 0.4s ease 0.6s forwards;
                 }
-                
                 .Booster-Accordion:nth-of-type(3) {
                     animation: slideUp 0.4s ease 0.7s forwards;
                 }
-                
                 .Booster-Accordion:nth-of-type(4) {
                     animation: slideUp 0.4s ease 0.8s forwards;
                 }
-
                 .Booster-Accordion:after {
                     content: '+';
                     color: var(--secondary-color);
@@ -618,17 +587,14 @@
                     float: right;
                     margin-left: 5px;
                 }
-
                 .Booster-Accordion.active {
                     border-bottom-left-radius: 0;
                     border-bottom-right-radius: 0;
                     margin-bottom: 0;
                 }
-
                 .Booster-Accordion.active:after {
                     content: "-";
                 }
-
                 .Booster-Panel {
                     max-height: 0;
                     overflow: hidden;
@@ -639,16 +605,13 @@
                     background-color: var(--background-panel);
                     border-radius: 0 0 8px 8px;
                 }
-
                 .Booster-Panel.active {
                     margin-bottom: 15px;
                     padding: 10px 15px 15px;
                 }
-
                 .Booster-Control-Group {
                     margin-bottom: 15px;
                 }
-
                 .Booster-Control-Label {
                     display: flex;
                     justify-content: space-between;
@@ -656,12 +619,10 @@
                     font-size: 14px;
                     color: rgba(255, 255, 255, 0.8);
                 }
-
                 .Booster-Value {
                     color: var(--highlight-color);
                     font-weight: 600;
                 }
-
                 .Booster-Mini-Slider {
                     -webkit-appearance: none;
                     appearance: none;
@@ -671,7 +632,6 @@
                     border-radius: 2px;
                     outline: none;
                 }
-
                 .Booster-Mini-Slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
@@ -681,7 +641,6 @@
                     background: var(--secondary-color);
                     cursor: pointer;
                 }
-
                 .Booster-Mini-Slider::-moz-range-thumb {
                     width: 12px;
                     height: 12px;
@@ -690,13 +649,11 @@
                     cursor: pointer;
                     border: none;
                 }
-
                 .Booster-Mini-Slider::-moz-range-progress {
                     background: var(--slider-track);
                     border-radius: 2px;
                     height: 4px;
                 }
-
                 @keyframes fadeIn {
                     from {
                         opacity: 0;
@@ -705,7 +662,6 @@
                         opacity: 1;
                     }
                 }
-
                 @keyframes fadeOut {
                     from {
                         opacity: 1;
@@ -715,7 +671,6 @@
                         pointer-events: none;
                     }
                 }
-                
                 @keyframes scaleIn {
                     from {
                         transform: scale(0.9);
@@ -726,7 +681,6 @@
                         opacity: 1;
                     }
                 }
-
                 @keyframes shrinkFadeOut {
                     from {
                         transform: scale(1);
@@ -737,7 +691,6 @@
                         opacity: 0;
                     }
                 }
-
                 @keyframes slideUp {
                     from {
                         transform: translateY(10px);
@@ -748,7 +701,6 @@
                         opacity: 1;
                     }
                 }
-
                 @keyframes slideDown {
                     from {
                         transform: translateY(-10px);
@@ -759,7 +711,6 @@
                         opacity: 1;
                     }
                 }
-                
                 @keyframes progressIn {
                     from {
                         width: 0%;
