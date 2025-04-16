@@ -49,10 +49,10 @@ The adjustment menu is my own design - I apologize if it's not visually appealin
 
 ## **📦 Version Info**
 
-**Release Version: 0.0.39**
+**Release Version: 0.0.40**
 
-### **Updates**
-1. Added filter and compression adjustments
-2. Revised menu design
+### **What's New**
+1. Reduced loading latency  
+2. Adjusted default parameters and UI configuration range
 
 ---
