@@ -77,7 +77,7 @@
                     border-radius: var(--border-radius);
                     background-color: var(--background-dark);
                     border: 1px solid rgba(78, 164, 255, 0.3);
-                    box-shadow: 
+                    box-shadow:
                         inset -6px 0 10px -8px rgba(0, 0, 0, 0.5),
                         0 10px 30px rgba(0, 0, 0, 0.5),
                         0 0 15px rgba(0, 212, 255, 0.2);
@@ -220,7 +220,7 @@
                     transform: rotate(30deg);
                     background: rgba(255, 255, 255, 0.13);
                     background: linear-gradient(
-                        to right, 
+                        to right,
                         rgba(255, 255, 255, 0.13) 0%,
                         rgba(255, 255, 255, 0.13) 77%,
                         rgba(255, 255, 255, 0.5) 92%,
