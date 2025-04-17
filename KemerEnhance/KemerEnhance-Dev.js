@@ -1524,7 +1524,7 @@
                         }, preact.h("video", {
                             key: "video",
                             controls: true,
-                            preload: "auto",
+                            preload: "metadata",
                             "data-setup": JSON.stringify({}),
                             className: "post-video",
                         },
