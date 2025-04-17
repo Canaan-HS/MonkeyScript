@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/04/04
+// @version      2025/04/17
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -318,7 +318,8 @@ const Syn = (() => {
      * @param {Function} onFunc - 當觀察到變化時執行的回調函數
      * @param {Object} [options] - 配置選項
      * @param {string} [options.mark=""] - 創建標記，避免重複創建觀察器
-     * @param {number} [options.debounce=0] - 防抖時間(毫秒)
+     * @param {number} [options.throttle=100] - 節流時間(毫秒) [預設使用]
+     * @param {number} [options.debounce=0] - 防抖時間(毫秒) [⚠ 再同時設置節流與防抖時, 優先使用防抖]
      * @param {boolean} [options.subtree=true] - 是否觀察目標及其所有後代節點的變化
      * @param {boolean} [options.childList=true] - 是否觀察子節點的添加或移除
      * @param {boolean} [options.attributes=true] - 是否觀察屬性變化
@@ -341,6 +342,7 @@ const Syn = (() => {
         const {
             mark="",
             debounce=0,
+            throttle=100,
             subtree=true,
             childList=true,
             attributes=true,
@@ -351,14 +353,15 @@ const Syn = (() => {
             if (Mark[mark]) { return } else { Mark[mark] = true }
         };
 
+        const [RateFunc, DelayMs] = debounce > 0 ? [Debounce, debounce] : [Throttle, throttle];
         const op = {
             subtree: subtree,
             childList: childList,
             attributes: attributes,
             characterData: characterData
-        }, ob = new MutationObserver(Debounce(() => { onFunc() }, debounce));
-        ob.observe(target, op);
+        }, ob = new MutationObserver(RateFunc(() => { onFunc() }, DelayMs));
 
+        ob.observe(target, op);
         callback && callback({ ob, op });
     };
 
@@ -371,7 +374,9 @@ const Syn = (() => {
      * @param {boolean} [options.raf=false] - 使用 requestAnimationFrame 進行查找 (極致快的查找, 沒有 debounce 限制, 用於盡可能最快找到元素)
      * @param {boolean} [options.all=false] - 是否以 all 查找, 僅支援 selector 是單個字串
      * @param {number} [options.timeout=8] - 超時時間(秒)
-     * @param {number} [options.debounce=50] - 防抖時間(毫秒)
+     * @param {number} [options.throttle=0] - 節流時間(毫秒) [⚠ 再同時設置節流與防抖時, 優先使用節流]
+     * @param {number} [options.debounce=50] - 防抖時間(毫秒) [預設使用]
+     * @param {boolean} [options.visibility=true] - 是否在頁面可見時開始查找元素
      * @param {boolean} [options.subtree=true] - 是否觀察所有後代節點
      * @param {boolean} [options.childList=true] - 是否觀察子節點變化
      * @param {boolean} [options.attributes=true] - 是否觀察屬性變化
@@ -415,7 +420,9 @@ const Syn = (() => {
             raf=false,
             all=false,
             timeout=8,
+            throttle=0,
             debounce=50,
+            visibility=true,
             subtree=true,
             childList=true,
             attributes=true,
@@ -458,7 +465,8 @@ const Syn = (() => {
                     }, (1000 * timeout));
 
                 } else {
-                    const observer = new MutationObserver(Debounce(() => {
+                    const [RateFunc, DelayMs] = throttle > 0 ? [Throttle, throttle] : [Debounce, debounce];
+                    const observer = new MutationObserver(RateFunc(() => {
                         result = Query(selector, all);
 
                         if (result) {
@@ -468,7 +476,7 @@ const Syn = (() => {
                             found && found(result);
                             resolve(result);
                         }
-                    }, debounce));
+                    }, DelayMs));
 
                     observer.observe(root, {
                         subtree: subtree,
@@ -487,8 +495,8 @@ const Syn = (() => {
                 }
             };
 
-            if (document.visibilityState === "hidden") {
-                document.$one("visibilitychange", () => Core(), { once: true });
+            if (visibility && document.visibilityState === "hidden") {
+                document.addEventListener("visibilitychange", () => Core(), { once: true });
             } else Core();
         })
     };
