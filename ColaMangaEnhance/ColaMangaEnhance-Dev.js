@@ -62,7 +62,7 @@ Todo 未來添加
         },
         AutoTurnPage: { // 自動翻頁
             Enable: true,
-            Mode: 4, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
+            Mode: 5, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
         },
         RegisterHotkey: { // 快捷功能
             Enable: true,
@@ -98,7 +98,7 @@ Todo 未來添加
             /* 取得數據 */
             this.Get_Data = async (callback) => {
                 Syn.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
-                    {raf: true, timeout: 10, timeoutResult: true})
+                    {timeout: 10, throttle: 30, timeoutResult: true})
                     .then(([Body, Title, HeadPager, Readend, Manga]) => {
                         this.Body = Body;
 
@@ -510,15 +510,22 @@ Todo 未來添加
 
                 setTimeout(()=> {
 
-                    Img = self.MangaList.$qa("img");
+                    Img = self.MangaList.$qa("img"); // 取得當前狀態
 
                     if (Img.length <= 5) { // 總長度 <= 5 直接觸發換頁
                         TurnPage();
                         return;
                     };
 
-                    // 後續變化觀察
+                    // 首次添加觀察
+                    self.Observer_Next.observe(
+                        self.ObserveObject(self.VisibleObjects(Img))
+                    );
+
+                    // 後續根據變化, 修改觀察對象
                     Syn.Observer(self.MangaList, () => {
+                        Img = self.MangaList.$qa("img"); // 重新獲取當前狀態 (因為獲取的不是動態對象, 雖然不重新獲取不會怎樣, 避免意外)
+
                         const Visible = self.VisibleObjects(Img);
                         const VL = Visible.length;
 
@@ -527,12 +534,12 @@ Todo 未來添加
                             self.Observer_Next.disconnect();
                             self.Observer_Next.observe(
                                 self.ObserveObject(Visible) // 修改新的觀察對象
-                            );
+                            )
                         }
+
                     }, {debounce: 500}, observer=> {
                         Observer = observer.ob;
                     });
-
                 }, self.WaitPicture);
             };
 
