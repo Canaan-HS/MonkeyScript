@@ -20,7 +20,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 
-// @require      https://update.greasyfork.org/scripts/487608/1551580/ClassSyntax_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1572649/SyntaxLite_min.js
 // ==/UserScript==
 
 /*
@@ -62,7 +62,7 @@ Todo 未來添加
         },
         AutoTurnPage: { // 自動翻頁
             Enable: true,
-            Mode: 5, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
+            Mode: 4, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
         },
         RegisterHotkey: { // 快捷功能
             Enable: true,
@@ -74,9 +74,8 @@ Todo 未來添加
             }
         }
     };
-    (new class Manga extends Syntax {
+    (new class Manga {
         constructor() {
-            super();
             this.ScrollPixels = 2; // 像素, 越高越快
             this.WaitPicture = 1000; // 等待圖片載入時間
             this.IsFinalPage = false; // 判斷是否為最終頁
@@ -98,38 +97,39 @@ Todo 未來添加
 
             /* 取得數據 */
             this.Get_Data = async (callback) => {
-                this.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], element => {
-                    const [Body, Title, HeadPager, Readend, Manga] = element;
-                    this.Body = Body;
+                Syn.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
+                    {raf: true, timeout: 10, timeoutResult: true})
+                    .then(([Body, Title, HeadPager, Readend, Manga]) => {
+                        this.Body = Body;
 
-                    const HomeLink = this.$$("a", {all: true, root: Title});
-                    this.ContentsPage = HomeLink[0].href; // 目錄連結
-                    this.HomePage = HomeLink[1].href; // 首頁連結
+                        const HomeLink = Title.$qa("a");
+                        this.ContentsPage = HomeLink[0].href; // 目錄連結
+                        this.HomePage = HomeLink[1].href; // 首頁連結
 
-                    try {
-                        const PageLink = this.$$("ul a", {all: true, root: Readend});
-                        this.PreviousPage = PageLink[0].href;
-                        this.NextPage = PageLink[2].href;
-                    } catch {
-                        const PageLink = this.$$("a.mh_btn:not(.mh_bgcolor)", {all: true, root: HeadPager});
-                        this.PreviousPage = PageLink[0].href;
-                        this.NextPage = PageLink[1].href;
-                    }
+                        try {
+                            const PageLink = Readend.$qa("ul a");
+                            this.PreviousPage = PageLink[0].href;
+                            this.NextPage = PageLink[2].href;
+                        } catch {
+                            const PageLink = HeadPager.$qa("a.mh_btn:not(.mh_bgcolor)");
+                            this.PreviousPage = PageLink[0].href;
+                            this.NextPage = PageLink[1].href;
+                        }
 
-                    this.MangaList = Manga; // 漫畫列表
-                    this.BottomStrip = this.$$("a", {root: Readend}); // 以閱讀完畢的那條, 看到他跳轉
+                        this.MangaList = Manga; // 漫畫列表
+                        this.BottomStrip = Readend.$q("a"); // 以閱讀完畢的那條, 看到他跳轉
 
-                    if([
-                        this.Body,
-                        this.ContentsPage,
-                        this.HomePage,
-                        this.PreviousPage,
-                        this.NextPage,
-                        this.MangaList,
-                        this.BottomStrip
-                    ].every(Check => Check)) callback(true);
-                    else callback(false);
-                }, {timeout: 10, timeoutResult: true, object: document});
+                        if([
+                            this.Body,
+                            this.ContentsPage,
+                            this.HomePage,
+                            this.PreviousPage,
+                            this.NextPage,
+                            this.MangaList,
+                            this.BottomStrip
+                        ].every(Check => Check)) callback(true);
+                        else callback(false);
+                    });
             };
 
             /* 取得釋放節點 */
@@ -165,20 +165,22 @@ Todo 未來添加
             /* 存取會話數據 */
             this.storage = (key, value=null) => {
                 return value != null
-                    ? this.Storage(key, {value: value})
-                    : this.Storage(key);
+                    ? Syn.Session(key, {value: value})
+                    : Syn.Session(key);
             };
 
             /* ===== 自動滾動的函數 ===== */
 
             /* 檢測到頂 */
-            this.TopDetected = this.Throttle(()=>{
-                this.Up_scroll = this.Device.sY() == 0 ? (this.storage("scroll", false), false) : true;
+            this.TopDetected = Syn.Throttle(()=>{
+                this.Up_scroll = Syn.sY() == 0 ? (this.storage("scroll", false), false) : true;
             }, 1000);
+
             /* 檢測到底 */
-            this.BottomDetected = this.Throttle(()=>{
-                this.Down_scroll =
-                this.Device.sY() + this.Device.iH() >= document.documentElement.scrollHeight ? (this.storage("scroll", false), false) : true;
+            this.IsTheBottom = () => Syn.sY() + Syn.iH() >= document.documentElement.scrollHeight;
+            this.BottomDetected = Syn.Throttle(()=>{
+                if (Config.AutoTurnPage.Mode <= 3) return; // ! 臨時寫法, 當翻頁模式為 1,2,3 時不會觸發
+                this.Down_scroll = this.IsTheBottom() ? (this.storage("scroll", false), false) : true;
             }, 1000);
 
             /* 自動滾動 (邏輯修改) */
@@ -221,12 +223,11 @@ Todo 未來添加
 
             /* 獲取樣式 */
             this.Get_Style = () => {
-                const Style = this.Store("g", "Style") ||
-                    [{
-                        "BG_Color": "#595959",
-                        "Img_Bw": "auto",
-                        "Img_Mw": "100%"
-                    }];
+                const Style = Syn.gV("Style", [{
+                    "BG_Color": "#595959",
+                    "Img_Bw": "auto",
+                    "Img_Mw": "100%"
+                }]);
                 return Style[0];
             };
 
@@ -255,14 +256,14 @@ Todo 未來添加
                 });
             }
 
-            this.AddStyle(`
+            Syn.AddStyle(`
                 html {pointer-events: none !important;}
                 .mh_wrap, span.mh_btn:not(.contact), ${this.Id.Iframe} {pointer-events: auto;}
             `, this.Id.Block);
 
             // 雖然性能開銷比較高, 但比較不會跳一堆錯誤訊息
             this.AdCleanup = setInterval(() => {
-                this.$$(`iframe:not(#${this.Id.Iframe})`)?.remove();
+                Syn.$q(`iframe:not(#${this.Id.Iframe})`)?.remove();
                 removeBlockedListeners();
             }, 500);
         }
@@ -292,14 +293,14 @@ Todo 未來添加
                 });
             }, { threshold: .3 });
 
-            this.$$("span.mh_btn:not(.contact):not(.read_page_link)", {all: true, root: this.MangaList})
+            this.MangaList.$qa("span.mh_btn:not(.contact):not(.read_page_link)")
                 .forEach(reloadBtn => observer.observe(reloadBtn));
         }
 
         /* 圖片樣式 */
         async PictureStyle() {
-            if (this.Device.Type() == "Desktop") {
-                this.AddStyle(`
+            if (Syn.Platform() === "Desktop") {
+                Syn.AddStyle(`
                     .mh_comicpic img {
                         margin: auto;
                         display: block;
@@ -317,7 +318,7 @@ Todo 未來添加
         async HotkeySwitch(Use) {
             let JumpState = false; // 如果不是最後一頁, 觸發時他將會被設置為 true, 反之始終為 false (是 false 才能觸發跳轉, 一個跳轉的防抖機制)
 
-            if (this.Device.Type() == "Desktop") {
+            if (Syn.Platform() === "Desktop") {
                 // 是主頁, 且啟用保持滾動, 也啟用自動滾動(避免無法手動停止), 且沒有開啟手動滾動(避免無法手動停止)
                 if (this.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
                     this.Down_scroll = this.storage("scroll"); // 取得是否有保持滾動
@@ -327,7 +328,7 @@ Todo 未來添加
                 const UP_ScrollSpeed = -this.ScrollPixels;
                 const CanScroll = Use.AutoScroll || Use.ManualScroll;
 
-                this.AddListener(window, "keydown", event => {
+                window.$onEvent("keydown", event => {
                     const key = event.key;
                     if (key == "ArrowLeft" && Use.TurnPage && !JumpState) {
                         event.stopImmediatePropagation();
@@ -344,7 +345,7 @@ Todo 未來添加
                         event.preventDefault();
 
                         if (Use.ManualScroll) {
-                            this.ManualScroll(-this.Device.iH());
+                            this.ManualScroll(-Syn.iH());
                         } else {
                             if (this.Up_scroll) {
                                 this.Up_scroll = false;
@@ -360,7 +361,7 @@ Todo 未來添加
                         event.preventDefault();
 
                         if (Use.ManualScroll) {
-                            this.ManualScroll(this.Device.iH());
+                            this.ManualScroll(Syn.iH());
                         } else {
                             if (this.Down_scroll) {
                                 this.Down_scroll = false;
@@ -374,18 +375,18 @@ Todo 未來添加
                         }
                     }
                 }, { capture: true });
-            } else if (this.Device.Type() == "Mobile") {
+            } else if (Syn.Platform() === "Mobile") {
 
                 let startX, startY, moveX, moveY;
-                const sidelineX = this.Device.iW() * .3;
-                const sidelineY = (this.Device.iH() / 4) * .3;
+                const sidelineX = Syn.iW() * .3;
+                const sidelineY = (Syn.iH() / 4) * .3;
 
-                this.AddListener(window, "touchstart", event => {
+                window.$onEvent("touchstart", event => {
                     startX = event.touches[0].clientX;
                     startY = event.touches[0].clientY;
                 }, { passive: true });
 
-                this.AddListener(window, "touchmove", this.Debounce(event => {
+                window.$onEvent("touchmove", Syn.Debounce(event => {
                     moveY = event.touches[0].clientY - startY;
                     if (Math.abs(moveY) < sidelineY) { // 限制 Y 軸移動
                         moveX = event.touches[0].clientX - startX;
@@ -404,12 +405,11 @@ Todo 未來添加
 
         /* 自動切換下一頁 */
         async AutoPageTurn(Mode) {
-            let self = this, hold, point, img;
-            self.Observer_Next = new IntersectionObserver(observed => {
+            let hold, point, img;
+            this.Observer_Next = new IntersectionObserver(observed => {
                 observed.forEach(entry => {
-                    if (entry.isIntersecting && self.DetectionValue(img)) {
-                        self.Observer_Next.disconnect();
-                        !self.FinalPage(self.NextPage) && location.assign(self.NextPage);
+                    if (entry.isIntersecting && this.DetectionValue(img)) {
+                        location.assign(this.NextPage);
                     }
                 });
             }, { threshold: hold });
@@ -417,37 +417,35 @@ Todo 未來添加
             switch (Mode) {
                 case 2:
                     hold = .5;
-                    point = self.$$("li:nth-child(3) a.read_page_link");
+                    point = Syn.$q("li:nth-child(3) a.read_page_link");
                     break;
                 case 3:
                     hold = 1;
-                    point = self.$$("div.endtip2.clear");
+                    point = Syn.$q("div.endtip2.clear");
                     break;
                 case 4: case 5:
                     this.UnlimitedPageTurn(Mode == 5);
                     break;
                 default:
                     hold = .1;
-                    point = self.BottomStrip;
+                    point = this.BottomStrip;
             };
 
             if (point) {
                 setTimeout(()=> {
-                    img = self.$$("img", {all: true, root: self.MangaList});
-                    self.Observer_Next.observe(point);
-                }, self.WaitPicture);
+                    img = this.MangaList.$qa("img");
+                    if (!this.FinalPage(this.NextPage)) this.Observer_Next.observe(point);
+                }, this.WaitPicture);
             };
         }
 
         /* 無盡 翻頁模式 */
         async UnlimitedPageTurn(Optimized) {
             const self = this;
-            const iframe = document.createElement("iframe");
-            iframe.id = this.Id.Iframe;
-            iframe.src = self.NextPage;
+            const iframe = Syn.$createElement("iframe", { id: this.Id.Iframe, src: this.NextPage });
 
             // 修改樣式 (隱藏某些元素 增加沉浸體驗)
-            this.AddStyle(`
+            Syn.AddStyle(`
                 .mh_wrap, .mh_readend, .mh_footpager,
                 .fed-foot-info, #imgvalidation2022 {display: none;}
                 body {
@@ -457,15 +455,15 @@ Todo 未來添加
                 #${this.Id.Iframe} {
                     margin: 0;
                     padding: 0;
-                    height: 110vh;
                     width: 100%;
+                    height: 150vh;
                     border: none;
                 }
             `, this.Id.Scroll);
 
             // 修改當前觀看的頁面 (根據無盡翻頁的變化)
             if (this.IsMainPage) {
-                this.Listen(window, "message", event => {
+                window.$one("message", event => {
                     const data = event.data;
                     if (data && data.length > 0) {
                         document.title = data[0]; // 修改最上層標題
@@ -475,7 +473,7 @@ Todo 未來添加
                     }
                 })
             } else { // 第二頁開始, 不斷向上找到主頁
-                this.AddStyle(`
+                Syn.AddStyle(`
                     html {
                         overflow: hidden !important;
                         overflow-x: hidden !important;
@@ -488,11 +486,11 @@ Todo 未來添加
                 `, this.Id.ChildS);
 
                 let MainWindow = window;
-                this.Listen(window, "message", event => {
+                window.$one("message", event => {
                     while (MainWindow.parent !== MainWindow) {MainWindow = MainWindow.parent}
                     MainWindow.postMessage(event.data, self.Origin);
                 })
-            }
+            };
 
             /* 檢測翻頁 */
             TriggerNextPage();
@@ -512,7 +510,7 @@ Todo 未來添加
 
                 setTimeout(()=> {
 
-                    Img = self.$$("img", {all: true, root: self.MangaList});
+                    Img = self.MangaList.$qa("img");
 
                     if (Img.length <= 5) { // 總長度 <= 5 直接觸發換頁
                         TurnPage();
@@ -520,8 +518,9 @@ Todo 未來添加
                     };
 
                     // 後續變化觀察
-                    self.Observer(self.MangaList, () => {
-                        const Visible = self.VisibleObjects(Img), VL = Visible.length;
+                    Syn.Observer(self.MangaList, () => {
+                        const Visible = self.VisibleObjects(Img);
+                        const VL = Visible.length;
 
                         if (VL > Quantity) { // 判斷值測試
                             Quantity = VL;
@@ -530,7 +529,7 @@ Todo 未來添加
                                 self.ObserveObject(Visible) // 修改新的觀察對象
                             );
                         }
-                    }, {throttle: 150}, observer=> {
+                    }, {debounce: 500}, observer=> {
                         Observer = observer.ob;
                     });
 
@@ -539,7 +538,7 @@ Todo 未來添加
 
             /* 翻頁邏輯 */
             async function TurnPage() {
-                let Content, CurrentUrl, StylelRules=self.$$(`#${self.Id.Scroll}`).sheet.cssRules;
+                let Content, CurrentUrl, StylelRules=Syn.$q(`#${self.Id.Scroll}`).sheet.cssRules;
 
                 if (self.FinalPage(self.NextPage)) { // 檢測是否是最後一頁 (恢復隱藏的元素)
                     StylelRules[0].style.display = "block";
@@ -558,23 +557,34 @@ Todo 未來添加
 
                         Content = iframe.contentWindow.document;
                         Content.body.style.overflow = "hidden";
+                        Syn.Log("無盡翻頁", CurrentUrl);
 
                         // 首張圖片
-                        const TopImg = self.$$("#mangalist img", {root: Content});
+                        const TopImg = Content.$q("#mangalist img");
 
                         // 持續設置高度
-                        setInterval(()=> {
-                            StylelRules[2].style.height = `${Content.body.scrollHeight}px`;
-                        }, 1500);
+                        let lastHeight = 0;
+                        const Resize = () => {
+                            const newHeight = Content.body.scrollHeight;
+
+                            if (newHeight !== lastHeight) {
+                                requestAnimationFrame(() => {
+                                    StylelRules[2].style.height = `${newHeight}px`;
+                                })
+                                lastHeight = newHeight;
+                            }
+
+                            setTimeout(Resize, 1300);
+                        };
+                        Resize();
 
                         // 監聽換頁點
                         const UrlUpdate = new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
                                     UrlUpdate.disconnect();
-                                    self.Log("無盡翻頁", CurrentUrl);
 
-                                    const PageLink = self.$$("div.mh_readend ul a", {all: true, root: Content.body});
+                                    const PageLink = Content.body.$qa("div.mh_readend ul a");
                                     const PreviousUrl = PageLink[0]?.href;
                                     const NextUrl = PageLink[2]?.href;
 
@@ -590,11 +600,11 @@ Todo 未來添加
                         UrlUpdate.observe(TopImg);
 
                         if (Optimized) {
-                            self.$$("title").id = self.Id.Title; // 賦予一個 ID 用於白名單排除
+                            Syn.$q("title").id = self.Id.Title; // 賦予一個 ID 用於白名單排除
 
                             // 動態計算臨界值
-                            const adapt = self.Device.Type() == "Desktop" ? .5 : .7;
-                            const hold = Math.min(adapt, (self.Device.iH() * adapt) / TopImg.clientHeight);
+                            const adapt = Syn.Platform() === "Desktop" ? .5 : .7;
+                            const hold = Math.min(adapt, (Syn.iH() * adapt) / TopImg.clientHeight);
 
                             // 監聽釋放點
                             const ReleaseMemory = new IntersectionObserver(observed => {
@@ -612,6 +622,7 @@ Todo 未來添加
                             ReleaseMemory.observe(TopImg);
                         };
                     };
+
                     iframe.onerror = () => {
                         iframe.src = self.NextPage;
                         Waitload();
@@ -626,7 +637,7 @@ Todo 未來添加
 
         /* 菜單樣式 */
         async MenuStyle() {
-            this.AddStyle(``, this.Id.Menu);
+            Syn.AddStyle(``, this.Id.Menu);
         }
 
         /* 功能注入 */
@@ -640,9 +651,9 @@ Todo 未來添加
                         Config.BGColor.Enable && this.BackgroundStyle(Config.BGColor.Color);
                         Config.AutoTurnPage.Enable && this.AutoPageTurn(Config.AutoTurnPage.Mode);
                         Config.RegisterHotkey.Enable && this.HotkeySwitch(Config.RegisterHotkey.Function);
-                    } else this.Log(null, "Error");
+                    } else Syn.Log(null, "Error");
                 });
-            } catch (error) { this.Log(null, error) }
+            } catch (error) { Syn.Log(null, error) }
         }
     }).Injection();
 })();
