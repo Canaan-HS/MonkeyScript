@@ -466,10 +466,12 @@ Todo 未來添加
                 window.$one("message", event => {
                     const data = event.data;
                     if (data && data.length > 0) {
-                        document.title = data[0]; // 修改最上層標題
-                        this.NextPage = data[3]; // 修改上一頁跳轉連結
-                        this.PreviousPage = data[1]; // 修改下一頁跳轉連結
-                        history.pushState(null, null, data[2]); // 修改網址並添加到歷史紀錄
+                        const {Title, PreviousUrl, CurrentUrl, NextUrl} = data[0];
+
+                        document.title = Title;
+                        this.NextPage = NextUrl;
+                        this.PreviousPage = PreviousUrl;
+                        history.pushState(null, null, CurrentUrl);
                     }
                 })
             } else { // 第二頁開始, 不斷向上找到主頁
@@ -552,7 +554,6 @@ Todo 未來添加
                     return;
                 };
 
-                // iframe 載入
                 document.body.appendChild(iframe);
                 Waitload();
 
@@ -592,15 +593,13 @@ Todo 未來添加
                                     UrlUpdate.disconnect();
 
                                     const PageLink = Content.body.$qa("div.mh_readend ul a");
-                                    const PreviousUrl = PageLink[0]?.href;
-                                    const NextUrl = PageLink[2]?.href;
 
-                                    window.parent.postMessage([
-                                        Content.title,
-                                        PreviousUrl,
+                                    window.parent.postMessage([{
+                                        Title: Content.title,
                                         CurrentUrl,
-                                        NextUrl
-                                    ], self.Origin);
+                                        PreviousUrl: PageLink[0]?.href,
+                                        NextUrl: PageLink[2]?.href
+                                    }], self.Origin);
                                 }
                             });
                         }, { threshold: .1 });
