@@ -37,7 +37,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1561380/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1573223/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
