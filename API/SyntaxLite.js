@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/04/17
+// @version      2025/04/18
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -19,9 +19,18 @@ const Syn = (() => {
         iH: () => window.innerHeight,
         _Cache: undefined,
         Platform: function () {
-            return this._Cache = this._Cache ? this._Cache
-                : (this._Cache = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen) || this.iW < 768
-                    ? "Mobile" : "Desktop");
+            if (!this._Cache) {
+                if (navigator.userAgentData?.mobile !== undefined) {
+                    this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+                } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
+                    this._Cache = "Mobile";
+                } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    this._Cache = "Mobile";
+                } else {
+                    this._Cache = "Desktop";
+                }
+            }
+            return this._Cache;
         }
     };
 
