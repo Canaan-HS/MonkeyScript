@@ -26,6 +26,7 @@
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
 // @run-at       document-start
