@@ -95,15 +95,10 @@ Originally, the preview image would be replaced directly, and the original image
 
 ## **📦 Version Details**
 
-**Release Version: 0.0.49-Beta9**
+**Release Version: 0.0.49-Beta10**
 
 ### **Updates**
-1. Added language support
-2. Removed redundant imports and navigation icons
-3. Implemented feature adaptations for Nekohouse
-4. Fixed known bugs and layout issues
-5. Optimized API and syntax to improve script performance
-6. Modified `QuickPostToggle` to fix Nekohouse page navigation issues
+1. Adapting to website changes
 
 ### **Known Issues**
 1. Due to AJAX rendering on Kemono and Coomer, functionality may fail to load if rendering is incomplete when the script finishes running. This can be resolved by refreshing the page. A 0.5-second loading delay has been implemented, but issues may still occur. Adding more delay could negatively impact user experience
