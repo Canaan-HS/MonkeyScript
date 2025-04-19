@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta9
+// @version      0.0.49-Beta10
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -37,7 +37,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1561380/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1573223/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -48,11 +48,11 @@
     /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
     const User_Config = {
         Global: {
-            BlockAds: {mode: 0, enable: true}, // 阻擋廣告
-            BackToTop: {mode: 0, enable: true}, // 翻頁後回到頂部
-            KeyScroll: {mode: 1, enable: true}, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
-            DeleteNotice: {mode: 0, enable: true}, // 刪除上方公告
-            SidebarCollapse: {mode: 0, enable: true}, // 側邊攔摺疊
+            BlockAds: { mode: 0, enable: true }, // 阻擋廣告
+            BackToTop: { mode: 0, enable: true }, // 翻頁後回到頂部
+            KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
+            DeleteNotice: { mode: 0, enable: true }, // 刪除上方公告
+            SidebarCollapse: { mode: 0, enable: true }, // 側邊攔摺疊
             FixArtist: { // 修復作者名稱
                 mode: 0,
                 enable: true,
@@ -69,9 +69,9 @@
             },
         },
         Preview: {
-            CardZoom: {mode: 2, enable: true}, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
-            CardText: {mode: 2, enable: true}, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            QuickPostToggle: {mode: 0, enable: true}, // 快速切換帖子 (僅支援 nekohouse)
+            CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
+            CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
+            QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
                 enable: true,
@@ -80,10 +80,10 @@
             },
         },
         Content: {
-            ExtraButton: {mode: 0, enable: true}, // 額外的下方按鈕
-            LinkBeautify: {mode: 0, enable: true}, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
-            CommentFormat: {mode: 0, enable: true}, // 評論區重新排版
-            VideoBeautify: {mode: 1, enable: true}, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
+            ExtraButton: { mode: 0, enable: true }, // 額外的下方按鈕
+            LinkBeautify: { mode: 0, enable: true }, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
+            CommentFormat: { mode: 0, enable: true }, // 評論區重新排版
+            VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
                 enable: true,
@@ -927,6 +927,7 @@
             },
             DeleteNotice: async Config => {
                 Syn.WaitElem("aside", null, {
+                    raf: true,
                     timeout: 5
                 }).then(aside => aside.remove());
             },
@@ -1078,7 +1079,7 @@
                 } else {
                     Syn.WaitElem("span[itemprop='name']", null, {
                         raf: true,
-                        timeout: 10
+                        timeout: 5
                     }).then(artist => {
                         Func.Other_Fix(artist);
                     });
@@ -1364,7 +1365,7 @@
             LinkBeautify_Dependent: function () {
                 if (!this.LinkBeautify_Cache) {
                     this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
-                        const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts", "api/v1/posts");
+                        const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file");
                         Browse.style.position = "relative";
                         Browse.$q(".View")?.remove();
                         GM_xmlhttpRequest({
@@ -1383,11 +1384,16 @@
                                     View.appendChild(Buffer);
                                     Browse.appendChild(View);
                                 } else {
+                                    const ResponseJson = JSON.parse(response.responseText);
                                     const View = Syn.$createElement("View", {
                                         class: "View"
                                     });
                                     const Buffer = Syn.$createFragment();
-                                    for (const text of JSON.parse(response.responseText)["archive"]["file_list"]) {
+                                    const password = ResponseJson["password"];
+                                    if (password) {
+                                        Buffer.append(document.createTextNode(`password: ${password}`), Syn.$createElement("br"));
+                                    }
+                                    for (const text of ResponseJson["file_list"]) {
                                         Buffer.append(document.createTextNode(text), Syn.$createElement("br"));
                                     }
                                     View.appendChild(Buffer);
@@ -1413,7 +1419,7 @@
                         }, preact.h("video", {
                             key: "video",
                             controls: true,
-                            preload: "auto",
+                            preload: "metadata",
                             "data-setup": JSON.stringify({}),
                             className: "post-video"
                         }, preact.h("source", {
@@ -1494,9 +1500,9 @@
                 }).then(post => {
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
                     for (const link of post) {
-                        link.$sAttr("download", "");
-                        link.href = decodeURIComponent(link.href);
-                        link.$text(link.$text().replace("Download", ""));
+                        const text = link.$text().replace("Download", "");
+                        link.$sAttr("download", text);
+                        link.$text(text);
                         const Browse = link.nextElementSibling;
                         if (!Browse) continue;
                         ShowBrowse(Browse);
