@@ -1004,19 +1004,23 @@
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style", false);
                 Syn.AddScript(String.raw`
-                    const domains = [
+                    const domains = new Set([
                         "go.mnaspm.com", "go.reebr.com",
                         "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
-                    ];
-                    const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+                    ]);
+
+                    // 舊版白名單正則轉換
+                    // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+
                     const XMLRequest = XMLHttpRequest.prototype.open;
                     const Ad_observer = new MutationObserver(() => {
                         XMLHttpRequest.prototype.open = function(method, Url) {
-                            if (Url.endsWith(".m3u8") || adRegex.test(Url)) { return; }
+                            try {
+                                if (Url.endsWith(".m3u8") || domains.has(new URL(Url).host)) { return }
+                            } catch {}
+
                             XMLRequest.apply(this, arguments);
                         };
-                        // document.querySelector("div.ex-over-btn")?.click();
-                        // document.querySelector(".root--ujvuu button")?.click();
                     });
                     Ad_observer.observe(document.head, {childList: true, subtree: true});
                 `, "Ad-blocking-script", false);
