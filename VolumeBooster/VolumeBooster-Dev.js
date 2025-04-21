@@ -98,7 +98,7 @@
         const MenuHotkey = async () => {
             document.$onEvent("keydown", event => {
                 if (event.altKey && event.key.toUpperCase() == "B") EnhancerMenu();
-            }, { passive: true, capture: true });
+            }, { passive: true, capture: true, mark: "Volume-Booster-Hotkey" });
         };
 
         /* 增強處理 */
