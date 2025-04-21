@@ -20,7 +20,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 
-// @require      https://update.greasyfork.org/scripts/487608/1573223/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
 // ==/UserScript==
 
 /*
