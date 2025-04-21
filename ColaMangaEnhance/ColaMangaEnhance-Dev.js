@@ -273,7 +273,7 @@ Todo 未來添加
             const AdCleanup = () => {
                 Syn.$q(`iframe:not(#${this.Id.Iframe})`)?.remove();
                 removeBlockedListeners();
-                requestIdleCallback(() => setTimeout(AdCleanup, 100));
+                requestIdleCallback(AdCleanup, { timeout: 500 });
             };
             AdCleanup();
         }
