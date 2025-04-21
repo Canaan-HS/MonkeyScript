@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta10
+// @version      0.0.49-Beta11
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -37,7 +37,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1573223/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -260,6 +260,7 @@
                     }
                     .Image-style, figure img {
                         display: block;
+                        will-change: transform;
                         width: ${set.Width} !important;
                         height: ${set.Height} !important;
                         margin: ${set.Spacing} auto !important;
@@ -687,14 +688,17 @@
                         Protocol_F: /^(?!https?:\/\/)/,
                         Exclusion_F: /onfanbokkusuokibalab\.net/,
                         URL_F: /(?:https?:\/\/[^\s]+)|(?:[a-zA-Z0-9]+\.)?(?:[a-zA-Z0-9]+)\.[^\s]+\/[^\s]+/g,
+                        UrlMatch: function (str) {
+                            this.URL_F.lastIndex = 0;
+                            return this.URL_F.test(str);
+                        },
                         getTextNodes: function (root) {
                             const nodes = [];
                             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                                 acceptNode: node => {
-                                    this.URL_F.lastIndex = 0;
                                     const content = node.$text();
                                     if (!content || this.Exclusion_F.test(content)) return NodeFilter.FILTER_REJECT;
-                                    return this.URL_F.test(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                                    return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
                             });
                             while (tree.nextNode()) {
@@ -703,31 +707,11 @@
                             return nodes;
                         },
                         ParseModify: async function (father, content) {
-                            if (this.Exclusion_F.test(content)) return;
+                            if (this.Exclusion_F.test(content) || father.tagName === "A") return;
                             father.$iHtml(content.replace(this.URL_F, url => {
                                 const decode = decodeURIComponent(url).trim();
                                 return `<a href="${decode.replace(this.Protocol_F, "https://")}">${decode}</a>`;
                             }));
-                        },
-                        Process: async function (pre) {
-                            const Text = pre.$text();
-                            this.URL_F.test(Text) && this.ParseModify(pre, Text);
-                        },
-                        Multiprocessing: async function (root) {
-                            if (DLL.IsNeko) {
-                                const Text = root.$q();
-                                this.URL_F.test(Text) && this.ParseModify(root, Text);
-                                return;
-                            }
-                            let p;
-                            for (p of root.$qa("p")) {
-                                const Text = p.$text();
-                                this.URL_F.test(Text) && this.ParseModify(p, Text);
-                            }
-                            let a;
-                            for (a of root.$qa("a")) {
-                                !a.href && this.ParseModify(a, a.$text());
-                            }
                         },
                         JumpTrigger: async root => {
                             const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
@@ -952,19 +936,23 @@
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style", false);
                 Syn.AddScript(String.raw`
-                    const domains = [
+                    const domains = new Set([
                         "go.mnaspm.com", "go.reebr.com",
                         "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
-                    ];
-                    const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+                    ]);
+
+                    // 舊版白名單正則轉換
+                    // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+
                     const XMLRequest = XMLHttpRequest.prototype.open;
                     const Ad_observer = new MutationObserver(() => {
                         XMLHttpRequest.prototype.open = function(method, Url) {
-                            if (Url.endsWith(".m3u8") || adRegex.test(Url)) { return; }
+                            try {
+                                if (Url.endsWith(".m3u8") || domains.has(new URL(Url).host)) { return }
+                            } catch {}
+
                             XMLRequest.apply(this, arguments);
                         };
-                        // document.querySelector("div.ex-over-btn")?.click();
-                        // document.querySelector(".root--ujvuu button")?.click();
                     });
                     Ad_observer.observe(document.head, {childList: true, subtree: true});
                 `, "Ad-blocking-script", false);
@@ -973,11 +961,9 @@
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
                 const Func = LoadFunc.TextToLink_Dependent(Config);
                 if (DLL.IsContent()) {
-                    Syn.WaitElem(".post__body, .scrape__body", null, {
-                        raf: true
-                    }).then(body => {
+                    Syn.WaitElem(".post__body, .scrape__body", null).then(body => {
                         Func.JumpTrigger(body);
-                        const [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
+                        let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
@@ -1648,7 +1634,7 @@
                         FastAuto: async function () {
                             this.FailedClick();
                             thumbnail.forEach((object, index) => {
-                                setTimeout(() => {
+                                requestIdleCallback(() => {
                                     object.$dAttr("class");
                                     const a = object.$q(LinkObj);
                                     const hrefP = HrefParse(a);
@@ -1667,7 +1653,9 @@
                                             Nurl: hrefP
                                         }), object);
                                     }
-                                }, index * 300);
+                                }, {
+                                    timeout: index * 300
+                                });
                             });
                         },
                         SlowAuto: async function (index) {
