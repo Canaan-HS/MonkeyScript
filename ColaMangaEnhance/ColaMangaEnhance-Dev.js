@@ -79,26 +79,34 @@ Todo 未來添加
             this.ScrollPixels = 2; // 像素, 越高越快
             this.WaitPicture = 1000; // 等待圖片載入時間
             this.IsFinalPage = false; // 判斷是否為最終頁
-            this.AdCleanup = this.Body = null; // 清理廣告的函數, body 元素
+            this.Body = null; // body 元素
             this.ContentsPage = this.HomePage = null; // 返回目錄, 返回首頁, 連結
             this.PreviousPage = this.NextPage = null; // 下一頁, 上一頁, 連結
             this.MangaList = this.BottomStrip = null; // 漫畫列表, 底下觸發換頁條
             this.Up_scroll = this.Down_scroll = false; // 向上滾動, 向下滾動
             this.Observer_Next = null; // 下一頁觀察器
 
-            this.IsMainPage = (window.self === window.parent); // 判斷是非 iframe
+            this.IsMainPage = (window.self === window.parent); // 判斷是否是 iframe
+
             this.BlockListener = new Set([
-                "pointerup", "pointerdown", "dState", "touchstart", "unhandledrejection"
+                "auxclick",
+                "mousedown",
+                "pointerup",
+                "pointerdown",
+                "dState",
+                "touchstart",
+                "unhandledrejection"
             ]);
+
             this.Id = { // Id 名稱表
                 Title: "CME_Title", Iframe: "CME_Iframe", Block: "CME_Block-Ads", Menu: "CME_Menu-Style",
                 Image: "CME_Image-Style", Scroll: "CME_Scroll-Hidden", ChildS: "CME_Child-Scroll-Hidden"
             };
 
-            /* 取得數據 */
+            /* 取得數據 (開始運行) */
             this.Get_Data = async (callback) => {
                 Syn.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
-                    {timeout: 10, throttle: 30, timeoutResult: true})
+                    { timeout: 10, throttle: 30, timeoutResult: true })
                     .then(([Body, Title, HeadPager, Readend, Manga]) => {
                         this.Body = Body;
 
@@ -119,7 +127,7 @@ Todo 未來添加
                         this.MangaList = Manga; // 漫畫列表
                         this.BottomStrip = Readend.$q("a"); // 以閱讀完畢的那條, 看到他跳轉
 
-                        if([
+                        if ([
                             this.Body,
                             this.ContentsPage,
                             this.HomePage,
@@ -163,22 +171,22 @@ Todo 未來添加
             };
 
             /* 存取會話數據 */
-            this.storage = (key, value=null) => {
+            this.storage = (key, value = null) => {
                 return value != null
-                    ? Syn.Session(key, {value: value})
+                    ? Syn.Session(key, { value: value })
                     : Syn.Session(key);
             };
 
             /* ===== 自動滾動的函數 ===== */
 
             /* 檢測到頂 */
-            this.TopDetected = Syn.Throttle(()=>{
+            this.TopDetected = Syn.Throttle(() => {
                 this.Up_scroll = Syn.sY() == 0 ? (this.storage("scroll", false), false) : true;
             }, 1000);
 
             /* 檢測到底 */
             this.IsTheBottom = () => Syn.sY() + Syn.iH() >= document.documentElement.scrollHeight;
-            this.BottomDetected = Syn.Throttle(()=>{
+            this.BottomDetected = Syn.Throttle(() => {
                 if (Config.AutoTurnPage.Mode <= 3) return; // ! 臨時寫法, 當翻頁模式為 1,2,3 時不會觸發
                 this.Down_scroll = this.IsTheBottom() ? (this.storage("scroll", false), false) : true;
             }, 1000);
@@ -239,7 +247,7 @@ Todo 未來添加
             const OriginListener = EventTarget.prototype.addEventListener, Block = this.BlockListener;
             const EventListeners = new Map();
 
-            EventTarget.prototype.addEventListener = function(type, listener, options) {
+            EventTarget.prototype.addEventListener = function (type, listener, options) {
                 if (Block.has(type)) return;
                 if (!EventListeners.has(this)) EventListeners.set(this, []);
                 EventListeners.get(this).push({ type, listener, options });
@@ -262,10 +270,12 @@ Todo 未來添加
             `, this.Id.Block);
 
             // 雖然性能開銷比較高, 但比較不會跳一堆錯誤訊息
-            this.AdCleanup = setInterval(() => {
+            const AdCleanup = () => {
                 Syn.$q(`iframe:not(#${this.Id.Iframe})`)?.remove();
                 removeBlockedListeners();
-            }, 500);
+                requestIdleCallback(() => setTimeout(AdCleanup, 100));
+            };
+            AdCleanup();
         }
 
         /* 背景樣式 */
@@ -280,7 +290,7 @@ Todo 未來添加
             `;
 
             // this.Body.style.cssText = `
-                // background: ${this.ImgStyle.BG_Color} !important;
+            // background: ${this.ImgStyle.BG_Color} !important;
             // `;
         }
 
@@ -289,7 +299,7 @@ Todo 未來添加
             let click = new MouseEvent("click", { bubbles: true, cancelable: true });
             const observer = new IntersectionObserver(observed => {
                 observed.forEach(entry => {
-                    if (entry.isIntersecting) {entry.target.dispatchEvent(click)}
+                    if (entry.isIntersecting) { entry.target.dispatchEvent(click) }
                 });
             }, { threshold: .3 });
 
@@ -311,7 +321,7 @@ Todo 未來添加
                     }
                 `, this.Id.Image);
             }
-            setTimeout(()=>{this.AutoReload()}, this.WaitPicture);
+            setTimeout(() => { this.AutoReload() }, this.WaitPicture);
         }
 
         /* 快捷切換上下頁 和 自動滾動 */
@@ -432,7 +442,7 @@ Todo 未來添加
             };
 
             if (point) {
-                setTimeout(()=> {
+                setTimeout(() => {
                     img = this.MangaList.$qa("img");
                     if (!this.FinalPage(this.NextPage)) this.Observer_Next.observe(point);
                 }, this.WaitPicture);
@@ -466,7 +476,7 @@ Todo 未來添加
                 window.$one("message", event => {
                     const data = event.data;
                     if (data && data.length > 0) {
-                        const {Title, PreviousUrl, CurrentUrl, NextUrl} = data[0];
+                        const { Title, PreviousUrl, CurrentUrl, NextUrl } = data[0];
 
                         document.title = Title;
                         this.NextPage = NextUrl;
@@ -489,7 +499,7 @@ Todo 未來添加
 
                 let MainWindow = window;
                 window.$one("message", event => {
-                    while (MainWindow.parent !== MainWindow) {MainWindow = MainWindow.parent}
+                    while (MainWindow.parent !== MainWindow) { MainWindow = MainWindow.parent }
                     MainWindow.postMessage(event.data, self.Origin);
                 })
             };
@@ -498,7 +508,7 @@ Todo 未來添加
             TriggerNextPage();
             async function TriggerNextPage() {
 
-                let Img, Observer, Quantity=0;
+                let Img, Observer, Quantity = 0;
 
                 self.Observer_Next = new IntersectionObserver(observed => {
                     observed.forEach(entry => {
@@ -510,7 +520,7 @@ Todo 未來添加
                     });
                 }, { threshold: .1 });
 
-                setTimeout(()=> {
+                setTimeout(() => {
 
                     Img = self.MangaList.$qa("img"); // 取得當前狀態
 
@@ -539,7 +549,7 @@ Todo 未來添加
                             )
                         }
 
-                    }, {debounce: 500}, observer=> {
+                    }, { debounce: 500 }, observer => {
                         Observer = observer.ob;
                     });
                 }, self.WaitPicture);
@@ -547,7 +557,7 @@ Todo 未來添加
 
             /* 翻頁邏輯 */
             async function TurnPage() {
-                let Content, CurrentUrl, StylelRules=Syn.$q(`#${self.Id.Scroll}`).sheet.cssRules;
+                let Content, CurrentUrl, StylelRules = Syn.$q(`#${self.Id.Scroll}`).sheet.cssRules;
 
                 if (self.FinalPage(self.NextPage)) { // 檢測是否是最後一頁 (恢復隱藏的元素)
                     StylelRules[0].style.display = "block";
@@ -651,7 +661,7 @@ Todo 未來添加
             this.BlockAds();
 
             try {
-                this.Get_Data(state=> {
+                this.Get_Data(state => {
                     if (state) { // 在這邊載入的功能都是需要等到, 找到元素才操作比較不會出錯
                         this.PictureStyle();
                         Config.BGColor.Enable && this.BackgroundStyle(Config.BGColor.Color);
