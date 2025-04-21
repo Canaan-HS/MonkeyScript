@@ -28,6 +28,8 @@
 // @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
 // ==/UserScript==
 
+// ! 該腳本新發佈時 全部導入 Syntax 的都要同步更新, 不然會有問題
+
 (async () => {
 
     const { Transl } = Language(Syn.$lang); // 語言翻譯
