@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/04/18
+// @version      2025/04/21
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -11,7 +11,6 @@
 const Syn = (() => {
     const Mark = {};
     const Parser = new DOMParser();
-    const ListenerRecord = new Map();
     const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const DeviceCall = {
         sX: () => window.scrollX,
@@ -82,7 +81,7 @@ const Syn = (() => {
         return all ? [...collection] : collection[0];
     };
 
-    const $Window = {
+    const $Sugar = {
         $q: document.$q.bind(document),
         $qa: document.$qa.bind(document),
         $html: document.documentElement,
@@ -101,7 +100,7 @@ const Syn = (() => {
         $cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
         $createUrl: (object) => URL.createObjectURL(object),
         $createFragment: () => document.createDocumentFragment(),
-        $createElement: (arg1, arg2, arg3) => {
+        $createElement(arg1, arg2, arg3) {
             const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
             if (!tag) return;
 
@@ -174,6 +173,8 @@ const Syn = (() => {
     };
 
     const $Event = {
+        $EventRecord: new Map(),
+
         /**
          * * { 簡化版監聽器 (不可刪除, 不檢測是否重複添加, 但可回傳註冊狀態) }
          * @param {string} element - 添加元素
@@ -189,7 +190,7 @@ const Syn = (() => {
          *      console.log(註冊狀態)
          * })
          */
-        $one(type, listener, add={}, resolve=null) {
+        async $one(type, listener, add={}, resolve=null) {
             try {
                 this.addEventListener(type, listener, add);
                 resolve && resolve(true);
@@ -197,10 +198,14 @@ const Syn = (() => {
         },
 
         /**
+         * ! 匹配全域的腳本建議使用 mark 定義鍵值
          * * { 添加監聽器 (可刪除, element 和 type 不能有完全重複的, 否則會被排除) }
          * @param {string} type    - 監聽器類型
          * @param {Function} listener - 監聽後執行的函數
-         * @param {object} options - 附加功能 (可選)
+         * @param {boolean} [options.capture] - 是否捕獲事件
+         * @param {boolean} [options.once] - 是否只觸發一次
+         * @param {boolean} [options.passive] - 是否為被動事件
+         * @param {string} [options.mark] - 自定義鍵值
          *
          * @example
          * element.$onEvent("click", (event) => {
@@ -212,31 +217,32 @@ const Syn = (() => {
          *    mark: "自定鍵值" // 因為有自定所以不能使用 WeakMap
          * });
          */
-        $onEvent(type, listener, options = {}) {
+        async $onEvent(type, listener, options = {}) {
             const { mark, ...opts } = options;
             const key = mark ?? this;
-            const record = ListenerRecord.get(key);
+            const record = window.$EventRecord.get(key);
 
             if (record?.has(type)) return;
             this.addEventListener(type, listener, opts);
 
-            if (!record) ListenerRecord.set(key, new Map());
-            ListenerRecord.get(key).set(type, listener);
+            if (!record) window.$EventRecord.set(key, new Map());
+            window.$EventRecord.get(key).set(type, listener);
         },
 
         /**
          * * { 移除監聽器 }
          * @param {string} type - 監聽類型
+         * @param {string} [mark] - 自定義鍵值 (預設使用 this)
          *
          * @example
          * element.$offEvent("click")
          */
-        $offEvent(type, mark) {
+        async $offEvent(type, mark) {
             const key = mark ?? this;
-            const listen = ListenerRecord.get(key)?.get(type);
+            const listen = window.$EventRecord.get(key)?.get(type);
             if (listen) {
                 this.removeEventListener(type, listen);
-                ListenerRecord.get(key).delete(type);
+                window.$EventRecord.get(key).delete(type);
             }
         }
     };
@@ -257,11 +263,8 @@ const Syn = (() => {
     });
 
     /* 工廠函數調用 */
-    const $Call = {
-        ...$Window,
-        // 以下只有展示
-        ElementFunctions: Object.keys($Node),
-        EventFunctions: Object.keys($Event),
+    const SugarCall = {
+        ...$Sugar
     };
 
     /**
@@ -957,7 +960,7 @@ const Syn = (() => {
     };
 
     return {
-        ...DeviceCall, ...$Call, ...AddCall, ...StorageCall, ...StoreCall,
+        ...DeviceCall, ...SugarCall, ...AddCall, ...StorageCall, ...StoreCall,
         Type, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
         FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
         Menu, StoreListen,
