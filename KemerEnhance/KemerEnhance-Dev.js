@@ -36,7 +36,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1576380/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -703,10 +703,22 @@
     /* ==================== 主運行 ==================== */
     Enhance.Run();
 
+    // 等待 DOM 更新
+    const WaitDom = new MutationObserver(() => {
+        WaitDom.disconnect();
+        Enhance.Run();
+    });
+
+    // 監聽網址變化
     Syn.onUrlChange(change => {
         Url = change.url;
-        Enhance.Run();
-    }, 500);
+        WaitDom.observe(document, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            characterData: true
+        })
+    });
 
     /* ==================== 全域功能 ==================== */
     function Global_Function() {
@@ -1500,29 +1512,6 @@
                 };
                 return this.LinkBeautify_Cache;
             },
-            VideoBeautify_Cache: undefined,
-            VideoBeautify_Dependent: function () {
-                if (!this.VideoBeautify_Cache) {
-                    this.VideoBeautify_Cache = function VideoRendering({ stream }) {
-                        return preact.h("summary", {
-                            className: "video-title"
-                        }, preact.h("video", {
-                            key: "video",
-                            controls: true,
-                            preload: "metadata",
-                            "data-setup": JSON.stringify({}),
-                            className: "post-video",
-                        },
-                            preact.h("source", {
-                                key: "source",
-                                src: stream.src,
-                                type: stream.type
-                            })
-                        ));
-                    }
-                };
-                return this.VideoBeautify_Cache;
-            },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent: function () {
                 // ! 這個函數目前只有 nekohouse 需要
@@ -1593,8 +1582,8 @@
                     for (const link of post) {
                         const text = link.$text().replace("Download", ""); // 修正原文本
 
-                        link.$sAttr("download", text); // 修改標籤
                         link.$text(text); // 修改文本
+                        DLL.IsNeko && link.$sAttr("download", text); // ? 修改標籤 (非 Neko 的網站修改標籤會導致 AJAX 換頁時意外無法變更)
 
                         const Browse = link.nextElementSibling; // 查找是否含有 Browse 元素
                         if (!Browse) continue;
@@ -1604,11 +1593,6 @@
                 });
             },
             VideoBeautify: async function (Config) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
-                Syn.AddStyle(`
-                    .video-title {margin-top: 0.5rem;}
-                    .post-video {height: 50%; width: 60%;}
-                `, "Video_Effects", false);
-
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
                         video.forEach(media => media.$sAttr("preload", "metadata"));
@@ -1616,45 +1600,38 @@
                 } else {
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true,  all: true, timeout: 5 }).then(parents => {
                         Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
-                            const VideoRendering = LoadFunc.VideoBeautify_Dependent();
 
-                            let li;
-                            for (li of parents) {
-                                let [node, video, title, stream] = [
-                                    undefined,
-                                    li.$q("video"),
-                                    li.$q("summary"),
-                                    li.$q("source")
-                                ];
+                            const move = Config.mode === 2;
+                            const linkBox = Object.fromEntries([...post].map(a => {
+                                const data = [a.download?.trim(), a];
+                                move && a.parentNode.remove();
 
-                                // video.$sAttr("preload", "metadata") // 需要動態監聽
-                                
-                                console.log(parents);
-                                continue;
+                                return data;
+                            }));
 
-                                if (!title || !stream) continue;
-                                if (title.previousElementSibling) continue; // 排除極端狀況下的重複添加
+                            for (const li of parents) {
 
-                                let link;
-                                for (link of post) {
-                                    if (link.$text().includes(title.$text())) {
-                                        switch (Config.mode) {
-                                            case 2: // 因為移動節點 需要刪除再去複製 因此不使用 break
-                                                link.parentNode.remove();
-                                            default:
-                                                stream.replaceWith(link.$copy(true));
-                                        }
-                                    }
-                                }
+                                const WaitLoad = new MutationObserver(() => {
+                                    WaitLoad.disconnect();
 
-                                // 重新渲染影片, 避免跑版
-                                render(preact.h(VideoRendering, { stream: stream }), li);
-                                // 將連結元素進行插入 (確保不重複添加)
-                                li.insertBefore(node, li.$q("summary"));
+                                    let [video, summary] = [li.$q("video"), li.$q("summary")];
+                                    if (!video || !summary) return;
 
-                            }
+                                    video.$sAttr("preload", "metadata"); // 預載影片元數據
 
-                        });
+                                    const link = linkBox[summary.$text()]; // 查找對應下載連結
+                                    if (!link) return;
+
+                                    summary.$text("");
+                                    summary.appendChild(move ? link : link.$copy(true));
+                                });
+
+                                // 監聽動態變化
+                                WaitLoad.observe(li, { attributes: true, characterData: true, childList: true, subtree: true });
+                                li.$sAttr("Video-Beautify", true); // 容錯 (避免沒有監聽到動態變化)
+                            };
+
+                        })
                     });
                 }
             },
