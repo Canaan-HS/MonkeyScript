@@ -95,7 +95,7 @@ Originally, the preview image would be replaced directly, and the original image
 
 ## **📦 Version Details**
 
-**Release Version: 0.0.49-Beta10**
+**Release Version: 0.0.49-Beta11**
 
 ### **Updates**
 1. Adapting to website changes
