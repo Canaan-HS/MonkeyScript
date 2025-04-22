@@ -703,7 +703,7 @@
 
     /* ==================== 主運行 ==================== */
     Enhance.Run();
-    window.$onEvent("urlchange", change => {
+    window.$one("urlchange", change => {
         Url = change.url;
         // ? 不設置延遲的話, 功能重新調用時, 如果 Ajex 還沒渲染完成, 就會調用失敗
         setTimeout(() => {
