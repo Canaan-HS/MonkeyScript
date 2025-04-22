@@ -8,9 +8,9 @@
 // @name:en      Kemer Downloader
 // @version      0.0.21-Beta5
 // @author       Canaan HS
-// @description         一鍵下載圖片 (壓縮下載/單圖下載) , 頁面數據創建 json 下載 , 一鍵開啟當前所有帖子
-// @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 頁面數據創建 json 下載 , 一鍵開啟當前所有帖子
-// @description:zh-CN   一键下载图片 (压缩下载/单图下载) , 页面数据创建 json 下载 , 一键开启当前所有帖子
+// @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
+// @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
+// @description:zh-CN   一键下载图片 (压缩下载/单图下载) , 下载页面数据 , 一键开启当前所有帖子
 // @description:ja      画像をワンクリックでダウンロード（圧縮ダウンロード/単一画像ダウンロード）、ページデータを作成してjsonでダウンロード、現在のすべての投稿をワンクリックで開く
 // @description:ru      Загрузка изображений в один клик (сжатая загрузка/загрузка отдельных изображений), создание данных страницы для загрузки в формате json, открытие всех текущих постов одним кликом
 // @description:ko      이미지 원클릭 다운로드(압축 다운로드/단일 이미지 다운로드), 페이지 데이터 생성하여 json 다운로드, 현재 모든 게시물 원클릭 열기
@@ -129,6 +129,7 @@
      * 外部連結: "ExternalLink" (Only AdvancedFetch)
      */
     const FetchSet = {
+        Delay: 200, // 獲取延遲 (ms) [太快會被 BAN]
         AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
         ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
         UseFormat: false, // 這裡為 false 下面兩項就不生效
@@ -548,136 +549,11 @@
         }
     }
 
-    class DataToJson {
-        constructor() {
-            this.JsonDict = {};
-            this.Genmode = true;
-            this.SortMap = new Map();
-            this.Source = document.URL;
-            this.TitleCache = Syn.$title();
-            this.Section = Syn.$q("section");
-            this.Pages = this.progress = this.filtercache = null;
-            this.Author = Syn.$q("span[itemprop='name'], fix_name").$text();
-            this.JsonMode = { "orlink": "set_1", "imgnb": "set_2", "videonb": "set_3", "dllink": "set_4" }
-
-            /* Mega 連結解析 (測試中 有些Bug) */
-            this.MegaAnalysis = (data) => {
-                let title_box = [], link_box = [], result = {}, pass;
-                for (let i = 0; i < data.length; i++) {
-                    const str = data[i].$text();
-                    if (str.startsWith("Pass")) { // 解析密碼字串
-                        const ps = data[i].$iHtml().match(/Pass:([^<]*)/);
-                        try { pass = `Pass : ${ps[1].trim()}` } catch { pass = str }
-                    } else if (str.toUpperCase() == "MEGA") {
-                        link_box.push(data[i].parentElement.href);
-                    } else {
-                        title_box.push(str.replace(":", "").trim());
-                    }
-                }
-                // 合併數據
-                for (let i = 0; i < title_box.length; i++) {
-                    result[title_box[i]] = link_box[i]
-                }
-                return { pass, result };
-            }
-        }
-
-        /* 獲取下一頁數據 */
-        async GetNextPage(NextPage) {
-            GM_xmlhttpRequest({
-                method: "GET",
-                url: NextPage,
-                nocache: false,
-                onload: response => {
-                    this.GetPageData(response.responseXML.$q("section"));
-                }
-            })
-        }
-
-        /* 獲取主頁元素 */
-        async GetPageData(section) {
-            let title, link;
-            const item = section.$qa(".card-list__items article");
-
-            // 遍歷數據
-            this.progress = 0;
-            for (const [index, card] of item.entries()) {
-                link = card.$q("a").href;
-                title = card.$q(".post-card__header").$text() || `Untitled_${String(this.progress + 1).padStart(2, "0")}`;
-
-                if (Config.ExperimeDownload) {
-                    this.worker.postMessage({ index: index, title: title, url: link });
-                } else {
-                    this.JsonDict[`${link}`] = title;
-                }
-
-                await Syn.Sleep(10);
-            }
-
-            const menu = section.$q("a.pagination-button-after-current");
-            const ILength = item.length,
-                wait = setInterval(() => {
-                    if (ILength == this.SortMap.size) {
-                        clearInterval(wait);
-
-                        for (let i = 0; i < ILength; i++) { // 按照索引順序取出 SortMap, 並將數據添加到 JsonDict, 接著清除掉 SortMap
-                            const data = this.SortMap.get(i);
-                            this.JsonDict[data.title] = data.box;
-                        }
-
-                        this.Pages++;
-                        this.SortMap.clear(); // 清除
-                        menu ? this.GetNextPage(menu.href) : this.ToJson();
-                    }
-                }, 500);
-        }
-
-        /* Json 數據請求 並 解析 */
-        async DataAnalysis() {
-            this.worker.onmessage = async (e) => {
-                const data_box = {}, { index, title, url, text, error } = e.data;
-                if (!error) {
-                    const DOM = Syn.DomParse(text);
-
-                    const original_link = url,
-                        pictures_number = DOM.$qa("post__thumbnail, .scrape__thumbnail").length,
-                        video_number = DOM.$qa(".post__body li video, .scrape__files video").length,
-                        mega_link = DOM.$qa(".post__content strong, .scrape__content strong");
-
-                    DOM.$qa("a.post__attachment-link, a.scrape__attachment-link").forEach(link => {
-                        const analyze = decodeURIComponent(link.href).split("?f="),
-                            download_link = analyze[0],
-                            download_name = analyze[1];
-                        data_box[download_name] = download_link;
-                    })
-
-                    if (mega_link.length > 0) {
-                        try {
-                            const { pass, result } = this.MegaAnalysis(mega_link);
-                            pass != unSynined ? data_box[pass] = result : null;
-                        } catch { }
-                    }
-
-                    const box = this.GenerateBox(original_link, pictures_number, video_number, data_box);
-                    if (Object.keys(box).length !== 0) {
-                        this.SortMap.set(index, { title: title, box: box });
-                    }
-
-                    Syn.Log("Request Successful", this.SortMap, { dev: Config.Dev, collapsed: false });
-                    Syn.$title(`（${this.Pages} - ${++this.progress}）`);
-                } else {
-                    Syn.Log("Request Failed", { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
-                    await Syn.Sleep(1500);
-                    this.worker.postMessage({ index: index, title: title, url: url });
-                }
-            }
-        }
-    }
-
     class FetchData {
-        constructor(AdvancedFetch, ToLinkTxt) {
+        constructor(Delay, AdvancedFetch, ToLinkTxt) {
             this.MetaDict = {}; // 保存元數據
             this.DataDict = {}; // 保存最終數據
+            this.RecordKey = `${decodeURIComponent(location.href)}-Complete`; // 緩存最終數據
 
             this.TaskDict = new Map(); // 任務臨時數據
 
@@ -687,10 +563,10 @@
             this.FirstURL = this.SourceURL.split("?o=")[0]; // 第一頁連結
 
             this.Pages = 1; // 預設開始抓取的頁數
-            this.RequestDelay = 10; // ! 請求延遲 (毫秒) [還需要測試]
             this.FinalPages = 10; // 預設最終抓取的頁數
             this.Progress = 0; // 用於顯示當前抓取進度
             this.OnlyMode = false; // 判斷獲取數據的模式
+            this.FetchDelay = Delay; // 獲取延遲
             this.ToLinkTxt = ToLinkTxt; // 判斷是否輸出為連結文本
             this.AdvancedFetch = AdvancedFetch; // 判斷是否往內抓數據
 
@@ -988,6 +864,7 @@
                     }
                 }
 
+                Syn.Session(this.RecordKey) && (this.FetchDelay = 0); // 當存在完成紀錄時, 降低延遲
                 this.FetchRun(Section, this.SourceURL); // 啟用抓取
             } else {
                 alert(Lang.Transl("未取得數據"));
@@ -1033,7 +910,10 @@
                             ? Url.replace(/\?o=(\d+)$/, (match, number) => `?o=${+number + 50}`)
                             : `${Url}?o=50`
                     )
-                    : this.ToLinkTxt ? this.ToTxt() : this.ToJson();
+                    : (
+                        Syn.Session(this.RecordKey, { value: true }),
+                        this.ToLinkTxt ? this.ToTxt() : this.ToJson()
+                    );
             }
         };
 
@@ -1140,8 +1020,6 @@
                                     await this.TooMany_TryAgain(url); // 錯誤等待
                                     this.Worker.postMessage({ index: index, title: title, url: url });
                                 }
-
-                                await Syn.Sleep(50);
                             }
                         };
 
@@ -1152,7 +1030,7 @@
                                 this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}` });
                             }));
 
-                            await Syn.Sleep(this.RequestDelay);
+                            await Syn.Sleep(this.FetchDelay);
                         }
 
                         // 等待所有任務
@@ -1183,8 +1061,6 @@
                             } catch (error) {
                                 Syn.Log(error, { title: Title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
                                 continue;
-                            } finally {
-                                await Syn.Sleep(this.RequestDelay);
                             }
                         }
                     }
@@ -1195,6 +1071,7 @@
                     }
 
                     this.TaskDict.clear(); // 清空任務數據
+                    await Syn.Sleep(this.FetchDelay);
                     return true; // 回傳完成
                 } else { /* 之後在想 */ }
             }
@@ -1397,7 +1274,7 @@
                             func: () => {
                                 if (!lock) {
                                     let Instantiate = null;
-                                    Instantiate = new FetchData(FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
+                                    Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
                                     FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
                                     Instantiate.FetchInit();
                                 }
