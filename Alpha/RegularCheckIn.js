@@ -22,7 +22,7 @@
 // @grant        GM_addValueChangeListener
 // @grant        GM_removeValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/462234/1545786/Message.js
+// @require      https://cdn.jsdelivr.net/npm/qmsg@1.3.1/dist/index.umd.min.js
 // ==/UserScript==
 
 (async ()=> {
