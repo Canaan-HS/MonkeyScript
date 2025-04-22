@@ -691,9 +691,9 @@
             TextToLink_Dependent: function (Config) {
                 if (!this.TextToLink_Cache) {
                     this.TextToLink_Cache = {
-                        Protocol_F: /^(?!https?:\/\/)/,
+                        Protocol_F: /^(?!(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/)/,
                         Exclusion_F: /onfanbokkusuokibalab\.net/,
-                        URL_F: /(?:https?:\/\/[^\s]+)|(?:[a-zA-Z0-9]+\.)?(?:[a-zA-Z0-9]+)\.[^\s]+\/[^\s]+/g,
+                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()""''""「」『』【】\[\]{}、，。！？!?:;；：]|$|\s)/g,
                         UrlMatch: function (str) {
                             this.URL_F.lastIndex = 0;
                             return this.URL_F.test(str);
