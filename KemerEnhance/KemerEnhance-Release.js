@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta11
+// @version      0.0.49-Beta12
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -33,11 +33,10 @@
 // @grant        GM_getValue
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
-// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1576380/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -91,7 +90,7 @@
             }
         }
     };
-    let Url = Syn.$url;
+    let Url = Syn.$url();
     const DLL = (() => {
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
         const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
@@ -105,7 +104,7 @@
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
             nekohouse: "#bb91ff !important"
-        }[Syn.$domain.split(".")[0]];
+        }[Syn.$domain().split(".")[0]];
         const SaveKey = {
             Img: "ImgStyle",
             Lang: "Language",
@@ -593,7 +592,7 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain.startsWith("nekohouse"),
+            IsNeko: Syn.$domain().startsWith("nekohouse"),
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
                 const ML = Syn.TranslMatcher(Word, Log);
@@ -673,11 +672,18 @@
         };
     })();
     Enhance.Run();
-    window.$onEvent("urlchange", change => {
+    const WaitDom = new MutationObserver(() => {
+        WaitDom.disconnect();
+        Enhance.Run();
+    });
+    Syn.onUrlChange(change => {
         Url = change.url;
-        setTimeout(() => {
-            Enhance.Run();
-        }, 500);
+        WaitDom.observe(document, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
     });
     function Global_Function() {
         const LoadFunc = {
@@ -929,7 +935,7 @@
                         [required[1]]: 1
                     };
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
+                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain()}; path=/; expires=${expires};`);
                     }
                 }
                 Syn.AddStyle(`
@@ -1394,29 +1400,6 @@
                 }
                 return this.LinkBeautify_Cache;
             },
-            VideoBeautify_Cache: undefined,
-            VideoBeautify_Dependent: function () {
-                if (!this.VideoBeautify_Cache) {
-                    this.VideoBeautify_Cache = function VideoRendering({
-                        stream
-                    }) {
-                        return preact.h("summary", {
-                            className: "video-title"
-                        }, preact.h("video", {
-                            key: "video",
-                            controls: true,
-                            preload: "metadata",
-                            "data-setup": JSON.stringify({}),
-                            className: "post-video"
-                        }, preact.h("source", {
-                            key: "source",
-                            src: stream.src,
-                            type: stream.type
-                        })));
-                    };
-                }
-                return this.VideoBeautify_Cache;
-            },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent: function () {
                 if (!this.ExtraButton_Cache) {
@@ -1487,8 +1470,8 @@
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
                     for (const link of post) {
                         const text = link.$text().replace("Download", "");
-                        link.$sAttr("download", text);
                         link.$text(text);
+                        DLL.IsNeko && link.$sAttr("download", text);
                         const Browse = link.nextElementSibling;
                         if (!Browse) continue;
                         ShowBrowse(Browse);
@@ -1496,17 +1479,13 @@
                 });
             },
             VideoBeautify: async function (Config) {
-                Syn.AddStyle(`
-                    .video-title {margin-top: 0.5rem;}
-                    .post-video {height: 50%; width: 60%;}
-                `, "Video_Effects", false);
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, {
                         raf: true,
                         all: true,
                         timeout: 5
                     }).then(video => {
-                        video.forEach(media => media.$sAttr("preload", "auto"));
+                        video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
                 } else {
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
@@ -1519,28 +1498,30 @@
                             all: true,
                             timeout: 5
                         }).then(post => {
-                            const VideoRendering = LoadFunc.VideoBeautify_Dependent();
-                            let li;
-                            for (li of parents) {
-                                let [node, title, stream] = [undefined, li.$q("summary"), li.$q("source")];
-                                if (!title || !stream) continue;
-                                if (title.previousElementSibling) continue;
-                                let link;
-                                for (link of post) {
-                                    if (link.$text().includes(title.$text())) {
-                                        switch (Config.mode) {
-                                            case 2:
-                                                link.parentNode.remove();
-
-                                            default:
-                                                node = link.$copy(true);
-                                        }
-                                    }
-                                }
-                                render(preact.h(VideoRendering, {
-                                    stream: stream
-                                }), li);
-                                li.insertBefore(node, li.$q("summary"));
+                            const move = Config.mode === 2;
+                            const linkBox = Object.fromEntries([...post].map(a => {
+                                const data = [a.download?.trim(), a];
+                                move && a.parentNode.remove();
+                                return data;
+                            }));
+                            for (const li of parents) {
+                                const WaitLoad = new MutationObserver(() => {
+                                    WaitLoad.disconnect();
+                                    let [video, summary] = [li.$q("video"), li.$q("summary")];
+                                    if (!video || !summary) return;
+                                    video.$sAttr("preload", "metadata");
+                                    const link = linkBox[summary.$text()];
+                                    if (!link) return;
+                                    summary.$text("");
+                                    summary.appendChild(move ? link : link.$copy(true));
+                                });
+                                WaitLoad.observe(li, {
+                                    attributes: true,
+                                    characterData: true,
+                                    childList: true,
+                                    subtree: true
+                                });
+                                li.$sAttr("Video-Beautify", true);
                             }
                         });
                     });
@@ -1555,7 +1536,7 @@
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = element => {
                         const Uri = element.href || element.$gAttr("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
+                        return Uri.startsWith("http") ? Uri : `${Syn.$origin()}${Uri}`;
                     };
                     const Origina_Requ = {
                         Reload: async (Img, Retry) => {
