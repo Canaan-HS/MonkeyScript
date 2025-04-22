@@ -10,7 +10,6 @@
 
 const Syn = (() => {
     const Mark = {};
-    const ListenerRecord = new Map();
     const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const DeviceCall = {
         sX: () => window.scrollX,
