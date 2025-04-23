@@ -33,7 +33,6 @@
 // @grant        GM_getValue
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
-// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
@@ -93,7 +92,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Syn.$url;
+    let Url = Syn.$url();
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -110,7 +109,7 @@
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
-        }[Syn.$domain.split(".")[0]];
+        }[Syn.$domain().split(".")[0]];
 
         const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
@@ -606,7 +605,7 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain.startsWith("nekohouse"),
+            IsNeko: Syn.$domain().startsWith("nekohouse"),
 
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
@@ -703,13 +702,11 @@
 
     /* ==================== 主運行 ==================== */
     Enhance.Run();
-    window.$one("urlchange", change => {
+
+    Syn.onUrlChange(change => {
         Url = change.url;
-        // ? 不設置延遲的話, 功能重新調用時, 如果 Ajex 還沒渲染完成, 就會調用失敗
-        setTimeout(() => {
-            Enhance.Run();
-        }, 500);
-    });
+        Enhance.Run();
+    }, 500);
 
     /* ==================== 全域功能 ==================== */
     function Global_Function() {
@@ -979,7 +976,7 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
+                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain()}; path=/; expires=${expires};`);
                     }
                 };
 
@@ -1614,20 +1611,26 @@
 
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
-                        video.forEach(media => media.$sAttr("preload", "auto"));
+                        video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
                 } else {
-                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then(parents => {
+                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true,  all: true, timeout: 5 }).then(parents => {
                         Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                             const VideoRendering = LoadFunc.VideoBeautify_Dependent();
 
                             let li;
                             for (li of parents) {
-                                let [node, title, stream] = [
+                                let [node, video, title, stream] = [
                                     undefined,
+                                    li.$q("video"),
                                     li.$q("summary"),
                                     li.$q("source")
                                 ];
+
+                                // video.$sAttr("preload", "metadata") // 需要動態監聽
+                                
+                                console.log(parents);
+                                continue;
 
                                 if (!title || !stream) continue;
                                 if (title.previousElementSibling) continue; // 排除極端狀況下的重複添加
@@ -1639,7 +1642,7 @@
                                             case 2: // 因為移動節點 需要刪除再去複製 因此不使用 break
                                                 link.parentNode.remove();
                                             default:
-                                                node = link.$copy(true);
+                                                stream.replaceWith(link.$copy(true));
                                         }
                                     }
                                 }
@@ -1648,6 +1651,7 @@
                                 render(preact.h(VideoRendering, { stream: stream }), li);
                                 // 將連結元素進行插入 (確保不重複添加)
                                 li.insertBefore(node, li.$q("summary"));
+
                             }
 
                         });
@@ -1662,7 +1666,7 @@
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = (element) => {
                         const Uri = element.href || element.$gAttr("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
+                        return Uri.startsWith("http") ? Uri : `${Syn.$origin()}${Uri}`;
                     };
 
                     /**
