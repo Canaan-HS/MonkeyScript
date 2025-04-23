@@ -33,6 +33,7 @@
 // @grant        GM_getValue
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
@@ -1604,7 +1605,6 @@
                             const move = Config.mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
-                                move && a.parentNode.remove();
 
                                 return data;
                             }));
@@ -1622,8 +1622,12 @@
                                     const link = linkBox[summary.$text()]; // 查找對應下載連結
                                     if (!link) return;
 
+                                    move && link.parentNode.remove(); // 刪除對應下載連結
+                                    let element = link.$copy();
+                                    element.$text(element.$text().replace("Download", "")); // 修改載入連結
+
                                     summary.$text("");
-                                    summary.appendChild(move ? link : link.$copy(true));
+                                    summary.appendChild(element);
                                 });
 
                                 // 監聽動態變化
