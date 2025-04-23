@@ -685,6 +685,7 @@
             subtree: true,
             characterData: true
         });
+        Syn.$body.$sAttr("Enhance", true);
     });
     function Global_Function() {
         const LoadFunc = {
@@ -694,7 +695,7 @@
                     this.TextToLink_Cache = {
                         Protocol_F: /^(?!(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/)/,
                         Exclusion_F: /onfanbokkusuokibalab\.net/,
-                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()""''""「」『』【】\[\]{}、，。！？!?:;；：]|$|\s)/g,
+                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()""''""「」『』【】\[\]{}、，。！？；：]|$|\s)/g,
                         UrlMatch: function (str) {
                             this.URL_F.lastIndex = 0;
                             return this.URL_F.test(str);
