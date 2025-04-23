@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/04/23
+// @version      2025/04/24
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -263,13 +263,13 @@ const Syn = (() => {
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 
-        function target(event) {
+        function target(type) {
             clearTimeout(timer);
             timer = setTimeout(() => {
-                if (event.type === 'urlchange') off(false, true);
+                if (type === 'urlchange') off(false, true);
 
                 callback({
-                    type: event.type,
+                    type: type,
                     url: location.href,
                     domain: location.hostname
                 });
@@ -294,24 +294,24 @@ const Syn = (() => {
         };
 
         // 最新版本 url 監聽
-        window.addEventListener('urlchange', target);
+        window.addEventListener('urlchange', () => target('urlchange'));
 
         // 監聽 popstate
-        window.addEventListener('popstate', target);
+        window.addEventListener('popstate', () => target('popstate'));
 
         // 監聽 hashchange
-        window.addEventListener('hashchange', target);
+        window.addEventListener('hashchange', () => target('hashchange'));
 
         // 監聽 pushState
         history.pushState = function () {
             originalPushState.apply(this, arguments);
-            target({ type : 'pushState' });
+            target('pushState');
         };
 
         // 監聽 replaceState
         history.replaceState = function () {
             originalReplaceState.apply(this, arguments);
-            target({ type: 'replacestate' });
+            target('replacestate');
         };
 
         return { off };
