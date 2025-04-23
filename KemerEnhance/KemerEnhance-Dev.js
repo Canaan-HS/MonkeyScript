@@ -1621,7 +1621,7 @@
 
                             for (const li of parents) {
 
-                                const WaitLoad = new MutationObserver(() => {
+                                const WaitLoad = new MutationObserver(Syn.Debounce(() => {
                                     WaitLoad.disconnect();
 
                                     let [video, summary] = [
@@ -1642,7 +1642,7 @@
 
                                     summary.$text("");
                                     summary.appendChild(element);
-                                });
+                                }, 100));
 
                                 // 監聽動態變化
                                 WaitLoad.observe(li, { attributes: true, characterData: true, childList: true, subtree: true });
