@@ -1630,6 +1630,7 @@
                                     ];
 
                                     if (!video || !summary) return;
+
                                     video.$sAttr("preload", "metadata"); // 預載影片元數據
 
                                     const link = linkBox[summary.$text()]; // 查找對應下載連結
