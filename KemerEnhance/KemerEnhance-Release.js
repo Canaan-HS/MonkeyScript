@@ -33,10 +33,11 @@
 // @grant        GM_getValue
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1576380/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1576506/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -82,7 +83,7 @@
             ExtraButton: { mode: 0, enable: true }, // 額外的下方按鈕
             LinkBeautify: { mode: 0, enable: true }, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
             CommentFormat: { mode: 0, enable: true }, // 評論區重新排版
-            VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點] (有啟用 LinkBeautify, 會與原始狀態不同)
+            VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點]
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
                 enable: true,
@@ -1501,7 +1502,6 @@
                             const move = Config.mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
-                                move && a.parentNode.remove();
                                 return data;
                             }));
                             for (const li of parents) {
@@ -1512,8 +1512,11 @@
                                     video.$sAttr("preload", "metadata");
                                     const link = linkBox[summary.$text()];
                                     if (!link) return;
+                                    move && link.parentNode.remove();
+                                    let element = link.$copy();
+                                    element.$text(element.$text().replace("Download", ""));
                                     summary.$text("");
-                                    summary.appendChild(move ? link : link.$copy(true));
+                                    summary.appendChild(element);
                                 });
                                 WaitLoad.observe(li, {
                                     attributes: true,
