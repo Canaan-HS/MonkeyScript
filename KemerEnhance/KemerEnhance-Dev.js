@@ -732,7 +732,7 @@
                     this.TextToLink_Cache = {
                         Protocol_F: /^(?!(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/)/,
                         Exclusion_F: /onfanbokkusuokibalab\.net/,
-                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()""''""「」『』【】\[\]{}、，。！？；：]|$|\s)/g,
+                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()「」『』【】\[\]{}、"'”，。！？；：]|$|\s)/g,
                         UrlMatch: function (str) {
                             // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
                             this.URL_F.lastIndex = 0;
