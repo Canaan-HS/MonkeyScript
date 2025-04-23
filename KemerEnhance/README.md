@@ -1,6 +1,6 @@
 # **Enhanced Website User Experience**
 
-## ⚠️ The website has recently undergone a major update. Temporary fixes have been applied, but some features may be broken or there may be bugs. Please report any issues.
+## ⚠️ The website has been changing frequently recently, and some functions may become invalid or have bugs at any time. Please provide feedback if you encounter any issues
 
 ---
 
@@ -125,15 +125,17 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ---
 
-## **📦 Version Details**
+## **📦 Version Information**
 
-**Release Version: 0.0.49-Beta11**
+**Release Version: 0.0.49-Beta12**
 
 ### **Updates**
-1. Adapting to website changes
+1. Adaptation to website changes
+2. Modified page change monitoring logic
+3. Fixed and enhanced TextToLink matching
 
 ### **Known Issues**
-1. Due to AJAX rendering on Kemono and Coomer, functionality may fail to load if rendering is incomplete when the script finishes running. This can be resolved by refreshing the page. A 0.5-second loading delay has been implemented, but issues may still occur. Adding more delay could negatively impact user experience
-2. After modifying menu positions, changes may be visible during debugging but require a page refresh to take effect in actual use
+1. The current modifications to page change monitoring and loading wait methods are experimental (anomalies may occur due to environmental differences)
+2. After modifying menu positions, although changes are visible during debugging, actual application requires a refresh to take effect
 
 ---
