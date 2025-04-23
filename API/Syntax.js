@@ -249,7 +249,7 @@ const Syn = (() => {
 
     /**
      * * { 監聽網址變化 }
-     * @param {function} callback - 回調 {url, domain} 
+     * @param {function} callback - 回調 {type, url, domain} 
      * @param {number} timeout - 防抖 (毫秒) [設置延遲多少 ms 之後才回條]
      *
      * @example
@@ -259,40 +259,63 @@ const Syn = (() => {
      */
     function onUrlChange(callback, timeout = 15) {
         let timer = null;
+        let cleaned = false;
 
-        function target() {
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+
+        function target(event) {
             clearTimeout(timer);
             timer = setTimeout(() => {
+                if (event.type === 'urlchange') off(false, true);
+
                 callback({
+                    type: event.type,
                     url: location.href,
                     domain: location.hostname
                 });
             }, Math.max(15, timeout));
         };
 
-        // 監聽 pushState
-        const originalPushState = history.pushState;
-        history.pushState = function () {
-            originalPushState.apply(this, arguments);
-            target();
+        /**
+         * @param {boolean} all - 是否清除所有監聽器 (否會跳過最新的 urlchange 監聽器)
+         * @param {boolean} clean - 是否要判斷已經被清理過 
+         */
+        function off(all=true, clean=false) {
+            if (clean && cleaned) return;
+
+            clearTimeout(timer);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            all && window.removeEventListener('urlchange', target);
+            window.removeEventListener('popstate', target);
+            window.removeEventListener('hashchange', target);
+
+            cleaned = true;
         };
 
-        // 監聽 replaceState
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function () {
-            originalReplaceState.apply(this, arguments);
-            target();
-        };
+        // 最新版本 url 監聽
+        window.addEventListener('urlchange', target);
 
         // 監聽 popstate
         window.addEventListener('popstate', target);
 
-        return function off() {
-            clearTimeout(timer);
-            history.pushState = originalPushState;
-            history.replaceState = originalReplaceState;
-            window.removeEventListener('popstate', target);
-        }
+        // 監聽 hashchange
+        window.addEventListener('hashchange', target);
+
+        // 監聽 pushState
+        history.pushState = function () {
+            originalPushState.apply(this, arguments);
+            target({ type : 'pushState' });
+        };
+
+        // 監聽 replaceState
+        history.replaceState = function () {
+            originalReplaceState.apply(this, arguments);
+            target({ type: 'replacestate' });
+        };
+
+        return { off };
     };
 
     // 原型註冊
