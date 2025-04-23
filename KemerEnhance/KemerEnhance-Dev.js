@@ -1604,6 +1604,14 @@
                     Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true,  all: true, timeout: 5 }).then(parents => {
                         Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
 
+                            Syn.AddStyle(`
+                                .fluid_video_wrapper {
+                                    height: 50% !important;
+                                    width: 65% !important;
+                                    border-radius: 8px !important;
+                                }
+                            `, "Video_Effects", false);
+
                             const move = Config.mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
@@ -1616,9 +1624,12 @@
                                 const WaitLoad = new MutationObserver(() => {
                                     WaitLoad.disconnect();
 
-                                    let [video, summary] = [li.$q("video"), li.$q("summary")];
-                                    if (!video || !summary) return;
+                                    let [video, summary] = [
+                                        li.$q("video"),
+                                        li.$q("summary"),
+                                    ];
 
+                                    if (!video || !summary) return;
                                     video.$sAttr("preload", "metadata"); // 預載影片元數據
 
                                     const link = linkBox[summary.$text()]; // 查找對應下載連結
