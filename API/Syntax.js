@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/04/21
+// @version      2025/04/23
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -91,11 +91,11 @@ const Syn = (() => {
         $link: document.links,
         $script: document.scripts,
         $style: document.styleSheets,
-        $url: location.href,
-        $origin: location.origin,
-        $domain: location.hostname,
-        $lang: navigator.language,
-        $agen: navigator.userAgent,
+        $url: () => location.href,
+        $origin: () => location.origin,
+        $domain: () => location.hostname,
+        $lang: () => navigator.language,
+        $agen: () => navigator.userAgent,
         $title: (value=null) => value !== null ? (document.title = value) : document.title,
         $cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
         $createUrl: (object) => URL.createObjectURL(object),
@@ -244,6 +244,54 @@ const Syn = (() => {
                 this.removeEventListener(type, listen);
                 window.$EventRecord.get(key).delete(type);
             }
+        }
+    };
+
+    /**
+     * * { 監聽網址變化 }
+     * @param {function} callback - 回調 {url, domain} 
+     * @param {number} timeout - 防抖 (毫秒) [設置延遲多少 ms 之後才回條]
+     *
+     * @example
+     * onUrlChange(change => {
+     *    console.log(change.url);
+     * }, 100);
+     */
+    function onUrlChange(callback, timeout = 15) {
+        let timer = null;
+
+        function target() {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                callback({
+                    url: location.href,
+                    domain: location.hostname
+                });
+            }, Math.max(15, timeout));
+        };
+
+        // 監聽 pushState
+        const originalPushState = history.pushState;
+        history.pushState = function () {
+            originalPushState.apply(this, arguments);
+            target();
+        };
+
+        // 監聽 replaceState
+        const originalReplaceState = history.replaceState;
+        history.replaceState = function () {
+            originalReplaceState.apply(this, arguments);
+            target();
+        };
+
+        // 監聽 popstate
+        window.addEventListener('popstate', target);
+
+        return function off() {
+            clearTimeout(timer);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            window.removeEventListener('popstate', target);
         }
     };
 
@@ -861,7 +909,7 @@ const Syn = (() => {
         'zh-HK': 'Traditional',
         'zh-MO': 'Traditional'
     };
-    function TranslMatcher(word, lang, defaultLang="en-US") {
+    function TranslMatcher(word, lang=navigator.language, defaultLang="en-US") {
         return word[TranslUtils[lang]]
             ?? word[TranslUtils[defaultLang]]
             ?? word[TranslUtils["en-US"]];
@@ -961,7 +1009,7 @@ const Syn = (() => {
 
     return {
         ...DeviceCall, ...SugarCall, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
+        Type, Log, onUrlChange, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
         FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
         Menu, StoreListen,
 
