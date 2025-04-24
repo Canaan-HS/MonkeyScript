@@ -260,14 +260,16 @@ const Syn = (() => {
     function onUrlChange(callback, timeout = 15) {
         let timer = null;
         let cleaned = false;
+        let support_urlchange = false;
 
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 
         function target(type) {
             clearTimeout(timer);
+            if (!support_urlchange && type === 'urlchange') support_urlchange = true; // 支援時設置為 true
             timer = setTimeout(() => {
-                if (type === 'urlchange') off(false, true);
+                if (support_urlchange) off(false, true); // 支援時調用清除
 
                 callback({
                     type: type,
