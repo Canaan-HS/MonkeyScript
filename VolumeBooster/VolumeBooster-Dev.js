@@ -25,14 +25,14 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1577559/SyntaxLite_min.js
 // ==/UserScript==
 
 // ! 該腳本新發佈時 全部導入 Syntax 的都要同步更新, 不然會有問題
 
 (async () => {
 
-    const { Transl } = Language(Syn.$lang); // 語言翻譯
+    const { Transl } = Language(); // 語言翻譯
 
     const BannedDomains = (() => {
         let Banned = new Set(Syn.gV("Banned", [])); // 禁用網域
@@ -45,14 +45,14 @@
             Banned = new Set(old);
         };
 
-        let ExcludeStatus = Banned.has(Syn.$domain); // 排除狀態
+        let ExcludeStatus = Banned.has(Syn.domain); // 排除狀態
 
         return {
             IsEnabled: (callback) => callback(!ExcludeStatus), // 返回排除狀態
             AddBanned: async () => {
                 ExcludeStatus
-                    ? Banned.delete(Syn.$domain)
-                    : Banned.add(Syn.$domain);
+                    ? Banned.delete(Syn.domain)
+                    : Banned.add(Syn.domain);
 
                 Syn.sV("Banned", [...Banned]); // 更新禁用網域
                 location.reload(); // 重新加載頁面
@@ -67,38 +67,40 @@
         let ObserverOption = null; // 觀察者選項
 
         let Control = null; // 增強控制器
+        const Parame = {}; // 增強參數
         const EnhancedNodes = []; // 儲存增強節點 (音頻節點)
         const EnhancedElements = new Map(); // 儲存增強元素 (媒體元素)
 
         let MediaAudioContent = null; // 儲存音頻上下文 實例
         const AudioContext = window.AudioContext || window.webkitAudioContext; // 音頻上下文
 
-        let Config = Syn.gV(Syn.$domain, {}); // 獲取當前網域設置
+        const UpdateParame = () => {
+            let Config = Syn.gV(Syn.domain, {}); // 獲取當前網域設置
 
-        if (typeof Config === "number") {
-            Config = { Gain: Config }; // 舊數據轉移
-        };
+            if (typeof Config === "number") {
+                Config = { Gain: Config }; // 舊數據轉移
+            };
 
-        // 增強參數
-        const Parame = {
-            Gain: Config.Gain ?? 1.0,
-            LowFilterGain: Config.LowFilterGain ?? 1.2,
-            LowFilterFreq: Config.LowFilterFrequency ?? 200,
-            MidFilterQ: Config.MidFilterQ ?? 1,
-            MidFilterGain: Config.MidFilterGain ?? 1.6,
-            MidFilterFreq: Config.MidFilterFrequency ?? 2000,
-            HighFilterGain: Config.HighFilterGain ?? 1.8,
-            HighFilterFreq: Config.HighFilterFreq ?? 10000,
-            CompressorRatio: Config.CompressorRatio ?? 3, // 壓縮率 (調低會更大聲, 但容易爆音)
-            CompressorKnee: Config.CompressorKnee ?? 4, // 壓縮過渡反應時間(越小越快)
-            CompressorThreshold: Config.CompressorThreshold ?? -8, // 壓縮閾值
-            CompressorAttack: Config.CompressorAttack ?? 0.03, // 開始壓縮的速度
-            CompressorRelease: Config.CompressorRelease ?? 0.2, // 釋放壓縮的速度
+            Object.assign(Parame, {
+                Gain: Config.Gain ?? 1.0,
+                LowFilterGain: Config.LowFilterGain ?? 1.2,
+                LowFilterFreq: Config.LowFilterFrequency ?? 200,
+                MidFilterQ: Config.MidFilterQ ?? 1,
+                MidFilterGain: Config.MidFilterGain ?? 1.6,
+                MidFilterFreq: Config.MidFilterFrequency ?? 2000,
+                HighFilterGain: Config.HighFilterGain ?? 1.8,
+                HighFilterFreq: Config.HighFilterFreq ?? 10000,
+                CompressorRatio: Config.CompressorRatio ?? 3, // 壓縮率 (調低會更大聲, 但容易爆音)
+                CompressorKnee: Config.CompressorKnee ?? 4, // 壓縮過渡反應時間(越小越快)
+                CompressorThreshold: Config.CompressorThreshold ?? -8, // 壓縮閾值
+                CompressorAttack: Config.CompressorAttack ?? 0.03, // 開始壓縮的速度
+                CompressorRelease: Config.CompressorRelease ?? 0.2, // 釋放壓縮的速度
+            })
         };
 
         /* 註冊快捷鍵(開啟菜單) */
         const MenuHotkey = async () => {
-            document.$onEvent("keydown", event => {
+            Syn.onEvent(document, "keydown", event => {
                 if (event.altKey && event.key.toUpperCase() == "B") EnhancerMenu();
             }, { passive: true, capture: true, mark: "Volume-Booster-Hotkey" });
         };
@@ -106,6 +108,7 @@
         /* 增強處理 */
         function BoosterCore(media_object) {
             try {
+                UpdateParame(); // 更新增強參數
                 if (!AudioContext) throw new Error(Transl("不支援音頻增強節點"));
                 if (!MediaAudioContent) MediaAudioContent = new AudioContext();
                 if (MediaAudioContent.state === "suspended") MediaAudioContent.resume();
@@ -193,9 +196,9 @@
                         MenuHotkey();
 
                         Syn.Menu({
-                            [Transl("📜 菜單熱鍵")]: { func: () => alert(Transl("熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)")) },
-                            [Transl("🛠️ 調整菜單")]: { func: () => EnhancerMenu() }
-                        }, "Menu", 2);
+                            [Transl("📜 菜單熱鍵")]: () => alert(Transl("熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)")),
+                            [Transl("🛠️ 調整菜單")]: () => EnhancerMenu()
+                        }, {index: 2});
 
                         Syn.StoreListen([Syn.$domain], call => { // 全局監聽保存值變化
                             if (call.far && call.key == Syn.$domain) { // 由遠端且觸發網域相同
@@ -236,7 +239,7 @@
             BannedDomains.IsEnabled(Status => {
                 const Menu = async (name) => { // 簡化註冊菜單
                     Syn.Menu({
-                        [name]: { func: () => BannedDomains.AddBanned() }
+                        [name]: () => BannedDomains.AddBanned()
                     })
                 };
 
@@ -272,7 +275,7 @@
     };
 
     /* 語言翻譯 */
-    function Language(lang) {
+    function Language() {
         const Word = {
             Traditional: {},
             Simplified: {
@@ -330,7 +333,7 @@
                 "熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)": "Hotkey Menu Opened!!\n\nShortcut Combination: (Alt + B)"
             }
         };
-        const TM = Syn.TranslMatcher(Word, lang);
+        const TM = Syn.TranslMatcher(Word);
 
         return {
             Transl: (Str) => TM[Str] ?? Str
@@ -346,7 +349,7 @@
         const shadowID = "Booster_Modal_Background";
         if (Syn.$q(`#${shadowID}`)) return;
 
-        const shadow = Syn.$createElement("div", { id: shadowID });
+        const shadow = Syn.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
 
         shadowRoot.$iHtml(`
@@ -908,7 +911,7 @@
                 }
 
             } else if (target.id === "Booster-Sound-Save") {
-                Syn.sV(Syn.$domain, Parame);
+                Syn.sV(Syn.domain, Parame);
                 DeleteMenu();
             } else if (
                 target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu"
