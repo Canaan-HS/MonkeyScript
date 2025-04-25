@@ -67,6 +67,7 @@
         let ObserverOption = null; // 觀察者選項
 
         let Control = null; // 增強控制器
+        let Updated = false; // 是否已更新
         const Parame = {}; // 增強參數
         const EnhancedNodes = []; // 儲存增強節點 (音頻節點)
         const EnhancedElements = new Map(); // 儲存增強元素 (媒體元素)
@@ -108,7 +109,6 @@
         /* 增強處理 */
         function BoosterCore(media_object) {
             try {
-                UpdateParame(); // 更新增強參數
                 if (!AudioContext) throw new Error(Transl("不支援音頻增強節點"));
                 if (!MediaAudioContent) MediaAudioContent = new AudioContext();
                 if (MediaAudioContent.state === "suspended") MediaAudioContent.resume();
@@ -227,8 +227,13 @@
             }
         };
 
-        async function Trigger(media) {
+        function Trigger(media) {
             try {
+                if (!Updated) { // ? 動態更新是為了首次觸發時 能取得最新的配置
+                    Updated = true;
+                    UpdateParame();
+                };
+
                 Control = BoosterCore(media);
             } catch (error) {
                 Syn.Log("Trigger Error : ", error, { type: "error", collapsed: false });
