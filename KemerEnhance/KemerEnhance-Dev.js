@@ -93,7 +93,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Syn.$url();
+    let Url = Syn.url;
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -110,7 +110,7 @@
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
-        }[Syn.$domain().split(".")[0]];
+        }[Syn.domain.split(".")[0]];
 
         const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
@@ -606,7 +606,7 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain().startsWith("nekohouse"),
+            IsNeko: Syn.domain.startsWith("nekohouse"),
 
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
@@ -720,7 +720,7 @@
             characterData: true
         })
 
-        Syn.$body.$sAttr("Enhance", true); // 避免沒監聽到變化
+        Syn.body.$sAttr("Enhance", true); // 避免沒監聽到變化
     });
 
     /* ==================== 全域功能 ==================== */
@@ -771,7 +771,7 @@
                                 Config.newtab_insert ?? false,
                             ];
 
-                            root.$onEvent("click", event => {
+                            Syn.onEvent(root, "click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
                                 if (!target || target.$hAttr("download")) return;
                                 event.preventDefault();
@@ -846,7 +846,7 @@
                         },
                         Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
-                            const edit = Syn.$createElement("fix_edit", { id, class: "edit_artist", text: "Edit" });
+                            const edit = Syn.createElement("fix_edit", { id, class: "edit_artist", text: "Edit" });
 
                             name_obj.parentNode.insertBefore(edit, name_obj);
                             name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
@@ -976,7 +976,7 @@
             BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
-                const cookieString = Syn.$cookie();
+                const cookieString = Syn.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
 
@@ -991,7 +991,7 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain()}; path=/; expires=${expires};`);
+                        Syn.cookie(`${key}=${value}; domain=.${Syn.domain}; path=/; expires=${expires};`);
                     }
                 };
 
@@ -1033,7 +1033,7 @@
                             body.$q("article"),
                             body.$q(".post__content, .scrape__content")
                         ];
-                        
+
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
@@ -1070,14 +1070,14 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.$body.$onEvent("click", event => {
+                Syn.onEvent(Syn.body, "click", event => {
                     const target = event.target;
 
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
 
                         const display = target.nextElementSibling; // 取得下方的 name 元素
-                        const text = Syn.$createElement("textarea", {
+                        const text = Syn.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`,
                         });
@@ -1090,7 +1090,7 @@
                         setTimeout(() => {
                             text.focus() // 設置焦點
                             setTimeout(() => { // 避免還沒設置好焦點就觸發
-                                text.$one("blur", () => {
+                                Syn.one(text, "blur", () => {
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name); // 修改顯示名
@@ -1128,7 +1128,7 @@
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
                             // 這是用於避免沒觸發變更, 手動創建一個元素
-                            Syn.$createElement(card_items, "fix-trigger", { style: "display: none;" });
+                            Syn.createElement(card_items, "fix-trigger", { style: "display: none;" });
                         }
                     });
 
@@ -1147,7 +1147,7 @@
                 }
             },
             BackToTop: async (Config) => { /* 翻頁後回到頂部 */
-                Syn.$body.$onEvent("pointerup", event => {
+                Syn.onEvent(Syn.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
@@ -1169,7 +1169,7 @@
                             ? false : true
                     }, 600),
                     Syn.Throttle(() => {
-                        Down_scroll = Syn.sY() + Syn.iH() >= Syn.$html.scrollHeight
+                        Down_scroll = Syn.sY() + Syn.iH() >= Syn.html.scrollHeight
                             ? false : true
                     }, 600)
                 ];
@@ -1205,7 +1205,7 @@
                         }
                 }
 
-                window.$onEvent("keydown", Syn.Throttle(event => {
+                Syn.onEvent(window, "keydown", Syn.Throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1243,7 +1243,7 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.$body.$onEvent("click", event => {
+                Syn.onEvent(Syn.body, "click", event => {
                     const target = event.target.closest("article a");
 
                     target && (
@@ -1283,8 +1283,8 @@
                         preact.h(Rendering, { textContent: ">" })
                     ];
 
-                    const fragment1 = Syn.$createFragment();
-                    const fragment2 = Syn.$createFragment();
+                    const fragment1 = Syn.createFragment;
+                    const fragment2 = Syn.createFragment;
 
                     // 渲染到兩個不同的 fragment
                     preact.render([...elements], fragment1);
@@ -1339,7 +1339,7 @@
                     }
 
                     let request_lock = false;
-                    Syn.$q("section").$onEvent("click", event => {
+                    Syn.onEvent("section", "click", event => {
                         const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                         if (!target || request_lock) return;
 
@@ -1474,8 +1474,8 @@
                             onload: response => {
                                 if (DLL.IsNeko) {
                                     const Main = response.responseXML.$q("main");
-                                    const View = Syn.$createElement("View", { class: "View" });
-                                    const Buffer = Syn.$createFragment();
+                                    const View = Syn.createElement("View", { class: "View" });
+                                    const Buffer = Syn.createFragment;
                                     for (const br of Main.$qa("br")) { // 取得 br 數據
                                         Buffer.append( // 將以下元素都添加到 Buffer
                                             document.createTextNode(br.previousSibling.$text()),
@@ -1486,22 +1486,22 @@
                                     Browse.appendChild(View);
                                 } else {
                                     const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Syn.$createElement("View", { class: "View" });
-                                    const Buffer = Syn.$createFragment();
+                                    const View = Syn.createElement("View", { class: "View" });
+                                    const Buffer = Syn.createFragment;
 
                                     // 添加密碼數據
                                     const password = ResponseJson['password'];
                                     if (password) {
                                         Buffer.append(
                                             document.createTextNode(`password: ${password}`),
-                                            Syn.$createElement("br")
+                                            Syn.createElement("br")
                                         )
                                     };
 
                                     // 添加檔案數據
                                     for (const text of ResponseJson['file_list']) {
                                         Buffer.append(
-                                            document.createTextNode(text), Syn.$createElement("br")
+                                            document.createTextNode(text), Syn.createElement("br")
                                         )
                                     };
 
@@ -1531,7 +1531,7 @@
 
                                 history.pushState(null, null, url); // 修改連結與紀錄
                                 const Title = XML.$q("title")?.$text();
-                                Title && (Syn.$title(Title)); // 修改標題
+                                Title && (Syn.title(Title)); // 修改標題
 
                                 setTimeout(() => {
                                     Syn.WaitElem(".post__content, .scrape__content", null, { raf: true, timeout: 10 }).then(post => {
@@ -1601,7 +1601,7 @@
                         video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
                 } else {
-                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true,  all: true, timeout: 5 }).then(parents => {
+                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then(parents => {
                         Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
 
                             Syn.AddStyle(`
@@ -1661,7 +1661,7 @@
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const HrefParse = (element) => {
                         const Uri = element.href || element.$gAttr("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.$origin()}${Uri}`;
+                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
                     };
 
                     /**
@@ -1690,7 +1690,7 @@
                         },
                         FailedClick: async () => {
                             //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (監聽對象 需要測試)
-                            Syn.$q(".post__files, .scrape__files").$one("click", event => {
+                            Syn.one(".post__files, .scrape__files", "click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -1735,7 +1735,7 @@
                          * Result 回傳圖片連結
                          */
                         Request: async function (Container, Url, Result) {
-                            const indicator = Syn.$createElement(Container, "div", { class: "progress-indicator", text: "0%" });
+                            const indicator = Syn.createElement(Container, "div", { class: "progress-indicator", text: "0%" });
 
                             GM_xmlhttpRequest({
                                 url: Url,
@@ -1875,7 +1875,7 @@
                         Syn.$q(".post__nav-link.next, .scrape__nav-link.next"),
                         document.createElement("svg"),
                         document.createElement("span"),
-                        Syn.$createFragment()
+                        Syn.createFragment
                     ];
 
                     Svg.id = "To_top";
@@ -1896,12 +1896,12 @@
                     Span.appendChild(Next_btn);
 
                     // 點擊回到上方的按鈕
-                    Svg.$one("click", () => {
+                    Syn.one(Svg, "click", () => {
                         Syn.$q("header").scrollIntoView();
                     }, { capture: true, passive: true });
 
                     // 點擊切換下一頁按鈕
-                    Next_btn.$one("click", () => {
+                    Syn.one(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
                             GetNextPage(
                                 Next_btn.$gAttr("jump"),
@@ -1952,7 +1952,7 @@
         const { Log, Transl } = DLL.Language(); // 菜單觸發器, 每次創建都會獲取新數據
 
         callback && callback({ Log, Transl }); // 使用 callback 會額外回傳數據
-        Syn.Menu({ [Transl("📝 設置選單")]: { func: () => Create_Menu(Log, Transl) } });
+        Syn.Menu({ [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl) });
     }
     function Create_Menu(Log, Transl) {
         const shadowID = "shadow";
@@ -1964,11 +1964,11 @@
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
 
         // 創建陰影環境
-        const fragment = Syn.$createFragment();
-        const shadow = Syn.$createElement("div", { id: shadowID });
+        const fragment = Syn.createFragment;
+        const shadow = Syn.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
-        const script = Syn.$createElement("script", { id: "Img-Script", text: Syn.$q("#Menu-Settings").$text() });
-        const style = Syn.$createElement("style", { id: "Menu-Style", text: Syn.$q("#Menu-Custom-Style").$text() });
+        const script = Syn.createElement("script", { id: "Img-Script", text: Syn.$q("#Menu-Settings").$text() });
+        const style = Syn.createElement("style", { id: "Menu-Style", text: Syn.$q("#Menu-Custom-Style").$text() });
 
         // 調整選項
         const UnitOptions = `
@@ -2057,7 +2057,7 @@
         shadowRoot.appendChild(fragment);
 
         // 添加到 dom, 並緩存對象
-        $(Syn.$body).append(shadow);
+        $(Syn.body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
