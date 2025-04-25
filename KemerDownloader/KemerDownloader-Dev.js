@@ -43,7 +43,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://update.greasyfork.org/scripts/495339/1574748/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1577558/Syntax_min.js
 // @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
