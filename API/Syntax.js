@@ -265,6 +265,12 @@ const Syn = (() => {
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 
+        const eventHandler = {
+            urlchange: ()=> target('urlchange'),
+            popstate: ()=> target('popstate'),
+            hashchange: ()=> target('hashchange')
+        };
+
         function target(type) {
             clearTimeout(timer);
             if (!support_urlchange && type === 'urlchange') support_urlchange = true; // 支援時設置為 true
@@ -289,21 +295,21 @@ const Syn = (() => {
             clearTimeout(timer);
             history.pushState = originalPushState;
             history.replaceState = originalReplaceState;
-            all && window.removeEventListener('urlchange', target);
-            window.removeEventListener('popstate', target);
-            window.removeEventListener('hashchange', target);
+            all && window.removeEventListener('urlchange', eventHandler.urlchange);
+            window.removeEventListener('popstate', eventHandler.popstate);
+            window.removeEventListener('hashchange', eventHandler.hashchange);
 
             cleaned = true;
         };
 
         // 最新版本 url 監聽
-        window.addEventListener('urlchange', () => target('urlchange'));
+        window.addEventListener('urlchange', eventHandler.urlchange);
 
         // 監聽 popstate
-        window.addEventListener('popstate', () => target('popstate'));
+        window.addEventListener('popstate', eventHandler.popstate);
 
         // 監聽 hashchange
-        window.addEventListener('hashchange', () => target('hashchange'));
+        window.addEventListener('hashchange', eventHandler.hashchange);
 
         // 監聽 pushState
         history.pushState = function () {
