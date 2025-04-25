@@ -49,14 +49,6 @@ const Syn = (() => {
      * 不支援鏈式
      * $qa("div").$qa("span")
      */
-    [Document.prototype, Element.prototype].forEach(proto => { // 註冊 document & element 原型
-        proto.$q = function(selector) {
-            return Selector(this, selector, false);
-        };
-        proto.$qa = function(selector) {
-            return Selector(this, selector, true);
-        };
-    });
     function Selector(root=document, selector, all) {
         const head = selector[0];
         const headless = selector.slice(1);
@@ -79,55 +71,14 @@ const Syn = (() => {
         const collection = root.getElementsByTagName(selector);
         return all ? [...collection] : collection[0];
     };
-
-    const $Sugar = {
-        $q: document.$q.bind(document),
-        $qa: document.$qa.bind(document),
-        $html: document.documentElement,
-        $head: document.head,
-        $body: document.body,
-        $img: document.images,
-        $link: document.links,
-        $script: document.scripts,
-        $style: document.styleSheets,
-        $url: () => location.href,
-        $origin: () => location.origin,
-        $domain: () => location.hostname,
-        $lang: () => navigator.language,
-        $agen: () => navigator.userAgent,
-        $title: (value=null) => value !== null ? (document.title = value) : document.title,
-        $cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
-        $createUrl: (object) => URL.createObjectURL(object),
-        $createFragment: () => document.createDocumentFragment(),
-        $createElement(arg1, arg2, arg3) {
-            const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
-            if (!tag) return;
-
-            const {
-                id, title, class: className, text: textContent = "",
-                rows: rowSpan, cols: colSpan, style = {}, attr = {}, ...props
-            } = value;
-
-            const element = Object.assign(document.createElement(tag), {textContent});
-
-            if (id) element.id = id;
-            if (title) element.title = title;
-            if (className) element.className = className;
-            if (rowSpan !== undefined) element.rowSpan = rowSpan;
-            if (colSpan !== undefined) element.colSpan = colSpan;
-
-            // 批量賦值常見屬性
-            Object.assign(element, props);
-
-            // 設置樣式，支持字串或物件
-            Object.assign(element.style, typeof style === "string" ? { cssText: style } : style);
-
-            // 設置自定義屬性
-            Object.entries(attr).forEach(([key, val]) => element.setAttribute(key, val));
-
-            return root instanceof HTMLElement ? root.appendChild(element) : element;
-        },
-    };
+    [Document.prototype, Element.prototype].forEach(proto => { // 註冊 document & element 原型
+        proto.$q = function(selector) {
+            return Selector(this, selector, false);
+        };
+        proto.$qa = function(selector) {
+            return Selector(this, selector, true);
+        };
+    });
 
     const $Node = {
         $text(value=null) {
@@ -171,84 +122,158 @@ const Syn = (() => {
         },
     };
 
-    const $Event = {
-        $EventRecord: new Map(),
-
-        /**
-         * * { 簡化版監聽器 (不可刪除, 不檢測是否重複添加, 但可回傳註冊狀態) }
-         * @param {string} element - 添加元素
-         * @param {string} type    - 監聽器類型
-         * @param {*} listener     - 監聽後操作
-         * @param {object} add     - 附加功能
-         * @returns {boolean}      - 回傳添加狀態
-         *
-         * @example
-         * 監聽元素.$one("監聽類型", 觸發 => {
-         *      觸發... 其他操作
-         * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
-         *      console.log(註冊狀態)
-         * })
-         */
-        async $one(type, listener, add={}, resolve=null) {
-            try {
-                this.addEventListener(type, listener, add);
-                resolve && resolve(true);
-            } catch { resolve && resolve(false) }
+    Object.assign(Node.prototype, $Node); // 原型註冊
+    const $text = Object.keys($Node)[0]; // 處理可能的空值
+    Object.defineProperty(Object.prototype, $text, {
+        value: function(value = null) {
+            return $Node[$text].call(this, value);
         },
+        writable: true,
+        configurable: true
+    });
 
-        /**
-         * ! 匹配全域的腳本建議使用 mark 定義鍵值
-         * * { 添加監聽器 (可刪除, element 和 type 不能有完全重複的, 否則會被排除) }
-         * @param {string} type    - 監聽器類型
-         * @param {Function} listener - 監聽後執行的函數
-         * @param {boolean} [options.capture] - 是否捕獲事件
-         * @param {boolean} [options.once] - 是否只觸發一次
-         * @param {boolean} [options.passive] - 是否為被動事件
-         * @param {string} [options.mark] - 自定義鍵值
-         *
-         * @example
-         * element.$onEvent("click", (event) => {
-         *      觸發執行
-         * }, {
-         *    capture: true,
-         *    once: true,
-         *    passive: true,
-         *    mark: "自定鍵值" // 因為有自定所以不能使用 WeakMap
-         * });
-         */
-        async $onEvent(type, listener, options = {}) {
-            const { mark, ...opts } = options;
-            const key = mark ?? this;
-            const record = window.$EventRecord.get(key);
+    // 簡化語法糖
+    const Sugar = {
+        $q: document.$q.bind(document),
+        $qa: document.$qa.bind(document),
+        html: document.documentElement,
+        head: document.head,
+        body: document.body,
+        img: document.images,
+        link: document.links,
+        script: document.scripts,
+        style: document.styleSheets,
+        get url() {return location.href},
+        get origin() {return location.origin},
+        get domain() {return location.hostname},
+        get lang() {return navigator.language},
+        get agen() {return navigator.userAgent},
+        get createFragment() {return document.createDocumentFragment()},
+        title: (value=null) => value !== null ? (document.title = value) : document.title,
+        cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
+        createUrl: (object) => URL.createObjectURL(object),
+        createElement(arg1, arg2, arg3) {
+            const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
+            if (!tag) return;
 
-            if (record?.has(type)) return;
-            this.addEventListener(type, listener, opts);
+            const {
+                id, title, class: className, text: textContent = "",
+                rows: rowSpan, cols: colSpan, style = {}, attr = {}, ...props
+            } = value;
 
-            if (!record) window.$EventRecord.set(key, new Map());
-            window.$EventRecord.get(key).set(type, listener);
+            const element = Object.assign(document.createElement(tag), {textContent});
+
+            if (id) element.id = id;
+            if (title) element.title = title;
+            if (className) element.className = className;
+            if (rowSpan !== undefined) element.rowSpan = rowSpan;
+            if (colSpan !== undefined) element.colSpan = colSpan;
+
+            // 批量賦值常見屬性
+            Object.assign(element, props);
+
+            // 設置樣式，支持字串或物件
+            Object.assign(element.style, typeof style === "string" ? { cssText: style } : style);
+
+            // 設置自定義屬性
+            Object.entries(attr).forEach(([key, val]) => element.setAttribute(key, val));
+
+            return root instanceof HTMLElement ? root.appendChild(element) : element;
         },
+    };
 
-        /**
-         * * { 移除監聽器 }
-         * @param {string} type - 監聽類型
-         * @param {string} [mark] - 自定義鍵值 (預設使用 this)
-         *
-         * @example
-         * element.$offEvent("click")
-         */
-        async $offEvent(type, mark) {
-            const key = mark ?? this;
-            const listen = window.$EventRecord.get(key)?.get(type);
-            if (listen) {
-                this.removeEventListener(type, listen);
-                window.$EventRecord.get(key).delete(type);
-            }
+    const EventRecord = new Map();
+    /**
+     * * { 簡化版監聽器 (不檢測是否重複添加, 不回傳註冊監聽器, 只能透過 once 移除) }
+     * @param {element|string} element - 監聽元素, 或查找字串
+     * @param {string} type    - 監聽器類型 (支持批量添加同類型監聽器)
+     * @param {*} listener     - 監聽後操作
+     * @param {object} add     - 附加功能
+     * @returns {boolean}      - 回傳添加狀態
+     *
+     * @example
+     * Syn.one(元素, "監聽類型", 觸發 => {
+     *      觸發... 其他操作
+     * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
+     *      console.log(註冊狀態)
+     * })
+     *
+     * Syn.one(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
+     */
+    async function one(element, type, listener, add={}, resolve=null) {
+        try {
+            let event = type.split(/\s*[\,|/]\s*/).filter(Boolean);
+            let timeout = null;
+            let delay = event.length > 1 ? 15 : 0;
+
+            const trigger = (event) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => listener(event), delay);
+            };
+
+            typeof element === "string" && (element = Selector(document, element));
+            event.forEach(type => element.addEventListener(type, trigger, add));
+
+            resolve && resolve(true);
+        } catch { resolve && resolve(false) }
+    };
+
+    /**
+     * ! 匹配全域的腳本建議使用 mark 定義鍵值
+     * * { 添加監聽器 (可透過 offEvent 移除, element 和 type 不能有完全重複的, 否則會被排除) }
+     * @param {element|string} element - 監聽元素, 或查找字串
+     * @param {string} type    - 監聽器類型
+     * @param {Function} listener - 監聽後執行的函數
+     * @param {boolean} [options.capture] - 是否捕獲事件
+     * @param {boolean} [options.once] - 是否只觸發一次
+     * @param {boolean} [options.passive] - 是否為被動事件
+     * @param {string} [options.mark] - 自定義鍵值
+     *
+     * @example
+     * Syn.onEvent(元素, "監聽類型", (event) => {
+     *      觸發執行
+     * }, {
+     *    capture: true,
+     *    once: true,
+     *    passive: true,
+     *    mark: "自定鍵值" // 因為有自定所以不能使用 WeakMap
+     * });
+     */
+    async function onEvent(element, type, listener, options = {}) {
+        const { mark, ...opts } = options;
+        typeof element === "string" && (element = Selector(document, element));
+        const key = mark ?? element;
+        const record = EventRecord.get(key);
+
+        if (record?.has(type)) return;
+        element.addEventListener(type, listener, opts);
+
+        if (!record) EventRecord.set(key, new Map());
+        EventRecord.get(key).set(type, listener);
+    };
+
+    /**
+     * * { 移除監聽器 }
+     * @param {element|string} element - 監聽元素, 或查找字串
+     * @param {string} type - 監聽類型
+     * @param {string} [mark] - 自定義鍵值 (預設使用 this)
+     *
+     * @example
+     * Syn.offEvent(元素, "監聽類型")
+     */
+    async function offEvent(element, type, mark) {
+        typeof element === "string" && (element = Selector(document, element));
+        const key = mark ?? element;
+        const listen = EventRecord.get(key)?.get(type);
+        if (listen) {
+            element.removeEventListener(type, listen);
+            EventRecord.get(key).delete(type);
         }
     };
 
     /**
      * * { 監聽網址變化 }
-     * @param {function} callback - 回調 {url, domain} 
+     * @param {function} callback - 回調 {type, url, domain} 
      * @param {number} timeout - 防抖 (毫秒) [設置延遲多少 ms 之後才回條]
      *
      * @example
@@ -265,12 +290,12 @@ const Syn = (() => {
         const originalReplaceState = history.replaceState;
 
         const eventHandler = {
-            urlchange: ()=> target('urlchange'),
-            popstate: ()=> target('popstate'),
-            hashchange: ()=> target('hashchange')
+            urlchange: ()=> trigger('urlchange'),
+            popstate: ()=> trigger('popstate'),
+            hashchange: ()=> trigger('hashchange')
         };
 
-        function target(type) {
+        function trigger(type) {
             clearTimeout(timer);
             if (!support_urlchange && type === 'urlchange') support_urlchange = true; // 支援時設置為 true
             timer = setTimeout(() => {
@@ -313,36 +338,16 @@ const Syn = (() => {
         // 監聽 pushState
         history.pushState = function () {
             originalPushState.apply(this, arguments);
-            target('pushState');
+            trigger('pushState');
         };
 
         // 監聽 replaceState
         history.replaceState = function () {
             originalReplaceState.apply(this, arguments);
-            target('replacestate');
+            trigger('replacestate');
         };
 
         return { off };
-    };
-
-    // 原型註冊
-    Object.assign(window, $Event);
-    Object.assign(Node.prototype, $Node);
-    Object.assign(EventTarget.prototype, $Event);
-
-    // 處理可能的空值
-    const $text = Object.keys($Node)[0];
-    Object.defineProperty(Object.prototype, $text, {
-        value: function(value = null) {
-            return $Node[$text].call(this, value);
-        },
-        writable: true,
-        configurable: true
-    });
-
-    /* 工廠函數調用 */
-    const SugarCall = {
-        ...$Sugar
     };
 
     /**
@@ -462,7 +467,7 @@ const Syn = (() => {
      * @param {Function} [found=null] - 找到元素後執行的回調函數
      * @param {Object} [options] - 配置選項
      * @param {boolean} [options.raf=false] - 使用 requestAnimationFrame 進行查找 (極致快的查找, 沒有 debounce 限制, 用於盡可能最快找到元素)
-     * @param {boolean} [options.all=false] - 是否以 all 查找, 僅支援 selector 是單個字串
+     * @param {boolean} [options.all=false] - 是否以 all 查找
      * @param {number} [options.timeout=8] - 超時時間(秒)
      * @param {number} [options.throttle=0] - 節流時間(毫秒) [⚠ 再同時設置節流與防抖時, 優先使用節流]
      * @param {number} [options.debounce=50] - 防抖時間(毫秒) [預設使用]
@@ -495,9 +500,11 @@ const Syn = (() => {
      * });
      */
     const WaitCore = {
-        queryMap: (selector) => {
-            const result = selector.map(select => Selector(document, select));
-            return result.every(Boolean) && result;
+        queryMap: (selector, all) => {
+            const result = selector.map(select => Selector(document, select, all));
+            return all
+                ? result.every(res => res.length > 0) && result
+                : result.every(Boolean) && result;
         },
         queryElement: (selector, all) => {
             const result = Selector(document, selector, all);
@@ -821,10 +828,12 @@ const Syn = (() => {
      * * { 菜單註冊 API }
      *
      * @grant GM_registerMenuCommand
+     * @grant GM_unregisterMenuCommand
      *
-     * @param {object} Item  - 創建菜單的物件
-     * @param {string} ID    - 創建菜單的 ID
-     * @param {number} Index - 創建菜單的 ID 的 編號 (設置從多少開始)
+     * @param {object} items - 創建菜單的物件
+     * @param {string} [options.name] - 創建菜單的 名稱
+     * @param {number} [options.index] - 創建菜單的 名稱 編號 (設置從多少開始)
+     * @param {boolean} [options.reset] - 是否重置菜單
      * @example
      *
      * Menu({
@@ -837,14 +846,31 @@ const Syn = (() => {
      *      "菜單2": ()=> { 方法2(參數) }
      * }, "ID");
      */
-    async function Menu(Item, ID = "Menu", Index = 1) {
-        for (const [Name, options] of Object.entries(Item)) {
-            GM_registerMenuCommand(Name, () => { options.func() }, {
-                title: options.desc,
-                id: `${ID}-${Index++}`,
-                autoClose: options.close,
-                accessKey: options.hotkey,
+    const Register = new Set();
+    async function Menu(items, options={}) {
+        let {
+            name = "Menu",
+            index = 1,  
+            reset = false
+        } = options ?? {};
+
+        if (reset) {
+            [...Register].map(id => GM_unregisterMenuCommand(id));
+            Register.clear();
+        };
+
+        for (let [show, item] of Object.entries(items)) {
+            let id = `${name}-${index++}`;
+            typeof item === "function" && (item = { func: item });
+
+            GM_registerMenuCommand(show, () => { item.func() }, {
+                id,
+                title: item.desc,
+                autoClose: item.close,
+                accessKey: item.hotkey,
             });
+
+            Register.add(id);
         }
     };
 
@@ -908,7 +934,8 @@ const Syn = (() => {
     };
 
     return {
-        ...DeviceCall, ...SugarCall, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, Log, onUrlChange, Observer, WaitElem, Throttle, Debounce, OutputJson, Runtime, GetDate, TranslMatcher, Menu, StoreListen
+        ...DeviceCall, ...Sugar, ...AddCall, ...StorageCall, ...StoreCall,
+        Type, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem,
+        Throttle, Debounce, OutputJson, Runtime, GetDate, TranslMatcher, Menu, StoreListen
     };
 })();
