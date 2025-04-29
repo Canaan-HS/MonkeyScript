@@ -34,7 +34,7 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1574749/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 
@@ -45,7 +45,7 @@
 
 (async () => {
     const domain = Syn.$domain;
-    const Transl = Language(Syn.$lang).Transl;
+    const { Transl } = Language();
 
     (async function ImportStyle() {
         let show_style, button_style, button_hover, jGrowl_style, acc_style;
@@ -268,7 +268,7 @@
         /* 創建菜單 */
         const CreateMenu = async (Modal) => {
             Syn.$q(".modal-background")?.remove();
-            $(Syn.$body).append(Modal.replace(/>\s+</g, '><'));
+            $(Syn.body).append(Modal.replace(/>\s+</g, '><'));
             requestAnimationFrame(() => {
                 $(".modal-background").css({
                     "opacity": "1",
@@ -293,12 +293,12 @@
         /* 創建延伸菜單 */
         const Expand = async () => {
             Syn.Menu({
-                [Transl("📜 自動獲取")]: { func: () => AutoGetCookie() },
-                [Transl("📝 手動輸入")]: { func: () => ManualSetting() },
-                [Transl("🔍 查看保存")]: { func: () => ViewSaveCookie() },
-                [Transl("🔃 手動注入")]: { func: () => CookieInjection() },
-                [Transl("🗑️ 清除登入")]: { func: () => ClearLogin() },
-            }, "Expand")
+                [Transl("📜 自動獲取")]: AutoGetCookie,
+                [Transl("📝 手動輸入")]: ManualSetting,
+                [Transl("🔍 查看保存")]: ViewSaveCookie,
+                [Transl("🔃 手動注入")]: CookieInjection,
+                [Transl("🗑️ 清除登入")]: ClearLogin,
+            }, { name: "Expand" })
         };
 
         /* 刪除延伸菜單 */
@@ -320,7 +320,7 @@
                         MenuToggle();
                     }, hotkey: "c", close: false
                 }
-            }, "Switch");
+            }, { name: "Switch" });
 
             //? 開合需要比切換菜單晚創建, 不然會跑版
             state ? Expand() : Collapse();
@@ -347,10 +347,10 @@
                         LoginToggle();
                     }, close: false
                 }
-            }, "Check");
+            }, { name: "Check" });
 
             //? 選擇檢測狀態後, 會重新創建選單, 避免跑板因此同樣重新創建下方菜單 (兼容舊版本插件的寫法)
-            Syn.Menu({ [Transl("🍪 共享登入")]: { func: () => SharedLogin() } });
+            Syn.Menu({ [Transl("🍪 共享登入")]: SharedLogin });
             MenuToggle();
         };
 
@@ -602,22 +602,14 @@
                 const Favorites = Syn.gV("Favorites", {});
                 const favorite = Favorites[save_key];
 
-                const favoriteButton = Syn.$createElement(container, "div", {
+                // 創建收藏按鈕
+                const favoriteButton = Syn.createElement(container, "div", {
                     class: favorite ? "cancelFavorite" : "addFavorite",
                     text: favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏")
                 });
 
-                favoriteButton.$onEvent("click", () => {
-                    const Favorites = Syn.gV("Favorites", {});
-
-                    if (Favorites[save_key]) {
-                        delete Favorites[save_key];
-                        Syn.sV("Favorites", Favorites);
-                        favoriteButton.$text(Transl("💖 添加收藏"));
-                        favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
-                        return;
-                    };
-
+                // 添加收藏 邏輯
+                const addfavorite = async (Favorites) => {
                     const img = getComputedStyle(thumbnail); // 縮略圖樣式
                     const score = getComputedStyle(info.$q(".ir")); // 評分
                     const icon = info.$q("#gdc div"); // 類型 icon
@@ -633,11 +625,11 @@
                     for (const a of info.$qa("#taglist tr a")) {
                         const tags = a.id.slice(3).replace(/[_]/g, " ").split(":"); // 去除開頭 ta_ , 分出 類別 與 標籤
                         if (!tagData.has(tags[0])) tagData.set(tags[0], []);
-                        tagData.get(tags[0]).push(tags[1]); 
+                        tagData.get(tags[0]).push(tags[1]);
                     };
 
                     const data = JSON.stringify({
-                        gid, tid, domain,posted, length,
+                        gid, tid, domain, posted, length,
                         key: save_key,
                         tags: [...tagData],
                         score: score.backgroundPosition,
@@ -653,10 +645,25 @@
                     });
 
                     Syn.sV("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(data, 9) }));
+                };
+
+                favorite && addfavorite(Favorites); // 當前為收藏狀態時, 進行狀態更新
+                favoriteButton.$onEvent("click", () => { // 點擊事件
+                    const Favorites = Syn.gV("Favorites", {});
+
+                    if (Favorites[save_key]) {
+                        delete Favorites[save_key];
+                        Syn.sV("Favorites", Favorites);
+                        favoriteButton.$text(Transl("💖 添加收藏"));
+                        favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
+                        return;
+                    };
+
+                    addfavorite(Favorites);
                     favoriteButton.$text(Transl("💘 取消收藏"));
                     favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
                 });
-            }, {raf: true});
+            }, { raf: true });
         };
 
         /* 請求數據 */
@@ -678,6 +685,7 @@
             const Favorites = Syn.gV("Favorites");
 
             if (Favorites && Object.keys(Favorites).length > 0) {
+
                 /* 刪除收藏 */
                 const DeleteFavorites = async function (key, element) {
                     const Favorites = Syn.gV("Favorites");
@@ -689,14 +697,14 @@
 
                 Syn.WaitElem(".ido", ido => {
                     let delete_object = "tr";
-                    const fragment = Syn.$createFragment();
+                    const fragment = Syn.createFragment;
 
                     const select = ido.$q(".searchnav div:last-of-type select option[selected='selected']");
 
                     const mode = !select ? "t" : select.value; // 展示的模式 (m:Minimal, p:Minimal+, l:Compact, e:Extended, t: Thumbnail)
 
                     if (!select) {
-                        const newform = Syn.$createElement("form", {id: "favform", name: "favform", action: "", method: "post"});
+                        const newform = Syn.createElement("form", { id: "favform", name: "favform", action: "", method: "post" });
                         newform.$iHtml(`<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>`);
                         ido.appendChild(newform);
                     };
@@ -752,7 +760,7 @@
                         /* ----- 後續按照模式個別生成 ----- */
 
                         if (mode === "m" || mode === "p") {
-                            const tr = Syn.$createElement("tr");
+                            const tr = Syn.createElement("tr");
                             tr.$iHtml(`
                                 <td class="gl1m glcat">${Thumbnail}</td>
                                 <td class="gl2m">
@@ -787,7 +795,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "l") {
-                            const tr = Syn.$createElement("tr");
+                            const tr = Syn.createElement("tr");
                             const posted = json.posted.split(" ");
                             tr.$iHtml(`
                                 <tr>
@@ -815,21 +823,20 @@
                                         ${PostUrl}
                                             ${PostName}
                                             <div>
-                                                ${
-                                                    (() => {
-                                                        let count = 0;
-                                                        let result = '';
-                                                        for (const [tagCategory, tagList] of json.tags) {
-                                                            for (const tag of tagList) {
-                                                                if (count >= 10) break;
-                                                                result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
-                                                                count++;
-                                                            }
-                                                            if (count >= 10) break;
-                                                        }
-                                                        return result;
-                                                    })()
-                                                }
+                                                ${(() => {
+                                    let count = 0;
+                                    let result = '';
+                                    for (const [tagCategory, tagList] of json.tags) {
+                                        for (const tag of tagList) {
+                                            if (count >= 10) break;
+                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
+                                            count++;
+                                        }
+                                        if (count >= 10) break;
+                                    }
+                                    return result;
+                                })()
+                                }
                                             </div>
                                             ${Glfnote}
                                         </a>
@@ -845,7 +852,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "e") {
-                            const tr = Syn.$createElement("tr");
+                            const tr = Syn.createElement("tr");
                             tr.$iHtml(`
                                 <tr>
                                     <td class="gl1e" style="width:250px">
@@ -874,20 +881,18 @@
                                                     <div>
                                                         <table>
                                                             <tbody>
-                                                                ${
-                                                                    json.tags.map(([tagCategory, tagList]) => {
-                                                                        return `
+                                                                ${json.tags.map(([tagCategory, tagList]) => {
+                                return `
                                                                             <tr>
                                                                                 <td class="tc">${tagCategory}</td>
                                                                                 <td>
-                                                                                    ${
-                                                                                        tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')
-                                                                                    }
+                                                                                    ${tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')
+                                    }
                                                                                 </td>
                                                                             </tr>
                                                                         `;
-                                                                    }).join('')
-                                                                }
+                            }).join('')
+                                }
                                                             </tbody>
                                                         </table>
                                                     </div>
@@ -903,7 +908,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "t") {
-                            const div = Syn.$createElement("div", {class: "gl1t"});
+                            const div = Syn.createElement("div", { class: "gl1t" });
                             div.$iHtml(`
                                 <div class="gl4t glname glft">
                                     <div>
@@ -1062,7 +1067,7 @@
 
         return {
             Get: () => { /* 取得 cookie */
-                return Syn.$cookie().split("; ").reduce((acc, cookie) => {
+                return Syn.cookie().split("; ").reduce((acc, cookie) => {
                     const [name, value] = cookie.split("=");
                     acc[decodeURIComponent(name)] = decodeURIComponent(value);
                     return acc;
@@ -1071,14 +1076,14 @@
             Add: function (CookieObject) { /* 添加 cookie */
                 Syn.Local("DetectionTime", { value: Syn.GetDate() });
                 for (const Cookie of CookieObject) {
-                    Syn.$cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
+                    Syn.cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
                 };
                 location.reload();
             },
             Delete: function () { /* 刪除 cookie (避免意外使用兩種清除) */
                 Object.keys(this.Get()).forEach(Name => {
-                    Syn.$cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
-                    Syn.$cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
+                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
+                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
                 });
             },
             ReAdd: function (Cookies) { /* 重新添加 */
@@ -1100,7 +1105,7 @@
     };
 
     /* 語言支援 */
-    function Language(lang) {
+    function Language() {
         const Word = {
             Traditional: {},
             Simplified: {
@@ -1310,7 +1315,7 @@
             }
         };
 
-        const translator = Syn.TranslMatcher(Word, lang);
+        const translator = Syn.TranslMatcher(Word);
         return {
             Transl: (Str) => translator[Str] ?? Str
         };
