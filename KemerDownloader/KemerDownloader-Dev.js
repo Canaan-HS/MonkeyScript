@@ -43,8 +43,8 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://update.greasyfork.org/scripts/495339/1577558/Syntax_min.js
 // @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -140,8 +140,8 @@
     /* --------------------- */
 
     let lock = false;
-    const Lang = Language(Syn.lang);
-    const IsNeko = Syn.domain === "nekohouse.su"; // 臨時方案
+    const { Transl } = Language();
+    const IsNeko = Syn.$domain === "nekohouse.su"; // 臨時方案
 
     class Download {
         constructor(CM, MD, BT) {
@@ -313,7 +313,7 @@
             }
 
             Syn.Menu({
-                [Lang.Transl("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
+                [Transl("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
             }, { name: "Enforce" });
 
             // 更新請求狀態
@@ -333,7 +333,7 @@
 
                     show = `[${++progress}/${Total}]`;
                     Syn.title(show);
-                    Self.Button.$text(`${Lang.Transl("下載進度")} ${show}`);
+                    Self.Button.$text(`${Transl("下載進度")} ${show}`);
 
                     if (progress == Total) {
                         Total = Data.size;
@@ -384,7 +384,7 @@
             const Delay = Config.ConcurrentDelay * 1e3;
 
             // 只是顯示給使用者讓其知道 有運作 (無實際作用)
-            Self.Button.$text(`${Lang.Transl("請求進度")} [${Total}/${Total}]`);
+            Self.Button.$text(`${Transl("請求進度")} [${Total}/${Total}]`);
 
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
@@ -414,18 +414,18 @@
             }, (progress) => {
                 const display = `${progress.percent.toFixed(1)} %`;
                 Syn.title(display);
-                this.Button.$text(`${Lang.Transl("封裝進度")}: ${display}`);
+                this.Button.$text(`${Transl("封裝進度")}: ${display}`);
             }).then(zip => {
                 saveAs(zip, `${Name}.zip`);
                 Syn.title(`✓ ${Title}`);
-                this.Button.$text(Lang.Transl("下載完成"));
+                this.Button.$text(Transl("下載完成"));
                 setTimeout(() => {
                     this.ResetButton();
                 }, 3000);
             }).catch(result => {
                 Syn.title(Title);
 
-                const ErrorShow = Lang.Transl("壓縮封裝失敗");
+                const ErrorShow = Transl("壓縮封裝失敗");
                 this.Button.$text(ErrorShow);
                 Syn.Log(ErrorShow, result, { dev: Config.Dev, type: "error", collapsed: false });
 
@@ -465,7 +465,7 @@
             }
 
             Syn.Menu({
-                [Lang.Transl("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
+                [Transl("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
             }, { name: "Abort" });
 
             async function Request(index) {
@@ -487,7 +487,7 @@
                             show = `[${++progress}/${Total}]`;
                             Syn.title(show);
 
-                            Self.Button.$text(`${Lang.Transl("下載進度")} ${show}`);
+                            Self.Button.$text(`${Transl("下載進度")} ${show}`);
                             resolve();
                         }
                     };
@@ -533,7 +533,7 @@
             GM_unregisterMenuCommand("Abort-1");
 
             Syn.title(`✓ ${TitleCache}`);
-            this.Button.$text(Lang.Transl("下載完成"));
+            this.Button.$text(Transl("下載完成"));
             setTimeout(() => {
                 this.ResetButton();
             }, 3000);
@@ -557,7 +557,7 @@
 
             this.TaskDict = new Map(); // 任務臨時數據
 
-            this.Host = Syn.domain;
+            this.Host = Syn.$domain;
             this.SourceURL = document.URL; // 不能從 Device 取得, 會無法適應換頁
             this.TitleCache = Syn.title();
             this.FirstURL = this.SourceURL.split("?o=")[0]; // 第一頁連結
@@ -580,13 +580,13 @@
 
             // 預設添加的數據
             this.InfoRules = {
-                "PostLink": Lang.Transl("帖子連結"),
-                "Timestamp": Lang.Transl("發佈日期"),
-                "TypeTag": Lang.Transl("類型標籤"),
-                "ImgLink": Lang.Transl("圖片連結"),
-                "VideoLink": Lang.Transl("影片連結"),
-                "DownloadLink": Lang.Transl("下載連結"),
-                "ExternalLink": Lang.Transl("外部連結")
+                "PostLink": Transl("帖子連結"),
+                "Timestamp": Transl("發佈日期"),
+                "TypeTag": Transl("類型標籤"),
+                "ImgLink": Transl("圖片連結"),
+                "VideoLink": Transl("影片連結"),
+                "DownloadLink": Transl("下載連結"),
+                "ExternalLink": Transl("外部連結")
             };
 
             // 根據類型判斷預設值
@@ -799,8 +799,8 @@
                             };
 
                             Cache[name] = pass ? {
-                                [Lang.Transl("密碼")]: pass,
-                                [Lang.Transl("連結")]: href
+                                [Transl("密碼")]: pass,
+                                [Transl("連結")]: href
                             } : href;
                         } else if (href) {
                             const description = a.previousSibling.$text() ?? "";
@@ -867,7 +867,7 @@
                 Syn.Session(this.RecordKey) && (this.FetchDelay = 0); // 當存在完成紀錄時, 降低延遲
                 this.FetchRun(Section, this.SourceURL); // 啟用抓取
             } else {
-                alert(Lang.Transl("未取得數據"));
+                alert(Transl("未取得數據"));
             }
         };
 
@@ -936,11 +936,11 @@
                         const props = Json.props;
                         this.FinalPages = Math.ceil(+props.count / 50); // 計算最終頁數
                         this.MetaDict = {
-                            [Lang.Transl("作者")]: props.name,
-                            [Lang.Transl("帖子數量")]: props.count,
-                            [Lang.Transl("建立時間")]: Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"),
-                            [Lang.Transl("獲取頁面")]: this.SourceURL,
-                            [Lang.Transl("作者網站")]: props.display_data.href
+                            [Transl("作者")]: props.name,
+                            [Transl("帖子數量")]: props.count,
+                            [Transl("建立時間")]: Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"),
+                            [Transl("獲取頁面")]: this.SourceURL,
+                            [Transl("作者網站")]: props.display_data.href
                         };
                     }
 
@@ -1083,16 +1083,16 @@
             let Content = "";
             for (const value of Object.values(this.DataDict)) {
                 for (const link of Object.values(Object.assign({},
-                    value[Lang.Transl("圖片連結")],
-                    value[Lang.Transl("影片連結")],
-                    value[Lang.Transl("下載連結")]
+                    value[Transl("圖片連結")],
+                    value[Transl("影片連結")],
+                    value[Transl("下載連結")]
                 ))) {
                     Content += `${link}\n`;
                 }
             }
             if (Content.endsWith('\n')) Content = Content.slice(0, -1); // 去除末行空白
 
-            Syn.OutputTXT(Content, this.MetaDict[Lang.Transl("作者")], () => {
+            Syn.OutputTXT(Content, this.MetaDict[Transl("作者")], () => {
                 lock = false;
                 this.Worker.terminate();
                 Syn.title(this.TitleCache);
@@ -1103,11 +1103,11 @@
             // 合併數據
             const Json_data = Object.assign(
                 {},
-                { [Lang.Transl("元數據")]: this.MetaDict },
-                { [`${Lang.Transl("帖子內容")} (${Object.keys(this.DataDict).length})`]: this.DataDict }
+                { [Transl("元數據")]: this.MetaDict },
+                { [`${Transl("帖子內容")} (${Object.keys(this.DataDict).length})`]: this.DataDict }
             );
 
-            Syn.OutputJson(Json_data, this.MetaDict[Lang.Transl("作者")], () => {
+            Syn.OutputJson(Json_data, this.MetaDict[Transl("作者")], () => {
                 lock = false;
                 this.Worker.terminate();
                 Syn.title(this.TitleCache);
@@ -1176,7 +1176,7 @@
                     if (Files.length == 0) return;
 
                     const CompressMode = Syn.Local("Compression", { error: true });
-                    const ModeDisplay = CompressMode ? Lang.Transl("壓縮下載") : Lang.Transl("單圖下載");
+                    const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
 
                     // 創建容器
                     const Container = Syn.createElement("span", { id: "Button-Container" });
@@ -1188,7 +1188,7 @@
 
                     Button = Syn.createElement(Container, "button", { // 創建 Button
                         class: "Download_Button",
-                        text: lock ? Lang.Transl("下載中鎖定") : ModeDisplay,
+                        text: lock ? Transl("下載中鎖定") : ModeDisplay,
                         disabled: lock
                     });
 
@@ -1208,7 +1208,7 @@
                     Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
 
                     Button.disabled = true;
-                    Button.$text(Lang.Transl("無法下載"));
+                    Button.$text(Transl("無法下載"));
                 }
             })
         }
@@ -1218,7 +1218,7 @@
             const card = Syn.$qa("article.post-card a");
             if (card.length == 0) { throw new Error("No links found") }
 
-            let scope = prompt(`(${Lang.Transl("當前帖子數")}: ${card.length})${Lang.Transl("開帖說明")}`);
+            let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
 
             if (scope != null) {
                 scope = scope == "" ? "1-50" : scope;
@@ -1249,19 +1249,19 @@
             GM_info.isIncognito = true;
 
             // 首次載入嘗試註冊
-            registerMenu(Syn.url);
-            self.Content(Syn.url) && self.ButtonCreation();
+            registerMenu(Syn.$url);
+            self.Content(Syn.$url) && self.ButtonCreation();
 
             /* 註冊菜單 */
             async function registerMenu(Page) {
 
                 if (self.Content(Page)) {
                     Syn.Menu({
-                        [Lang.Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
+                        [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
                     }, { reset: true });
                 } else if (self.Preview(Page)) {
                     Syn.Menu({
-                        [Lang.Transl("📑 獲取帖子數據")]: () => {
+                        [Transl("📑 獲取帖子數據")]: () => {
                             if (!lock) {
                                 let Instantiate = null;
                                 Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
@@ -1269,7 +1269,7 @@
                                 Instantiate.FetchInit();
                             }
                         },
-                        [Lang.Transl("📃 開啟當前頁面帖子")]: () => self.OpenAllPages()
+                        [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
                     }, { reset: true });
                 }
             };
@@ -1282,8 +1282,8 @@
         }
     }).Injection();
 
-    function Language(lang) {
-        const Word = {
+    function Language() {
+        const Word = Syn.TranslMatcher({
             Traditional: {
                 "開帖說明": "\n\n!! 不輸入直接確認, 將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10"
             },
@@ -1457,11 +1457,10 @@
                 "當前帖子數": "Current Post Count",
                 "開帖說明": "\n\n!! Without confirmation, all posts on the current page will be opened\nEnter selection range:\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10",
             }
-        }
+        });
 
-        const translator = Syn.TranslMatcher(Word, lang);
         return {
-            Transl: (Str) => translator[Str] ?? Str,
+            Transl: (Str) => Word[Str] ?? Str,
         };
     }
 })();
