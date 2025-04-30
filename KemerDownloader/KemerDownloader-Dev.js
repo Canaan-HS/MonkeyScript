@@ -636,7 +636,13 @@
             ]);
 
             // 抓取檔案的副檔名
-            this.Suffix = (Str) => `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
+            this.Suffix = (Str) => {
+                try {
+                    return `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
+                } catch { // 無法判斷副檔名
+                    return "";
+                }
+            }
 
             // 進階抓取檔案分類 (影片與圖片文件 Array) => { video: {}, other: {} }
             this.AdvancedCategorize = (Data) => {
@@ -781,14 +787,14 @@
 
                         if (href.startsWith("https://mega.nz")) {
 
-                            let name = (a.previousElementSibling.$text().replace(":", "") || hash);
+                            let name = (a.previousElementSibling?.$text().replace(":", "") || hash);
                             if (name === "") continue;
 
                             let pass = "";
                             const nextNode = a.nextElementSibling;
 
                             if (nextNode) {
-                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE).$text() ?? "";
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
                                 if (nodeText.startsWith("Pass")) {
                                     pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
                                 }
@@ -799,8 +805,8 @@
                                 [Transl("連結")]: href
                             } : href;
                         } else if (href) {
-                            const description = a.previousSibling.$text() ?? "";
-                            const name = `${description} ${a.$text()}`.trim();
+                            const description = a.previousSibling?.$text() ?? "";
+                            const name = `${description} ${a?.$text()}`.trim();
                             Cache[name ? name : hash] = href;
                         }
                     };
