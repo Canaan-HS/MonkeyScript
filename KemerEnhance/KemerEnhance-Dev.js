@@ -37,7 +37,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1577559/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
@@ -93,7 +93,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Syn.url;
+    let Url = Syn.$url;
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -110,7 +110,7 @@
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
-        }[Syn.domain.split(".")[0]];
+        }[Syn.$domain.split(".")[0]];
 
         const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
@@ -606,7 +606,7 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.domain.startsWith("nekohouse"),
+            IsNeko: Syn.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
 
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
@@ -991,7 +991,7 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.cookie(`${key}=${value}; domain=.${Syn.domain}; path=/; expires=${expires};`);
+                        Syn.cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
                     }
                 };
 
@@ -1659,10 +1659,7 @@
                      * 針對 Neko 網站的支援
                      */
                     const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const HrefParse = (element) => {
-                        const Uri = element.href || element.$gAttr("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`;
-                    };
+                    const HrefParse = (element) => element.href || element.$gAttr("href");
 
                     /**
                      * 這邊的邏輯, 因為是有延遲運行, 如果還在運行當中,
@@ -1685,7 +1682,7 @@
                                     });
                                     Img.onload = function () { Img.classList.remove("Image-loading-indicator") };
                                     Img.onerror = function () { Origina_Requ.Reload(Img, Retry - 1) };
-                                }, 1000);
+                                }, 1500);
                             }
                         },
                         FailedClick: async () => {
