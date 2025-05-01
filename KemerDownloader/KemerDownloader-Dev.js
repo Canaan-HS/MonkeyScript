@@ -137,7 +137,7 @@
 
     let lock = false;
     const { Transl } = Language();
-    const IsNeko = Syn.$domain === "nekohouse.su"; // 臨時方案
+    const IsNeko = Syn.$domain.startsWith("nekohouse");
 
     class Download {
         constructor(CM, MD, BT) {
