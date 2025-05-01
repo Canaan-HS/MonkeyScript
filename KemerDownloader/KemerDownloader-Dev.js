@@ -39,7 +39,6 @@
 // @grant        GM_openInTab
 // @grant        GM_getResourceURL
 // @grant        GM_xmlhttpRequest
-// @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
@@ -47,9 +46,6 @@
 // @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
-
-// @resource     json-processing https://cdn-icons-png.flaticon.com/512/2582/2582087.png
-// @resource     font-awesome https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/svg-with-js.min.css
 // ==/UserScript==
 
 /**
@@ -1132,7 +1128,6 @@
         async ButtonCreation() {
             Syn.WaitElem(".post__body h2, .scrape__body h2", null, {raf: true, all: true}).then(Files => {
                 Syn.AddStyle(`
-                    ${GM_getResourceText("font-awesome")}
                     #Button-Container {
                         padding: 1rem;
                         font-size: 40% !important;
