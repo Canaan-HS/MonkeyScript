@@ -42,7 +42,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
+// @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
 // @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
@@ -138,6 +138,65 @@
     let lock = false;
     const { Transl } = Language();
     const IsNeko = Syn.$domain.startsWith("nekohouse");
+
+    class Compression {
+        constructor() {
+            this.files = {};
+        }
+
+        // 存入 blob 進行壓縮
+        async file(name, blob) {
+            const buffer = await blob.arrayBuffer();
+            this.files[name] = new Uint8Array(buffer);
+        }
+
+        // 估算壓縮耗時
+        estimateCompressionTime() {
+            let totalSize = 0;
+
+            Object.values(this.files).forEach(file => {
+                totalSize += file.length;
+            });
+
+            const bytesPerSecond = 60 * 1024 ** 2; // 預估每秒壓縮 60MB/s
+            const estimatedTime = totalSize / bytesPerSecond;
+            return estimatedTime;
+        }
+
+        // 生成壓縮
+        async generateZip(options = {}, progressCallback) {
+
+            const updateInterval = 30; // 更新頻率
+            const totalTime = this.estimateCompressionTime();
+            const progressUpdate = 100 / (totalTime * 1000 / updateInterval); // 每次更新的進度
+
+            let fakeProgress = 0; // 假進度模擬
+            const progressInterval = setInterval(() => {
+                if (fakeProgress < 99.99) {
+                    fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
+                    if (progressCallback) progressCallback(fakeProgress);
+                } else {
+                    clearInterval(progressInterval);
+                }
+            }, updateInterval);
+
+            return new Promise((resolve, reject) => {
+                try {
+                    fflate.zip(
+                        this.files,
+                        { level: options.level || 5 },
+                        (err, data) => {
+                            clearInterval(progressInterval);
+                            err ? reject(err) : resolve(new Blob([data], { type: "application/zip" }));
+                        }
+                    );
+                } catch (e) {
+                    clearInterval(progressInterval);
+                    reject(e);
+                }
+            })
+        }
+    }
 
     class Download {
         constructor(CM, MD, BT) {
@@ -295,7 +354,7 @@
                 Total = Data.size;
             const
                 Self = this,
-                Zip = new JSZip(),
+                Zip = new Compression(),
                 TitleCache = this.OriginalTitle();
             const
                 FillValue = this.NameAnalysis(FileName.FillValue),
@@ -314,17 +373,16 @@
 
             // 更新請求狀態
             FolderName = FolderName != "" ? `${FolderName}/` : ""; // 處理資料夾名稱格式
-            function Request_update(index, url, blob, retry = false) {
+            function Request_update(index, url, blob, error = false) {
                 if (Self.ForceDownload) return;
                 requestAnimationFrame(() => {
-                    Data.delete(index);
-                    if (retry) {
-                        Data.set(index, url);
-                    } else {
+                    
+                    if (!error && blob instanceof Blob && blob.size > 0){
                         extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 isVideo 的資訊, 所以分別操作
                         Self.isVideo(extension)
                             ? Zip.file(`${FolderName}${decodeURIComponent(url.split("?f=")[1])}`, blob)
                             : Zip.file(`${FolderName}${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`, blob);
+                        Data.delete(index); // 成功時清除
                     }
 
                     show = `[${++progress}/${Total}]`;
@@ -364,10 +422,7 @@
                             return;
                         }
 
-                        const blob = response.response;
-                        blob instanceof Blob && blob.size > 0
-                            ? Request_update(index, url, blob)
-                            : Request_update(index, url, "", true);
+                        Request_update(index, url, response.response);
                     },
                     onerror: () => {
                         Request_update(index, url, "", true);
@@ -375,12 +430,12 @@
                 })
             }
 
-            // 傳遞訊息
-            const Batch = Config.ConcurrentQuantity;
-            const Delay = Config.ConcurrentDelay * 1e3;
-
             // 只是顯示給使用者讓其知道 有運作 (無實際作用)
             Self.Button.$text(`${Transl("請求進度")} [${Total}/${Total}]`);
+
+            // 傳遞消息發起請求
+            const Batch = Config.ConcurrentQuantity;
+            const Delay = Config.ConcurrentDelay * 1e3;
 
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
@@ -390,7 +445,7 @@
                 }, (i / Batch) * Delay);
             }
 
-            // 接收訊息
+            // 接收消息處理
             this.worker.onmessage = (e) => {
                 const { index, url, blob, error } = e.data;
                 error
@@ -403,18 +458,17 @@
         async Compression(Name, Data, Title) {
             this.ForceDownload = true;
             GM_unregisterMenuCommand("Enforce-1");
-            Data.generateAsync({
-                type: "blob",
-                compression: "DEFLATE",
-                compressionOptions: { level: 5 }
+            Data.generateZip({
+                level: 9
             }, (progress) => {
-                const display = `${progress.percent.toFixed(1)} %`;
+                const display = `${progress.toFixed(1)} %`;
                 Syn.title(display);
                 this.Button.$text(`${Transl("封裝進度")}: ${display}`);
             }).then(zip => {
                 saveAs(zip, `${Name}.zip`);
                 Syn.title(`✓ ${Title}`);
                 this.Button.$text(Transl("下載完成"));
+
                 setTimeout(() => {
                     this.ResetButton();
                 }, 3000);
