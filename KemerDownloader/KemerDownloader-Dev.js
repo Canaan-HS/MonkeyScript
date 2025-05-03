@@ -71,7 +71,7 @@
         Dev: true, // 顯示請求資訊, 與錯誤資訊
         ContainsVideo: false, // 下載時包含影片
         CompleteClose: false, // 下載完成後關閉
-        ConcurrentDelay: 3, // 下載線程延遲 (秒) [壓縮下載]
+        ConcurrentDelay: 2, // 下載線程延遲 (秒) [壓縮下載]
         ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
         BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
     };
@@ -181,6 +181,8 @@
             }, updateInterval);
 
             return new Promise((resolve, reject) => {
+                if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
+
                 try {
                     fflate.zip(
                         this.files,
@@ -288,12 +290,13 @@
                 ".post__user-name, .scrape__user-name, fix_name"
             ], found => {
                 const [title, files, artist] = found;
+
                 this.Button.disabled = lock = true;
                 const DownloadData = new Map();
 
                 this.Named_Data = { // 建立數據
                     fill: () => "fill",
-                    title: () => title.$q("span").$text(),
+                    title: () => title.$q("span").$text().replaceAll("/", "／"),
                     artist: () => artist.$text(),
                     source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
                     time: () => {
