@@ -687,20 +687,13 @@
 
             if (Favorites && Object.keys(Favorites).length > 0) {
 
-                /* 刪除收藏 */
-                const DeleteFavorites = async function (key, element) {
-                    const Favorites = Syn.gV("Favorites");
-                    delete Favorites[key];
-                    Syn.sV("Favorites", Favorites);
-
-                    element.remove();
-                };
-
                 Syn.WaitElem(".ido", ido => {
                     let delete_object = "tr";
 
                     const select = ido.$q(".searchnav div:last-of-type select option[selected='selected']");
 
+                    const usertags = {}; // 保存標籤
+                    const favoritDB = Object.values(Favorites); // 收藏數據
                     const mode = !select ? "t" : select.value; // 展示的模式 (m:Minimal, p:Minimal+, l:Compact, e:Extended, t: Thumbnail)
 
                     if (!select) {
@@ -711,11 +704,79 @@
 
                     if (mode === "t") delete_object = ".gl1t";
 
-                    // ! 模板沒問題就不要修改, 很容易壞掉
+                    /* 渲染標籤 */
+                    const RenderTags = async function () {
+                        const nodes = [];
+                        const tree = document.createTreeWalker(
+                            ido,
+                            NodeFilter.SHOW_TEXT,
+                            {
+                                acceptNode: (node) => {
+                                    const parent = node.parentNode;
+                                    if (
+                                        parent?.nodeName === "DIV" &&
+                                        parent.hasAttribute("title") &&
+                                        !parent.hasAttribute("id")
+                                    ) {
+                                        return NodeFilter.FILTER_ACCEPT;
+                                    }
+                                    return NodeFilter.FILTER_REJECT;
+                                }
+                            }
+                        );
+
+                        while (tree.nextNode()) {
+                            nodes.push(tree.currentNode.parentElement);
+                        };
+
+                        // ! 如果有必要可以 set 保存渲染過的標籤, 並再下次排除避免重複渲染 (目前無性能瓶頸不做這個優化)
+                        nodes.forEach(node => {
+                            const tags = usertags[node.title];
+                            tags && (node.style.cssText = tags.cssText);
+                        });
+                    };
+
+                    /* 獲取標籤 */
+                    const GetTags = async function () {
+
+                        if (Object.keys(usertags).length > 0) {
+                            RenderTags();
+                            return;
+                        }
+
+                        httpRequest("https://exhentai.org/mytags", root => {
+                            for (const user of root.$qa("div[id^='usertag_']:not(#usertag_0)")) {
+                                const input = user.$q("div:nth-of-type(2) input");
+                            
+                                if (input.checked) {
+                                    const tag = user.$q("div.gt");
+                                    usertags[tag.title] = tag.style;
+                                }
+                            }
+
+                            RenderTags();
+                        })
+                    
+                    };
+
+                    let count = 0;
                     const fragment = Syn.createFragment;
-                    for (const data of Object.values(Favorites)) {
+                    const RenderWait = requestIdleCallback || ((cb, _) => requestAnimationFrame(cb)); // 簡單的 fallback
+
+                    /* 渲染預覽卡 */
+                    const RenderCard = async function () {
+                        if (fragment.hasChildNodes()) {
+                            ido.$q("tbody")?.prepend(fragment);
+                            ido.$q("#favform .gld")?.prepend(fragment);
+
+                            requestAnimationFrame(GetTags);
+                        };
+                    };
+
+                    for (const data of favoritDB) {
                         const json = JSON.parse(LZString.decompress(data));
 
+                        // ! 模板沒問題就不要修改, 很容易壞掉
                         /* ----- 常用模板 ----- */
 
                         const Pages = `<div>${json.length}</div>`;
@@ -938,44 +999,28 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(div);
                         }
+
+                        /* ----- 內部分批渲染 ----- */
+
+                        ++count;
+                        if (count === 50) {
+                            count = 0;
+                            RenderWait(RenderCard, { timeout: 1e3 });
+                        }
                     };
 
-                    // ! 小量級的數據, 採用生成後一次插入, 是高效的, 但數量大時會導致卡頓
-                    if (fragment) {
-                        ido.$q("tbody")?.prepend(fragment);
-                        ido.$q("#favform .gld")?.prepend(fragment);
+                    RenderCard(); // 完成最終渲染
 
-                        requestAnimationFrame(() => {
-
-                            // 添加完才添加標籤 (避免請求失敗, 導致卡住)
-                            httpRequest("https://exhentai.org/mytags", root => {
-                                const usertags = {};
-                                for (const user of root.$qa("div[id^='usertag_']:not(#usertag_0)")) {
-                                    const input = user.$q("div:nth-of-type(2) input");
-
-                                    if (input.checked) {
-                                        const tag = user.$q("div.gt");
-                                        usertags[tag.title] = tag.style;
-                                    }
-                                }
-
-                                Syn.$qa(".glname tr td:nth-of-type(2)").forEach(td => {
-                                    td.childNodes.forEach(node => {
-                                        const tags = usertags[node.title];
-                                        tags && (node.style.cssText = tags.cssText);
-                                    })
-                                })
-                            });
-
-                            Syn.$q("#nb")?.scrollIntoView();
-                        })
-                    };
-
+                    /* 刪除收藏 */
                     Syn.onEvent(ido, "click", event => {
                         const target = event.target;
 
                         if (target.className === "unFavorite") {
-                            DeleteFavorites(target.id, target.closest(delete_object));
+                            const Favorites = Syn.gV("Favorites");
+                            delete Favorites[target.id];
+                            Syn.sV("Favorites", Favorites);
+
+                            target.closest(delete_object).remove();
                         }
                     })
                 })
