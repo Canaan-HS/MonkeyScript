@@ -268,7 +268,7 @@
         /* 創建菜單 */
         const CreateMenu = async (Modal) => {
             Syn.$q(".modal-background")?.remove();
-            $(Syn.body).append(Modal.replace(/>\s+</g, '><'));
+            $("body").append(Modal.replace(/>\s+</g, '><'));
             requestAnimationFrame(() => {
                 $(".modal-background").css({
                     "opacity": "1",
