@@ -142,12 +142,19 @@
     class Compression {
         constructor() {
             this.files = {};
+            this.tasks = [];
         }
 
         // 存入 blob 進行壓縮
         async file(name, blob) {
-            const buffer = await blob.arrayBuffer();
-            this.files[name] = new Uint8Array(buffer);
+            const task = new Promise(async resolve => {
+                const buffer = await blob.arrayBuffer();
+                this.files[name] = new Uint8Array(buffer);
+                resolve();
+            });
+
+            this.tasks.push(task);
+            return task;
         }
 
         // 估算壓縮耗時
@@ -165,6 +172,7 @@
 
         // 生成壓縮
         async generateZip(options = {}, progressCallback) {
+            await Promise.all(this.tasks); // 等待所有檔案加入
 
             const updateInterval = 30; // 更新頻率
             const totalTime = this.estimateCompressionTime();
