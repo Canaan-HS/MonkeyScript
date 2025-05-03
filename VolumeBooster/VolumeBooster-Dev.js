@@ -17,7 +17,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-start
+// @run-at       document-body
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -247,20 +247,44 @@
                 };
 
                 if (Status) {
+
                     // 查找媒體元素
-                    const FindMedia = Syn.Throttle((func) => {
-                        const media = [...Syn.$qa("video, audio")]
-                            .filter(media => !EnhancedElements.has(media));
+                    const FindMedia = Syn.Debounce((func) => {
+                        const media = [];
+
+                        const tree = document.createTreeWalker(
+                            Syn.body,
+                            NodeFilter.SHOW_ELEMENT,
+                            {
+                                acceptNode: (node) => {
+                                    const tag = node.tagName;
+
+                                    if (tag === 'VIDEO' || tag === 'AUDIO') {
+                                        if (!EnhancedElements.has(node))
+                                            return NodeFilter.FILTER_ACCEPT;
+                                    };
+
+                                    return NodeFilter.FILTER_SKIP;
+                                } 
+                            }
+                        );
+
+                        while (tree.nextNode()) {
+                            media.push(tree.currentNode);
+                        };
+
                         media.length > 0 && func(media);
-                    }, 100);
+                    }, 50);
 
                     // 觀察者持續觸發查找
                     Syn.Observer(document, () => {
+
                         FindMedia(media => {
                             MediaObserver.disconnect(); // 停止觀察
                             Trigger(media);
                         })
-                    }, { mark: "Media-Booster", attributes: false, debounce: 30 }, ({ ob, op }) => {
+
+                    }, { mark: "Media-Booster", attributes: false, throttle: 200 }, ({ ob, op }) => {
                         MediaObserver = ob;
                         ObserverOption = op;
                         Menu(Transl("❌ 禁用增幅"));
