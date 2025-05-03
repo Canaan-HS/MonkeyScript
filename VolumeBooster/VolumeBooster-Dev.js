@@ -25,10 +25,8 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1577559/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
 // ==/UserScript==
-
-// ! 該腳本新發佈時 全部導入 Syntax 的都要同步更新, 不然會有問題
 
 (async () => {
 
@@ -45,14 +43,14 @@
             Banned = new Set(old);
         };
 
-        let ExcludeStatus = Banned.has(Syn.domain); // 排除狀態
+        let ExcludeStatus = Banned.has(Syn.$domain); // 排除狀態
 
         return {
             IsEnabled: (callback) => callback(!ExcludeStatus), // 返回排除狀態
             AddBanned: async () => {
                 ExcludeStatus
-                    ? Banned.delete(Syn.domain)
-                    : Banned.add(Syn.domain);
+                    ? Banned.delete(Syn.$domain)
+                    : Banned.add(Syn.$domain);
 
                 Syn.sV("Banned", [...Banned]); // 更新禁用網域
                 location.reload(); // 重新加載頁面
@@ -76,7 +74,7 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext; // 音頻上下文
 
         const UpdateParame = () => {
-            let Config = Syn.gV(Syn.domain, {}); // 獲取當前網域設置
+            let Config = Syn.gV(Syn.$domain, {}); // 獲取當前網域設置
 
             if (typeof Config === "number") {
                 Config = { Gain: Config }; // 舊數據轉移
@@ -254,7 +252,7 @@
                         const media = [...Syn.$qa("video, audio")]
                             .filter(media => !EnhancedElements.has(media));
                         media.length > 0 && func(media);
-                    }, 150);
+                    }, 100);
 
                     // 觀察者持續觸發查找
                     Syn.Observer(document, () => {
@@ -281,7 +279,7 @@
 
     /* 語言翻譯 */
     function Language() {
-        const Word = {
+        const Word = Syn.TranslMatcher({
             Traditional: {},
             Simplified: {
                 "📜 菜單熱鍵": "📜 菜单热键",
@@ -337,11 +335,10 @@
                 "添加增強節點成功": "Enhancement Node Added Successfully",
                 "熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)": "Hotkey Menu Opened!!\n\nShortcut Combination: (Alt + B)"
             }
-        };
-        const TM = Syn.TranslMatcher(Word);
+        });
 
         return {
-            Transl: (Str) => TM[Str] ?? Str
+            Transl: (Str) => Word[Str] ?? Str
         }
     };
 
