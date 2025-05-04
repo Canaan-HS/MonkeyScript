@@ -24,6 +24,7 @@
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @run-at       document-start
 // @grant        GM_setValue
@@ -824,19 +825,18 @@
                                             ${PostName}
                                             <div>
                                                 ${(() => {
-                                    let count = 0;
-                                    let result = '';
-                                    for (const [tagCategory, tagList] of json.tags) {
-                                        for (const tag of tagList) {
-                                            if (count >= 10) break;
-                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
-                                            count++;
-                                        }
-                                        if (count >= 10) break;
-                                    }
-                                    return result;
-                                })()
-                                }
+                                                    let count = 0;
+                                                    let result = '';
+                                                    for (const [tagCategory, tagList] of json.tags) {
+                                                        for (const tag of tagList) {
+                                                            if (count >= 10) break;
+                                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
+                                                            count++;
+                                                        }
+                                                        if (count >= 10) break;
+                                                    }
+                                                    return result;
+                                                })()}
                                             </div>
                                             ${Glfnote}
                                         </a>
@@ -882,17 +882,15 @@
                                                         <table>
                                                             <tbody>
                                                                 ${json.tags.map(([tagCategory, tagList]) => {
-                                return `
-                                                                            <tr>
-                                                                                <td class="tc">${tagCategory}</td>
-                                                                                <td>
-                                                                                    ${tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')
-                                    }
-                                                                                </td>
-                                                                            </tr>
-                                                                        `;
-                            }).join('')
-                                }
+                                                                    return `
+                                                                        <tr>
+                                                                            <td class="tc">${tagCategory}</td>
+                                                                            <td>
+                                                                                ${tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')}
+                                                                            </td>
+                                                                        </tr>
+                                                                    `;
+                                                                }).join('')}
                                                             </tbody>
                                                         </table>
                                                     </div>
@@ -1106,7 +1104,7 @@
 
     /* 語言支援 */
     function Language() {
-        const Word = {
+        const Word = Syn.TranslMatcher({
             Traditional: {},
             Simplified: {
                 "🍪 共享登入": "🍪 共享登录",
@@ -1313,11 +1311,10 @@
                 "連線異常，更新地址可能是錯的": "Connection Error - Update Address May Be Incorrect",
                 "請求錯誤: ": "Request Error: "
             }
-        };
+        });
 
-        const translator = Syn.TranslMatcher(Word);
         return {
-            Transl: (Str) => translator[Str] ?? Str
+            Transl: (Str) => Word[Str] ?? Str
         };
     };
 
