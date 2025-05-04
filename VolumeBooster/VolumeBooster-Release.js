@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      0.0.40
+// @version      0.0.41
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -17,7 +17,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-start
+// @run-at       document-body
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -25,12 +25,12 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1565376/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
 // ==/UserScript==
 (async () => {
-    async function A() {
-        function k() { t.classList.replace("open", "close"); x.classList.replace("open", "close"); setTimeout(() => { h.remove() }, 800) } if (!Syn.$q("#Booster_Modal_Background")) {
-            var h = Syn.$createElement("div", { id: "Booster_Modal_Background" }); h.attachShadow({ mode: "open" }).$iHtml(`
+    async function y() {
+        function h() { u.classList.replace("open", "close"); v.classList.replace("open", "close"); setTimeout(() => { g.remove() }, 800) } if (!Syn.$q("#Booster_Modal_Background")) {
+            var g = Syn.createElement("div", { id: "Booster_Modal_Background" }); g.attachShadow({ mode: "open" }).$iHtml(`
             <style id="Booster-Menu">
                 :host {
                     --primary-color: #3a7bfd;
@@ -405,138 +405,139 @@
                     }
                 }
             </style>
+
             <Booster_Modal_Background id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
-                    <h2 class="Booster-Title">${a("\u97f3\u91cf\u589e\u5f37\u5668")}</h2>
+                    <h2 class="Booster-Title">${c("\u97f3\u91cf\u589e\u5f37\u5668")}</h2>
 
                     <div class="Booster-Multiplier">
                         <span>
-                            <img src="${GM_getResourceURL("Img")}">${a("\u589e\u5f37\u500d\u6578 ")}
-                            <span id="Gain-Value" class="Booster-Value">${b.Gain}</span>${a(" \u500d")}
+                            <img src="${GM_getResourceURL("Img")}">${c("\u589e\u5f37\u500d\u6578 ")}
+                            <span id="Gain-Value" class="Booster-Value">${d.Gain}</span>${c(" \u500d")}
                         </span>
-                        <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${b.Gain}" step="0.1">
+                        <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${d.Gain}" step="0.1">
                     </div>
 
-                    <button class="Booster-Accordion">${a("\u4f4e\u983b\u8a2d\u5b9a")}</button>
+                    <button class="Booster-Accordion">${c("\u4f4e\u983b\u8a2d\u5b9a")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u589e\u76ca")}</span>
-                                <span id="LowFilterGain-Value" class="Booster-Value">${b.LowFilterGain}</span>
+                                <span>${c("\u589e\u76ca")}</span>
+                                <span id="LowFilterGain-Value" class="Booster-Value">${d.LowFilterGain}</span>
                             </div>
-                            <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${b.LowFilterGain}" step="0.1">
+                            <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.LowFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u983b\u7387")}</span>
-                                <span id="LowFilterFreq-Value" class="Booster-Value">${b.LowFilterFreq}</span>
+                                <span>${c("\u983b\u7387")}</span>
+                                <span id="LowFilterFreq-Value" class="Booster-Value">${d.LowFilterFreq}</span>
                             </div>
-                            <input type="range" id="LowFilterFreq" class="Booster-Mini-Slider" min="20" max="1000" value="${b.LowFilterFreq}" step="20">
-                        </div>
-                    </div>
-
-                    <button class="Booster-Accordion">${a("\u4e2d\u983b\u8a2d\u5b9a")}</button>
-                    <div class="Booster-Panel">
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${a("\u589e\u76ca")}</span>
-                                <span id="MidFilterGain-Value" class="Booster-Value">${b.MidFilterGain}</span>
-                            </div>
-                            <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${b.MidFilterGain}" step="0.1">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${a("\u983b\u7387")}</span>
-                                <span id="MidFilterFreq-Value" class="Booster-Value">${b.MidFilterFreq}</span>
-                            </div>
-                            <input type="range" id="MidFilterFreq" class="Booster-Mini-Slider" min="200" max="8000" value="${b.MidFilterFreq}" step="100">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${a("Q\u503c")}</span>
-                                <span id="MidFilterQ-Value" class="Booster-Value">${b.MidFilterQ}</span>
-                            </div>
-                            <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.5" max="5" value="${b.MidFilterQ}" step="0.1">
+                            <input type="range" id="LowFilterFreq" class="Booster-Mini-Slider" min="20" max="1000" value="${d.LowFilterFreq}" step="20">
                         </div>
                     </div>
 
-                    <button class="Booster-Accordion">${a("\u9ad8\u983b\u8a2d\u5b9a")}</button>
+                    <button class="Booster-Accordion">${c("\u4e2d\u983b\u8a2d\u5b9a")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u589e\u76ca")}</span>
-                                <span id="HighFilterGain-Value" class="Booster-Value">${b.HighFilterGain}</span>
+                                <span>${c("\u589e\u76ca")}</span>
+                                <span id="MidFilterGain-Value" class="Booster-Value">${d.MidFilterGain}</span>
                             </div>
-                            <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${b.HighFilterGain}" step="0.1">
+                            <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.MidFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u983b\u7387")}</span>
-                                <span id="HighFilterFreq-Value" class="Booster-Value">${b.HighFilterFreq}</span>
+                                <span>${c("\u983b\u7387")}</span>
+                                <span id="MidFilterFreq-Value" class="Booster-Value">${d.MidFilterFreq}</span>
                             </div>
-                            <input type="range" id="HighFilterFreq" class="Booster-Mini-Slider" min="2000" max="22000" value="${b.HighFilterFreq}" step="500">
+                            <input type="range" id="MidFilterFreq" class="Booster-Mini-Slider" min="200" max="8000" value="${d.MidFilterFreq}" step="100">
+                        </div>
+
+                        <div class="Booster-Control-Group">
+                            <div class="Booster-Control-Label">
+                                <span>${c("Q\u503c")}</span>
+                                <span id="MidFilterQ-Value" class="Booster-Value">${d.MidFilterQ}</span>
+                            </div>
+                            <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.5" max="5" value="${d.MidFilterQ}" step="0.1">
                         </div>
                     </div>
 
-                    <button class="Booster-Accordion">${a("\u52d5\u614b\u58d3\u7e2e")}</button>
+                    <button class="Booster-Accordion">${c("\u9ad8\u983b\u8a2d\u5b9a")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u58d3\u7e2e\u7387")}</span>
-                                <span id="CompressorRatio-Value" class="Booster-Value">${b.CompressorRatio}</span>
+                                <span>${c("\u589e\u76ca")}</span>
+                                <span id="HighFilterGain-Value" class="Booster-Value">${d.HighFilterGain}</span>
                             </div>
-                            <input type="range" id="CompressorRatio" class="Booster-Mini-Slider" min="1" max="30" value="${b.CompressorRatio}" step="0.1">
+                            <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.HighFilterGain}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u904e\u6e21\u53cd\u61c9")}</span>
-                                <span id="CompressorKnee-Value" class="Booster-Value">${b.CompressorKnee}</span>
+                                <span>${c("\u983b\u7387")}</span>
+                                <span id="HighFilterFreq-Value" class="Booster-Value">${d.HighFilterFreq}</span>
                             </div>
-                            <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${b.CompressorKnee}" step="1">
+                            <input type="range" id="HighFilterFreq" class="Booster-Mini-Slider" min="2000" max="22000" value="${d.HighFilterFreq}" step="500">
+                        </div>
+                    </div>
+
+                    <button class="Booster-Accordion">${c("\u52d5\u614b\u58d3\u7e2e")}</button>
+                    <div class="Booster-Panel">
+                        <div class="Booster-Control-Group">
+                            <div class="Booster-Control-Label">
+                                <span>${c("\u58d3\u7e2e\u7387")}</span>
+                                <span id="CompressorRatio-Value" class="Booster-Value">${d.CompressorRatio}</span>
+                            </div>
+                            <input type="range" id="CompressorRatio" class="Booster-Mini-Slider" min="1" max="30" value="${d.CompressorRatio}" step="0.1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u95be\u503c")}</span>
-                                <span id="CompressorThreshold-Value" class="Booster-Value">${b.CompressorThreshold}</span>
+                                <span>${c("\u904e\u6e21\u53cd\u61c9")}</span>
+                                <span id="CompressorKnee-Value" class="Booster-Value">${d.CompressorKnee}</span>
                             </div>
-                            <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-60" max="0" value="${b.CompressorThreshold}" step="1">
+                            <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${d.CompressorKnee}" step="1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u8d77\u97f3\u901f\u5ea6")}</span>
-                                <span id="CompressorAttack-Value" class="Booster-Value">${b.CompressorAttack}</span>
+                                <span>${c("\u95be\u503c")}</span>
+                                <span id="CompressorThreshold-Value" class="Booster-Value">${d.CompressorThreshold}</span>
                             </div>
-                            <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0.001" max="0.5" value="${b.CompressorAttack}" step="0.001">
+                            <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-60" max="0" value="${d.CompressorThreshold}" step="1">
                         </div>
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${a("\u91cb\u653e\u901f\u5ea6")}</span>
-                                <span id="CompressorRelease-Value" class="Booster-Value">${b.CompressorRelease}</span>
+                                <span>${c("\u8d77\u97f3\u901f\u5ea6")}</span>
+                                <span id="CompressorAttack-Value" class="Booster-Value">${d.CompressorAttack}</span>
                             </div>
-                            <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0.01" max="2" value="${b.CompressorRelease}" step="0.01">
+                            <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0.001" max="0.5" value="${d.CompressorAttack}" step="0.001">
+                        </div>
+
+                        <div class="Booster-Control-Group">
+                            <div class="Booster-Control-Label">
+                                <span>${c("\u91cb\u653e\u901f\u5ea6")}</span>
+                                <span id="CompressorRelease-Value" class="Booster-Value">${d.CompressorRelease}</span>
+                            </div>
+                            <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0.01" max="2" value="${d.CompressorRelease}" step="0.01">
                         </div>
                     </div>
 
                     <div class="Booster-Buttons">
-                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${a("\u95dc\u9589")}</button>
-                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${a("\u4fdd\u5b58")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${c("\u95dc\u9589")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${c("\u4fdd\u5b58")}</button>
                     </div>
                 </div>
             </Booster_Modal_Background>
-        `); document.body.appendChild(h); var l = h.shadowRoot, t = l.querySelector("Booster_Modal_Background"), x = l.querySelector(".Booster-Modal-Content"); t.classList.add("open"); x.classList.add("open"); var z = { ...Object.fromEntries([...l.querySelectorAll(".Booster-Value")].map(c => [c.id, c])) }; x.addEventListener("input", c => { var f = c.target; c = f.id; f = f.value; z[`${c}-Value`].textContent = f; D(c, f) }); t.addEventListener("click", c => {
-                const f = c.target; c.stopPropagation(); f.classList.contains("Booster-Accordion") ? (f.classList.toggle("active"),
-                    c = f.nextElementSibling, c.style.maxHeight ? (c.style.maxHeight = null, c.classList.remove("active")) : (c.style.maxHeight = c.scrollHeight + "px", c.classList.add("active"))) : "Booster-Sound-Save" === f.id ? (Syn.sV(Syn.$domain, b), k()) : "Booster-Menu-Close" !== f.id && "Booster-Modal-Menu" !== f.id || k()
+        `); document.body.appendChild(g); var n = g.shadowRoot, u = n.querySelector("Booster_Modal_Background"), v = n.querySelector(".Booster-Modal-Content"); u.classList.add("open"); v.classList.add("open"); var x = { ...Object.fromEntries([...n.querySelectorAll(".Booster-Value")].map(a => [a.id, a])) }; v.addEventListener("input", a => { var f = a.target; a = f.id; f = f.value; x[`${a}-Value`].textContent = f; C(a, f) }); u.addEventListener("click", a => {
+                const f = a.target; a.stopPropagation(); f.classList.contains("Booster-Accordion") ? (f.classList.toggle("active"),
+                    a = f.nextElementSibling, a.style.maxHeight ? (a.style.maxHeight = null, a.classList.remove("active")) : (a.style.maxHeight = a.scrollHeight + "px", a.classList.add("active"))) : "Booster-Sound-Save" === f.id ? (Syn.sV(Syn.domain, d), h()) : "Booster-Menu-Close" !== f.id && "Booster-Modal-Menu" !== f.id || h()
             })
         }
-    } const { Transl: a } = function (k) {
+    } const { Transl: c } = function () {
         const h = Syn.TranslMatcher({
             Traditional: {}, Simplified: {
                 "\ud83d\udcdc \u83dc\u55ae\u71b1\u9375": "\ud83d\udcdc \u83dc\u5355\u70ed\u952e", "\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae": "\ud83d\udee0\ufe0f \u8c03\u6574\u83dc\u5355",
@@ -548,32 +549,47 @@
                 "\u2705 \u555f\u7528\u589e\u5e45": "\u2705 Enable Amplification", "\u589e\u5f37\u932f\u8aa4": "Enhancement Error", "\u97f3\u91cf\u589e\u5f37\u5668": "Volume Booster", "\u589e\u5f37\u500d\u6578 ": "Enhancement Factor ", " \u500d": " times", "\u589e\u76ca": "Gain", "\u983b\u7387": "Frequency", "Q\u503c": "Q Factor", "\u4f4e\u983b\u8a2d\u5b9a": "Low Frequency Settings", "\u4e2d\u983b\u8a2d\u5b9a": "Mid Frequency Settings", "\u9ad8\u983b\u8a2d\u5b9a": "High Frequency Settings", "\u52d5\u614b\u58d3\u7e2e": "Dynamic Compression",
                 "\u58d3\u7e2e\u7387": "Compression Ratio", "\u904e\u6e21\u53cd\u61c9": "Knee", "\u95be\u503c": "Threshold", "\u8d77\u97f3\u901f\u5ea6": "Attack Time", "\u91cb\u653e\u901f\u5ea6": "Release Time", "\u95dc\u9589": "Close", "\u4fdd\u5b58": "Save", "\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede": "Audio Enhancement Node Not Supported", "\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f": "Enhancement Node Added Successfully", "\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)": "Hotkey Menu Opened!!\n\nShortcut Combination: (Alt + B)"
             }
-        },
-            k); return { Transl: l => h[l] ?? l }
-    }(Syn.$lang), B = (() => { let k = new Set(Syn.gV("Banned", [])); var h = Syn.gV("BannedDomains_v2"); h && (h = Object.keys(h), Syn.sV("Banned", h), Syn.dV("BannedDomains_v2"), k = new Set(h)); let l = k.has(Syn.$domain); return { IsEnabled: t => t(!l), AddBanned: async () => { l ? k.delete(Syn.$domain) : k.add(Syn.$domain); Syn.sV("Banned", [...k]); location.reload() } } })(), { Start: E, SetControl: D, Parame: b } = function () {
-        function k(p) {
+        });
+        return { Transl: g => h[g] ?? g }
+    }(), z = (() => { let h = new Set(Syn.gV("Banned", [])); var g = Syn.gV("BannedDomains_v2"); g && (g = Object.keys(g), Syn.sV("Banned", g), Syn.dV("BannedDomains_v2"), h = new Set(g)); let n = h.has(Syn.$domain); return { IsEnabled: u => u(!n), AddBanned: async () => { n ? h.delete(Syn.$domain) : h.add(Syn.$domain); Syn.sV("Banned", [...h]); location.reload() } } })(), { Start: D, SetControl: C, Parame: d } = function () {
+        function h(q) {
             try {
-                if (!C) throw Error(a("\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede")); r ||=
-                    new C; "suspended" === r.state && r.resume(); const u = c.length; for (const d of p) {
-                        d.crossOrigin || (d.crossOrigin = "anonymous"); if (d.mediaKeys || d.encrypted || 0 < d.textTracks.length) continue; const m = r.createMediaElementSource(d), n = r.createGain(), v = r.createBiquadFilter(), w = r.createBiquadFilter(), y = r.createBiquadFilter(), q = r.createDynamicsCompressor(); n.gain.value = g.Gain; v.type = "lowshelf"; v.gain.value = g.LowFilterGain; v.frequency.value = g.LowFilterFreq; w.type = "peaking"; w.Q.value = g.MidFilterQ; w.gain.value = g.MidFilterGain;
-                        w.frequency.value = g.MidFilterFreq; y.type = "highshelf"; y.gain.value = g.HighFilterGain; y.frequency.value = g.HighFilterFreq; q.ratio.value = g.CompressorRatio; q.knee.value = g.CompressorKnee; q.threshold.value = g.CompressorThreshold; q.attack.value = g.CompressorAttack; q.release.value = g.CompressorRelease; m.connect(n).connect(v).connect(w).connect(y).connect(q).connect(r.destination); c.push({
-                            Gain: n.gain, LowFilterGain: v.gain, LowFilterFreq: v.frequency, MidFilterQ: w.Q, MidFilterGain: w.gain, MidFilterFreq: w.frequency, HighFilterGain: y.gain,
-                            HighFilterFreq: y.frequency, CompressorRatio: q.ratio, CompressorKnee: q.knee, CompressorThreshold: q.threshold, CompressorAttack: q.attack, CompressorRelease: q.release
-                        }); f.set(d, !0)
-                    } c.length > u && (Syn.Log(a("\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f"), { "Booster Media : ": p }, { collapsed: !1 }), l || (l = !0, F(), Syn.Menu({
-                        [a("\ud83d\udcdc \u83dc\u55ae\u71b1\u9375")]: { func: () => alert(a("\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)")) }, [a("\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae")]: {
-                            func: () =>
-                                A()
-                        }
-                    }, "Menu", 2), Syn.StoreListen([Syn.$domain], d => { d.far && d.key == Syn.$domain && Object.entries(d.nv).forEach(([m, n]) => { z.SetBooster(m, n) }) }))); setTimeout(() => { t.observe(document, x) }, 3E3); return { SetBooster: (d, m) => { g[d] = m; c.forEach(n => { n[d].value = m }) } }
-            } catch (u) { Syn.Log(a("\u589e\u5f37\u932f\u8aa4"), u, { type: "error", collapsed: !1 }) }
-        } async function h(p) { try { z = k(p) } catch (u) { Syn.Log("Trigger Error : ", u, { type: "error", collapsed: !1 }) } } let l = !1, t = null, x = null, z = null; const c = [], f = new Map; let r = null; const C = window.AudioContext ||
-            window.webkitAudioContext; let e = Syn.gV(Syn.$domain, {}); "number" === typeof e && (e = { Gain: e }); const g = {
-                Gain: e.Gain ?? 1, LowFilterGain: e.LowFilterGain ?? 1.2, LowFilterFreq: e.LowFilterFrequency ?? 200, MidFilterQ: e.MidFilterQ ?? 1, MidFilterGain: e.MidFilterGain ?? 1.6, MidFilterFreq: e.MidFilterFrequency ?? 2E3, HighFilterGain: e.HighFilterGain ?? 1.8, HighFilterFreq: e.HighFilterFreq ?? 1E4, CompressorRatio: e.CompressorRatio ?? 3, CompressorKnee: e.CompressorKnee ?? 4, CompressorThreshold: e.CompressorThreshold ?? -8, CompressorAttack: e.CompressorAttack ??
-                    .03, CompressorRelease: e.CompressorRelease ?? .2
-            }, F = async () => { document.$onEvent("keydown", p => { p.altKey && "B" == p.key.toUpperCase() && A() }, { passive: !0, capture: !0 }) }; return {
-                Start: function () { B.IsEnabled(p => { const u = async d => { Syn.Menu({ [d]: { func: () => B.AddBanned() } }) }; if (p) { const d = Syn.Throttle(m => { const n = [...Syn.$qa("video, audio")].filter(v => !f.has(v)); 0 < n.length && m(n) }, 150); Syn.Observer(document, () => { d(m => { t.disconnect(); h(m) }) }, { mark: "Media-Booster", attributes: !1, debounce: 30 }, ({ ob: m, op: n }) => { t = m; x = n; u(a("\u274c \u7981\u7528\u589e\u5e45")) }) } else u(a("\u2705 \u555f\u7528\u589e\u5e45")) }) },
-                SetControl: (...p) => z.SetBooster(...p), Parame: g
-            }
-    }(); E()
+                if (!A) throw Error(c("\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede")); p ||= new A; "suspended" ===
+                    p.state && p.resume(); const w = f.length; for (const e of q) {
+                        e.crossOrigin || (e.crossOrigin = "anonymous"); if (e.mediaKeys || e.encrypted || 0 < e.textTracks.length) continue; const k = p.createMediaElementSource(e), b = p.createGain(), r = p.createBiquadFilter(), l = p.createBiquadFilter(), t = p.createBiquadFilter(), m = p.createDynamicsCompressor(); b.gain.value = a.Gain; r.type = "lowshelf"; r.gain.value = a.LowFilterGain; r.frequency.value = a.LowFilterFreq; l.type = "peaking"; l.Q.value = a.MidFilterQ; l.gain.value = a.MidFilterGain; l.frequency.value =
+                            a.MidFilterFreq; t.type = "highshelf"; t.gain.value = a.HighFilterGain; t.frequency.value = a.HighFilterFreq; m.ratio.value = a.CompressorRatio; m.knee.value = a.CompressorKnee; m.threshold.value = a.CompressorThreshold; m.attack.value = a.CompressorAttack; m.release.value = a.CompressorRelease; k.connect(b).connect(r).connect(l).connect(t).connect(m).connect(p.destination); f.push({
+                                Gain: b.gain, LowFilterGain: r.gain, LowFilterFreq: r.frequency, MidFilterQ: l.Q, MidFilterGain: l.gain, MidFilterFreq: l.frequency, HighFilterGain: t.gain,
+                                HighFilterFreq: t.frequency, CompressorRatio: m.ratio, CompressorKnee: m.knee, CompressorThreshold: m.threshold, CompressorAttack: m.attack, CompressorRelease: m.release
+                            }); B.set(e, !0)
+                    } f.length > w && (Syn.Log(c("\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f"), { "Booster Media : ": q }, { collapsed: !1 }), g || (g = !0, E(), Syn.Menu({
+                        [c("\ud83d\udcdc \u83dc\u55ae\u71b1\u9375")]: () => alert(c("\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)")), [c("\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae")]: () =>
+                            y()
+                    }, { index: 2 }), Syn.StoreListen([Syn.$domain], e => { e.far && e.key == Syn.$domain && Object.entries(e.nv).forEach(([k, b]) => { v.SetBooster(k, b) }) }))); setTimeout(() => { n.observe(document, u) }, 3E3); return { SetBooster: (e, k) => { a[e] = k; f.forEach(b => { b[e].value = k }) } }
+            } catch (w) { Syn.Log(c("\u589e\u5f37\u932f\u8aa4"), w, { type: "error", collapsed: !1 }) }
+        } let g = !1, n = null, u = null, v = null, x = !1; const a = {}, f = [], B = new Map; let p = null; const A = window.AudioContext || window.webkitAudioContext, E = async () => {
+            Syn.onEvent(document, "keydown", q => {
+                q.altKey &&
+                "B" == q.key.toUpperCase() && y()
+            }, { passive: !0, capture: !0, mark: "Volume-Booster-Hotkey" })
+        }; return {
+            Start: function () {
+                z.IsEnabled(q => {
+                    const w = async e => { Syn.Menu({ [e]: () => z.AddBanned() }) }; if (q) {
+                        const e = Syn.Debounce(k => { const b = [], r = document.createTreeWalker(Syn.body, NodeFilter.SHOW_ELEMENT, { acceptNode: l => { const t = l.tagName; return "VIDEO" !== t && "AUDIO" !== t || B.has(l) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT } }); for (; r.nextNode();)b.push(r.currentNode); 0 < b.length && k(b) }, 50); Syn.Observer(document, () => {
+                            e(k => {
+                                n.disconnect(); try {
+                                    if (!x) {
+                                        x = !0; let b = Syn.gV(Syn.$domain, {}); "number" === typeof b && (b = { Gain: b }); Object.assign(a, {
+                                            Gain: b.Gain ?? 1, LowFilterGain: b.LowFilterGain ?? 1.2, LowFilterFreq: b.LowFilterFrequency ?? 200, MidFilterQ: b.MidFilterQ ?? 1, MidFilterGain: b.MidFilterGain ?? 1.6, MidFilterFreq: b.MidFilterFrequency ?? 2E3, HighFilterGain: b.HighFilterGain ?? 1.8, HighFilterFreq: b.HighFilterFreq ?? 1E4, CompressorRatio: b.CompressorRatio ?? 3, CompressorKnee: b.CompressorKnee ?? 4, CompressorThreshold: b.CompressorThreshold ?? -8, CompressorAttack: b.CompressorAttack ??
+                                                .03, CompressorRelease: b.CompressorRelease ?? .2
+                                        })
+                                    } v = h(k)
+                                } catch (b) { Syn.Log("Trigger Error : ", b, { type: "error", collapsed: !1 }) }
+                            })
+                        }, { mark: "Media-Booster", attributes: !1, throttle: 200 }, ({ ob: k, op: b }) => { n = k; u = b; w(c("\u274c \u7981\u7528\u589e\u5e45")) })
+                    } else w(c("\u2705 \u555f\u7528\u589e\u5e45"))
+                })
+            }, SetControl: (...q) => v.SetBooster(...q), Parame: a
+        }
+    }(); D()
 })();
