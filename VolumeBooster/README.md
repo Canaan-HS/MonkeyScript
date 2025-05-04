@@ -80,12 +80,13 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ---
 
-## **📦 Version Info**
+## **📦 Version Information**
 
-**Release Version: 0.0.40**
+**Release Version: 0.0.41**
 
-### **What's New**
-1. Reduced loading latency  
-2. Adjusted default parameters and UI configuration range
+### **Update Content**
+1. Reduced script loading timing
+2. Adjusted media search logic
+3. Reduced loading delay
 
 ---
