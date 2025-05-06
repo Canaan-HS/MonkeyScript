@@ -16,5 +16,13 @@ export default {
             util.dataUrl(`window.Syn=Syn`),
             util.dataUrl(`window.fflate=fflate`)
         ],
-    }
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                dir: './ExDownloader/Dev/dist',
+                entryFileNames: 'ExDownload-Dev.js',
+            },
+        }
+    },
 };
