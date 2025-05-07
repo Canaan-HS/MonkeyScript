@@ -1,21 +1,22 @@
 export function Compressor(WorkerCreation) {
+    // ? 因為會載入整個 fflate, 使用持久化閉包, 避免多次創建 (不會手動清除他)
+    const worker = WorkerCreation(`
+        importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+        onmessage = function(e) {
+            const { files, level } = e.data;
+            try {
+                const zipped = fflate.zipSync(files, { level });
+                postMessage({ data: zipped }, [zipped.buffer]);
+            } catch (err) {
+                postMessage({ error: err.message });
+            }
+        }
+    `);
 
     class Compression {
         constructor() {
             this.files = {};
             this.tasks = [];
-            this.worker = WorkerCreation(`
-                importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
-                onmessage = function(e) {
-                    const { files, level } = e.data;
-                    try {
-                        const zipped = fflate.zipSync(files, { level });
-                        postMessage({ data: zipped }, [zipped.buffer]);
-                    } catch (err) {
-                        postMessage({ error: err.message });
-                    }
-                }
-            `);
         }
 
         // 存入 blob 進行壓縮
@@ -63,12 +64,12 @@ export function Compressor(WorkerCreation) {
             return new Promise((resolve, reject) => {
                 if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
 
-                this.worker.postMessage({
+                worker.postMessage({
                     files: this.files,
-                    level: options.level || 5 
+                    level: options.level || 5
                 }, Object.values(this.files).map(buf => buf.buffer));
 
-                this.worker.onmessage = (e) => {
+                worker.onmessage = (e) => {
                     clearInterval(progressInterval);
                     const { error, data } = e.data;
                     error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
