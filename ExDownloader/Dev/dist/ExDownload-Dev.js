@@ -40,7 +40,7 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(function () {
+(async () => {
   const Config = {
     Dev: true, // 開發模式 (會顯示除錯訊息)
     ReTry: 10, // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
