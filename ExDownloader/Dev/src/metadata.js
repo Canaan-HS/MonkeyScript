@@ -1,4 +1,5 @@
 export default `
+
 // ==UserScript==
 // @name         [E/Ex-Hentai] Downloader
 // @name:zh-TW   [E/Ex-Hentai] 下載器
@@ -7,7 +8,7 @@ export default `
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      0.0.16
+// @version      0.0.17-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -40,4 +41,5 @@ export default `
 
 // @run-at       document-body
 // ==/UserScript==
+
 `;
