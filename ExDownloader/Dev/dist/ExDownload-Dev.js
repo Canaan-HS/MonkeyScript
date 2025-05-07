@@ -24,7 +24,6 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
 // @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -42,11 +41,11 @@
 
 (async () => {
   const Config = {
-    Dev: true, // 開發模式 (會顯示除錯訊息)
-    ReTry: 10, // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
-    Original: false, // 是否下載原圖
-    ResetScope: true, // 下載完成後 重置範圍設置
-    CompleteClose: false // 下載完成自動關閉
+    Dev: true,            // 開發模式 (會顯示除錯訊息)
+    ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
+    Original: false,      // 是否下載原圖
+    ResetScope: true,     // 下載完成後 重置範圍設置
+    CompleteClose: false, // 下載完成自動關閉
   };
   const DConfig = {
     Compr_Level: 9,
@@ -170,11 +169,23 @@
       };
     }
   };
-  function Compressor(fflate2) {
+  function Compressor(WorkerCreation) {
     class Compression {
       constructor() {
         this.files = {};
         this.tasks = [];
+        this.worker = WorkerCreation(`
+                importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+                onmessage = function(e) {
+                    const { files, level } = e.data;
+                    try {
+                        const zipped = fflate.zipSync(files, { level });
+                        postMessage({ data: zipped }, [zipped.buffer]);
+                    } catch (err) {
+                        postMessage({ error: err.message });
+                    }
+                }
+            `);
       }
       async file(name, blob) {
         const task = new Promise(async resolve => {
@@ -210,19 +221,20 @@
         await Promise.all(this.tasks);
         return new Promise((resolve, reject) => {
           if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
-          try {
-            fflate2.zip(this.files, {
-              level: options.level || 5
-            }, (err, data) => {
-              clearInterval(progressInterval);
-              err ? reject(err) : resolve(new Blob([data], {
-                type: "application/zip"
-              }));
-            });
-          } catch (e) {
+          this.worker.postMessage({
+            files: this.files,
+            level: options.level || 5
+          }, Object.values(this.files).map(buf => buf.buffer));
+          this.worker.onmessage = e => {
             clearInterval(progressInterval);
-            reject(e);
-          }
+            const {
+              error,
+              data
+            } = e.data;
+            error ? reject(error) : resolve(new Blob([data], {
+              type: "application/zip"
+            }));
+          };
         });
       }
     }
@@ -400,7 +412,7 @@
   };
   (async () => {
     const Url = Syn.url.split("?p=")[0];
-    const Compression = Compressor(fflate);
+    const Compression = Compressor(Syn.WorkerCreation);
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
     function Language() {
       const ML = Syn.TranslMatcher(words);
@@ -598,14 +610,14 @@ ${JSON.stringify(Processed, null, 4)}`, {
       ReGetImageData(Index, Url2) {
         function GetLink(index, url, page) {
           var _a;
-          const Resample = page.$q("#img");
-          ((_a = page.$q("#i6 div:last-of-type a")) == null ? void 0 : _a.href) || "#";
+          const Resample = page.querySelector("#img");
+          ((_a = page.querySelector("#i6 div:last-of-type a")) == null ? void 0 : _a.href) || "#";
           if (!Resample) return false;
           const Link = Resample.src || Resample.href;
           return [index, url, Link];
         }
         let Token = Config.ReTry;
-        return new Promise((resolve, reject) => {
+        return new Promise(resolve => {
           this.Worker.postMessage({
             index: Index,
             url: Url2,
@@ -621,7 +633,7 @@ ${JSON.stringify(Processed, null, 4)}`, {
               delay,
               error
             } = e.data;
-            if (Token <= 0) return reject(false);
+            if (Token <= 0) return resolve(false);
             if (error) {
               this.Worker.postMessage({
                 Index: Index,
