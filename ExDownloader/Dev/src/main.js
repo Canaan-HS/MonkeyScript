@@ -295,6 +295,7 @@ const { Syn, saveAs } = monkeyWindow;
                 { dev: Config.Dev }
             );
 
+            this.Worker.terminate();
             this.Button.$text(Lang.Transl("開始下載"));
             DConfig.CurrentDownloadMode
                 ? this.PackDownload(DataMap)
