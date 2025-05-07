@@ -135,7 +135,9 @@ const Syn = (() => {
     // 簡化語法糖
     const Sugar = {
         $q: document.$q.bind(document),
+        $Q: (root, selector) => Selector(root, selector, false),
         $qa: document.$qa.bind(document),
+        $Qa: (root, selector) => Selector(root, selector, true),
         html: document.documentElement,
         head: document.head,
         body: document.body,
