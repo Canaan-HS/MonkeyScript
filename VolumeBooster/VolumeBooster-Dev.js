@@ -393,22 +393,18 @@
                 Booster_Modal_Background {
                     top: 0;
                     left: 0;
-                    opacity: 0;
                     width: 100%;
                     height: 100%;
                     display: flex;
-                    z-index: 9999;
+                    z-index: 999999;
                     overflow: auto;
                     position: fixed;
                     align-items: center;
                     justify-content: center;
-                    backdrop-filter: blur(5px);
-                    -webkit-backdrop-filter: blur(5px);
+                    backdrop-filter: blur(2px);
+                    -webkit-backdrop-filter: blur(2px);
                     transition: opacity 0.4s ease;
                     background-color: rgba(0, 0, 0, 0.4);
-                }
-                Booster_Modal_Background.open {
-                    animation: fadeIn 0.4s ease forwards;
                 }
                 Booster_Modal_Background.close {
                     animation: fadeOut 0.4s ease forwards;
@@ -430,13 +426,8 @@
                         0 10px 30px rgba(0, 0, 0, 0.5),
                         0 0 15px rgba(0, 212, 255, 0.2);
                     color: var(--text-color);
-                    opacity: 0;
                     max-height: 85vh;
-                    transform: scale(0.9);
                     transition: all 0.5s ease;
-                }
-                .Booster-Modal-Content.open {
-                    animation: scaleIn 0.5s ease forwards;
                 }
                 .Booster-Modal-Content.close {
                     animation: shrinkFadeOut 0.8s ease forwards;
@@ -459,16 +450,12 @@
                     letter-spacing: 0.5px;
                     margin-bottom: 20px;
                     text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
-                    opacity: 0;
                     transform: translateY(-10px);
-                    animation: slideDown 0.4s ease 0.3s forwards;
                 }
                 .Booster-Multiplier {
                     margin: 1.5rem 0;
                     font-size: 22px;
                     font-weight: 500;
-                    opacity: 0;
-                    animation: fadeIn 0.5s ease 0.4s forwards;
                 }
                 .Booster-Multiplier img {
                     width: 24px;
@@ -496,8 +483,6 @@
                     background: var(--slider-track);
                     border-radius: 3px;
                     outline: none;
-                    opacity: 0;
-                    animation: progressIn 0.8s ease 0.5s forwards;
                 }
                 .Booster-Slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
@@ -528,8 +513,6 @@
                     justify-content: flex-end;
                     margin-top: 20px;
                     gap: 10px;
-                    opacity: 0;
-                    animation: fadeIn 0.5s ease 0.7s forwards;
                 }
                 .Booster-Modal-Button {
                     color: var(--text-color);
@@ -564,7 +547,6 @@
                     left: -60%;
                     width: 20%;
                     height: 200%;
-                    opacity: 0;
                     transform: rotate(30deg);
                     background: rgba(255, 255, 255, 0.13);
                     background: linear-gradient(
@@ -596,20 +578,7 @@
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    opacity: 0;
                     transform: translateY(10px);
-                }
-                .Booster-Accordion:nth-of-type(1) {
-                    animation: slideUp 0.4s ease 0.5s forwards;
-                }
-                .Booster-Accordion:nth-of-type(2) {
-                    animation: slideUp 0.4s ease 0.6s forwards;
-                }
-                .Booster-Accordion:nth-of-type(3) {
-                    animation: slideUp 0.4s ease 0.7s forwards;
-                }
-                .Booster-Accordion:nth-of-type(4) {
-                    animation: slideUp 0.4s ease 0.8s forwards;
                 }
                 .Booster-Accordion:after {
                     content: '+';
@@ -685,14 +654,6 @@
                     border-radius: 2px;
                     height: 4px;
                 }
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                    }
-                    to {
-                        opacity: 1;
-                    }
-                }
                 @keyframes fadeOut {
                     from {
                         opacity: 1;
@@ -700,16 +661,6 @@
                     to {
                         opacity: 0;
                         pointer-events: none;
-                    }
-                }
-                @keyframes scaleIn {
-                    from {
-                        transform: scale(0.9);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: scale(1);
-                        opacity: 1;
                     }
                 }
                 @keyframes shrinkFadeOut {
@@ -720,36 +671,6 @@
                     to {
                         transform: scale(0.5);
                         opacity: 0;
-                    }
-                }
-                @keyframes slideUp {
-                    from {
-                        transform: translateY(10px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes slideDown {
-                    from {
-                        transform: translateY(-10px);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateY(0);
-                        opacity: 1;
-                    }
-                }
-                @keyframes progressIn {
-                    from {
-                        width: 0%;
-                        opacity: 0;
-                    }
-                    to {
-                        width: 90%;
-                        opacity: 1;
                     }
                 }
             </style>
@@ -887,14 +808,10 @@
         const Modal = shadowGate.querySelector("Booster_Modal_Background");
         const Content = shadowGate.querySelector(".Booster-Modal-Content");
 
-        // 添加開啟樣式
-        Modal.classList.add("open");
-        Content.classList.add("open");
-
         // 關閉菜單
         function DeleteMenu() {
-            Modal.classList.replace("open", "close");
-            Content.classList.replace("open", "close");
+            Modal.classList.add("close");
+            Content.classList.add("close");
 
             setTimeout(() => {
                 shadow.remove();
