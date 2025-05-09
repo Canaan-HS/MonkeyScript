@@ -42,7 +42,6 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
 // @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
@@ -137,75 +136,89 @@
 
     let lock = false;
     const { Transl } = Language();
+    const Compression = Compressor(Syn.WorkerCreation);
     const IsNeko = Syn.$domain.startsWith("nekohouse");
 
-    class Compression {
-        constructor() {
-            this.files = {};
-            this.tasks = [];
-        }
-
-        // 存入 blob 進行壓縮
-        async file(name, blob) {
-            const task = new Promise(async resolve => {
-                const buffer = await blob.arrayBuffer();
-                this.files[name] = new Uint8Array(buffer);
-                resolve();
-            });
-
-            this.tasks.push(task);
-            return task;
-        }
-
-        // 估算壓縮耗時
-        estimateCompressionTime() {
-            let totalSize = 0;
-
-            Object.values(this.files).forEach(file => {
-                totalSize += file.length;
-            });
-
-            const bytesPerSecond = 60 * 1024 ** 2; // 預估每秒壓縮 60MB/s
-            const estimatedTime = totalSize / bytesPerSecond;
-            return estimatedTime;
-        }
-
-        // 生成壓縮
-        async generateZip(options = {}, progressCallback) {
-            await Promise.all(this.tasks); // 等待所有檔案加入
-
-            const updateInterval = 30; // 更新頻率
-            const totalTime = this.estimateCompressionTime();
-            const progressUpdate = 100 / (totalTime * 1000 / updateInterval); // 每次更新的進度
-
-            let fakeProgress = 0; // 假進度模擬
-            const progressInterval = setInterval(() => {
-                if (fakeProgress < 99.99) {
-                    fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
-                    if (progressCallback) progressCallback(fakeProgress);
-                } else {
-                    clearInterval(progressInterval);
-                }
-            }, updateInterval);
-
-            return new Promise((resolve, reject) => {
-                if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
-
+    function Compressor(WorkerCreation) {
+        const worker = WorkerCreation(`
+            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+            onmessage = function(e) {
+                const { files, level } = e.data;
                 try {
-                    fflate.zip(
-                        this.files,
-                        { level: options.level || 5 },
-                        (err, data) => {
-                            clearInterval(progressInterval);
-                            err ? reject(err) : resolve(new Blob([data], { type: "application/zip" }));
-                        }
-                    );
-                } catch (e) {
-                    clearInterval(progressInterval);
-                    reject(e);
+                    const zipped = fflate.zipSync(files, { level });
+                    postMessage({ data: zipped }, [zipped.buffer]);
+                } catch (err) {
+                    postMessage({ error: err.message });
                 }
-            })
-        }
+            }
+        `);
+
+        class Compression {
+            constructor() {
+                this.files = {};
+                this.tasks = [];
+            }
+
+            // 存入 blob 進行壓縮
+            async file(name, blob) {
+                const task = new Promise(async resolve => {
+                    const buffer = await blob.arrayBuffer();
+                    this.files[name] = new Uint8Array(buffer);
+                    resolve();
+                });
+
+                this.tasks.push(task);
+                return task;
+            }
+
+            // 估算壓縮耗時
+            estimateCompressionTime() {
+                let totalSize = 0;
+
+                Object.values(this.files).forEach(file => {
+                    totalSize += file.length;
+                });
+
+                const bytesPerSecond = 60 * 1024 ** 2; // 預估每秒壓縮 60MB/s
+                const estimatedTime = totalSize / bytesPerSecond;
+                return estimatedTime;
+            }
+
+            // 生成壓縮
+            async generateZip(options = {}, progressCallback) {
+                const updateInterval = 30; // 更新頻率
+                const totalTime = this.estimateCompressionTime();
+                const progressUpdate = 100 / (totalTime * 1000 / updateInterval); // 每次更新的進度
+
+                let fakeProgress = 0; // 假進度模擬
+                const progressInterval = setInterval(() => {
+                    if (fakeProgress < 99.99) {
+                        fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
+                        if (progressCallback) progressCallback(fakeProgress);
+                    } else {
+                        clearInterval(progressInterval);
+                    }
+                }, updateInterval);
+
+                await Promise.all(this.tasks); // 等待所有檔案加入
+                return new Promise((resolve, reject) => {
+                    if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
+
+                    worker.postMessage({
+                        files: this.files,
+                        level: options.level || 5
+                    }, Object.values(this.files).map(buf => buf.buffer));
+
+                    worker.onmessage = (e) => {
+                        clearInterval(progressInterval);
+                        const { error, data } = e.data;
+                        error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
+                    };
+                })
+            }
+        };
+
+        return Compression;
     }
 
     class Download {
