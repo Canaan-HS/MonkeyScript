@@ -641,7 +641,7 @@
         constructor(Delay, AdvancedFetch, ToLinkTxt) {
             this.MetaDict = {}; // 保存元數據
             this.DataDict = {}; // 保存最終數據
-            this.RecordKey = `${decodeURIComponent(location.href)}-Complete`; // 緩存最終數據
+            this.RecordKey = `${decodeURIComponent(Syn.url)}-Complete`; // 緩存最終數據 (根據 Url 設置)
 
             this.TaskDict = new Map(); // 任務臨時數據
 
