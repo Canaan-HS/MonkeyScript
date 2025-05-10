@@ -97,7 +97,7 @@
         },
         CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
         FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
-        FillName: "{Artist} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
+        FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
     };
 
     /** ---------------------
@@ -179,13 +179,15 @@
                     totalSize += file.length;
                 });
 
-                const bytesPerSecond = 60 * 1024 ** 2; // 預估每秒壓縮 60MB/s
+                const bytesPerSecond = 50 * 1024 ** 2; // 預估每秒壓縮 50MB/s
                 const estimatedTime = totalSize / bytesPerSecond;
                 return estimatedTime;
             }
 
             // 生成壓縮
             async generateZip(options = {}, progressCallback) {
+                await Promise.all(this.tasks); // 等待所有檔案加入
+
                 const updateInterval = 30; // 更新頻率
                 const totalTime = this.estimateCompressionTime();
                 const progressUpdate = 100 / (totalTime * 1000 / updateInterval); // 每次更新的進度
@@ -200,7 +202,6 @@
                     }
                 }, updateInterval);
 
-                await Promise.all(this.tasks); // 等待所有檔案加入
                 return new Promise((resolve, reject) => {
                     if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
 
@@ -350,7 +351,7 @@
                     const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
                     if (Uri) {
                         DownloadData.set(index, (
-                            Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}`
+                            Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}` // 方便打印觀看
                         ));
                     }
                 }
@@ -403,10 +404,17 @@
 
                     if (!error && blob instanceof Blob && blob.size > 0) {
                         extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 isVideo 的資訊, 所以分別操作
+
+                        const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
                         Self.isVideo(extension)
-                            ? Zip.file(`${FolderName}${decodeURIComponent(url.split("?f=")[1])}`, blob)
-                            : Zip.file(`${FolderName}${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`, blob);
-                        Data.delete(index); // 成功時清除
+                            ? Zip.file(`${FolderName}${(
+                                decodeURIComponent(url).split("?f=")[1] ||
+                                Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
+                                FileName
+                            )}`, blob)
+                            : Zip.file(`${FolderName}${FileName}`, blob);
+
+                            Data.delete(index); // 成功時清除
                     }
 
                     show = `[${++progress}/${Total}]`;
@@ -514,7 +522,7 @@
         async SeparDownload(FillName, Data) {
             let
                 show,
-                link,
+                url,
                 filename,
                 extension,
                 stop = false,
@@ -544,11 +552,17 @@
 
             async function Request(index) {
                 if (stop) return;
-                link = Data.get(index);
-                extension = Syn.ExtensionName(link);
+                url = Data.get(index);
+                extension = Syn.ExtensionName(url);
+
+                const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
                 filename = Self.isVideo(extension)
-                    ? decodeURIComponent(link.split("?f=")[1])
-                    : `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
+                    ? (
+                        decodeURIComponent(url).split("?f=")[1] ||
+                        Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
+                        FileName
+                    )
+                    : FileName;
 
                 return new Promise((resolve, reject) => {
 
@@ -556,7 +570,7 @@
                         if (!ShowTracking[index]) { // 多一個判斷是因為, 他有可能同樣的重複呼叫多次
                             ShowTracking[index] = true;
 
-                            Syn.Log("Download Successful", link, { dev: Config.Dev, collapsed: false });
+                            Syn.Log("Download Successful", url, { dev: Config.Dev, collapsed: false });
 
                             show = `[${++progress}/${Total}]`;
                             Syn.title(show);
@@ -567,7 +581,7 @@
                     };
 
                     const download = GM_download({
-                        url: link,
+                        url,
                         name: filename,
                         conflictAction: "overwrite",
                         onload: () => {
@@ -577,7 +591,7 @@
                             /* 新版本的油猴插件, 這個回條怪怪的
                             Syn.Log("Download Progress", {
                                 Index: index,
-                                ImgUrl: link,
+                                ImgUrl: url,
                                 Progress: `${progress.loaded}/${progress.total}`
                             }, {dev: Config.Dev, collapsed: false});
 
@@ -586,7 +600,7 @@
                             */
                         },
                         onerror: () => {
-                            Syn.Log("Download Error", link, { dev: Config.Dev, type: "error", collapsed: false });
+                            Syn.Log("Download Error", url, { dev: Config.Dev, type: "error", collapsed: false });
                             setTimeout(() => {
                                 reject();
                                 Request(index);
