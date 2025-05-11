@@ -649,7 +649,7 @@
                 };
 
                 favorite && addfavorite(Favorites); // 當前為收藏狀態時, 進行狀態更新
-                favoriteButton.$onEvent("click", () => { // 點擊事件
+                Syn.onEvent(favoriteButton, "click", () => { // 點擊事件
                     const Favorites = Syn.gV("Favorites", {});
 
                     if (Favorites[save_key]) {
@@ -698,7 +698,6 @@
 
                 Syn.WaitElem(".ido", ido => {
                     let delete_object = "tr";
-                    const fragment = Syn.createFragment;
 
                     const select = ido.$q(".searchnav div:last-of-type select option[selected='selected']");
 
@@ -713,6 +712,7 @@
                     if (mode === "t") delete_object = ".gl1t";
 
                     // ! 模板沒問題就不要修改, 很容易壞掉
+                    const fragment = Syn.createFragment;
                     for (const data of Object.values(Favorites)) {
                         const json = JSON.parse(LZString.decompress(data));
 
@@ -940,6 +940,7 @@
                         }
                     };
 
+                    // ! 小量級的數據, 採用生成後一次插入, 是高效的, 但數量大時會導致卡頓
                     if (fragment) {
                         ido.$q("tbody")?.prepend(fragment);
                         ido.$q("#favform .gld")?.prepend(fragment);
@@ -970,7 +971,7 @@
                         })
                     };
 
-                    ido.$onEvent("click", event => {
+                    Syn.onEvent(ido, "click", event => {
                         const target = event.target;
 
                         if (target.className === "unFavorite") {
