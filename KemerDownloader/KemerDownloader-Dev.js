@@ -379,8 +379,8 @@
             function Request_update(index, url, blob, error = false) {
                 if (Self.ForceDownload) return;
                 requestAnimationFrame(() => {
-                    
-                    if (!error && blob instanceof Blob && blob.size > 0){
+
+                    if (!error && blob instanceof Blob && blob.size > 0) {
                         extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 isVideo 的資訊, 所以分別操作
                         Self.isVideo(extension)
                             ? Zip.file(`${FolderName}${decodeURIComponent(url.split("?f=")[1])}`, blob)
@@ -1178,18 +1178,18 @@
     (new class Main {
         constructor() {
             this.Content = (URL) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL),
-            this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
-                || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
-                || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
+                this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
+                    || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
+                    || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
 
             this.AddStyle = async () => {
-                
+
             }
         }
 
         /* 按鈕創建 */
         async ButtonCreation() {
-            Syn.WaitElem(".post__body h2, .scrape__body h2", null, {raf: true, all: true}).then(Files => {
+            Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true }).then(Files => {
                 Syn.AddStyle(`
                     #Button-Container {
                         padding: 1rem;
