@@ -995,30 +995,42 @@
                     }
                 };
 
+                // 舊版白名單正則轉換
+                // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+
+                if (Syn.$q("#Ad-blocking-style")) return; // ! 存在時跳過 (待測試)
+
                 Syn.AddStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
-                `, "Ad-blocking-style", false);
-                Syn.AddScript(String.raw`
-                    const domains = new Set([
-                        "go.mnaspm.com", "go.reebr.com",
-                        "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
-                    ]);
+                `, "Ad-blocking-style");
 
-                    // 舊版白名單正則轉換
-                    // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
+                const domains = new Set([
+                    "go.mnaspm.com", "go.reebr.com",
+                    "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
+                ]);
 
-                    const XMLRequest = XMLHttpRequest.prototype.open;
-                    const Ad_observer = new MutationObserver(() => {
-                        XMLHttpRequest.prototype.open = function(method, Url) {
-                            try {
-                                if (Url.endsWith(".m3u8") || domains.has(new URL(Url).host)) { return }
-                            } catch {}
-
-                            XMLRequest.apply(this, arguments);
-                        };
-                    });
-                    Ad_observer.observe(document.head, {childList: true, subtree: true});
-                `, "Ad-blocking-script", false);
+                const originalRequest = XMLHttpRequest;
+                XMLHttpRequest = new Proxy(originalRequest, {
+                    construct: function (target, args) {
+                        const xhr = new target(...args);
+                        return new Proxy(xhr, {
+                            get: function (target, prop, receiver) {
+                                if (prop === 'open') {
+                                    return function (method, url) {
+                                        try {
+                                            if (typeof url !== 'string' || url.endsWith(".m3u8")) return;
+                                            if ((
+                                                url.startsWith('http') || url.startsWith('//')
+                                            ) && domains.has(new URL(url).host)) return;
+                                        } catch { }
+                                        return target[prop].apply(target, arguments);
+                                    };
+                                }
+                                return Reflect.get(target, prop, receiver);
+                            }
+                        })
+                    }
+                });
             },
             TextToLink: async (Config) => { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
