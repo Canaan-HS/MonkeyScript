@@ -5,9 +5,11 @@ import monkey from 'vite-plugin-monkey';
 import config from './ExDownloader/Dev/config.ts';
 
 const entry: string = config.entry;
+const build: object = config.build;
 const userscript: object = config.userscript;
 
 export default defineConfig({
+    build,
     plugins: [
         monkey({
             entry,
