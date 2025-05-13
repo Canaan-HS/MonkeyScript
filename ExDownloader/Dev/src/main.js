@@ -8,9 +8,9 @@ import {
     GM_unregisterMenuCommand,
 } from 'vite-plugin-monkey/dist/client';
 
-import words from './language.js';
-import { Compressor } from './compression.js';
 import { Config, DConfig } from './config.js';
+import { Compressor } from './compression.js';
+import words from './language.js';
 
 const { Syn, saveAs, fflate } = monkeyWindow;
 
