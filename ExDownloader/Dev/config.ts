@@ -9,12 +9,10 @@ export default {
         namespace: 'https://greasyfork.org/users/989635',
         'run-at': 'document-body',
         require: [ // 更新庫的 meta 時, 也要對應更新
-            'https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js',
             'https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
 
-            util.dataUrl(`window.Syn=Syn`),
-            util.dataUrl(`window.fflate=fflate`)
+            util.dataUrl(`window.Syn=Syn`)
         ],
     },
     build: {
