@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
-// 要開發的配置
+// 要開發的對應配置
 import config from './ExDownloader/Dev/config.ts';
 
 const entry: string = config.entry;
@@ -11,7 +11,13 @@ export default defineConfig({
     plugins: [
         monkey({
             entry,
-            userscript,
+            userscript: {
+                name: 'Vite Dev',
+                version: '0.0.0',
+                author: 'Canaan HS',
+                description: 'Vite Server',
+                ...userscript
+            },
         }),
     ],
 });
