@@ -25,7 +25,10 @@ export default `
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
+// @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
+
 // @grant        window.close
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -35,8 +38,6 @@ export default `
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://update.greasyfork.org/scripts/529004/1548656/JSZip_min.js
-// @require      https://update.greasyfork.org/scripts/495339/1558818/ObjectSyntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
+// @run-at       document-body
 // ==/UserScript==
 `;
