@@ -1,9 +1,21 @@
-export function Compressor(fflate) {
+export function Compressor(WorkerCreation) {
 
     class Compression {
         constructor() {
             this.files = {};
             this.tasks = [];
+            this.worker = WorkerCreation(`
+                importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+                onmessage = function(e) {
+                    const { files, level } = e.data;
+                    try {
+                        const zipped = fflate.zipSync(files, { level });
+                        postMessage({ data: zipped }, [zipped.buffer]);
+                    } catch (err) {
+                        postMessage({ error: err.message });
+                    }
+                }
+            `);
         }
 
         // 存入 blob 進行壓縮
@@ -51,19 +63,16 @@ export function Compressor(fflate) {
             return new Promise((resolve, reject) => {
                 if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
 
-                try {
-                    fflate.zip(
-                        this.files,
-                        { level: options.level || 5 },
-                        (err, data) => {
-                            clearInterval(progressInterval);
-                            err ? reject(err) : resolve(new Blob([data], { type: "application/zip" }));
-                        }
-                    );
-                } catch (e) {
+                this.worker.postMessage({
+                    files: this.files,
+                    level: options.level || 5 
+                }, Object.values(this.files).map(buf => buf.buffer));
+
+                this.worker.onmessage = (e) => {
                     clearInterval(progressInterval);
-                    reject(e);
-                }
+                    const { error, data } = e.data;
+                    error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
+                };
             })
         }
     };
