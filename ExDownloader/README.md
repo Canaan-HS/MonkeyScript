@@ -84,17 +84,18 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.16**
+**Release Version: 0.0.17-Beta**
 
-### **Updates**
-1. API updates
-2. Added language support
-3. Modified some translations
+### **Update Content**
+1. Library update
+2. Modified compression logic
+3. Optimized dynamic adjustment
+4. Architecture adjustment
 
 ### **Known Issues**
-❗️ Currently unsure whether the issue is from the website or elsewhere, the logic that previously worked has now encountered several problems, becoming quite frustrating.
+❗️ Currently not sure if it's a website issue or something else, logic that previously worked now has numerous problems, starting to get a bit frustrated
 
-The following bugs currently cannot be fixed due to time constraints (sometimes encountered). [Recommend rolling back to an older version]:
-1. The newer plugin versions have strange issues when using `GM_xmlhttpRequest` to download images. Sometimes it freezes for a long time or even completely freezes.
+Current bugs that I don't have time to fix (encountered occasionally) [Recommend downgrading to an older version]:
+1. In newer versions of the plugin, there are some strange issues when downloading images using `GM_xmlhttpRequest`, sometimes it gets stuck for a long time or even freezes completely
 
 ---
