@@ -12,13 +12,13 @@ import { Config, DConfig } from './config.js';
 import { Compressor } from './compression.js';
 import words from './language.js';
 
-const { Syn, saveAs, fflate } = monkeyWindow;
+const { Syn, saveAs } = monkeyWindow;
 
 (async () => {
     // ! 早期寫的耦合性太高, 難以模組化, 後續很閒時再重構
 
     const Url = Syn.url.split("?p=")[0];
-    const Compression = Compressor(fflate);
+    const Compression = Compressor(Syn.WorkerCreation);
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
 
     function Language() {
@@ -221,11 +221,12 @@ const { Syn, saveAs, fflate } = monkeyWindow;
             };
         };
 
+        // ! 調整邏輯, 待測試
         /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
         ReGetImageData(Index, Url) {
             function GetLink(index, url, page) {
-                const Resample = page.$q("#img");
-                const Original = page.$q("#i6 div:last-of-type a")?.href || "#";
+                const Resample = page.querySelector("#img");
+                const Original = page.querySelector("#i6 div:last-of-type a")?.href || "#";
 
                 if (!Resample) return false;
 
@@ -238,12 +239,12 @@ const { Syn, saveAs, fflate } = monkeyWindow;
 
             let Token = Config.ReTry; // 取得試錯次數
 
-            return new Promise((resolve, reject) => {
+            return new Promise(resolve => {
                 this.Worker.postMessage({ index: Index, url: Url, time: Date.now(), delay: DConfig.Image_ID });
                 this.Worker.onmessage = (e) => {
                     const { index, url, html, time, delay, error } = e.data;
 
-                    if (Token <= 0) return reject(false); // 真的一直失敗的結束 (應該很難被觸發)
+                    if (Token <= 0) return resolve(false); // 真的一直失敗的結束 (應該很難被觸發)
 
                     if (error) {
                         this.Worker.postMessage({ Index, url: Url, time: time, delay: delay });
