@@ -63,3 +63,9 @@ export const FetchSet = {
     Mode: "FilterMode",
     Format: ["Timestamp", "TypeTag"],
 };
+
+// 不要修改
+export const Process = {
+    Lock: false,
+    IsNeko: location.hostname.startsWith("nekohouse")
+};
