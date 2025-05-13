@@ -170,22 +170,22 @@
         }
     };
     function Compressor(WorkerCreation) {
+        const worker = WorkerCreation(`
+        importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+        onmessage = function(e) {
+            const { files, level } = e.data;
+            try {
+                const zipped = fflate.zipSync(files, { level });
+                postMessage({ data: zipped }, [zipped.buffer]);
+            } catch (err) {
+                postMessage({ error: err.message });
+            }
+        }
+    `);
         class Compression {
             constructor() {
                 this.files = {};
                 this.tasks = [];
-                this.worker = WorkerCreation(`
-                importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
-                onmessage = function(e) {
-                    const { files, level } = e.data;
-                    try {
-                        const zipped = fflate.zipSync(files, { level });
-                        postMessage({ data: zipped }, [zipped.buffer]);
-                    } catch (err) {
-                        postMessage({ error: err.message });
-                    }
-                }
-            `);
             }
             async file(name, blob) {
                 const task = new Promise(async resolve => {
@@ -221,11 +221,11 @@
                 await Promise.all(this.tasks);
                 return new Promise((resolve, reject) => {
                     if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
-                    this.worker.postMessage({
+                    worker.postMessage({
                         files: this.files,
                         level: options.level || 5
                     }, Object.values(this.files).map(buf => buf.buffer));
-                    this.worker.onmessage = e => {
+                    worker.onmessage = e => {
                         clearInterval(progressInterval);
                         const {
                             error,
@@ -679,6 +679,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                 }, {
                     dev: Config.Dev
                 });
+                this.Worker.terminate();
                 this.Button.$text(Lang.Transl("開始下載"));
                 DConfig.CurrentDownloadMode ? this.PackDownload(DataMap) : this.SingleDownload(DataMap);
             }
