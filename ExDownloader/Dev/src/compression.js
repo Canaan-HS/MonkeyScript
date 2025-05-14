@@ -52,8 +52,8 @@ export function Compressor(WorkerCreation) {
 
             let fakeProgress = 0; // 假進度模擬
             const progressInterval = setInterval(() => {
-                if (fakeProgress < 99.99) {
-                    fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
+                if (fakeProgress < 99) {
+                    fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
                     if (progressCallback) progressCallback(fakeProgress);
                 } else {
                     clearInterval(progressInterval);
