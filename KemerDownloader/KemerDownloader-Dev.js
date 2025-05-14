@@ -1197,7 +1197,7 @@
 
         /* 按鈕創建 */
         async ButtonCreation() {
-            Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true }).then(Files => {
+            Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then(Files => {
                 Syn.AddStyle(`
                     #Button-Container {
                         padding: 1rem;
