@@ -646,7 +646,7 @@
             this.TaskDict = new Map(); // 任務臨時數據
 
             this.Host = Syn.$domain;
-            this.SourceURL = document.URL; // 不能從 Device 取得, 會無法適應換頁
+            this.SourceURL = Syn.url;
             this.TitleCache = Syn.title();
             this.FirstURL = this.SourceURL.split("?o=")[0]; // 第一頁連結
 
@@ -1054,8 +1054,8 @@
                                         const Json = JSON.parse(text);
 
                                         if (Json) {
-                                            const Post = Json.post;
-                                            const Title = Post.title.trim() || `Untitled_${String(index + 1).padStart(2, "0")}`;
+                                            const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
+                                            const Title = Post.title.trim().replace(/\n/g, " ") || `Untitled_${String(index + 1).padStart(2, "0")}`;
 
                                             // 對下載連結進行分類
                                             const File = this.AdvancedCategorize(Json.attachments);
