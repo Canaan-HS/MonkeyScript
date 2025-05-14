@@ -82,11 +82,9 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.41**
+**Release Version: 0.0.42-Beta**
 
 ### **Update Content**
-1. Reduced script loading timing
-2. Adjusted media search logic
-3. Reduced loading delay
+1. Remove menu opening animation
 
 ---
