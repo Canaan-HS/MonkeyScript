@@ -1,4 +1,4 @@
-export function Fetch(
+export default function Fetch(
     Config, Process, Transl, Syn, md5
 ) {
     return class FetchData {
