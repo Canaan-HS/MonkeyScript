@@ -1,6 +1,6 @@
-import { Compressor } from './compressor.js';
+import Compressor from './compressor.js';
 
-export function Downloader(
+export default function Downloader(
     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
     Config, FileName, Process, Transl, Syn, saveAs
 ) {
