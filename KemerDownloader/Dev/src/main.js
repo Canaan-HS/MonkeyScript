@@ -13,8 +13,8 @@ const { Syn, md5, saveAs } = monkeyWindow; // 外部函數
 
 import { Config, FileName, FetchSet, Process } from './config.js'; // 腳本配置
 import Dict from './language.js'; // 腳本語言
-import { Fetch } from './fetch.js'; // 抓取數據
-import { Downloader } from './downloader.js'; // 下載數據
+import Fetch from './fetch.js'; // 抓取數據
+import Downloader from './downloader.js'; // 下載數據
 
 (async () => {
 
