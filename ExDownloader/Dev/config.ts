@@ -8,7 +8,7 @@ export default {
         icon: 'https://e-hentai.org/favicon.ico',
         namespace: 'https://greasyfork.org/users/989635',
         'run-at': 'document-body',
-        require: [ // 更新庫的 meta 時, 也要對應更新
+        require: [
             'https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
 
