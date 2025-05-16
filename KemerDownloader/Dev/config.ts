@@ -23,7 +23,6 @@ export default {
             'GM_getValue',
             'GM_download',
             'GM_openInTab',
-            'GM_getResourceURL',
             'GM_xmlhttpRequest',
             'GM_registerMenuCommand',
             'GM_unregisterMenuCommand'
