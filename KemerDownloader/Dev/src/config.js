@@ -2,7 +2,7 @@ export const Config = {
     Dev: true, // 顯示請求資訊, 與錯誤資訊
     ContainsVideo: false, // 下載時包含影片
     CompleteClose: false, // 下載完成後關閉
-    ConcurrentDelay: 1, // 下載線程延遲 (秒) [壓縮下載]
+    ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
     ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
     BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
 };
