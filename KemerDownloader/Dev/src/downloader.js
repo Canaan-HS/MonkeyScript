@@ -254,7 +254,7 @@ export default function Downloader(
 
             // 傳遞消息發起請求
             const Batch = Config.ConcurrentQuantity;
-            const Delay = Config.ConcurrentDelay * 1e3;
+            const Delay = Config.ConcurrentDelay;
 
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
@@ -271,38 +271,6 @@ export default function Downloader(
                     ? (Request(index, url), Syn.Log("Download Failed", url, { dev: Config.Dev, type: "error", collapsed: false }))
                     : (Request_update(index, url, blob), Syn.Log("Download Successful", url, { dev: Config.Dev, collapsed: false }));
             }
-        }
-
-        /* 壓縮檔案 */
-        async Compression(Name, Data, Title) {
-            this.ForceDownload = true;
-            GM_unregisterMenuCommand("Enforce-1");
-            Data.generateZip({
-                level: 9
-            }, (progress) => {
-                const display = `${progress.toFixed(1)} %`;
-                Syn.title(display);
-                this.Button.$text(`${Transl("封裝進度")}: ${display}`);
-            }).then(zip => {
-                saveAs(zip, `${Name}.zip`);
-                Syn.title(`✓ ${Title}`);
-                this.Button.$text(Transl("下載完成"));
-
-                setTimeout(() => {
-                    this.ResetButton();
-                }, 3000);
-            }).catch(result => {
-                Syn.title(Title);
-
-                const ErrorShow = Transl("壓縮封裝失敗");
-                this.Button.$text(ErrorShow);
-                Syn.Log(ErrorShow, result, { dev: Config.Dev, type: "error", collapsed: false });
-
-                setTimeout(() => {
-                    this.Button.disabled = false;
-                    this.Button.$text(this.ModeDisplay);
-                }, 6000);
-            })
         }
 
         /* 單圖下載 */
@@ -412,6 +380,38 @@ export default function Downloader(
             setTimeout(() => {
                 this.ResetButton();
             }, 3000);
+        }
+
+        /* 壓縮檔案 */
+        async Compression(Name, Data, Title) {
+            this.ForceDownload = true;
+            GM_unregisterMenuCommand("Enforce-1");
+            Data.generateZip({
+                level: 9
+            }, (progress) => {
+                const display = `${progress.toFixed(1)} %`;
+                Syn.title(display);
+                this.Button.$text(`${Transl("封裝進度")}: ${display}`);
+            }).then(zip => {
+                saveAs(zip, `${Name}.zip`);
+                Syn.title(`✓ ${Title}`);
+                this.Button.$text(Transl("下載完成"));
+
+                setTimeout(() => {
+                    this.ResetButton();
+                }, 3000);
+            }).catch(result => {
+                Syn.title(Title);
+
+                const ErrorShow = Transl("壓縮封裝失敗");
+                this.Button.$text(ErrorShow);
+                Syn.Log(ErrorShow, result, { dev: Config.Dev, type: "error", collapsed: false });
+
+                setTimeout(() => {
+                    this.Button.disabled = false;
+                    this.Button.$text(this.ModeDisplay);
+                }, 6000);
+            })
         }
 
         /* 按鈕重置 */
