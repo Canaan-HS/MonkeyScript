@@ -7,12 +7,11 @@ import {
     GM_registerMenuCommand,
     GM_unregisterMenuCommand,
 } from 'vite-plugin-monkey/dist/client';
+const { Syn, saveAs } = monkeyWindow;
 
 import { Config, DConfig } from './config.js';
 import { Compressor } from './compression.js';
-import words from './language.js';
-
-const { Syn, saveAs } = monkeyWindow;
+import Words from './language.js';
 
 (async () => {
     // ! 早期寫的耦合性太高, 難以模組化, 後續很閒時再重構
@@ -22,7 +21,7 @@ const { Syn, saveAs } = monkeyWindow;
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
 
     function Language() {
-        const ML = Syn.TranslMatcher(words);
+        const ML = Syn.TranslMatcher(Words);
         return {
             Transl: (Str) => ML[Str] ?? Str
         };
