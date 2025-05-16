@@ -10,8 +10,8 @@ import {
 const { Syn, saveAs } = monkeyWindow;
 
 import { Config, DConfig } from './config.js';
-import { Compressor } from './compression.js';
-import Words from './language.js';
+import { Compressor } from './compressor.js';
+import Dict from './language.js';
 
 (async () => {
     // ! 早期寫的耦合性太高, 難以模組化, 後續很閒時再重構
@@ -21,9 +21,9 @@ import Words from './language.js';
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
 
     function Language() {
-        const ML = Syn.TranslMatcher(Words);
+        const Matcher = Syn.TranslMatcher(Dict);
         return {
-            Transl: (Str) => ML[Str] ?? Str
+            Transl: (Str) => Matcher[Str] ?? Str
         };
     };
 
