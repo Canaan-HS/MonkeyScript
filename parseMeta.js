@@ -1,4 +1,4 @@
-// import meta from './ExDownloader/Dev/src/metadata.js';
+import meta from './KemerDownloader/Dev/src/metadata.js';
 
 function parseMeta(meta) {
   if (typeof meta !== 'string') {
@@ -36,6 +36,6 @@ function parseMeta(meta) {
     }, {});
 }
 
-// console.log(parseMeta(meta));
+console.log(parseMeta(meta));
 
 export default parseMeta;
