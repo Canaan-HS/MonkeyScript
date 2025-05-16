@@ -31,7 +31,10 @@ export default `
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @run-at       document-start
+// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
+
 // @grant        window.close
 // @grant        window.onurlchange
 // @grant        GM_info
@@ -39,14 +42,11 @@ export default `
 // @grant        GM_getValue
 // @grant        GM_download
 // @grant        GM_openInTab
-// @grant        GM_getResourceURL
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
-// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
+// @run-at       document-start
 // ==/UserScript==
 
 `
