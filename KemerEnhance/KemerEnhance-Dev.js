@@ -1674,6 +1674,7 @@
                     const HrefParse = (element) => element.href || element.$gAttr("href");
 
                     /**
+                     * ! 目前有 Bug, 載入回條怪怪的不準確, 已經載入但觸發 onerror 又重載, 還無限遞迴
                      * 這邊的邏輯, 因為是有延遲運行, 如果還在運行當中,
                      * 頁面被 ExtraButton 的功能進行換頁, 就會出現報錯, 但我懶的處理
                      *
@@ -1693,12 +1694,12 @@
                                         alt: "Loading Failed"
                                     });
                                     Img.onload = function () { Img.classList.remove("Image-loading-indicator") };
-                                    Img.onerror = function () { Origina_Requ.Reload(Img, Retry - 1) };
-                                }, 1500);
+                                    Img.onerror = function () { Origina_Requ.Reload(Img, --Retry) };
+                                }, 3000); // 降低載入頻率
                             }
                         },
                         FailedClick: async () => {
-                            //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (監聽對象 需要測試)
+                            //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (目前也壞了, 感覺觸發不了)
                             Syn.one(".post__files, .scrape__files", "click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
