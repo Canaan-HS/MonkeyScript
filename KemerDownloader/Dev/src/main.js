@@ -82,8 +82,30 @@ import Downloader from './downloader.js'; // 下載數據
                     const CompressMode = Syn.Local("Compression", { error: true });
                     const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
 
+                    this.Download ??= Downloader( // 懶加載 Download 類
+                        GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
+                        Config, FileName, Process, Transl, Syn, saveAs
+                    );
+
                     // 創建容器
-                    const Container = Syn.createElement("span", { id: "Button-Container" });
+                    const Container = Syn.createElement("span", {
+                        id: "Button-Container",
+                        on: {
+                            type: "click",
+                            listener: event => {
+                                const target = event.target;
+
+                                if (target === Button) {
+                                    let Instantiate = null;
+                                    Instantiate = new this.Download(CompressMode, ModeDisplay, Button);
+                                    Instantiate.DownloadTrigger();
+                                } else if (target.closest("svg")) {
+                                    alert("Currently Invalid");
+                                }
+                            },
+                            add: { capture: true, passive: true }
+                        }
+                    });
 
                     Syn.createElement(Container, "svg", { // 創建設置 SVG
                         class: "Setting_Button",
@@ -96,23 +118,7 @@ import Downloader from './downloader.js'; // 下載數據
                         disabled: Process.Lock
                     });
 
-                    this.Download ??= Downloader( // 懶加載 Download 類
-                        GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
-                        Config, FileName, Process, Transl, Syn, saveAs
-                    );
-
                     Files[0].appendChild(Container);
-                    Syn.one(Container, "click", event => {
-                        const target = event.target;
-
-                        if (target === Button) {
-                            let Instantiate = null;
-                            Instantiate = new this.Download(CompressMode, ModeDisplay, Button);
-                            Instantiate.DownloadTrigger();
-                        } else if (target.closest("svg")) {
-                            alert("Currently Invalid");
-                        }
-                    }, { capture: true, passive: true });
                 } catch (error) {
                     Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
 
