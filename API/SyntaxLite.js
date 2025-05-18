@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/04/30
+// @version      2025/05/18
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -49,7 +49,7 @@ const Syn = (() => {
      * 不支援鏈式
      * $qa("div").$qa("span")
      */
-    function Selector(root=document, selector, all) {
+    function Selector(root = document, selector, all) {
         const head = selector[0];
         const headless = selector.slice(1);
         const complicated = /[ #.\[:]/.test(headless);
@@ -72,25 +72,25 @@ const Syn = (() => {
         return all ? [...collection] : collection[0];
     };
     [Document.prototype, Element.prototype].forEach(proto => { // 註冊 document & element 原型
-        proto.$q = function(selector) {
+        proto.$q = function (selector) {
             return Selector(this, selector, false);
         };
-        proto.$qa = function(selector) {
+        proto.$qa = function (selector) {
             return Selector(this, selector, true);
         };
     });
 
     const $Node = {
-        $text(value=null) {
+        $text(value = null) {
             return value !== null ? (this.textContent = value?.trim()) : this.textContent?.trim();
         },
-        $copy(deep=true) {
+        $copy(deep = true) {
             return this.cloneNode(deep);
         },
-        $iHtml(value=null) {
+        $iHtml(value = null) {
             return value !== null ? (this.innerHTML = value) : this.innerHTML;
         },
-        $oHtml(value=null) {
+        $oHtml(value = null) {
             return value !== null ? (this.outerHTML = value) : this.outerHTML;
         },
         $sAttr(name, value) {
@@ -125,7 +125,7 @@ const Syn = (() => {
     Object.assign(Node.prototype, $Node); // 原型註冊
     const $text = Object.keys($Node)[0]; // 處理可能的空值
     Object.defineProperty(Object.prototype, $text, {
-        value: function(value = null) {
+        value: function (value = null) {
             return $Node[$text].call(this, value);
         },
         writable: true,
@@ -146,29 +146,71 @@ const Syn = (() => {
         script: document.scripts,
         style: document.styleSheets,
         $url: location.href,
-        get url() {return location.href},
+        get url() { return location.href },
         $origin: location.origin,
-        get origin() {return location.origin},
+        get origin() { return location.origin },
         $domain: location.hostname,
-        get domain() {return location.hostname},
+        get domain() { return location.hostname },
         $lang: navigator.language,
-        get lang() {return navigator.language},
+        get lang() { return navigator.language },
         $agen: navigator.userAgent,
-        get agen() {return navigator.userAgent},
-        get createFragment() {return document.createDocumentFragment()},
-        title: (value=null) => value !== null ? (document.title = value) : document.title,
-        cookie: (value=null) => value !== null ? (document.cookie = value) : document.cookie,
+        get agen() { return navigator.userAgent },
+        get createFragment() { return document.createDocumentFragment() },
+        title: (value = null) => value !== null ? (document.title = value) : document.title,
+        cookie: (value = null) => value !== null ? (document.cookie = value) : document.cookie,
         createUrl: (object) => URL.createObjectURL(object),
+        _on: (root, { type, listener, add }) => {
+            if (typeof type === "string" && typeof listener === "function") {
+                root.addEventListener(type, listener, add);
+                return { [type]: () => root.removeEventListener(type, listener, add) };
+            }
+            return {};
+        },
+        /**
+         * * { 創建元素 }
+         * ! 並無對所有參數類型做嚴格檢查, 傳錯會直接報錯
+         * @param {element|string} arg1 - 添加的根元素 或 創建元素標籤
+         * @param {string|object} arg2 - 創建元素標籤 或 元素屬性, arg2 = arg1 == element ? string : object
+         * @param {object|undefined} arg3 - 元素屬性 或 不傳參數
+         * @param {string} [arg.id] - 元素ID
+         * @param {string} [arg.title] - 元素標題
+         * @param {string} [arg.class] - 元素類別
+         * @param {string} [arg.text] - 元素內文
+         * @param {number} [arg.rows] - 行數
+         * @param {number} [arg.cols] - 列數
+         * @param {object} [arg.on] - 監聽事件, 可用 [] 多設置
+         * @param {string|object} [arg.style] - 元素樣式
+         * @param {object} [arg.attr] - 元素屬性
+         * @param {object} [arg.props] - 其餘屬性
+         * @returns {element}
+         * @example
+         * const parent = document.querySelector("#parent");
+         * createElement(parent, "div", { class: "child", text: "Hello World" });
+         *
+         * const container = createElement("div", {
+         *  id: "container",
+         *  class: "container",
+         *  attr: { "container-id": "1" },
+         *  on: {
+         *      type: "click",
+         *      listener: () => console.log("click"),
+         *      add: {
+         *          capture: true,
+         *          once: true
+         *      }
+         * });
+         * document.body.appendChild(container);
+         */
         createElement(arg1, arg2, arg3) {
             const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
             if (!tag) return;
 
             const {
                 id, title, class: className, text: textContent = "",
-                rows: rowSpan, cols: colSpan, style = {}, attr = {}, ...props
+                rows: rowSpan, cols: colSpan, on = {}, style = {}, attr = {}, ...props
             } = value;
 
-            const element = Object.assign(document.createElement(tag), {textContent});
+            const element = Object.assign(document.createElement(tag), { textContent });
 
             if (id) element.id = id;
             if (title) element.title = title;
@@ -184,6 +226,35 @@ const Syn = (() => {
 
             // 設置自定義屬性
             Object.entries(attr).forEach(([key, val]) => element.setAttribute(key, val));
+
+            // 設置監聽器
+            const event = {};
+
+            if (typeof on === "object") {
+                Object.assign(event, this._on(element, on));
+            } else if (Array.isArray(on)) {
+                on.forEach(item => Object.assign(event, this._on(element, item)));
+            }
+
+            // 掛載監聽器函數
+            Object.assign(element, {
+                on(type, listener, add) {
+                    this.addEventListener(type, listener, add);
+                    Object.assign(event, {
+                        [type]: () => this.removeEventListener(type, listener, add)
+                    });
+                },
+                off(type) {
+                    event[type]?.();
+                    delete event[type];
+                },
+                offAll() {
+                    Object.keys(event).forEach(type => {
+                        event[type]();
+                        delete event[type];
+                    });
+                }
+            });
 
             return root instanceof HTMLElement ? root.appendChild(element) : element;
         },
@@ -207,7 +278,7 @@ const Syn = (() => {
      *
      * Syn.one(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
      */
-    async function one(element, type, listener, add={}, resolve=null) {
+    async function one(element, type, listener, add = {}, resolve = null) {
         try {
             let event = type.split(/\s*[\,|/]\s*/).filter(Boolean);
             let timeout = null;
@@ -297,9 +368,9 @@ const Syn = (() => {
         const originalReplaceState = history.replaceState;
 
         const eventHandler = {
-            urlchange: ()=> trigger('urlchange'),
-            popstate: ()=> trigger('popstate'),
-            hashchange: ()=> trigger('hashchange')
+            urlchange: () => trigger('urlchange'),
+            popstate: () => trigger('popstate'),
+            hashchange: () => trigger('hashchange')
         };
 
         function trigger(type) {
@@ -320,7 +391,7 @@ const Syn = (() => {
          * @param {boolean} all - 是否清除所有監聽器 (否會跳過最新的 urlchange 監聽器)
          * @param {boolean} clean - 是否要判斷已經被清理過 
          */
-        function off(all=true, clean=false) {
+        function off(all = true, clean = false) {
             if (clean && cleaned) return;
 
             clearTimeout(timer);
@@ -376,7 +447,7 @@ const Syn = (() => {
         error: label => console.error(label),
         count: label => console.count(label),
     };
-    async function Log(group = null, label = "print", {dev=true, type="log", collapsed=true} = {}) {
+    async function Log(group = null, label = "print", { dev = true, type = "log", collapsed = true } = {}) {
         if (!dev) return;
 
         const Call = Print[type] || Print.log;
@@ -400,8 +471,8 @@ const Syn = (() => {
      * AddScript(Rule, ID, RepeatAdd)
      */
     const AddCall = {
-        AddStyle: (rule, id, repeatAdd=true)=> AddHead("style", rule, id, repeatAdd),
-        AddScript: (rule, id, repeatAdd=true)=> AddHead("script", rule, id, repeatAdd),
+        AddStyle: (rule, id, repeatAdd = true) => AddHead("style", rule, id, repeatAdd),
+        AddScript: (rule, id, repeatAdd = true) => AddHead("script", rule, id, repeatAdd),
     };
     async function AddHead(type, rule, id, repeatAdd) {
         let element = document.getElementById(id);
@@ -440,15 +511,15 @@ const Syn = (() => {
      *    ob.observe(document.body, op); // 重建觀察器
      * });
      */
-    async function Observer(target, onFunc, options={}, callback=null) {
+    async function Observer(target, onFunc, options = {}, callback = null) {
         const {
-            mark="",
-            debounce=0,
-            throttle=100,
-            subtree=true,
-            childList=true,
-            attributes=true,
-            characterData=false,
+            mark = "",
+            debounce = 0,
+            throttle = 100,
+            subtree = true,
+            childList = true,
+            attributes = true,
+            characterData = false,
         } = options ?? {};
 
         if (mark) {
@@ -518,21 +589,21 @@ const Syn = (() => {
             return (all ? result.length > 0 : result) && result;
         }
     };
-    async function WaitElem(selector, found=null, options={}) {
+    async function WaitElem(selector, found = null, options = {}) {
         const Query = Array.isArray(selector) ? WaitCore.queryMap : WaitCore.queryElement; //! 批量查找只能傳 Array
         const {
-            raf=false,
-            all=false,
-            timeout=8,
-            throttle=0,
-            debounce=50,
-            visibility=true,
-            subtree=true,
-            childList=true,
-            attributes=true,
-            characterData=false,
-            timeoutResult=false,
-            root=document
+            raf = false,
+            all = false,
+            timeout = 8,
+            throttle = 0,
+            debounce = 50,
+            visibility = true,
+            subtree = true,
+            childList = true,
+            attributes = true,
+            characterData = false,
+            timeoutResult = false,
+            root = document
         } = options ?? {};
 
         return new Promise((resolve, reject) => {
@@ -622,8 +693,8 @@ const Syn = (() => {
      * Local("數據", {value: 123, error: null})
      */
     const StorageCall = {
-        Session: (key, {value=null, error=undefined}={}) => Storage(key, sessionStorage, value, error),
-        Local: (key, {value=null, error=undefined}={}) => Storage(key, localStorage, value, error)
+        Session: (key, { value = null, error = undefined } = {}) => Storage(key, sessionStorage, value, error),
+        Local: (key, { value = null, error = undefined } = {}) => Storage(key, localStorage, value, error)
     };
     const StorageHandlers = {
         String: (storage, key, value) =>
@@ -710,7 +781,7 @@ const Syn = (() => {
      *      console.log(Success);
      * })
      */
-    async function OutputJson(Data, Name, Success=null) {
+    async function OutputJson(Data, Name, Success = null) {
         try {
             Data = typeof Data !== "string" ? JSON.stringify(Data, null, 4) : Data;
             Name = typeof Name !== "string" ? "Anonymous.json" : Name.endsWith(".json") ? Name : `${Name}.json`;
@@ -748,7 +819,7 @@ const Syn = (() => {
      * let start = Runtime();
      * Runtime(start);
      */
-    function Runtime(time = null, {lable="Elapsed Time:", log=true, format=true, style="\x1b[1m\x1b[36m%s\x1b[0m"} = {}) {
+    function Runtime(time = null, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
         if (!time) return performance.now();
 
         const result = format
@@ -766,7 +837,7 @@ const Syn = (() => {
      * @example
      * GetDate("{year}/{month}/{date} {hour}:{minute}")
      */
-    function GetDate(format=null) {
+    function GetDate(format = null) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
 
@@ -823,7 +894,7 @@ const Syn = (() => {
         'zh-HK': 'Traditional',
         'zh-MO': 'Traditional'
     };
-    function TranslMatcher(word, lang=navigator.language, defaultLang="en-US") {
+    function TranslMatcher(word, lang = navigator.language, defaultLang = "en-US") {
         return word[TranslUtils[lang]]
             ?? word[TranslUtils[defaultLang]]
             ?? word[TranslUtils["en-US"]];
@@ -854,10 +925,10 @@ const Syn = (() => {
      * }, "ID");
      */
     const Register = new Set();
-    async function Menu(items, options={}) {
+    async function Menu(items, options = {}) {
         let {
             name = "Menu",
-            index = 1,  
+            index = 1,
             reset = false
         } = options ?? {};
 
@@ -903,9 +974,9 @@ const Syn = (() => {
         lV: () => StoreVerify(GM_listValues()),
         sV: (key, value) => GM_setValue(key, value),
         gV: (key, error) => StoreVerify(GM_getValue(key, error)),
-        sJV: (key, value, space=0) => GM_setValue(key, JSON.stringify(value, null, space)),
+        sJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
         gJV: (key, error) => {
-            try { return JSON.parse(StoreVerify(GM_getValue(key, error)))}
+            try { return JSON.parse(StoreVerify(GM_getValue(key, error))) }
             catch { return error }
         }
     };
