@@ -1,4 +1,4 @@
-import meta from './KemerDownloader/Dev/src/metadata.js';
+import meta from './YTHideTool/Dev/src/metadata.js';
 
 function parseMeta(meta) {
   if (typeof meta !== 'string') {
