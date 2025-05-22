@@ -1,7 +1,8 @@
 import { util } from 'vite-plugin-monkey';
 
+const Name = "KemerDownloader";
 export default {
-    entry: './KemerDownloader/Dev/src/main.js',
+    entry: `./${Name}/Dev/src/main.js`,
     userscript: {
         connect: '*',
         match: [
@@ -38,8 +39,8 @@ export default {
     build: {
         rollupOptions: {
             output: {
-                dir: './KemerDownloader/Dev/dist',
-                entryFileNames: 'KemerDownloader-Dev.js',
+                dir: `./${Name}/Dev/dist`,
+                entryFileNames: `${Name}-Dev.js`,
             },
         }
     },
