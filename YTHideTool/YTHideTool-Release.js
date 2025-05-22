@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      0.0.38-Beta
+// @version      0.0.38-Beta1
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -14,21 +14,22 @@
 // @description:ko      이 스크립트는 YouTube 동영상 끝에 나오는 추천 카드를 자동으로 숨기고, 마우스가 비디오 위에 머무를 때 추천 카드가 다시 나타납니다. 또한, 댓글 섹션, 비디오 추천, 기능 목록을 숨기고 최소 모드로 전환하는 단축키를 제공합니다. 설정은 자동으로 저장되며, 다음 비디오를 열 때 자동으로 적용됩니다.
 // @description:en      This script automatically hides the recommended cards at the end of YouTube videos. When the mouse hovers over the video, the recommended cards will reappear. Additionally, it provides shortcut keys to toggle the comment section, video recommendations, feature list, and switch to a minimalist mode. Settings are automatically saved and applied the next time the video is opened.
 
+// @noframes
 // @match        *://www.youtube.com/*
 // @icon         https://cdn-icons-png.flaticon.com/512/1383/1383260.png
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @noframes
-// @run-at       document-start
+// @require      https://update.greasyfork.org/scripts/487608/1591150/SyntaxLite_min.js
+
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1532086/ClassSyntax_min.js
+// @run-at       document-start
 // ==/UserScript==
 
 (async () => {
@@ -41,88 +42,149 @@
             MinimaList: k => k.ctrlKey && Config.HotKey.Adapt(k) == "z", // 極簡化
             RecomViewing: k => k.altKey && Config.HotKey.Adapt(k) == "1", // 推薦觀看
             Comment: k => k.altKey && Config.HotKey.Adapt(k) == "2", // 留言區
-            FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3", // 功能區
-            ListDesc: k => k.altKey && Config.HotKey.Adapt(k) == "4" // 播放清單資訊
+            FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3" // 功能區
         }
     };
-    new class Tool extends Syntax {
-        constructor() {
-            super();
-            this.MRM = null;
-            this.GCM = null;
-            this.RST = null;
-            this.TFT = false;
-            this.InjecRecord = {};
-            this.HotKey = Config.HotKey;
-            this.Lang = this.Language(this.Device.Lang);
-            this.Live = /^(https?:\/\/)www\.youtube\.com\/live\/.*$/;
-            this.Video = /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/;
-            this.Playlist = /^(https?:\/\/)www\.youtube\.com\/playlist\?list=.+$/;
-            this.PageType = url => this.Video.test(url) ? "Video" : this.Live.test(url) ? "Live" : this.Playlist.test(url) ? "Playlist" : "NotSupport";
-            this.TitleFormat = title => title.textContent.replace(/^\s+|\s+$/g, "");
-            this.TitleOb = new MutationObserver(() => {
-                document.title != "..." && (document.title = "...");
-            });
-            this.TitleOp = {
-                childList: true,
-                subtree: false
+    const Match = {
+        Live: /^(https?:\/\/)www\.youtube\.com\/live\/.*$/,
+        Video: /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/
+    };
+    const Dict = {
+        Traditional: {
+            "快捷提示": `@ 功能失效時 [請重新整理] =>
+                    \r(Alt + 1)：隱藏推薦播放
+                    \r(Alt + 2)：隱藏留言區
+                    \r(Alt + 3)：隱藏功能列表
+                    \r(Alt + T)：隱藏標題文字
+                    \r(Ctrl + Z)：使用極簡化`
+        },
+        Simplified: {
+            "📜 預設熱鍵": "📜 预设热键",
+            "快捷提示": `@ 功能失效时 [请重新整理] =>
+                    \r(Alt + 1)：隐藏推荐播放
+                    \r(Alt + 2)：隐藏评论区
+                    \r(Alt + 3)：隐藏功能列表
+                    \r(Alt + T)：隐藏标题文字
+                    \r(Ctrl + Z)：使用极简化`,
+            "查找框架失敗": "查找框架失败",
+            "頁面類型": "页面类型",
+            "隱藏元素": "隐藏元素",
+            "極簡化": "极简化",
+            "隱藏標題": "隐藏标题",
+            "隱藏推薦觀看": "隐藏推荐观看",
+            "隱藏留言區": "隐藏留言区",
+            "隱藏功能選項": "隐藏功能选项",
+            "隱藏播放清單資訊": "隐藏播放清单信息"
+        },
+        Japan: {
+            "📜 預設熱鍵": "📜 デフォルトホットキー",
+            "快捷提示": `@ 机能が无効になった场合 [ページを更新してください] =>
+                    \r(Alt + 1)：おすすめ再生を非表示にする
+                    \r(Alt + 2)：コメントエリアを非表示にする
+                    \r(Alt + 3)：机能リストを非表示にする
+                    \r(Alt + T)：タイトル文字を隠す
+                    \r(Ctrl + Z)：シンプル化を使用する`,
+            "查找框架失敗": "フレームの検索に失敗しました",
+            "頁面類型": "ページタイプ",
+            "隱藏元素": "要素を隠す",
+            "極簡化": "ミニマリスト",
+            "隱藏標題": "タイトルを隠す",
+            "隱藏推薦觀看": "おすすめ視聴を隠す",
+            "隱藏留言區": "コメントセクションを隠す",
+            "隱藏功能選項": "機能オプションを隠す",
+            "隱藏播放清單資訊": "再生リスト情報を隠す"
+        },
+        Korea: {
+            "📜 預設熱鍵": "📜 기본 단축키",
+            "快捷提示": `@ 기능이 작동하지 않을 때 [새로 고침하세요] =>
+                    \r(Alt + 1)：추천 재생 숨기기
+                    \r(Alt + 2)：댓글 영역 숨기기
+                    \r(Alt + 3)：기능 목록 숨기기
+                    \r(Alt + T)：제목 텍스트 숨기기
+                    \r(Ctrl + Z)：간소화 사용`,
+            "查找框架失敗": "프레임 검색 실패",
+            "頁面類型": "페이지 유형",
+            "隱藏元素": "요소 숨기기",
+            "極簡化": "극단적 단순화",
+            "隱藏標題": "제목 숨기기",
+            "隱藏推薦觀看": "추천 시청 숨기기",
+            "隱藏留言區": "댓글 섹션 숨기기",
+            "隱藏功能選項": "기능 옵션 숨기기",
+            "隱藏播放清單資訊": "재생 목록 정보 숨기기"
+        },
+        English: {
+            "📜 預設熱鍵": "📜 Default Hotkeys",
+            "快捷提示": `@ If functionalities fail [Please refresh] =>
+                    \r(Alt + 1)：Hide recommended playback
+                    \r(Alt + 2)：Hide comments section
+                    \r(Alt + 3)：Hide feature list
+                    \r(Alt + 4)：Hide playlist info
+                    \r(Alt + T)：Hide Title Text
+                    \r(Ctrl + Z)：Use Simplification`,
+            "查找框架失敗": "Frame search failed",
+            "頁面類型": "Page type",
+            "隱藏元素": "Hide elements",
+            "極簡化": "Minimalize",
+            "隱藏標題": "Hide title",
+            "隱藏推薦觀看": "Hide recommended views",
+            "隱藏留言區": "Hide comments section",
+            "隱藏功能選項": "Hide feature options",
+            "隱藏播放清單資訊": "Hide playlist information"
+        }
+    };
+    (async () => {
+        const { Transl } = (() => {
+            const Matcher = Syn.TranslMatcher(Dict);
+            return {
+                Transl: (Str) => Matcher[Str] ?? Str
             };
-            this.DevPrint = (title, content, show = Config.Dev) => {
-                this.Log(title, content, {
-                    dev: show,
-                    collapsed: false
-                });
+        })();
+        (() => {
+            let MRM = null;
+            let GCM = null;
+            let RST = null;
+            let TFT = false;
+            const InjecRecord = {};
+            const HotKey = Config.HotKey;
+            const PageType = (url) => Match.Video.test(url) ? "Video" : Match.Live.test(url) ? "Live" : "NotSupport";
+            const TitleFormat = (title) => title.$text().replace(/^\s+|\s+$/g, "");
+            const DevPrint = (title, content, show = Config.Dev) => {
+                Syn.Log(title, content, { dev: show, collapsed: false });
             };
-            this.DevTimePrint = (title, show) => {
-                this.DevPrint(title, this.Runtime(this.RST, {
-                    log: false
-                }), show);
+            const DevTimePrint = (title, show) => {
+                DevPrint(title, Syn.Runtime(RST, { log: false }), show);
             };
-            this.HideJudgment = async (Element, setKey = null) => {
-                if (Element.style.display == "none" || this.TFT) {
+            const HideJudgment = async (Element, setKey = null) => {
+                if (Element.style.display == "none" || TFT) {
                     Element.style.display = "block";
-                    setKey && this.Store("s", setKey, false);
+                    setKey && Syn.sV(setKey, false);
                 } else {
                     Element.style.display = "none";
-                    setKey && this.Store("s", setKey, true);
+                    setKey && Syn.sV(setKey, true);
                 }
             };
-            this.StyleTransform = async (ObjList, Type, Style) => {
-                ObjList.forEach(element => {
+            const StyleTransform = async (ObjList, Type, Style) => {
+                ObjList.forEach((element) => {
                     element.style[Type] = Style;
                 });
-                if (Config.Dev) {
-                    return new Promise(resolve => {
-                        resolve(ObjList.every(element => element.style[Type] == Style));
-                    });
-                }
             };
-        }
-        async Detec() {
-            this.Injec(this.Device.Url);
-            this.AddListener(window, "urlchange", change => {
-                this.Injec(change.url);
+            const TitleOp = { childList: true, subtree: false };
+            const TitleOb = new MutationObserver(() => {
+                document.title != "..." && Syn.title("...");
             });
-        }
-        async Injec(URL) {
-            const Page = this.PageType(URL);
-            this.DevPrint(this.Lang.Transl("頁面類型"), Page);
-            if (Page == "NotSupport" || this.InjecRecord[URL]) return;
-            this.WaitElem("#columns, #contents", null, {
-                object: document,
-                timeout: 20,
-                characterData: true,
-                timeoutResult: true
-            }).then(trigger => {
-                if (!trigger) {
-                    this.Log(null, this.Lang.Transl("查找框架失敗"), {
-                        type: "error"
-                    });
-                    return;
-                }
-                if (["Video", "Live"].includes(Page)) {
-                    Config.Dev && (this.RST = this.Runtime());
-                    this.AddStyle(`
+            async function Core(URL) {
+                const Page = PageType(URL);
+                DevPrint(Transl("頁面類型"), Page);
+                if (Page === "NotSupport" || InjecRecord[URL]) return;
+                Syn.WaitElem("#columns, #contents", null, { raf: true, timeoutResult: true }).then((trigger) => {
+                    if (!trigger) {
+                        Syn.Log(null, Transl("查找框架失敗"), { type: "error" });
+                        return;
+                    }
+                    MRM ?? (MRM = GM_registerMenuCommand(Transl("📜 預設熱鍵"), () => {
+                        alert(Transl("快捷提示"));
+                    }));
+                    Syn.AddStyle(`
                         .ytp-ce-element {
                             display: none;
                         }
@@ -136,229 +198,119 @@
                             overflow-x: hidden !important;
                         }
                     `, "Video-Tool-Hide", false);
-                    this.WaitElem(["title", "#title h1", "#end", "#below", "#secondary.style-scope.ytd-watch-flexy", "#secondary-inner", "#related", "#comments", "#actions"], null, {
-                        throttle: 100,
-                        characterData: true,
-                        timeoutResult: true
-                    }).then(found => {
-                        const [title, h1, end, below, secondary, inner, related, comments, actions] = found;
-                        this.DevPrint(this.Lang.Transl("隱藏元素"), found);
-                        if (!this.MRM) this.MRM = GM_registerMenuCommand(this.Lang.Transl("📜 預設熱鍵"), () => {
-                            alert(this.Lang.Transl("快捷提示"));
-                        });
-                        if (this.Store("g", "Minimalist")) {
-                            this.TitleOb.observe(title, this.TitleOp);
-                            this.StyleTransform([document.body], "overflow", "hidden");
-                            this.StyleTransform([h1, end, below, secondary, related], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("極簡化"), state));
+                    Syn.WaitElem([
+                        "title",
+                        "#title h1",
+                        "#end",
+                        "#below",
+                        "#secondary.style-scope.ytd-watch-flexy",
+                        "#secondary-inner",
+                        "#related",
+                        "#comments",
+                        "#actions"
+                    ], null, { throttle: 80, characterData: true, timeoutResult: true }).then((found) => {
+                        DevPrint(Transl("隱藏元素"), found);
+                        const [
+                            title,
+                            h1,
+                            end,
+                            below,
+                            secondary,
+                            inner,
+                            related,
+                            comments,
+                            actions
+                        ] = found;
+                        if (Syn.gV("Minimalist")) {
+                            TitleOb.observe(title, TitleOp);
+                            StyleTransform([document.body], "overflow", "hidden");
+                            StyleTransform([h1, end, below, secondary, related], "display", "none").then((state) => DevTimePrint(Transl("極簡化"), state));
                             document.title = "...";
                         } else {
-                            if (this.Store("g", "Title")) {
-                                this.TitleOb.observe(title, this.TitleOp);
-                                this.StyleTransform([h1], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("隱藏標題"), state));
+                            if (Syn.gV("Title")) {
+                                TitleOb.observe(title, TitleOp);
+                                StyleTransform([h1], "display", "none").then((state) => DevTimePrint(Transl("隱藏標題"), state));
                                 document.title = "...";
                             }
-                            if (this.Store("g", "RecomViewing")) {
-                                this.StyleTransform([secondary, related], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("隱藏推薦觀看"), state));
+                            if (Syn.gV("RecomViewing")) {
+                                StyleTransform([secondary, related], "display", "none").then((state) => DevTimePrint(Transl("隱藏推薦觀看"), state));
                             }
-                            if (this.Store("g", "Comment")) {
-                                this.StyleTransform([comments], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("隱藏留言區"), state));
+                            if (Syn.gV("Comment")) {
+                                StyleTransform([comments], "display", "none").then((state) => DevTimePrint(Transl("隱藏留言區"), state));
                             }
-                            if (this.Store("g", "FunctionBar")) {
-                                this.StyleTransform([actions], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("隱藏功能選項"), state));
+                            if (Syn.gV("FunctionBar")) {
+                                StyleTransform([actions], "display", "none").then((state) => DevTimePrint(Transl("隱藏功能選項"), state));
                             }
                         }
                         const Modify = {
                             Title: (Mode, Save = "Title") => {
                                 Mode = Save ? Mode : !Mode;
-                                document.title = Mode ? (this.TitleOb.disconnect(),
-                                    this.TitleFormat(h1)) : (this.TitleOb.observe(title, this.TitleOp),
-                                        "...");
-                                this.HideJudgment(h1, Save);
+                                document.title = Mode ? (TitleOb.disconnect(), TitleFormat(h1)) : (TitleOb.observe(title, TitleOp), "...");
+                                HideJudgment(h1, Save);
                             },
                             Minimalist: (Mode, Save = true) => {
                                 Mode = Save ? Mode : !Mode;
                                 if (Mode) {
                                     Modify.Title(false, false);
-                                    Save && this.Store("s", "Minimalist", false);
-                                    this.StyleTransform([document.body], "overflow", "auto");
-                                    this.StyleTransform([end, below, secondary, related], "display", "block");
+                                    Save && Syn.sV("Minimalist", false);
+                                    StyleTransform([document.body], "overflow", "auto");
+                                    StyleTransform([end, below, secondary, related], "display", "block");
                                 } else {
                                     Modify.Title(true, false);
-                                    Save && this.Store("s", "Minimalist", true);
-                                    this.StyleTransform([document.body], "overflow", "hidden");
-                                    this.StyleTransform([end, below, secondary, related], "display", "none");
+                                    Save && Syn.sV("Minimalist", true);
+                                    StyleTransform([document.body], "overflow", "hidden");
+                                    StyleTransform([end, below, secondary, related], "display", "none");
                                 }
                             },
                             RecomViewing: (Mode, Save = "RecomViewing") => {
                                 if (inner.childElementCount > 1) {
-                                    this.HideJudgment(secondary);
-                                    this.HideJudgment(related, Save);
-                                    this.TFT = false;
+                                    HideJudgment(secondary);
+                                    HideJudgment(related, Save);
+                                    TFT = false;
                                 } else {
-                                    this.HideJudgment(related, Save);
-                                    this.TFT = true;
+                                    HideJudgment(related, Save);
+                                    TFT = true;
                                 }
                             },
                             Comment: (Mode, Save = "Comment") => {
-                                this.HideJudgment(comments, Save);
+                                HideJudgment(comments, Save);
                             },
                             FunctionBar: (Mode, Save = "FunctionBar") => {
-                                this.HideJudgment(actions, Save);
+                                HideJudgment(actions, Save);
                             }
                         };
-                        this.AddListener(document, "keydown", event => {
-                            if (this.HotKey.MinimaList(event)) {
+                        Syn.onEvent(document, "keydown", (event) => {
+                            if (HotKey.MinimaList(event)) {
                                 event.preventDefault();
-                                Modify.Minimalist(this.Store("g", "Minimalist"));
-                            } else if (this.HotKey.Title(event)) {
+                                Modify.Minimalist(Syn.gV("Minimalist"));
+                            } else if (HotKey.Title(event)) {
                                 event.preventDefault();
-                                Modify.Title(document.title == "...");
-                            } else if (this.HotKey.RecomViewing(event)) {
+                                Modify.Title(document.title === "...");
+                            } else if (HotKey.RecomViewing(event)) {
                                 event.preventDefault();
                                 Modify.RecomViewing();
-                            } else if (this.HotKey.Comment(event)) {
+                            } else if (HotKey.Comment(event)) {
                                 event.preventDefault();
                                 Modify.Comment();
-                            } else if (this.HotKey.FunctionBar(event)) {
+                            } else if (HotKey.FunctionBar(event)) {
                                 event.preventDefault();
                                 Modify.FunctionBar();
                             }
-                        }, {
-                            capture: true
-                        });
-                        if (Config.GlobalChange && !this.GCM) {
-                            this.StoreListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], call => {
+                        }, { capture: true });
+                        if (!GCM) {
+                            Syn.StoreListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], (call) => {
                                 if (call.far) Modify[call.key](call.nv, false);
                             });
-                            this.GCM = true;
+                            GCM = true;
                         }
-                        this.InjecRecord[URL] = true;
+                        InjecRecord[URL] = true;
                     });
-                } else if (Page == "Playlist") {
-                    Config.Dev && (this.RST = this.Runtime());
-                    this.WaitElem("ytd-playlist-header-renderer.style-scope.ytd-browse", null, {
-                        throttle: 100,
-                        characterData: true,
-                        timeoutResult: true
-                    }).then(playlist => {
-                        this.DevPrint(this.Lang.Transl("隱藏元素"), playlist);
-                        if (!this.MRM) this.MRM = GM_registerMenuCommand(this.Lang.Transl("📜 預設熱鍵"), () => {
-                            alert(this.Lang.Transl("快捷提示"));
-                        });
-                        if (this.Store("g", "ListDesc")) {
-                            this.StyleTransform([playlist], "display", "none").then(state => this.DevTimePrint(this.Lang.Transl("隱藏播放清單資訊"), state));
-                        }
-                        this.AddListener(document, "keydown", event => {
-                            if (this.HotKey.ListDesc(event)) {
-                                event.preventDefault();
-                                this.HideJudgment(playlist, "ListDesc");
-                            }
-                        });
-                        this.InjecRecord[URL] = true;
-                    });
-                }
+                });
+            }
+            Core(Syn.$url);
+            Syn.onUrlChange((change) => {
+                Core(change.url);
             });
-        }
-        Language(lang) {
-            const Word = {
-                Traditional: {
-                    "快捷提示": `@ 功能失效時 [請重新整理] =>
-                    \r(Alt + 1)：隱藏推薦播放
-                    \r(Alt + 2)：隱藏留言區
-                    \r(Alt + 3)：隱藏功能列表
-                    \r(Alt + 4)：隱藏播放清單資訊
-                    \r(Alt + T)：隱藏標題文字
-                    \r(Ctrl + Z)：使用極簡化`
-                },
-                Simplified: {
-                    "📜 預設熱鍵": "📜 预设热键",
-                    "快捷提示": `@ 功能失效时 [请重新整理] =>
-                    \r(Alt + 1)：隐藏推荐播放
-                    \r(Alt + 2)：隐藏评论区
-                    \r(Alt + 3)：隐藏功能列表
-                    \r(Alt + 4)：隐藏播放清单资讯
-                    \r(Alt + T)：隐藏标题文字
-                    \r(Ctrl + Z)：使用极简化`,
-                    "查找框架失敗": "查找框架失败",
-                    "頁面類型": "页面类型",
-                    "隱藏元素": "隐藏元素",
-                    "極簡化": "极简化",
-                    "隱藏標題": "隐藏标题",
-                    "隱藏推薦觀看": "隐藏推荐观看",
-                    "隱藏留言區": "隐藏留言区",
-                    "隱藏功能選項": "隐藏功能选项",
-                    "隱藏播放清單資訊": "隐藏播放清单信息"
-                },
-                Japan: {
-                    "📜 預設熱鍵": "📜 デフォルトホットキー",
-                    "快捷提示": `@ 机能が无効になった场合 [ページを更新してください] =>
-                    \r(Alt + 1)：おすすめ再生を非表示にする
-                    \r(Alt + 2)：コメントエリアを非表示にする
-                    \r(Alt + 3)：机能リストを非表示にする
-                    \r(Alt + 4)：プレイリスト情报を非表示にする
-                    \r(Alt + T)：タイトル文字を隠す
-                    \r(Ctrl + Z)：シンプル化を使用する`,
-                    "查找框架失敗": "フレームの検索に失敗しました",
-                    "頁面類型": "ページタイプ",
-                    "隱藏元素": "要素を隠す",
-                    "極簡化": "ミニマリスト",
-                    "隱藏標題": "タイトルを隠す",
-                    "隱藏推薦觀看": "おすすめ視聴を隠す",
-                    "隱藏留言區": "コメントセクションを隠す",
-                    "隱藏功能選項": "機能オプションを隠す",
-                    "隱藏播放清單資訊": "再生リスト情報を隠す"
-                },
-                Korea: {
-                    "📜 預設熱鍵": "📜 기본 단축키",
-                    "快捷提示": `@ 기능이 작동하지 않을 때 [새로 고침하세요] =>
-                    \r(Alt + 1)：추천 재생 숨기기
-                    \r(Alt + 2)：댓글 영역 숨기기
-                    \r(Alt + 3)：기능 목록 숨기기
-                    \r(Alt + 4)：재생 목록 정보 숨기기
-                    \r(Alt + T)：제목 텍스트 숨기기
-                    \r(Ctrl + Z)：간소화 사용`,
-                    "查找框架失敗": "프레임 검색 실패",
-                    "頁面類型": "페이지 유형",
-                    "隱藏元素": "요소 숨기기",
-                    "極簡化": "극단적 단순화",
-                    "隱藏標題": "제목 숨기기",
-                    "隱藏推薦觀看": "추천 시청 숨기기",
-                    "隱藏留言區": "댓글 섹션 숨기기",
-                    "隱藏功能選項": "기능 옵션 숨기기",
-                    "隱藏播放清單資訊": "재생 목록 정보 숨기기"
-                },
-                English: {
-                    "📜 預設熱鍵": "📜 Default Hotkeys",
-                    "快捷提示": `@ If functionalities fail [Please refresh] =>
-                    \r(Alt + 1)：Hide recommended playback
-                    \r(Alt + 2)：Hide comments section
-                    \r(Alt + 3)：Hide feature list
-                    \r(Alt + 4)：Hide playlist info
-                    \r(Alt + T)：Hide Title Text
-                    \r(Ctrl + Z)：Use Simplification`,
-                    "查找框架失敗": "Frame search failed",
-                    "頁面類型": "Page type",
-                    "隱藏元素": "Hide elements",
-                    "極簡化": "Minimalize",
-                    "隱藏標題": "Hide title",
-                    "隱藏推薦觀看": "Hide recommended views",
-                    "隱藏留言區": "Hide comments section",
-                    "隱藏功能選項": "Hide feature options",
-                    "隱藏播放清單資訊": "Hide playlist information"
-                }
-            }, Match = {
-                ko: Word.Korea,
-                ja: Word.Japan,
-                "en-US": Word.English,
-                "zh-CN": Word.Simplified,
-                "zh-SG": Word.Simplified,
-                "zh-TW": Word.Traditional,
-                "zh-HK": Word.Traditional,
-                "zh-MO": Word.Traditional
-            }, ML = Match[lang] ?? Match["en-US"];
-            return {
-                Transl: Str => ML[Str] ?? Str
-            };
-        }
-    }().Detec();
+        })();
+    })();
 })();
