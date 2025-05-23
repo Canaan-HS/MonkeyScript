@@ -81,7 +81,7 @@ import Dict from './language.js';
         const TitleOp = { childList: true, subtree: false };
         /* 持續隱藏 */
         const TitleOb = new MutationObserver(() => {
-            document.title != "..." && Syn.title("...");
+            Syn.title() != "..." && Syn.title("...");
         });
 
         async function Core(URL) {
@@ -133,13 +133,13 @@ import Dict from './language.js';
                         TitleOb.observe(title, TitleOp);
                         StyleTransform([document.body], "overflow", "hidden");
                         StyleTransform([h1, end, below, secondary, related], "display", "none").then(state => DevTimePrint(Transl("極簡化"), state));
-                        document.title = "...";
+                        Syn.title("...");
                     } else {
                         // 標題
                         if (Syn.gV("Title")) {
                             TitleOb.observe(title, TitleOp);
                             StyleTransform([h1], "display", "none").then(state => DevTimePrint(Transl("隱藏標題"), state));
-                            document.title = "...";
+                            Syn.title("...");
                         };
 
                         // 推薦播放
@@ -163,11 +163,11 @@ import Dict from './language.js';
                         Title: (Mode, Save = "Title") => { // 以下的 Save 不需要, 就傳遞 false 或是 空值
                             Mode = Save ? Mode : !Mode; // 同上
 
-                            document.title = Mode ? (
+                            Syn.title(Mode ? (
                                 TitleOb.disconnect(), TitleFormat(h1)
                             ) : (
                                 TitleOb.observe(title, TitleOp), "..."
-                            );
+                            ));
                             HideJudgment(h1, Save);
                         },
                         Minimalist: (Mode, Save = true) => { // 這個比較特別, 他時直接在這操作存儲, 所以 Save 是 Boolen
@@ -210,7 +210,7 @@ import Dict from './language.js';
                             Modify.Minimalist(Syn.gV("Minimalist"));
                         } else if (HotKey.Title(event)) {
                             event.preventDefault();
-                            Modify.Title(document.title === "...");
+                            Modify.Title(Syn.title() === "...");
                         } else if (HotKey.RecomViewing(event)) {
                             event.preventDefault();
                             Modify.RecomViewing();
