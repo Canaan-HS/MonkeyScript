@@ -24,14 +24,13 @@ By hiding recommendations, you can avoid being constantly suggested by the algor
 
 ### **Quick Triggers (on watch page)**
 
-| **Shortcut**  | **Description**                           |
-|:-------------:|:-----------------------------------------:|
-| `Alt + 1`     | Hide the right-side video recommendations |
-| `Alt + 2`     | Hide the comment section                  |
-| `Alt + 3`     | Hide the options menu                     |
-| `Alt + 4`     | Hide playlist information (only available on playlist info page) |
-| `Alt + T`     | Hide the title text                       |
-| `Ctrl + Z`    | Minimal view (hide everything)            |
+| **Shortcut** |              **Description**              |
+| :----------: | :---------------------------------------: |
+|  `Alt + 1`   | Hide the right-side video recommendations |
+|  `Alt + 2`   |         Hide the comment section          |
+|  `Alt + 3`   |           Hide the options menu           |
+|  `Alt + T`   |            Hide the title text            |
+|  `Ctrl + Z`  |      Minimal view (hide everything)       |
 
 ---
 
@@ -77,9 +76,11 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.38-Beta**
+**Release Version: 0.0.38-Beta1**
 
 ### **Update Contents**
-1. None
+1. Library update
+2. Architecture adjustment
+3. Remove playlist hiding
 
 ---
