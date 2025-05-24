@@ -10,6 +10,9 @@ const userscript: object = config.userscript;
 
 export default defineConfig({
     build,
+    server: {
+        host: '0.0.0.0'
+    },
     plugins: [
         monkey({
             entry,
