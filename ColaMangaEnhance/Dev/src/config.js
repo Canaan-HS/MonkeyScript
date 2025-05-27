@@ -6,7 +6,7 @@ export const Config = {
     },
     AutoTurnPage: { // 自動翻頁
         Enable: true,
-        Mode: 5, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
+        Mode: 3, // 1 = 快速 | 2 = 一般無盡 | 3 = 優化無盡
     },
     RegisterHotkey: { // 快捷功能
         Enable: true,
