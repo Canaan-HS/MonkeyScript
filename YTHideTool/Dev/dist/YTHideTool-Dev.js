@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      0.0.38-Beta
+// @version      0.0.38-Beta1
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -42,17 +42,12 @@
       MinimaList: k => k.ctrlKey && Config.HotKey.Adapt(k) == "z", // 極簡化
       RecomViewing: k => k.altKey && Config.HotKey.Adapt(k) == "1", // 推薦觀看
       Comment: k => k.altKey && Config.HotKey.Adapt(k) == "2", // 留言區
-      FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3", // 功能區
-      ListDesc: k => k.altKey && Config.HotKey.Adapt(k) == "4" // 播放清單資訊
+      FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3" // 功能區
     }
   };
   const Match = {
     Live: /^(https?:\/\/)www\.youtube\.com\/live\/.*$/,
-    // 直播影片
-    Video: /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/,
-    // 影片播放區
-    Playlist: /^(https?:\/\/)www\.youtube\.com\/playlist\?list=.+$/
-    // 播放清單
+    Video: /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/
   };
   const Dict = {
     Traditional: {
@@ -60,7 +55,6 @@
                     \r(Alt + 1)：隱藏推薦播放
                     \r(Alt + 2)：隱藏留言區
                     \r(Alt + 3)：隱藏功能列表
-                    \r(Alt + 4)：隱藏播放清單資訊
                     \r(Alt + T)：隱藏標題文字
                     \r(Ctrl + Z)：使用極簡化`
     },
@@ -70,7 +64,6 @@
                     \r(Alt + 1)：隐藏推荐播放
                     \r(Alt + 2)：隐藏评论区
                     \r(Alt + 3)：隐藏功能列表
-                    \r(Alt + 4)：隐藏播放清单资讯
                     \r(Alt + T)：隐藏标题文字
                     \r(Ctrl + Z)：使用极简化`,
       "查找框架失敗": "查找框架失败",
@@ -89,7 +82,6 @@
                     \r(Alt + 1)：おすすめ再生を非表示にする
                     \r(Alt + 2)：コメントエリアを非表示にする
                     \r(Alt + 3)：机能リストを非表示にする
-                    \r(Alt + 4)：プレイリスト情报を非表示にする
                     \r(Alt + T)：タイトル文字を隠す
                     \r(Ctrl + Z)：シンプル化を使用する`,
       "查找框架失敗": "フレームの検索に失敗しました",
@@ -108,7 +100,6 @@
                     \r(Alt + 1)：추천 재생 숨기기
                     \r(Alt + 2)：댓글 영역 숨기기
                     \r(Alt + 3)：기능 목록 숨기기
-                    \r(Alt + 4)：재생 목록 정보 숨기기
                     \r(Alt + T)：제목 텍스트 숨기기
                     \r(Ctrl + Z)：간소화 사용`,
       "查找框架失敗": "프레임 검색 실패",
@@ -155,7 +146,7 @@
       let TFT = false;
       const InjecRecord = {};
       const HotKey = Config.HotKey;
-      const PageType = (url) => Match.Video.test(url) ? "Video" : Match.Live.test(url) ? "Live" : Match.Playlist.test(url) ? "Playlist" : "NotSupport";
+      const PageType = (url) => Match.Video.test(url) ? "Video" : Match.Live.test(url) ? "Live" : "NotSupport";
       const TitleFormat = (title) => title.$text().replace(/^\s+|\s+$/g, "");
       const DevPrint = (title, content, show = Config.Dev) => {
         Syn.Log(title, content, { dev: show, collapsed: false });
@@ -185,7 +176,7 @@
         const Page = PageType(URL);
         DevPrint(Transl("頁面類型"), Page);
         if (Page === "NotSupport" || InjecRecord[URL]) return;
-        Syn.WaitElem("#columns, #contents", null, { raf: true, timeout: 10, timeoutResult: true }).then((trigger) => {
+        Syn.WaitElem("#columns, #contents", null, { raf: true, timeoutResult: true }).then((trigger) => {
           if (!trigger) {
             Syn.Log(null, Transl("查找框架失敗"), { type: "error" });
             return;
@@ -193,23 +184,7 @@
           MRM ?? (MRM = GM_registerMenuCommand(Transl("📜 預設熱鍵"), () => {
             alert(Transl("快捷提示"));
           }));
-          if (Page === "Playlist") {
-            Syn.WaitElem("ytd-playlist-header-renderer.style-scope.ytd-browse", null, { throttle: 50, characterData: true, timeoutResult: true }).then((playlist) => {
-              DevPrint(Transl("隱藏元素"), playlist);
-              if (Syn.gV("ListDesc")) {
-                StyleTransform([playlist], "display", "none").then((state) => DevTimePrint(Transl("隱藏播放清單資訊"), state));
-              }
-              Syn.offEvent(document, "keydown");
-              Syn.onEvent(document, "keydown", (event) => {
-                if (HotKey.ListDesc(event)) {
-                  event.preventDefault();
-                  HideJudgment(playlist, "ListDesc");
-                }
-              });
-              InjecRecord[URL] = true;
-            });
-          } else {
-            Syn.AddStyle(`
+          Syn.AddStyle(`
                         .ytp-ce-element {
                             display: none;
                         }
@@ -223,115 +198,113 @@
                             overflow-x: hidden !important;
                         }
                     `, "Video-Tool-Hide", false);
-            Syn.WaitElem([
-              "title",
-              "#title h1",
-              "#end",
-              "#below",
-              "#secondary.style-scope.ytd-watch-flexy",
-              "#secondary-inner",
-              "#related",
-              "#comments",
-              "#actions"
-            ], null, { throttle: 100, characterData: true, timeoutResult: true }).then((found) => {
-              DevPrint(Transl("隱藏元素"), found);
-              const [
-                title,
-                h1,
-                end,
-                below,
-                secondary,
-                inner,
-                related,
-                comments,
-                actions
-              ] = found;
-              if (Syn.gV("Minimalist")) {
+          Syn.WaitElem([
+            "title",
+            "#title h1",
+            "#end",
+            "#below",
+            "#secondary.style-scope.ytd-watch-flexy",
+            "#secondary-inner",
+            "#related",
+            "#comments",
+            "#actions"
+          ], null, { throttle: 80, characterData: true, timeoutResult: true }).then((found) => {
+            DevPrint(Transl("隱藏元素"), found);
+            const [
+              title,
+              h1,
+              end,
+              below,
+              secondary,
+              inner,
+              related,
+              comments,
+              actions
+            ] = found;
+            if (Syn.gV("Minimalist")) {
+              TitleOb.observe(title, TitleOp);
+              StyleTransform([document.body], "overflow", "hidden");
+              StyleTransform([h1, end, below, secondary, related], "display", "none").then((state) => DevTimePrint(Transl("極簡化"), state));
+              document.title = "...";
+            } else {
+              if (Syn.gV("Title")) {
                 TitleOb.observe(title, TitleOp);
-                StyleTransform([document.body], "overflow", "hidden");
-                StyleTransform([h1, end, below, secondary, related], "display", "none").then((state) => DevTimePrint(Transl("極簡化"), state));
+                StyleTransform([h1], "display", "none").then((state) => DevTimePrint(Transl("隱藏標題"), state));
                 document.title = "...";
-              } else {
-                if (Syn.gV("Title")) {
-                  TitleOb.observe(title, TitleOp);
-                  StyleTransform([h1], "display", "none").then((state) => DevTimePrint(Transl("隱藏標題"), state));
-                  document.title = "...";
-                }
-                if (Syn.gV("RecomViewing")) {
-                  StyleTransform([secondary, related], "display", "none").then((state) => DevTimePrint(Transl("隱藏推薦觀看"), state));
-                }
-                if (Syn.gV("Comment")) {
-                  StyleTransform([comments], "display", "none").then((state) => DevTimePrint(Transl("隱藏留言區"), state));
-                }
-                if (Syn.gV("FunctionBar")) {
-                  StyleTransform([actions], "display", "none").then((state) => DevTimePrint(Transl("隱藏功能選項"), state));
-                }
               }
-              const Modify = {
-                Title: (Mode, Save = "Title") => {
-                  Mode = Save ? Mode : !Mode;
-                  document.title = Mode ? (TitleOb.disconnect(), TitleFormat(h1)) : (TitleOb.observe(title, TitleOp), "...");
-                  HideJudgment(h1, Save);
-                },
-                Minimalist: (Mode, Save = true) => {
-                  Mode = Save ? Mode : !Mode;
-                  if (Mode) {
-                    Modify.Title(false, false);
-                    Save && Syn.sV("Minimalist", false);
-                    StyleTransform([document.body], "overflow", "auto");
-                    StyleTransform([end, below, secondary, related], "display", "block");
-                  } else {
-                    Modify.Title(true, false);
-                    Save && Syn.sV("Minimalist", true);
-                    StyleTransform([document.body], "overflow", "hidden");
-                    StyleTransform([end, below, secondary, related], "display", "none");
-                  }
-                },
-                RecomViewing: (Mode, Save = "RecomViewing") => {
-                  if (inner.childElementCount > 1) {
-                    HideJudgment(secondary);
-                    HideJudgment(related, Save);
-                    TFT = false;
-                  } else {
-                    HideJudgment(related, Save);
-                    TFT = true;
-                  }
-                },
-                Comment: (Mode, Save = "Comment") => {
-                  HideJudgment(comments, Save);
-                },
-                FunctionBar: (Mode, Save = "FunctionBar") => {
-                  HideJudgment(actions, Save);
-                }
-              };
-              Syn.offEvent(document, "keydown");
-              Syn.onEvent(document, "keydown", (event) => {
-                if (HotKey.MinimaList(event)) {
-                  event.preventDefault();
-                  Modify.Minimalist(Syn.gV("Minimalist"));
-                } else if (HotKey.Title(event)) {
-                  event.preventDefault();
-                  Modify.Title(document.title === "...");
-                } else if (HotKey.RecomViewing(event)) {
-                  event.preventDefault();
-                  Modify.RecomViewing();
-                } else if (HotKey.Comment(event)) {
-                  event.preventDefault();
-                  Modify.Comment();
-                } else if (HotKey.FunctionBar(event)) {
-                  event.preventDefault();
-                  Modify.FunctionBar();
-                }
-              }, { capture: true });
-              if (!GCM) {
-                Syn.StoreListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], (call) => {
-                  if (call.far) Modify[call.key](call.nv, false);
-                });
-                GCM = true;
+              if (Syn.gV("RecomViewing")) {
+                StyleTransform([secondary, related], "display", "none").then((state) => DevTimePrint(Transl("隱藏推薦觀看"), state));
               }
-              InjecRecord[URL] = true;
-            });
-          }
+              if (Syn.gV("Comment")) {
+                StyleTransform([comments], "display", "none").then((state) => DevTimePrint(Transl("隱藏留言區"), state));
+              }
+              if (Syn.gV("FunctionBar")) {
+                StyleTransform([actions], "display", "none").then((state) => DevTimePrint(Transl("隱藏功能選項"), state));
+              }
+            }
+            const Modify = {
+              Title: (Mode, Save = "Title") => {
+                Mode = Save ? Mode : !Mode;
+                document.title = Mode ? (TitleOb.disconnect(), TitleFormat(h1)) : (TitleOb.observe(title, TitleOp), "...");
+                HideJudgment(h1, Save);
+              },
+              Minimalist: (Mode, Save = true) => {
+                Mode = Save ? Mode : !Mode;
+                if (Mode) {
+                  Modify.Title(false, false);
+                  Save && Syn.sV("Minimalist", false);
+                  StyleTransform([document.body], "overflow", "auto");
+                  StyleTransform([end, below, secondary, related], "display", "block");
+                } else {
+                  Modify.Title(true, false);
+                  Save && Syn.sV("Minimalist", true);
+                  StyleTransform([document.body], "overflow", "hidden");
+                  StyleTransform([end, below, secondary, related], "display", "none");
+                }
+              },
+              RecomViewing: (Mode, Save = "RecomViewing") => {
+                if (inner.childElementCount > 1) {
+                  HideJudgment(secondary);
+                  HideJudgment(related, Save);
+                  TFT = false;
+                } else {
+                  HideJudgment(related, Save);
+                  TFT = true;
+                }
+              },
+              Comment: (Mode, Save = "Comment") => {
+                HideJudgment(comments, Save);
+              },
+              FunctionBar: (Mode, Save = "FunctionBar") => {
+                HideJudgment(actions, Save);
+              }
+            };
+            Syn.onEvent(document, "keydown", (event) => {
+              if (HotKey.MinimaList(event)) {
+                event.preventDefault();
+                Modify.Minimalist(Syn.gV("Minimalist"));
+              } else if (HotKey.Title(event)) {
+                event.preventDefault();
+                Modify.Title(document.title === "...");
+              } else if (HotKey.RecomViewing(event)) {
+                event.preventDefault();
+                Modify.RecomViewing();
+              } else if (HotKey.Comment(event)) {
+                event.preventDefault();
+                Modify.Comment();
+              } else if (HotKey.FunctionBar(event)) {
+                event.preventDefault();
+                Modify.FunctionBar();
+              }
+            }, { capture: true });
+            if (!GCM) {
+              Syn.StoreListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], (call) => {
+                if (call.far) Modify[call.key](call.nv, false);
+              });
+              GCM = true;
+            }
+            InjecRecord[URL] = true;
+          });
         });
       }
       Core(Syn.$url);
@@ -340,5 +313,4 @@
       });
     })();
   })();
-
 })();
