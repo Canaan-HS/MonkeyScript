@@ -10,11 +10,11 @@ export default function Tools(Syn, Config, Control, Param) {
 
     /* 檢測到頂 */
     const TopDetected = Syn.Throttle(() => {
-        Param.Up_scroll = Syn.sY() == 0 ? (Storage("scroll", false), false) : true;
+        Param.Up_scroll = Syn.sY == 0 ? (Storage("scroll", false), false) : true;
     }, 1000);
 
     /* 檢測到底 */
-    const IsTheBottom = () => Syn.sY() + Syn.iH() >= document.documentElement.scrollHeight;
+    const IsTheBottom = () => Syn.sY + Syn.iH >= document.documentElement.scrollHeight;
     const BottomDetected = Syn.Throttle(() => {
         if (Config.AutoTurnPage.Mode <= 3) return; // ! 臨時寫法, 當翻頁模式為 1,2,3 時不會觸發
         Param.Down_scroll = IsTheBottom() ? (Storage("scroll", false), false) : true;
