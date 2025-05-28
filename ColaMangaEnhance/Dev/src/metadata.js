@@ -18,7 +18,7 @@ export default `
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/487608/1591150/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1597491/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
