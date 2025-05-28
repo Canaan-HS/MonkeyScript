@@ -8,6 +8,7 @@ const { Syn } = monkeyWindow;
 import { Config, Control, Param } from './config.js';
 import Tools from './tools.js';
 import Style from './style.js';
+import PageTurn from './pageturn.js';
 
 /*
 Todo 未來添加
@@ -44,6 +45,7 @@ Todo 未來添加
     const Set = tools.GetSet(); // 初始化設置
 
     const style = Style(Syn, Control, Param, Set); // 初始化樣式函數
+    const turn = PageTurn(Syn, Control, Param, tools); // 初始化自動翻頁函數
 
     /* 阻擋廣告 (目前無效) */
     async function BlockAds() {
@@ -71,7 +73,6 @@ Todo 未來添加
             div[style*='position'] {display: none !important;}
             html {pointer-events: none !important;}
             .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
-
         `, Control.IdList.Block);
 
         // 雖然性能開銷比較高, 但比較不會跳一堆錯誤訊息
@@ -86,15 +87,16 @@ Todo 未來添加
     };
 
     /* 快捷切換上下頁 和 自動滾動 */
-    async function HotkeySwitch() {
-        const Use = Config.RegisterHotkey.Function;
+    async function HotkeySwitch(Use) {
+        // const Use = Config.RegisterHotkey.Function;
         let JumpState = false; // 如果不是最後一頁, 觸發時他將會被設置為 true, 反之始終為 false (是 false 才能觸發跳轉, 一個跳轉的防抖機制)
 
         if (Syn.Platform === "Desktop") {
-            // 是主頁, 且啟用保持滾動, 也啟用自動滾動(避免無法手動停止), 且沒有開啟手動滾動(避免無法手動停止)
+
+            // 是主頁, 啟用保持滾動 & 啟用翻頁自動滾動, 且沒有開啟手動滾動
             if (Param.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
-                Param.IsMainPage = tools.Storage("scroll"); // 取得是否有保持滾動
-                Param.IsMainPage && tools.AutoScroll(Control.ScrollPixels); // 立即觸發滾動
+                Param.Down_scroll = tools.Storage("scroll"); // 取得是否有保持滾動
+                Param.Down_scroll && tools.AutoScroll(Control.ScrollPixels); // 立即觸發滾動
             }
 
             const UP_ScrollSpeed = -Control.ScrollPixels;
@@ -105,13 +107,13 @@ Todo 未來添加
 
                 if (key === "ArrowLeft" && Use.TurnPage && !JumpState) {
                     event.stopImmediatePropagation();
-                    JumpState = !tools.FinalPage(Param.PreviousPage);
-                    location.assign(Param.PreviousPage);
+                    JumpState = !tools.FinalPage(Param.PreviousLink);
+                    location.assign(Param.PreviousLink);
                 }
                 else if (key === "ArrowRight" && Use.TurnPage && !JumpState) {
                     event.stopImmediatePropagation();
-                    JumpState = !tools.FinalPage(Param.NextPage);
-                    location.assign(Param.NextPage);
+                    JumpState = !tools.FinalPage(Param.NextLink);
+                    location.assign(Param.NextLink);
                 }
                 else if (key === "ArrowUp" && CanScroll) {
                     event.stopImmediatePropagation();
@@ -165,11 +167,11 @@ Todo 未來添加
                     moveX = event.touches[0].clientX - startX;
 
                     if (moveX > sidelineX && !JumpState) { // 右滑 回到上頁, 需要大於限制 X 軸移動
-                        JumpState = !tools.FinalPage(Param.PreviousPage);
-                        location.assign(Param.PreviousPage);
+                        JumpState = !tools.FinalPage(Param.PreviousLink);
+                        location.assign(Param.PreviousLink);
                     } else if (moveX < -sidelineX && !JumpState) { // 左滑 到下一頁, 需要大於限制 X 軸移動
-                        JumpState = !tools.FinalPage(Param.NextPage);
-                        location.assign(Param.NextPage);
+                        JumpState = !tools.FinalPage(Param.NextLink);
+                        location.assign(Param.NextLink);
                     }
                 }
             }, 60), { passive: true });
@@ -181,7 +183,7 @@ Todo 未來添加
         /* 初始化取得數據 */
         async function Init(callback) {
             Syn.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
-                { timeout: 10, throttle: 30, timeoutResult: true })
+                { timeout: 10, throttle: 30, visibility: Param.IsMainPage, timeoutResult: true })
                 .then(([Body, Title, HeadPager, Readend, Manga]) => {
                     Param.Body = Body;
 
@@ -191,12 +193,12 @@ Todo 未來添加
 
                     try {
                         const PageLink = Readend.$qa("ul a");
-                        Param.PreviousPage = PageLink[0].href;
-                        Param.NextPage = PageLink[2].href;
+                        Param.PreviousLink = PageLink[0].href;
+                        Param.NextLink = PageLink[2].href;
                     } catch {
                         const PageLink = HeadPager.$qa("a.mh_btn:not(.mh_bgcolor)");
-                        Param.PreviousPage = PageLink[0].href;
-                        Param.NextPage = PageLink[1].href;
+                        Param.PreviousLink = PageLink[0].href;
+                        Param.NextLink = PageLink[1].href;
                     }
 
                     Param.MangaList = Manga; // 漫畫列表
@@ -206,8 +208,8 @@ Todo 未來添加
                         Param.Body,
                         Param.ContentsPage,
                         Param.HomePage,
-                        Param.PreviousPage,
-                        Param.NextPage,
+                        Param.PreviousLink,
+                        Param.NextLink,
                         Param.MangaList,
                         Param.BottomStrip
                     ].every(Check => Check)) callback(true);
@@ -222,8 +224,8 @@ Todo 未來添加
                 if (state) { // 在這邊載入的功能都是需要等到, 找到元素才操作比較不會出錯
                     style.PictureStyle();
                     Config.BGColor.Enable && style.BackgroundStyle(Config.BGColor.Color);
-                    // Config.AutoTurnPage.Enable && AutoPageTurn(Config.AutoTurnPage.Mode);
-                    Config.RegisterHotkey.Enable && HotkeySwitch();
+                    Config.AutoTurnPage.Enable && turn.Auto(Config.AutoTurnPage.Mode);
+                    Config.RegisterHotkey.Enable && HotkeySwitch(Config.RegisterHotkey.Function);
                 } else Syn.Log(null, "Error");
             });
         } catch (error) { Syn.Log(null, error) }
