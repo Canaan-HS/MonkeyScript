@@ -14,7 +14,7 @@ export default {
             'GM_setValue', 'GM_getValue'
         ],
         require: [
-            'https://update.greasyfork.org/scripts/487608/1591150/SyntaxLite_min.js',
+            'https://update.greasyfork.org/scripts/487608/1597491/SyntaxLite_min.js',
 
             util.dataUrl(`window.Syn=Syn`)
         ]
