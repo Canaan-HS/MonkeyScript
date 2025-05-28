@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/05/18
+// @version      2025/05/28
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -12,12 +12,12 @@ const Syn = (() => {
     const Mark = {};
     const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const DeviceCall = {
-        sX: () => window.scrollX,
-        sY: () => window.scrollY,
-        iW: () => window.innerWidth,
-        iH: () => window.innerHeight,
+        get sX() { return window.scrollX },
+        get sY() { return window.scrollY },
+        get iW() { return window.innerWidth },
+        get iH() { return window.innerHeight },
         _Cache: undefined,
-        Platform: function () {
+        get Platform() {
             if (!this._Cache) {
                 if (navigator.userAgentData?.mobile !== undefined) {
                     this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
@@ -29,6 +29,7 @@ const Syn = (() => {
                     this._Cache = "Desktop";
                 }
             }
+
             return this._Cache;
         }
     };
@@ -270,13 +271,13 @@ const Syn = (() => {
      * @returns {boolean}      - 回傳添加狀態
      *
      * @example
-     * Syn.one(元素, "監聽類型", 觸發 => {
+     * one(元素, "監聽類型", 觸發 => {
      *      觸發... 其他操作
      * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
      *      console.log(註冊狀態)
      * })
      *
-     * Syn.one(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
+     * one(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
      */
     async function one(element, type, listener, add = {}, resolve = null) {
         try {
@@ -308,7 +309,7 @@ const Syn = (() => {
      * @param {string} [options.mark] - 自定義鍵值
      *
      * @example
-     * Syn.onEvent(元素, "監聽類型", (event) => {
+     * onEvent(元素, "監聽類型", (event) => {
      *      觸發執行
      * }, {
      *    capture: true,
@@ -337,7 +338,7 @@ const Syn = (() => {
      * @param {string} [mark] - 自定義鍵值 (預設使用 this)
      *
      * @example
-     * Syn.offEvent(元素, "監聽類型")
+     * offEvent(元素, "監聽類型")
      */
     async function offEvent(element, type, mark) {
         typeof element === "string" && (element = Selector(document, element));
@@ -1013,7 +1014,7 @@ const Syn = (() => {
 
     return {
         ...DeviceCall, ...Sugar, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem,
+        Type, EventRecord, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem,
         Throttle, Debounce, OutputJson, Runtime, GetDate, TranslMatcher, Menu, StoreListen
     };
 })();
