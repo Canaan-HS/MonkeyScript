@@ -41,11 +41,10 @@ export const Param = {
     Body: null, // body 緩存
     ContentsPage: null, // 返回目錄連結 緩存
     HomePage: null, // 返回首頁連結 緩存
-    PreviousPage: null, // 上一頁連結 緩存
-    NextPage: null, // 下一頁連結 緩存
+    PreviousLink: null, // 上一頁連結 緩存
+    NextLink: null, // 下一頁連結 緩存
     MangaList: null, // 漫畫列表 緩存
     BottomStrip: null, // 以閱讀完畢的那條
-    Observer_Next: null, // 下一頁觀察器
     Up_scroll: false, // 向上滾動判斷值
     Down_scroll: false, // 向下滾動判斷值
     IsFinalPage: false, // 最終頁判斷值
