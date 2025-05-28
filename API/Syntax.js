@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/05/18
+// @version      2025/05/28
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -13,12 +13,12 @@ const Syn = (() => {
     const Parser = new DOMParser();
     const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const DeviceCall = {
-        sX: () => window.scrollX,
-        sY: () => window.scrollY,
-        iW: () => window.innerWidth,
-        iH: () => window.innerHeight,
+        get sX() { return window.scrollX },
+        get sY() { return window.scrollY },
+        get iW() { return window.innerWidth },
+        get iH() { return window.innerHeight },
         _Cache: undefined,
-        Platform: function () {
+        get Platform() {
             if (!this._Cache) {
                 if (navigator.userAgentData?.mobile !== undefined) {
                     this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
@@ -30,6 +30,7 @@ const Syn = (() => {
                     this._Cache = "Desktop";
                 }
             }
+
             return this._Cache;
         }
     };
@@ -1144,7 +1145,7 @@ const Syn = (() => {
 
     return {
         ...DeviceCall, ...Sugar, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
+        Type, EventRecord, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
         FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
         Menu, StoreListen,
 
