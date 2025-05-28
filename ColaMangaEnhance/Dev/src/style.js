@@ -16,7 +16,7 @@ export default function Style(Syn, Control, Param, Set) {
 
         /* 圖片樣式 */
         async PictureStyle() {
-            if (Syn.Platform() === "Desktop") {
+            if (Syn.Platform === "Desktop") {
                 Syn.AddStyle(`
                     .mh_comicpic img {
                         margin: auto;
