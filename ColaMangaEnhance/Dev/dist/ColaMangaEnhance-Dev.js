@@ -268,7 +268,6 @@
           }
           Observer_Next.observe(tools.ObserveObject(tools.VisibleObjects(Img)));
           Syn2.Observer(Param2.MangaList, () => {
-            Img = Param2.MangaList.$qa("img");
             const Visible = tools.VisibleObjects(Img);
             const VL = Visible.length;
             if (VL > Quantity) {
@@ -277,7 +276,7 @@
               Observer_Next.observe(tools.ObserveObject(Visible));
             }
           }, {
-            debounce: 500
+            debounce: 300
           }, observer => {
             Observer = observer.ob;
           });
