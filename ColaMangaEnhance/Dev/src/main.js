@@ -49,38 +49,28 @@ Todo 未來添加
 
     /* 阻擋廣告 (目前無效) */
     async function BlockAds() {
-        const OriginListener = EventTarget.prototype.addEventListener, Block = Control.BlockListener;
-        const EventListeners = new Map();
-
-        EventTarget.prototype.addEventListener = function (type, listener, options) {
-            if (Block.has(type)) return;
-            if (!EventListeners.has(this)) EventListeners.set(this, []);
-            EventListeners.get(this).push({ type, listener, options });
-            OriginListener.call(this, type, listener, options);
-        };
-
-        function removeBlockedListeners() {
-            EventListeners.forEach((listeners, element) => {
-                listeners.forEach(({ type, listener }) => {
-                    if (Block.has(type)) {
-                        element.removeEventListener(type, listener);
-                    }
-                });
-            });
-        }
-
         Syn.AddStyle(`
             div[style*='position'] {display: none !important;}
             html {pointer-events: none !important;}
             .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
         `, Control.IdList.Block);
 
+        const OriginListener = EventTarget.prototype.addEventListener;
+        const Block = Control.BlockListener;
+
+        EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
+            apply(target, thisArg, args) {
+                const [type, listener, options] = args;
+                if (Block.has(type)) return;
+                return target.apply(thisArg, args);
+            }
+        });
+
         // 雖然性能開銷比較高, 但比較不會跳一堆錯誤訊息
         const iframe = `iframe:not(#${Control.IdList.Iframe})`;
         const AdCleanup = () => {
             Syn.$q(iframe)?.remove();
-            removeBlockedListeners();
-            requestIdleCallback(AdCleanup, { timeout: 500 });
+            requestIdleCallback(AdCleanup, { timeout: 300 });
         };
 
         AdCleanup();
