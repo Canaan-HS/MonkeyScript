@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/05/28
+// @version      2025/06/04
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -136,9 +136,9 @@ const Syn = (() => {
     // 簡化語法糖
     const Sugar = {
         $q: document.$q.bind(document),
-        $Q: (root, selector) => Selector(root, selector, false),
+        Q: (root, selector) => Selector(root, selector, false),
         $qa: document.$qa.bind(document),
-        $Qa: (root, selector) => Selector(root, selector, true),
+        Qa: (root, selector) => Selector(root, selector, true),
         html: document.documentElement,
         head: document.head,
         body: document.body,
@@ -281,17 +281,25 @@ const Syn = (() => {
      */
     async function one(element, type, listener, add = {}, resolve = null) {
         try {
-            let event = type.split(/\s*[\,|/]\s*/).filter(Boolean);
-            let timeout = null;
-            let delay = event.length > 1 ? 15 : 0;
-
-            const trigger = (event) => {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => listener(event), delay);
-            };
-
             typeof element === "string" && (element = Selector(document, element));
-            event.forEach(type => element.addEventListener(type, trigger, add));
+
+            let events = type.split(/\s*[\,|/]\s*/).filter(Boolean);
+
+            if (events.length === 0) {
+                throw new Error("No event types provided");
+            }
+            else if (events.length === 1) { // 原始 type 直接註冊
+                element.addEventListener(type, listener, add);
+            }
+            else {
+                let timeout = null;
+                const trigger = (event) => { // 防抖處理多個相同事件類型
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => listener(event), 15);
+                };
+                // 解析後 type 個別註冊
+                events.forEach(type => element.addEventListener(type, trigger, add));
+            }
 
             resolve && resolve(true);
         } catch { resolve && resolve(false) }
