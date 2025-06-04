@@ -1,6 +1,4 @@
 export default function Style(Syn, Control, Param, Set) {
-
-
     return {
         /* 背景樣式 */
         async BackgroundStyle(Color) {
