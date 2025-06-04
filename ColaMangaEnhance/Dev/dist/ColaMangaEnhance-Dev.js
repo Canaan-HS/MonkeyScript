@@ -57,6 +57,8 @@
     // 像素, 越大越快
     WaitPicture: 1e3,
     // 載入延遲時間 (ms)
+    ResizeHandle: null,
+    // 保存 Resize 計時器
     BlockListener: /* @__PURE__ */ new Set([
       // 阻擋事件
       "auxclick",
@@ -231,7 +233,7 @@
   }
   function PageTurn(Syn2, Control2, Param2, tools) {
     async function Unlimited(Optimized) {
-      const iframe = Syn2.createElement("iframe", { id: Control2.IdList.Iframe, src: Param2.NextLink });
+      var _a, _b;
       Syn2.AddStyle(`
             .mh_wrap, .mh_readend, .mh_footpager,
             .fed-foot-info, #imgvalidation2022 {display: none;}
@@ -247,29 +249,44 @@
                 border: none;
             }
         `, Control2.IdList.Scroll);
+      const StylelRules = Syn2.$q(`#${Control2.IdList.Scroll}`).sheet.cssRules;
+      const BlockRules = (_b = (_a = Syn2.$q(`#${Control2.IdList.Block}`)) == null ? void 0 : _a.sheet) == null ? void 0 : _b.cssRules;
       if (Param2.IsMainPage) {
         window.addEventListener("message", (event) => {
           const data = event.data;
           if (data && data.length > 0) {
-            const { Title, PreviousUrl, CurrentUrl, NextUrl } = data[0];
-            document.title = Title;
-            Param2.NextLink = NextUrl;
-            Param2.PreviousLink = PreviousUrl;
-            history.pushState(null, null, CurrentUrl);
+            const {
+              Title,
+              PreviousUrl,
+              CurrentUrl,
+              NextUrl,
+              Resize,
+              StopResize,
+              Recover
+            } = data[0];
+            if (Resize) StylelRules[2].style.height = `${Resize}px`;
+            else if (StopResize) clearTimeout(Control2.ResizeHandle);
+            else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important");
+            else {
+              document.title = Title;
+              Param2.NextLink = NextUrl;
+              Param2.PreviousLink = PreviousUrl;
+              history.pushState(null, null, CurrentUrl);
+            }
           }
         });
       } else {
         Syn2.AddStyle(`
-                    html {
-                        overflow: hidden !important;
-                        overflow-x: hidden !important;
-                        scrollbar-width: none !important;
-                        -ms-overflow-style: none !important;
-                    }
-                    html::-webkit-scrollbar {
-                        display: none !important;
-                    }
-                `, Control2.IdList.ChildS);
+                html {
+                    overflow: hidden !important;
+                    overflow-x: hidden !important;
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                }
+                html::-webkit-scrollbar {
+                    display: none !important;
+                }
+            `, Control2.IdList.ChildS);
         let MainWindow = window;
         window.addEventListener("message", (event) => {
           while (MainWindow.parent !== MainWindow) {
@@ -278,8 +295,8 @@
           MainWindow.postMessage(event.data, Syn2.$origin);
         });
       }
-      TriggerNextLink();
-      async function TriggerNextLink() {
+      const iframe = Syn2.createElement("iframe", { id: Control2.IdList.Iframe, src: Param2.NextLink });
+      (() => {
         let Img, Observer, Quantity = 0;
         const Observer_Next = new IntersectionObserver((observed) => {
           observed.forEach((entry) => {
@@ -314,13 +331,25 @@
             Observer = observer.ob;
           });
         }, Control2.WaitPicture);
-      }
+      })();
       function TurnPage() {
-        let Content, CurrentUrl, StylelRules = Syn2.$q(`#${Control2.IdList.Scroll}`).sheet.cssRules;
+        let Content, CurrentUrl, CurrentHeight = 0;
+        const Resize = (Increment = 0) => {
+          const NewHeight = Param2.Body.scrollHeight + Increment;
+          if (NewHeight > CurrentHeight) {
+            CurrentHeight = NewHeight;
+            window.parent.postMessage([{ Resize: NewHeight }], Syn2.$origin);
+          }
+          Control2.ResizeHandle = setTimeout(Resize, 1200);
+        };
         if (tools.FinalPage(Param2.NextLink)) {
+          window.parent.postMessage([{ StopResize: true }], Syn2.$origin);
+          window.parent.postMessage([{ Recover: true }], Syn2.$origin);
           StylelRules[0].style.display = "block";
+          Resize(40);
           return;
         }
+        if (Param2.IsMainPage) Resize();
         Waitload();
         Param2.Body.appendChild(iframe);
         function Waitload() {
@@ -332,7 +361,7 @@
           const Success = () => {
             iframe.offAll();
             CurrentUrl = iframe.contentWindow.location.href;
-            if (CurrentUrl != Param2.NextLink) {
+            if (CurrentUrl !== Param2.NextLink) {
               Failed();
               return;
             }
@@ -342,15 +371,15 @@
             const AllImg = Content.$qa("#mangalist img");
             const UrlUpdate = new IntersectionObserver((observed) => {
               observed.forEach((entry) => {
-                var _a, _b;
+                var _a2, _b2;
                 if (entry.isIntersecting) {
                   UrlUpdate.disconnect();
                   const PageLink = Content.body.$qa("div.mh_readend ul a");
                   window.parent.postMessage([{
                     Title: Content.title,
                     CurrentUrl,
-                    PreviousUrl: (_a = PageLink[0]) == null ? void 0 : _a.href,
-                    NextUrl: (_b = PageLink[2]) == null ? void 0 : _b.href
+                    PreviousUrl: (_a2 = PageLink[0]) == null ? void 0 : _a2.href,
+                    NextUrl: (_b2 = PageLink[2]) == null ? void 0 : _b2.href
                   }], Syn2.$origin);
                 }
               });
@@ -376,16 +405,6 @@
               }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] });
               AllImg.forEach(async (img) => ReleaseMemory.observe(img));
             }
-            let lastHeight = 0;
-            const Resize = () => {
-              const newHeight = Content.body.scrollHeight;
-              if (newHeight !== lastHeight) {
-                StylelRules[2].style.height = `${newHeight}px`;
-                lastHeight = newHeight;
-              }
-              setTimeout(Resize, 1300);
-            };
-            Resize();
           };
           iframe.on("load", Success);
           iframe.on("error", Failed);
@@ -425,8 +444,8 @@
     const turn = PageTurn(Syn, Control, Param, tools);
     async function BlockAds() {
       Syn.AddStyle(`
-            div[style*='position'] {display: none !important;}
             html {pointer-events: none !important;}
+            div[style*='position'] {display: none !important;}
             .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
         `, Control.IdList.Block);
       const OriginListener = EventTarget.prototype.addEventListener;
