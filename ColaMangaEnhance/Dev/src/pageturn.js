@@ -102,7 +102,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
         };
 
         /* 翻頁邏輯 */
-        async function TurnPage() {
+        function TurnPage() {
             let Content, CurrentUrl, StylelRules = Syn.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
 
             if (tools.FinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (恢復隱藏的元素)
@@ -110,17 +110,35 @@ export default function PageTurn(Syn, Control, Param, tools) {
                 return;
             };
 
-            Param.Body.appendChild(iframe);
             Waitload();
+            Param.Body.appendChild(iframe);
 
             // 等待 iframe 載入完成
             function Waitload() {
-                iframe.onload = () => {
+
+                /*
+                Todo: 解決測試
+
+                ? 目前採用 load 監聽 iframe 的載入, 但這對於資源較多的頁面可能會有延遲, 導致數據更新 與 清理的錯誤
+                ? 目前解決方式 是將原先只 IntersectionObserver 首張圖片, 改成所有圖片, 這樣任意圖片都能觸發, 但一樣有延遲問題
+
+                ? 另一種解決方式 是使用詢輪的方式, 判斷 iframe.contentWindow.document 的 readyState 是不是 complete, 且後續找到 首張 img
+                ? 這樣可以盡可能降低延遲, 但會增加性能開銷
+                */
+
+                const Failed = () => {
+                    iframe.offAll();
+                    iframe.src = Param.NextLink;
+                    Waitload();
+                };
+
+                const Success = () => {
+
+                    iframe.offAll();
                     CurrentUrl = iframe.contentWindow.location.href;
 
                     if (CurrentUrl != Param.NextLink) { // 避免載入錯誤頁面
-                        iframe.src = Param.NextLink;
-                        Waitload();
+                        Failed();
                         return;
                     };
 
@@ -128,8 +146,8 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     Content.body.style.overflow = "hidden";
                     Syn.Log("無盡翻頁", CurrentUrl);
 
-                    // 首張圖片
-                    const TopImg = Content.$q("#mangalist img");
+                    // 全部圖片
+                    const AllImg = Content.$qa("#mangalist img");
 
                     // 監聽換頁點
                     const UrlUpdate = new IntersectionObserver(observed => {
@@ -148,30 +166,33 @@ export default function PageTurn(Syn, Control, Param, tools) {
                             }
                         });
                     }, { threshold: .1 });
-
-                    UrlUpdate.observe(TopImg);
+                    AllImg.forEach(async img => UrlUpdate.observe(img));
 
                     if (Optimized) {
                         Syn.$q("title").id = Control.IdList.Title; // 賦予一個 ID 用於白名單排除
 
-                        // 動態計算臨界值
                         const adapt = Syn.Platform === "Desktop" ? .5 : .7;
-                        const hold = Math.min(adapt, (Syn.iH * adapt) / TopImg.clientHeight);
 
                         // 監聽釋放點
                         const ReleaseMemory = new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
-                                    ReleaseMemory.disconnect();
-                                    tools.Get_Nodes(document).forEach(node => {
-                                        node.remove(); // 刪除元素, 等待瀏覽器自己釋放
-                                    })
-                                    TopImg.scrollIntoView();
+
+                                    const targetImg = entry.target;
+                                    const ratio = Math.min(adapt, (Syn.iH * adapt) / targetImg.clientHeight); // 動態計算
+
+                                    if (entry.intersectionRatio >= ratio) {
+                                        ReleaseMemory.disconnect();
+                                        tools.Get_Nodes(document).forEach(node => {
+                                            node.remove(); // 刪除元素, 等待瀏覽器自己釋放
+                                        })
+                                        targetImg.scrollIntoView();
+                                    }
                                 }
                             });
-                        }, { threshold: hold });
+                        }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] });
 
-                        ReleaseMemory.observe(TopImg);
+                        AllImg.forEach(async img => ReleaseMemory.observe(img));
                     };
 
                     // 持續設置高度
@@ -190,10 +211,8 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     Resize();
                 };
 
-                iframe.onerror = () => {
-                    iframe.src = Param.NextLink;
-                    Waitload();
-                };
+                iframe.on("load", Success);
+                iframe.on("error", Failed);
             }
         }
     };
