@@ -5,7 +5,7 @@
 // @name:en      Pornhub Mouse Hide
 // @name:ja      Pornhub マウス非表示
 // @name:ko      Pornhub 마우스 숨기기
-// @version      0.0.7
+// @version      0.0.8
 // @author       Canaan HS
 
 // @description         電腦端滑鼠於影片區塊上停留一段時間，會隱藏滑鼠遊標和進度條，滑鼠再次移動時將重新顯示，手機端在影片區塊向右滑，會觸發影片加速，滑越多加越多最高16倍，放開後恢復正常速度。
@@ -19,179 +19,168 @@
 // @match        *://*.pornhubpremium.com/view_video.php?viewkey=*
 // @icon         https://ei.phncdn.com/www-static/favicon.ico
 
-// @run-at       document-StartTime
-
 // @license      MPL-2.0
-// @grant        none
 // @namespace    https://greasyfork.org/users/989635
+
+// @grant        none
+// @run-at       document-start
 // ==/UserScript==
 
-(function() {
-    (new class Pornhub_Hide {
-        constructor() {
-            this.StyalRules = null;
-            this.ListenerRecord = new Map();
-            this.display = async(ms, ps) => {
-                requestAnimationFrame(() =>{
-                    this.StyalRules[0].style.setProperty("cursor", ms, "important");
-                    this.StyalRules[1].style.setProperty("display", ps, "important");
-                })
-            };
-            this.Device = {
-                iW: ()=> window.innerWidth,
-                Width: ()=> window.innerWidth,
-                Height: ()=> window.innerHeight,
-                Agen: ()=> navigator.userAgent,
-                _Type: undefined,
-                Type: function() {
-                    return this._Type = this._Type ? this._Type
-                        : (this._Type = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen) || this.iW < 768
-                        ? "Mobile" : "Desktop");
-                }
-            };
-            this.throttle = (func, delay) => {
-                let lastTime = 0;
-                return (...args) => {
-                    const now = Date.now();
-                    if ((now - lastTime) >= delay) {
-                        lastTime = now;
-                        func(...args);
+(new class Pornhub_Hide {
+    constructor() {
+        this.StyalRules = null;
+        this.display = async (ms, ps) => {
+            requestAnimationFrame(() => {
+                this.StyalRules[0].style.setProperty("cursor", ms, "important");
+                this.StyalRules[1].style.setProperty("display", ps, "important");
+            })
+        };
+        this.Device = {
+            iW: () => window.innerWidth,
+            _Cache: undefined,
+            get Platform() {
+                if (!this._Cache) {
+                    if (navigator.userAgentData?.mobile !== undefined) {
+                        this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+                    } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
+                        this._Cache = "Mobile";
+                    } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        this._Cache = "Mobile";
+                    } else {
+                        this._Cache = "Desktop";
                     }
                 }
-            };
-            this.Runtime = (time=null) => !time ? performance.now() : `${((performance.now()-time)/1e3).toFixed(3)}s`;
-        }
 
-        async AddListener(element, type, listener, add={}) {
-            const { mark, ...options } = add;
-            const key = mark ?? element;
-            const Record = this.ListenerRecord.get(key);
-            if (Record?.has(type)) return;
-            element.addEventListener(type, listener, options);
-            if (!Record) this.ListenerRecord.set(key, new Map());
-            this.ListenerRecord.get(key).set(type, listener);
-        };
-
-        async RemovListener(element, type) {
-            const Listen = this.ListenerRecord.get(element)?.get(type);
-            if (Listen) {
-                element.removeEventListener(type, Listen);
-                this.ListenerRecord.get(element).delete(type);
+                return this._Cache;
             }
         };
-
-        async WaitMap(selectors, timeout, callback, {object=document, throttle=0}={}) {
-            let timer, elements;
-            const observer = new MutationObserver(this.throttle(() => {
-                elements = selectors.map(selector => document.querySelector(selector))
-                if (elements.every(element => element !== null && typeof element !== "undefined")) {
-                    observer.disconnect();
-                    clearTimeout(timer);
-                    callback(elements);
+        this.throttle = (func, delay) => {
+            let lastTime = 0;
+            return (...args) => {
+                const now = Date.now();
+                if ((now - lastTime) >= delay) {
+                    lastTime = now;
+                    func(...args);
                 }
-            }, throttle));
-    
-            observer.observe(object, { childList: true, subtree: true });
-            timer = setTimeout(() => {
+            }
+        };
+        this.Runtime = (time = null) => !time ? performance.now() : `${((performance.now() - time) / 1e3).toFixed(3)}s`;
+    };
+
+    async WaitMap(selectors, timeout, callback, { object = document, throttle = 0 } = {}) {
+        let timer, elements;
+        const observer = new MutationObserver(this.throttle(() => {
+            elements = selectors.map(selector => document.querySelector(selector))
+            if (elements.every(element => element !== null && typeof element !== "undefined")) {
                 observer.disconnect();
+                clearTimeout(timer);
                 callback(elements);
-            }, (1000 * timeout));
-        };
+            }
+        }, throttle));
 
-        async AddStyle(Rule, ID="New-Style", RepeatAdd=true) {
-            let style = document.getElementById(ID);
-            if (!style) {
-                style = document.createElement("style");
-                style.id = ID;
-                document.head.appendChild(style);
-            } else if (!RepeatAdd) return;
-            style.textContent += Rule;
-        };
+        observer.observe(object, { childList: true, subtree: true });
+        timer = setTimeout(() => {
+            observer.disconnect();
+            callback(elements);
+        }, (1000 * timeout));
+    };
 
-        async Injection() {
-            const Self = this, StartTime = Self.Runtime(), Device = Self.Device.Type();
-            const FindObject = Device == "Desktop"
+    async AddStyle(Rule, ID = "New-Style", RepeatAdd = true) {
+        let style = document.getElementById(ID);
+        if (!style) {
+            style = document.createElement("style");
+            style.id = ID;
+            document.head.appendChild(style);
+        } else if (!RepeatAdd) return;
+        style.textContent += Rule;
+    };
+
+    async Injection() {
+        const Self = this, StartTime = Self.Runtime(), Platform = Self.Device.Platform;
+        const FindObject = Platform === "Desktop"
             ? ".video-wrapper div"
-            : Device == "Mobile"
-            ? ".mgp_videoWrapper"
-            : ".video-wrapper div";
+            : Platform === "Mobile"
+                ? ".mgp_videoWrapper"
+                : ".video-wrapper div";
 
-            let MouseHide, onTarget;
+        let MouseHide, onTarget;
 
-            /* 找到 影片區塊, 影片, 和進度條 */
-            Self.WaitMap([FindObject, "video.mgp_videoElement", "div[class*='mgp_progress']"], 8, call=> {
-                const [target, video, bar] = call;
+        /* 找到 影片區塊, 影片, 和進度條 */
+        Self.WaitMap([FindObject, "video.mgp_videoElement", "div[class*='mgp_progress']"], 8, call => {
+            const [target, video, bar] = call;
 
-                if (!target || !video || !bar) {
-                    console.log("\x1b[1m\x1b[31m%s\x1b[0m", `Injection Failed: ${this.Runtime(StartTime)}`);
-                    console.table({"Failed Data": {Target: target, Video: video, Bar: bar}});
-                    return;
+            if (!target || !video || !bar) {
+                console.log("\x1b[1m\x1b[31m%s\x1b[0m", `Injection Failed: ${this.Runtime(StartTime)}`);
+                console.table({ "Failed Data": { Target: target, Video: video, Bar: bar } });
+                return;
+            };
+
+            if (Platform === "Desktop") { /* 電腦端 */
+                Self.AddStyle("body {cursor: default;}.Hidden {display: block;}", "Mouse-Hide");
+                Self.StyalRules = document.getElementById("Mouse-Hide").sheet.cssRules;
+                bar.parentNode.classList.add("Hidden"); // 添加樣式到進度條
+
+                // 觸發隱藏
+                async function TriggerHide() {
+                    onTarget = true;
+                    clearTimeout(MouseHide);
+                    Self.display("default", "block");
+                    MouseHide = setTimeout(() => {
+                        Self.display("none", "none");
+                    }, 2100);
                 };
 
-                if (Device == "Desktop") { /* 電腦端 */
-                    Self.AddStyle("body {cursor: default;}.Hidden {display: block;}", "Mouse-Hide");
-                    Self.StyalRules = document.getElementById("Mouse-Hide").sheet.cssRules;
-                    bar.parentNode.classList.add("Hidden"); // 添加樣式到進度條
+                // 離開目標後重置
+                target.addEventListener("pointerleave", () => {
+                    Self.display("default", "block");
+                    clearTimeout(MouseHide);
+                    onTarget = false;
+                }, { passive: true });
 
-                    // 離開目標後重置
-                    Self.AddListener(target, "pointerleave", ()=> {
-                        Self.display("default", "block");
-                        clearTimeout(MouseHide);
-                        onTarget = false;
-                    }, { passive: true });
+                // 滑鼠移動觸發
+                target.addEventListener("pointermove", Self.throttle(() => TriggerHide(), 200), { passive: true });
 
-                    // 觸發隱藏
-                    async function TriggerHide() {
-                        onTarget = true;
-                        clearTimeout(MouseHide);
-                        Self.display("default", "block");
-                        MouseHide = setTimeout(()=> {
-                            Self.display("none", "none");
-                        }, 2100);
-                    };
+                // 點擊 與 鍵盤按下 觸發
+                target.addEventListener("pointerdown", () => {
+                    onTarget && TriggerHide(); // 雖然沒必要 (統一寫法)
+                }, { passive: true });
 
-                    Self.AddListener(target, "pointermove", Self.throttle(()=> TriggerHide(), 200), { passive: true });
+                document.addEventListener("keydown", Self.throttle(() => {
+                    console.log("keydown");
+                    onTarget && TriggerHide(); // 要在目標上才會觸發
+                }, 1200));
 
-                    // 點擊 與 鍵盤按下 觸發
-                    Self.AddListener(target, "pointerdown", () => {
-                        onTarget && TriggerHide(); // 雖然沒必要 (統一寫法)
-                    }, { passive: true });
-                    Self.AddListener(document.body, "keydown", Self.throttle(()=> {
-                        onTarget && TriggerHide(); // 要在目標上才會觸發
-                    }, 1200), { passive: true });
+                console.log("\x1b[1m\x1b[32m%s\x1b[0m", `Hidden Injection Success: ${Self.Runtime(StartTime)}`);
+            } else if (Platform === "Mobile") { /* 手機端 */
+                let sidelineX, startX, moveX, PlaybackRate = video.playbackRate;
 
-                    console.log("\x1b[1m\x1b[32m%s\x1b[0m", `Hidden Injection Success: ${Self.Runtime(StartTime)}`);
-                } else if (Device == "Mobile") { /* 手機端 */
-                    let sidelineX, startX, moveX, PlaybackRate = video.playbackRate;
+                // 觸碰
+                target.addEventListener("touchstart", event => {
+                    sidelineX = Self.Device.iW() * .2;
+                    startX = event.touches[0].clientX;
+                }, { passive: true });
 
-                    // 觸碰
-                    Self.AddListener(target, "touchstart", event => {
-                        sidelineX = Self.Device.Width() * .2;
-                        startX = event.touches[0].clientX;
-                    }, { passive: true });
+                // 滑動
+                target.addEventListener("touchmove", Self.throttle(event => {
+                    requestAnimationFrame(() => {
+                        moveX = event.touches[0].clientX - startX;
+                        if (moveX > sidelineX) { // 右滑
+                            const exceed = (moveX - sidelineX) / 3;
+                            const NewPlaybackRate = (PlaybackRate + exceed * 0.3).toPrecision(2);
+                            video.playbackRate = Math.min(NewPlaybackRate, 16.0);
+                        }
+                    });
+                }, 200), { passive: true });
 
-                    // 滑動
-                    Self.AddListener(target, "touchmove", Self.throttle(event => {
-                        requestAnimationFrame(() => {
-                            moveX = event.touches[0].clientX - startX;
-                            if (moveX > sidelineX) { // 右滑
-                                const exceed = (moveX - sidelineX) / 3;
-                                const NewPlaybackRate = (PlaybackRate + exceed * 0.3).toPrecision(2);
-                                video.playbackRate = Math.min(NewPlaybackRate, 16.0);
-                            }
-                        });
-                    }, 200), { passive: true });
+                // 放開
+                target.addEventListener("touchend", () => {
+                    video.playbackRate = PlaybackRate;
+                }, { passive: true });
 
-                    // 放開
-                    Self.AddListener(target, "touchend", ()=> {
-                        video.playbackRate = PlaybackRate;
-                    }, { passive: true });
-
-                    console.log("\x1b[1m\x1b[32m%s\x1b[0m", `Accelerate Injection Success: ${Self.Runtime(StartTime)}`);
-                } else {
-                    console.log("\x1b[1m\x1b[31m%s\x1b[0m", `Unsupported platform: ${Self.Runtime(StartTime)}`);
-                }
-            }, {throttle: 200});
-        };
-    }).Injection();
-})();
+                console.log("\x1b[1m\x1b[32m%s\x1b[0m", `Accelerate Injection Success: ${Self.Runtime(StartTime)}`);
+            } else {
+                console.log("\x1b[1m\x1b[31m%s\x1b[0m", `Unsupported platform: ${Self.Runtime(StartTime)}`);
+            }
+        }, { throttle: 100 });
+    };
+}).Injection();
