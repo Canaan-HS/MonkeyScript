@@ -86,7 +86,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                 // 後續根據變化, 修改觀察對象
                 Syn.Observer(Param.MangaList, () => {
-                    Img = Param.MangaList.$qa("img"); // 重新獲取當前狀態 (因為獲取的不是動態對象, 雖然不重新獲取不會怎樣, 避免意外)
+                    // Img = Param.MangaList.$qa("img"); // 重新獲取當前狀態 (因為獲取的不是動態對象, 雖然不重新獲取不會怎樣, 避免意外)
 
                     const Visible = tools.VisibleObjects(Img);
                     const VL = Visible.length;
@@ -99,7 +99,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                         )
                     }
 
-                }, { debounce: 500 }, observer => {
+                }, { debounce: 300 }, observer => {
                     Observer = observer.ob;
                 });
             }, Control.WaitPicture);
