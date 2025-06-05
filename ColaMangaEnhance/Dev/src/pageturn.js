@@ -37,7 +37,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                     if (Resize) StylelRules[2].style.height = `${Resize}px`; // 根據容器高度調整
                     else if (StopResize) clearTimeout(Control.ResizeHandle); // 停止 Resize
-                    else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important"); // 恢復點擊事件
+                    else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important"); // 恢復點擊事件 (有時失敗不知道為啥)
                     else { // 更新頁面信息
                         document.title = Title;
                         Param.NextLink = NextUrl;
@@ -117,7 +117,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
         /* 翻頁邏輯 */
         function TurnPage() {
-            let Content, CurrentUrl, CurrentHeight = 0;
+            let CurrentHeight = 0;
 
             const Resize = (Increment = 0) => {
                 const NewHeight = Param.Body.scrollHeight + Increment;
@@ -156,39 +156,37 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
             // 等待 iframe 載入完成
             function Waitload() {
+                let IframeWindow, CurrentUrl, Content, AllImg, Completed = false;
 
-                /*
-                Todo: 解決測試 (等待後續優化)
-
-                ? 目前採用 load 監聽 iframe 的載入, 但這對於資源較多的頁面可能會有延遲, 導致數據更新 與 清理的錯誤
-                ? 目前解決方式 是將原先只 IntersectionObserver 首張圖片, 改成所有圖片, 這樣任意圖片都能觸發, 但一樣有延遲問題
-
-                ? 另一種解決方式 是使用詢輪的方式, 判斷 iframe.contentWindow.document 的 readyState 是不是 complete, 且後續找到 首張 img
-                ? 這樣可以盡可能降低延遲, 但會增加性能開銷
-                */
-
+                // 失敗載入處理
                 const Failed = () => {
+                    Completed = false; // 重置為未完成
                     iframe.offAll();
                     iframe.src = Param.NextLink;
                     Waitload();
                 };
 
+                // 成功載入後處理
                 const Success = () => {
 
+                    if (Completed) return;
+                    Completed = true; // 標記為已完成
+
                     iframe.offAll();
-                    CurrentUrl = iframe.contentWindow.location.href;
+                    IframeWindow ??= iframe.contentWindow;
+                    CurrentUrl ??= IframeWindow.location.href;
 
                     if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
                         Failed();
                         return;
                     };
 
-                    Content = iframe.contentWindow.document;
+                    Content ??= IframeWindow.document;
                     Content.body.style.overflow = "hidden";
                     Syn.Log("無盡翻頁", CurrentUrl);
 
                     // 全部圖片
-                    const AllImg = Content.$qa("#mangalist img");
+                    AllImg ??= Content.$qa("#mangalist img");
 
                     // 監聽換頁點
                     const UrlUpdate = new IntersectionObserver(observed => {
@@ -237,9 +235,52 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     }
                 };
 
+                // iframe load 事件有時太慢, 這邊使用詢輪的方式, 性能開銷較高
+                const WaitIframe = () => {
+                    const QueryWindow = setInterval(() => {
+                        IframeWindow = iframe?.contentWindow;
+
+                        if (Completed) {
+                            clearInterval(QueryWindow);
+                            return;
+                        };
+
+                        if (IframeWindow && IframeWindow.document.readyState === "complete") {
+                            clearInterval(QueryWindow);
+
+                            CurrentUrl = IframeWindow.location.href;
+
+                            if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
+                                Failed();
+                                return;
+                            };
+
+                            Content = IframeWindow.document;
+
+                            const QueryImg = setInterval(() => {
+
+                                if (Completed) {
+                                    clearInterval(QueryImg);
+                                    return;
+                                };
+
+                                AllImg = Content.$qa("#mangalist img");
+
+                                if (AllImg.length > 0) {
+                                    clearInterval(QueryImg);
+                                    Success();
+                                }
+                            }, 300);
+                        }
+                    }, 500);
+                };
+
                 // 監聽 iframe 載入事件
                 iframe.on("load", Success);
                 iframe.on("error", Failed);
+
+                // 另一個等待 iframe 載入, 避免 load 事件延遲過久
+                WaitIframe();
             }
         }
     };
