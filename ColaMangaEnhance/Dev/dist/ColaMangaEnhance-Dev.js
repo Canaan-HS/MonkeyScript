@@ -333,7 +333,7 @@
         }, Control2.WaitPicture);
       })();
       function TurnPage() {
-        let Content, CurrentUrl, CurrentHeight = 0;
+        let CurrentHeight = 0;
         const Resize = (Increment = 0) => {
           const NewHeight = Param2.Body.scrollHeight + Increment;
           if (NewHeight > CurrentHeight) {
@@ -353,22 +353,27 @@
         Waitload();
         Param2.Body.appendChild(iframe);
         function Waitload() {
+          let IframeWindow, CurrentUrl, Content, AllImg, Completed = false;
           const Failed = () => {
+            Completed = false;
             iframe.offAll();
             iframe.src = Param2.NextLink;
             Waitload();
           };
           const Success = () => {
+            if (Completed) return;
+            Completed = true;
             iframe.offAll();
-            CurrentUrl = iframe.contentWindow.location.href;
+            IframeWindow ?? (IframeWindow = iframe.contentWindow);
+            CurrentUrl ?? (CurrentUrl = IframeWindow.location.href);
             if (CurrentUrl !== Param2.NextLink) {
               Failed();
               return;
             }
-            Content = iframe.contentWindow.document;
+            Content ?? (Content = IframeWindow.document);
             Content.body.style.overflow = "hidden";
             Syn2.Log("無盡翻頁", CurrentUrl);
-            const AllImg = Content.$qa("#mangalist img");
+            AllImg ?? (AllImg = Content.$qa("#mangalist img"));
             const UrlUpdate = new IntersectionObserver((observed) => {
               observed.forEach((entry) => {
                 var _a2, _b2;
@@ -406,8 +411,38 @@
               AllImg.forEach(async (img) => ReleaseMemory.observe(img));
             }
           };
+          const WaitIframe = () => {
+            const QueryWindow = setInterval(() => {
+              IframeWindow = iframe == null ? void 0 : iframe.contentWindow;
+              if (Completed) {
+                clearInterval(QueryWindow);
+                return;
+              }
+              if (IframeWindow && IframeWindow.document.readyState === "complete") {
+                clearInterval(QueryWindow);
+                CurrentUrl = IframeWindow.location.href;
+                if (CurrentUrl !== Param2.NextLink) {
+                  Failed();
+                  return;
+                }
+                Content = IframeWindow.document;
+                const QueryImg = setInterval(() => {
+                  if (Completed) {
+                    clearInterval(QueryImg);
+                    return;
+                  }
+                  AllImg = Content.$qa("#mangalist img");
+                  if (AllImg.length > 0) {
+                    clearInterval(QueryImg);
+                    Success();
+                  }
+                }, 300);
+              }
+            }, 500);
+          };
           iframe.on("load", Success);
           iframe.on("error", Failed);
+          WaitIframe();
         }
       }
     }
