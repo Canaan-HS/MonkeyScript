@@ -5,7 +5,7 @@
 // @name:en      Pornhub Mouse Hide
 // @name:ja      Pornhub マウス非表示
 // @name:ko      Pornhub 마우스 숨기기
-// @version      0.0.7
+// @version      0.0.8
 // @author       Canaan HS
 
 // @description         電腦端滑鼠於影片區塊上停留一段時間，會隱藏滑鼠遊標和進度條，滑鼠再次移動時將重新顯示，手機端在影片區塊向右滑，會觸發影片加速，滑越多加越多最高16倍，放開後恢復正常速度。
@@ -19,10 +19,42 @@
 // @match        *://*.pornhubpremium.com/view_video.php?viewkey=*
 // @icon         https://ei.phncdn.com/www-static/favicon.ico
 
-// @run-at       document-StartTime
-
 // @license      MPL-2.0
-// @grant        none
 // @namespace    https://greasyfork.org/users/989635
+
+// @grant        none
+// @run-at       document-start
 // ==/UserScript==
-(function(){(new class{constructor(){this.StyalRules=null;this.ListenerRecord=new Map;this.display=async(a,b)=>{requestAnimationFrame(()=>{this.StyalRules[0].style.setProperty("cursor",a,"important");this.StyalRules[1].style.setProperty("display",b,"important")})};this.Device={iW:()=>window.innerWidth,Width:()=>window.innerWidth,Height:()=>window.innerHeight,Agen:()=>navigator.userAgent,_Type:void 0,Type:function(){return this._Type=this._Type?this._Type:this._Type=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(this.Agen)||768>this.iW?"Mobile":"Desktop"}};this.throttle=(a,b)=>{let d=0;return(...c)=>{const f=Date.now();f-d>=b&&(d=f,a(...c))}};this.Runtime=(a=null)=>a?`${((performance.now()-a)/1E3).toFixed(3)}s`:performance.now()}async AddListener(a,b,d,c={}){const {mark:f,...l}=c;c=f??a;const e=this.ListenerRecord.get(c);e?.has(b)||(a.addEventListener(b,d,l),e||this.ListenerRecord.set(c,new Map),this.ListenerRecord.get(c).set(b,d))}async RemovListener(a,b){const d=this.ListenerRecord.get(a)?.get(b);d&&(a.removeEventListener(b,d),this.ListenerRecord.get(a).delete(b))}async WaitMap(a,b,d,{object:c=document,throttle:f=0}={}){let l,e;const g=new MutationObserver(this.throttle(()=>{e=a.map(h=>document.querySelector(h));e.every(h=>null!==h&&"undefined"!==typeof h)&&(g.disconnect(),clearTimeout(l),d(e))},f));g.observe(c,{childList:!0,subtree:!0});l=setTimeout(()=>{g.disconnect();d(e)},1E3*b)}async AddStyle(a,b="New-Style",d=!0){let c=document.getElementById(b);if(!c)c=document.createElement("style"),c.id=b,document.head.appendChild(c);else if(!d)return;c.textContent+=a}async Injection(){const a=this,b=a.Runtime(),d=a.Device.Type();let c,f;a.WaitMap(["Desktop"==d?".video-wrapper div":"Mobile"==d?".mgp_videoWrapper":".video-wrapper div","video.mgp_videoElement","div[class*='mgp_progress']"],8,l=>{const [e,g,h]=l;if(e&&g&&h)if("Desktop"==d){a.AddStyle("body {cursor: default;}.Hidden {display: block;}","Mouse-Hide");a.StyalRules=document.getElementById("Mouse-Hide").sheet.cssRules;h.parentNode.classList.add("Hidden");a.AddListener(e,"pointerleave",()=>{a.display("default","block");clearTimeout(c);f=!1},{passive:!0});async function k(){f=!0;clearTimeout(c);a.display("default","block");c=setTimeout(()=>{a.display("none","none")},2100)}a.AddListener(e,"pointermove",a.throttle(()=>k(),200),{passive:!0});a.AddListener(e,"pointerdown",()=>{f&&k()},{passive:!0});a.AddListener(document.body,"keydown",a.throttle(()=>{f&&k()},1200),{passive:!0});console.log("\u001b[1m\u001b[32m%s\u001b[0m",`Hidden Injection Success: ${a.Runtime(b)}`)}else if("Mobile"==d){let k,p,m,q=g.playbackRate;a.AddListener(e,"touchstart",n=>{k=.2*a.Device.Width();p=n.touches[0].clientX},{passive:!0});a.AddListener(e,"touchmove",a.throttle(n=>{requestAnimationFrame(()=>{m=n.touches[0].clientX-p;if(m>k){const r=(q+(m-k)/3*.3).toPrecision(2);g.playbackRate=Math.min(r,16)}})},200),{passive:!0});a.AddListener(e,"touchend",()=>{g.playbackRate=q},{passive:!0});console.log("\u001b[1m\u001b[32m%s\u001b[0m",`Accelerate Injection Success: ${a.Runtime(b)}`)}else console.log("\u001b[1m\u001b[31m%s\u001b[0m",`Unsupported platform: ${a.Runtime(b)}`);else console.log("\u001b[1m\u001b[31m%s\u001b[0m",`Injection Failed: ${this.Runtime(b)}`),console.table({"Failed Data":{Target:e,Video:g,Bar:h}})},{throttle:200})}}).Injection()})();
+
+(new class {
+    constructor() {
+        this.StyalRules = null; this.display = async (a, c) => { requestAnimationFrame(() => { this.StyalRules[0].style.setProperty("cursor", a, "important"); this.StyalRules[1].style.setProperty("display", c, "important") }) }; this.Device = {
+            iW: () => window.innerWidth, _Cache: void 0, get Platform() {
+                this._Cache || (void 0 !== navigator.userAgentData?.mobile ? this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop" : window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches ? this._Cache = "Mobile" : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ?
+                    this._Cache = "Mobile" : this._Cache = "Desktop"); return this._Cache
+            }
+        }; this.throttle = (a, c) => { let e = 0; return (...b) => { const f = Date.now(); f - e >= c && (e = f, a(...b)) } }; this.Runtime = (a = null) => a ? `${((performance.now() - a) / 1E3).toFixed(3)}s` : performance.now()
+    } async WaitMap(a, c, e, { object: b = document, throttle: f = 0 } = {}) {
+        let l, d; const g = new MutationObserver(this.throttle(() => { d = a.map(h => document.querySelector(h)); d.every(h => null !== h && "undefined" !== typeof h) && (g.disconnect(), clearTimeout(l), e(d)) }, f)); g.observe(b, {
+            childList: !0,
+            subtree: !0
+        }); l = setTimeout(() => { g.disconnect(); e(d) }, 1E3 * c)
+    } async AddStyle(a, c = "New-Style", e = !0) { let b = document.getElementById(c); if (!b) b = document.createElement("style"), b.id = c, document.head.appendChild(b); else if (!e) return; b.textContent += a } async Injection() {
+        const a = this, c = a.Runtime(), e = a.Device.Platform; let b, f; a.WaitMap(["Desktop" === e ? ".video-wrapper div" : "Mobile" === e ? ".mgp_videoWrapper" : ".video-wrapper div", "video.mgp_videoElement", "div[class*='mgp_progress']"], 8, l => {
+            const [d, g, h] = l; if (d && g && h) if ("Desktop" ===
+                e) {
+                    a.AddStyle("body {cursor: default;}.Hidden {display: block;}", "Mouse-Hide"); a.StyalRules = document.getElementById("Mouse-Hide").sheet.cssRules; h.parentNode.classList.add("Hidden"); async function k() { f = !0; clearTimeout(b); a.display("default", "block"); b = setTimeout(() => { a.display("none", "none") }, 2100) } d.addEventListener("pointerleave", () => { a.display("default", "block"); clearTimeout(b); f = !1 }, { passive: !0 }); d.addEventListener("pointermove", a.throttle(() => k(), 200), { passive: !0 }); d.addEventListener("pointerdown",
+                        () => { f && k() }, { passive: !0 }); document.addEventListener("keydown", a.throttle(() => { console.log("keydown"); f && k() }, 1200)); console.log("\u001b[1m\u001b[32m%s\u001b[0m", `Hidden Injection Success: ${a.Runtime(c)}`)
+            } else if ("Mobile" === e) {
+                let k, p, m, q = g.playbackRate; d.addEventListener("touchstart", n => { k = .2 * a.Device.iW(); p = n.touches[0].clientX }, { passive: !0 }); d.addEventListener("touchmove", a.throttle(n => {
+                    requestAnimationFrame(() => {
+                        m = n.touches[0].clientX - p; if (m > k) {
+                            const r = (q + (m - k) / 3 * .3).toPrecision(2); g.playbackRate =
+                                Math.min(r, 16)
+                        }
+                    })
+                }, 200), { passive: !0 }); d.addEventListener("touchend", () => { g.playbackRate = q }, { passive: !0 }); console.log("\u001b[1m\u001b[32m%s\u001b[0m", `Accelerate Injection Success: ${a.Runtime(c)}`)
+            } else console.log("\u001b[1m\u001b[31m%s\u001b[0m", `Unsupported platform: ${a.Runtime(c)}`); else console.log("\u001b[1m\u001b[31m%s\u001b[0m", `Injection Failed: ${this.Runtime(c)}`), console.table({ "Failed Data": { Target: d, Video: g, Bar: h } })
+        }, { throttle: 100 })
+    }
+}).Injection();
