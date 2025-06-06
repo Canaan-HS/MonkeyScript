@@ -23,7 +23,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
         // 修改當前觀看的頁面 (根據無盡翻頁的變化)
         if (Param.IsMainPage) {
-            Syn.one(window, "message", event => {
+            window.addEventListener("message", event => {
                 const data = event.data;
                 if (data && data.length > 0) {
                     const { Title, PreviousUrl, CurrentUrl, NextUrl } = data[0];
@@ -48,7 +48,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                 `, Control.IdList.ChildS);
 
             let MainWindow = window;
-            Syn.one(window, "message", event => {
+            window.addEventListener("message", event => {
                 while (MainWindow.parent !== MainWindow) { MainWindow = MainWindow.parent }
                 MainWindow.postMessage(event.data, Syn.$origin);
             })
@@ -59,8 +59,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
         async function TriggerNextLink() {
 
             let Img, Observer, Quantity = 0;
-
-            const Observer_Next = new IntersectionObserver(observed => {
+            const Observer_Next = new IntersectionObserver(observed => { // 觀察器
                 observed.forEach(entry => {
                     if (entry.isIntersecting && tools.DetectionValue(Img)) {
                         Observer_Next.disconnect();
@@ -71,7 +70,6 @@ export default function PageTurn(Syn, Control, Param, tools) {
             }, { threshold: .1 });
 
             setTimeout(() => {
-
                 Img = Param.MangaList.$qa("img"); // 取得當前狀態
 
                 if (Img.length <= 5) { // 總長度 <= 5 直接觸發換頁
@@ -86,8 +84,6 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                 // 後續根據變化, 修改觀察對象
                 Syn.Observer(Param.MangaList, () => {
-                    // Img = Param.MangaList.$qa("img"); // 重新獲取當前狀態 (因為獲取的不是動態對象, 雖然不重新獲取不會怎樣, 避免意外)
-
                     const Visible = tools.VisibleObjects(Img);
                     const VL = Visible.length;
 
@@ -121,7 +117,12 @@ export default function PageTurn(Syn, Control, Param, tools) {
             function Waitload() {
                 iframe.onload = () => {
                     CurrentUrl = iframe.contentWindow.location.href;
-                    CurrentUrl != Param.NextLink && (iframe.src = Param.NextLink, Waitload()); // 避免載入錯誤頁面
+
+                    if (CurrentUrl != Param.NextLink) { // 避免載入錯誤頁面
+                        iframe.src = Param.NextLink;
+                        Waitload();
+                        return;
+                    };
 
                     Content = iframe.contentWindow.document;
                     Content.body.style.overflow = "hidden";
@@ -129,20 +130,6 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                     // 首張圖片
                     const TopImg = Content.$q("#mangalist img");
-
-                    // 持續設置高度
-                    let lastHeight = 0;
-                    const Resize = () => {
-                        const newHeight = Content.body.scrollHeight;
-
-                        if (newHeight !== lastHeight) {
-                            StylelRules[2].style.height = `${newHeight}px`;
-                            lastHeight = newHeight;
-                        }
-
-                        setTimeout(Resize, 1300);
-                    };
-                    Resize();
 
                     // 監聽換頁點
                     const UrlUpdate = new IntersectionObserver(observed => {
@@ -161,6 +148,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                             }
                         });
                     }, { threshold: .1 });
+
                     UrlUpdate.observe(TopImg);
 
                     if (Optimized) {
@@ -185,6 +173,21 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                         ReleaseMemory.observe(TopImg);
                     };
+
+                    // 持續設置高度
+                    let lastHeight = 0;
+                    const Resize = () => {
+                        const newHeight = Content.body.scrollHeight;
+
+                        if (newHeight !== lastHeight) {
+                            StylelRules[2].style.height = `${newHeight}px`;
+                            lastHeight = newHeight;
+                        }
+
+                        setTimeout(Resize, 1300);
+                    };
+
+                    Resize();
                 };
 
                 iframe.onerror = () => {
