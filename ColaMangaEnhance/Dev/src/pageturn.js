@@ -2,7 +2,6 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
     /* 無盡 翻頁模式 */
     async function Unlimited(Optimized) {
-        const iframe = Syn.createElement("iframe", { id: Control.IdList.Iframe, src: Param.NextLink });
 
         // 修改樣式 (隱藏某些元素 增加沉浸體驗)
         Syn.AddStyle(`
@@ -21,15 +20,25 @@ export default function PageTurn(Syn, Control, Param, tools) {
             }
         `, Control.IdList.Scroll);
 
-        // 修改當前觀看的頁面 (根據無盡翻頁的變化)
+        // 取得樣式
+        const StylelRules = Syn.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
+        // 嘗試取得阻擋廣告的樣式
+        const BlockRules = Syn.$q(`#${Control.IdList.Block}`)?.sheet?.cssRules;
+
+        // 修改最上層主頁面 (根據無盡翻頁的變化)
         if (Param.IsMainPage) {
             window.addEventListener("message", event => {
                 const data = event.data;
                 if (data && data.length > 0) {
-                    const { Title, PreviousUrl, CurrentUrl, NextUrl, StopResize } = data[0];
+                    const {
+                        Title, PreviousUrl, CurrentUrl, NextUrl,
+                        Resize, StopResize, Recover
+                    } = data[0];
 
-                    if (StopResize) clearTimeout(Control.ResizeHandle);
-                    else {
+                    if (Resize) StylelRules[2].style.height = `${Resize}px`; // 根據容器高度調整
+                    else if (StopResize) clearTimeout(Control.ResizeHandle); // 停止 Resize
+                    else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important"); // 恢復點擊事件
+                    else { // 更新頁面信息
                         document.title = Title;
                         Param.NextLink = NextUrl;
                         Param.PreviousLink = PreviousUrl;
@@ -39,16 +48,16 @@ export default function PageTurn(Syn, Control, Param, tools) {
             })
         } else { // 第二頁開始, 不斷向上找到主頁
             Syn.AddStyle(`
-                    html {
-                        overflow: hidden !important;
-                        overflow-x: hidden !important;
-                        scrollbar-width: none !important;
-                        -ms-overflow-style: none !important;
-                    }
-                    html::-webkit-scrollbar {
-                        display: none !important;
-                    }
-                `, Control.IdList.ChildS);
+                html {
+                    overflow: hidden !important;
+                    overflow-x: hidden !important;
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                }
+                html::-webkit-scrollbar {
+                    display: none !important;
+                }
+            `, Control.IdList.ChildS);
 
             let MainWindow = window;
             window.addEventListener("message", event => {
@@ -57,9 +66,11 @@ export default function PageTurn(Syn, Control, Param, tools) {
             })
         };
 
-        /* 檢測翻頁 */
-        TriggerNextLink();
-        async function TriggerNextLink() {
+        // 創建 iframe 元素
+        const iframe = Syn.createElement("iframe", { id: Control.IdList.Iframe, src: Param.NextLink });
+
+        (() => {
+            /* 檢測翻頁 */
 
             let Img, Observer, Quantity = 0;
             const Observer_Next = new IntersectionObserver(observed => { // 觀察器
@@ -102,22 +113,43 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     Observer = observer.ob;
                 });
             }, Control.WaitPicture);
-        };
+        })();
 
         /* 翻頁邏輯 */
         function TurnPage() {
-            let Content, CurrentUrl, StylelRules = Syn.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
+            let Content, CurrentUrl, CurrentHeight = 0;
 
-            if (tools.FinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (恢復隱藏的元素)
-                StylelRules[0].style.display = "block";
+            const Resize = (Increment = 0) => {
+                const NewHeight = Param.Body.scrollHeight + Increment;
+
+                if (NewHeight > CurrentHeight) {
+                    CurrentHeight = NewHeight;
+                    window.parent.postMessage([{ Resize: NewHeight }], Syn.$origin);
+                };
+
+                Control.ResizeHandle = setTimeout(Resize, 1200);
+            };
+
+            if (tools.FinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (進行恢復處理)
 
                 /*
-                ? 發送停止 Resize
-                ! 目前在 TurnPage 觸發後馬上就停止, 可能會有高度不正確的問題, 後續可能需要調整確保圖片載入完成後再停止 Resize
+                ? 停止先前 Resize
+                * 只在 IsMainPage 啟用 Resize 遞迴, 因此他傳遞的是以 MainPage 的 scrollHeight, 給 MainPage 的 style.height 設置
+                * 在這邊停掉先前的 Resize, 再次啟動就會變成 當前 iframe 的 scrollHeight, 給 MainPage 的 style.height 設置
+                * 這樣就能解決最後一頁過多空白的問題
                 */
                 window.parent.postMessage([{ StopResize: true }], Syn.$origin);
+
+                window.parent.postMessage([{ Recover: true }], Syn.$origin); // 恢復點擊事件
+                StylelRules[0].style.display = "block"; // 恢復隱藏的元素
+
+                Resize(40); // 再次啟動, 並給予 40px 的增量
+
                 return;
             };
+
+            // 持續設置高度
+            if (Param.IsMainPage) Resize();
 
             Waitload();
             Param.Body.appendChild(iframe);
@@ -126,7 +158,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
             function Waitload() {
 
                 /*
-                Todo: 解決測試
+                Todo: 解決測試 (等待後續優化)
 
                 ? 目前採用 load 監聽 iframe 的載入, 但這對於資源較多的頁面可能會有延遲, 導致數據更新 與 清理的錯誤
                 ? 目前解決方式 是將原先只 IntersectionObserver 首張圖片, 改成所有圖片, 這樣任意圖片都能觸發, 但一樣有延遲問題
@@ -203,16 +235,6 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
                         AllImg.forEach(async img => ReleaseMemory.observe(img));
                     }
-                };
-
-                // 持續設置高度
-                // ! 實驗只在主頁面設置高度, 其他頁面不設置高度, 這樣可以減少性能開銷, 但會導致頁面高度不正確 (會有多餘的空白)
-                if (Param.IsMainPage) {
-                    const Resize = () => {
-                        StylelRules[2].style.height = `${Param.Body.scrollHeight}px`;
-                        Control.ResizeHandle = setTimeout(Resize, 1200);
-                    };
-                    Resize();
                 };
 
                 // 監聽 iframe 載入事件
