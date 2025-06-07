@@ -315,26 +315,31 @@
           });
         }, Control2.WaitPicture);
       }
-      async function TurnPage() {
+      function TurnPage() {
         let Content, CurrentUrl, StylelRules = Syn2.$q(`#${Control2.IdList.Scroll}`).sheet.cssRules;
         if (tools.FinalPage(Param2.NextLink)) {
           StylelRules[0].style.display = "block";
           return;
         }
-        Param2.Body.appendChild(iframe);
         Waitload();
+        Param2.Body.appendChild(iframe);
         function Waitload() {
-          iframe.onload = () => {
+          const Failed = () => {
+            iframe.offAll();
+            iframe.src = Param2.NextLink;
+            Waitload();
+          };
+          const Success = () => {
+            iframe.offAll();
             CurrentUrl = iframe.contentWindow.location.href;
             if (CurrentUrl != Param2.NextLink) {
-              iframe.src = Param2.NextLink;
-              Waitload();
+              Failed();
               return;
             }
             Content = iframe.contentWindow.document;
             Content.body.style.overflow = "hidden";
             Syn2.Log("無盡翻頁", CurrentUrl);
-            const TopImg = Content.$q("#mangalist img");
+            const AllImg = Content.$qa("#mangalist img");
             const UrlUpdate = new IntersectionObserver((observed) => {
               observed.forEach((entry) => {
                 var _a, _b;
@@ -350,23 +355,26 @@
                 }
               });
             }, { threshold: 0.1 });
-            UrlUpdate.observe(TopImg);
+            AllImg.forEach(async (img) => UrlUpdate.observe(img));
             if (Optimized) {
               Syn2.$q("title").id = Control2.IdList.Title;
               const adapt = Syn2.Platform === "Desktop" ? 0.5 : 0.7;
-              const hold = Math.min(adapt, Syn2.iH * adapt / TopImg.clientHeight);
               const ReleaseMemory = new IntersectionObserver((observed) => {
                 observed.forEach((entry) => {
                   if (entry.isIntersecting) {
-                    ReleaseMemory.disconnect();
-                    tools.Get_Nodes(document).forEach((node) => {
-                      node.remove();
-                    });
-                    TopImg.scrollIntoView();
+                    const targetImg = entry.target;
+                    const ratio = Math.min(adapt, Syn2.iH * adapt / targetImg.clientHeight);
+                    if (entry.intersectionRatio >= ratio) {
+                      ReleaseMemory.disconnect();
+                      tools.Get_Nodes(document).forEach((node) => {
+                        node.remove();
+                      });
+                      targetImg.scrollIntoView();
+                    }
                   }
                 });
-              }, { threshold: hold });
-              ReleaseMemory.observe(TopImg);
+              }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] });
+              AllImg.forEach(async (img) => ReleaseMemory.observe(img));
             }
             let lastHeight = 0;
             const Resize = () => {
@@ -379,10 +387,8 @@
             };
             Resize();
           };
-          iframe.onerror = () => {
-            iframe.src = Param2.NextLink;
-            Waitload();
-          };
+          iframe.on("load", Success);
+          iframe.on("error", Failed);
         }
       }
     }
