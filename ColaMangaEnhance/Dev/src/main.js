@@ -50,8 +50,8 @@ Todo 未來添加
     /* 阻擋廣告 (目前無效) */
     async function BlockAds() {
         Syn.AddStyle(`
-            div[style*='position'] {display: none !important;}
             html {pointer-events: none !important;}
+            div[style*='position'] {display: none !important;}
             .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
         `, Control.IdList.Block);
 
