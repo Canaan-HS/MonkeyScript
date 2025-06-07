@@ -26,12 +26,15 @@ export default function PageTurn(Syn, Control, Param, tools) {
             window.addEventListener("message", event => {
                 const data = event.data;
                 if (data && data.length > 0) {
-                    const { Title, PreviousUrl, CurrentUrl, NextUrl } = data[0];
+                    const { Title, PreviousUrl, CurrentUrl, NextUrl, StopResize } = data[0];
 
-                    document.title = Title;
-                    Param.NextLink = NextUrl;
-                    Param.PreviousLink = PreviousUrl;
-                    history.pushState(null, null, CurrentUrl);
+                    if (StopResize) clearTimeout(Control.ResizeHandle);
+                    else {
+                        document.title = Title;
+                        Param.NextLink = NextUrl;
+                        Param.PreviousLink = PreviousUrl;
+                        history.pushState(null, null, CurrentUrl);
+                    }
                 }
             })
         } else { // 第二頁開始, 不斷向上找到主頁
@@ -107,6 +110,12 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
             if (tools.FinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (恢復隱藏的元素)
                 StylelRules[0].style.display = "block";
+
+                /*
+                ? 發送停止 Resize
+                ! 目前在 TurnPage 觸發後馬上就停止, 可能會有高度不正確的問題, 後續可能需要調整確保圖片載入完成後再停止 Resize
+                */
+                window.parent.postMessage([{ StopResize: true }], Syn.$origin);
                 return;
             };
 
@@ -137,7 +146,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     iframe.offAll();
                     CurrentUrl = iframe.contentWindow.location.href;
 
-                    if (CurrentUrl != Param.NextLink) { // 避免載入錯誤頁面
+                    if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
                         Failed();
                         return;
                     };
@@ -193,24 +202,20 @@ export default function PageTurn(Syn, Control, Param, tools) {
                         }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] });
 
                         AllImg.forEach(async img => ReleaseMemory.observe(img));
-                    };
+                    }
+                };
 
-                    // 持續設置高度
-                    let lastHeight = 0;
+                // 持續設置高度
+                // ! 實驗只在主頁面設置高度, 其他頁面不設置高度, 這樣可以減少性能開銷, 但會導致頁面高度不正確 (會有多餘的空白)
+                if (Param.IsMainPage) {
                     const Resize = () => {
-                        const newHeight = Content.body.scrollHeight;
-
-                        if (newHeight !== lastHeight) {
-                            StylelRules[2].style.height = `${newHeight}px`;
-                            lastHeight = newHeight;
-                        }
-
-                        setTimeout(Resize, 1300);
+                        StylelRules[2].style.height = `${Param.Body.scrollHeight}px`;
+                        Control.ResizeHandle = setTimeout(Resize, 1200);
                     };
-
                     Resize();
                 };
 
+                // 監聽 iframe 載入事件
                 iframe.on("load", Success);
                 iframe.on("error", Failed);
             }
