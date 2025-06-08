@@ -59,10 +59,9 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.7**
+**Release Version: 0.0.8**
 
 ### **Update Contents**
-1. Modified print information
-2. Added keyboard trigger reset
+1. None
 
 ---
