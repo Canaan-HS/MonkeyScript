@@ -140,11 +140,10 @@ export default function PageTurn(Syn, Control, Param, tools) {
                 */
                 window.parent.postMessage([{ StopResize: true }], Syn.$origin);
 
-                window.parent.postMessage([{ Recover: true }], Syn.$origin); // 恢復點擊事件
                 StylelRules[0].style.display = "block"; // 恢復隱藏的元素
+                window.parent.postMessage([{ Recover: true }], Syn.$origin); // MainPage 恢復點擊事件 (有時沒用, 不知道為啥)
 
                 Resize(40); // 再次啟動, 並給予 40px 的增量
-
                 return;
             };
 
@@ -156,11 +155,10 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
             // 等待 iframe 載入完成
             function Waitload() {
-                let IframeWindow, CurrentUrl, Content, AllImg, Completed = false;
+                let IframeWindow, CurrentUrl, Content, AllImg;
 
                 // 失敗載入處理
                 const Failed = () => {
-                    Completed = false; // 重置為未完成
                     iframe.offAll();
                     iframe.src = Param.NextLink;
                     Waitload();
@@ -169,24 +167,21 @@ export default function PageTurn(Syn, Control, Param, tools) {
                 // 成功載入後處理
                 const Success = () => {
 
-                    if (Completed) return;
-                    Completed = true; // 標記為已完成
-
                     iframe.offAll();
-                    IframeWindow ??= iframe.contentWindow;
-                    CurrentUrl ??= IframeWindow.location.href;
+                    IframeWindow = iframe.contentWindow;
+                    CurrentUrl = IframeWindow.location.href;
 
                     if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
                         Failed();
                         return;
                     };
 
-                    Content ??= IframeWindow.document;
+                    Content = IframeWindow.document;
                     Content.body.style.overflow = "hidden";
                     Syn.Log("無盡翻頁", CurrentUrl);
 
                     // 全部圖片
-                    AllImg ??= Content.$qa("#mangalist img");
+                    AllImg = Content.$qa("#mangalist img");
 
                     // 監聽換頁點
                     const UrlUpdate = new IntersectionObserver(observed => {
@@ -235,52 +230,9 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     }
                 };
 
-                // iframe load 事件有時太慢, 這邊使用詢輪的方式, 性能開銷較高
-                const WaitIframe = () => {
-                    const QueryWindow = setInterval(() => {
-                        IframeWindow = iframe?.contentWindow;
-
-                        if (Completed) {
-                            clearInterval(QueryWindow);
-                            return;
-                        };
-
-                        if (IframeWindow && IframeWindow.document.readyState === "complete") {
-                            clearInterval(QueryWindow);
-
-                            CurrentUrl = IframeWindow.location.href;
-
-                            if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
-                                Failed();
-                                return;
-                            };
-
-                            Content = IframeWindow.document;
-
-                            const QueryImg = setInterval(() => {
-
-                                if (Completed) {
-                                    clearInterval(QueryImg);
-                                    return;
-                                };
-
-                                AllImg = Content.$qa("#mangalist img");
-
-                                if (AllImg.length > 0) {
-                                    clearInterval(QueryImg);
-                                    Success();
-                                }
-                            }, 300);
-                        }
-                    }, 500);
-                };
-
                 // 監聽 iframe 載入事件
-                iframe.on("load", Success);
+                iframe.on("load", Success); // ! 有些漫畫觸發很慢, 詢輪查找又有其他 Bug, 暫時放棄解決
                 iframe.on("error", Failed);
-
-                // 另一個等待 iframe 載入, 避免 load 事件延遲過久
-                WaitIframe();
             }
         }
     };
