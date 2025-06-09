@@ -22,7 +22,6 @@ export const Config = {
 export const Control = {
     ScrollPixels: 2, // 像素, 越大越快
     WaitPicture: 1000, // 載入延遲時間 (ms)
-    ResizeHandle: null, // 保存 Resize 計時器
     BlockListener: new Set([ // 阻擋事件
         "auxclick",
         "mousedown",
