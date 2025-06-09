@@ -23,13 +23,17 @@
 // @namespace    https://greasyfork.org/users/989635
 
 // @grant        window.close
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
+// @grant        GM_registerMenuCommand
 
 // @run-at       document-body
 // ==/UserScript==
 
 (async () => {
 
-    const Config = {
+    const Config = Object.assign({
         RestartLive: true, // 使用重啟直播
         EndAutoClose: true, // 全部進度完成後自動關閉
         TryStayActive: true, // 嘗試讓頁面保持活躍
@@ -44,7 +48,16 @@
         JudgmentInterval: 6, // (Minute) 經過多長時間進度無增加, 就重啟直播 [設置太短會可能誤檢測]
 
         FindTag: ["drops", "啟用掉寶", "启用掉宝", "드롭활성화됨"], // 查找直播標籤, 只要有包含該字串即可
-    };
+    }, GM_getValue("Config") ?? {});
+
+    GM_registerMenuCommand("📝 Save Config", () => {
+        GM_setValue("Config", Config);
+    });
+
+    GM_registerMenuCommand("🗑️ Clear Config", () => {
+        GM_deleteValue("Config");
+        location.reload();
+    });
 
     /* 檢測邏輯 */
     class Detection {
@@ -224,12 +237,12 @@
             /* 初始化數據 */
             this.ProgressValue = ""; // 保存進度值字串
             this.CurrentTime = new Date(); // 保存當前時間
-            this.Config = Object.assign(Config, {
+            this.Config = Object.assign({
                 EndLine: "div.gtpIYu", // 斷開觀察者的終止線
                 AllProgress: "div.ilRKfU", // 所有的掉寶進度
                 ProgressBar: "p.mLvNZ span", // 掉寶進度數據
                 ActivityTime: "span.jSkguG", // 掉寶活動的日期
-            });
+            }, Config);
         }
 
         /* 主要運行 */
@@ -349,7 +362,7 @@
                 })
             };
 
-            this.Config = Object.assign(Config, {
+            this.Config = Object.assign({
                 TagType: "span", // 頻道 Tag 標籤
                 Article: "article", // 直播目錄的文章
                 Offline: "p.fQYeyD", // 離線的直播 (離線文本)
@@ -357,7 +370,7 @@
                 WatchLiveLink: "[data-a-target='preview-card-image-link']", // 觀看直播的連結
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
-            });
+            }, Config);
         }
 
         async Ran(Index) { // 傳入對應的頻道索引
