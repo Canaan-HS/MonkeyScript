@@ -3,7 +3,7 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      0.0.11
+// @version      0.0.12-Beta
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -16,14 +16,15 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-start
+// @require      https://update.greasyfork.org/scripts/487608/1597491/SyntaxLite_min.js
+
 // @grant        GM_setValue
 // @grant        GM_getValue
 
-// @require      https://update.greasyfork.org/scripts/487608/1551580/ClassSyntax_min.js
+// @run-at       document-start
 // ==/UserScript==
 
-(async () => {
+(function () {
     /* 臨時的自定義 (當 Enable = false 時, 其餘的設置將無效) */
     const Config = {
         BGColor: {
@@ -32,7 +33,7 @@
         },
         AutoTurnPage: { // 自動翻頁
             Enable: true,
-            Mode: 5, // 1 = 快速 | 2 = 普通 | 3 = 緩慢 | 4 = 一般無盡 | 5 = 優化無盡
+            Mode: 3, // 1 = 快速 | 2 = 一般無盡 | 3 = 優化無盡
         },
         RegisterHotkey: { // 快捷功能
             Enable: true,
@@ -44,68 +45,60 @@
             }
         }
     };
-    new class Manga extends Syntax {
-        constructor() {
-            super();
-            this.ScrollPixels = 2;
-            this.WaitPicture = 1e3;
-            this.IsFinalPage = false;
-            this.AdCleanup = this.Body = null;
-            this.ContentsPage = this.HomePage = null;
-            this.PreviousPage = this.NextPage = null;
-            this.MangaList = this.BottomStrip = null;
-            this.Up_scroll = this.Down_scroll = false;
-            this.Observer_Next = null;
-            this.IsMainPage = window.self === window.parent;
-            this.BlockListener = new Set(["pointerup", "pointerdown", "dState", "touchstart", "unhandledrejection"]);
-            this.Id = {
-                Title: "CME_Title",
-                Iframe: "CME_Iframe",
-                Block: "CME_Block-Ads",
-                Menu: "CME_Menu-Style",
-                Image: "CME_Image-Style",
-                Scroll: "CME_Scroll-Hidden",
-                ChildS: "CME_Child-Scroll-Hidden"
-            };
-            this.Get_Data = async callback => {
-                this.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], element => {
-                    const [Body, Title, HeadPager, Readend, Manga] = element;
-                    this.Body = Body;
-                    const HomeLink = this.$$("a", {
-                        all: true,
-                        root: Title
-                    });
-                    this.ContentsPage = HomeLink[0].href;
-                    this.HomePage = HomeLink[1].href;
-                    try {
-                        const PageLink = this.$$("ul a", {
-                            all: true,
-                            root: Readend
-                        });
-                        this.PreviousPage = PageLink[0].href;
-                        this.NextPage = PageLink[2].href;
-                    } catch {
-                        const PageLink = this.$$("a.mh_btn:not(.mh_bgcolor)", {
-                            all: true,
-                            root: HeadPager
-                        });
-                        this.PreviousPage = PageLink[0].href;
-                        this.NextPage = PageLink[1].href;
-                    }
-                    this.MangaList = Manga;
-                    this.BottomStrip = this.$$("a", {
-                        root: Readend
-                    });
-                    if ([this.Body, this.ContentsPage, this.HomePage, this.PreviousPage, this.NextPage, this.MangaList, this.BottomStrip].every(Check => Check)) callback(true); else callback(false);
-                }, {
-                    timeout: 10,
-                    timeoutResult: true,
-                    object: document
+    const Control = {
+        ScrollPixels: 2,
+        WaitPicture: 1e3,
+        BlockListener: new Set(["auxclick", "mousedown", "pointerup", "pointerdown", "dState", "touchstart", "unhandledrejection"]),
+        IdList: {
+            Title: "CME_Title",
+            Iframe: "CME_Iframe",
+            Block: "CME_Block-Ads",
+            Menu: "CME_Menu-Style",
+            Image: "CME_Image-Style",
+            Scroll: "CME_Scroll-Hidden",
+            ChildS: "CME_Child-Scroll-Hidden"
+        }
+    };
+    const Param = {
+        Body: null,
+        ContentsPage: null,
+        HomePage: null,
+        PreviousLink: null,
+        NextLink: null,
+        MangaList: null,
+        BottomStrip: null,
+        Up_scroll: false,
+        Down_scroll: false,
+        IsFinalPage: false,
+        IsMainPage: window.self === window.parent
+    };
+    function Tools(Syn2, Config2, Control2, Param2) {
+        const IdWhiteList = new Set(Object.values(Control2.IdList));
+        const Storage = (key, value = null) => {
+            return value != null ? Syn2.Session(key, {
+                value: value
+            }) : Syn2.Session(key);
+        };
+        const TopDetected = Syn2.Throttle(() => {
+            Param2.Up_scroll = Syn2.sY == 0 ? (Storage("scroll", false), false) : true;
+        }, 1e3);
+        const Skip = Config2.AutoTurnPage.Mode === 1 && Config2.RegisterHotkey.Function.KeepScroll;
+        const IsTheBottom = () => Syn2.sY + Syn2.iH >= document.documentElement.scrollHeight;
+        const BottomDetected = Syn2.Throttle(() => {
+            if (Skip) return;
+            Param2.Down_scroll = IsTheBottom() ? (Storage("scroll", false), false) : true;
+        }, 1e3);
+        return {
+            Storage: Storage,
+            GetSet: () => {
+                return Syn2.gV("Style", {
+                    BG_Color: "#595959",
+                    Img_Bw: "auto",
+                    Img_Mw: "100%"
                 });
-            };
-            this.Get_Nodes = Root => {
+            },
+            Get_Nodes(Root) {
                 const nodes = [];
-                const IdWhiteList = new Set(Object.values(this.Id));
                 function Task(root) {
                     const tree = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
                         acceptNode: node => {
@@ -122,314 +115,155 @@
                 Task(Root.head);
                 Task(Root.body);
                 return nodes;
-            };
-            this.storage = (key, value = null) => {
-                return value != null ? this.Storage(key, {
-                    value: value
-                }) : this.Storage(key);
-            };
-            this.TopDetected = this.Throttle(() => {
-                this.Up_scroll = this.Device.sY() == 0 ? (this.storage("scroll", false),
-                    false) : true;
-            }, 1e3);
-            this.BottomDetected = this.Throttle(() => {
-                this.Down_scroll = this.Device.sY() + this.Device.iH() >= document.documentElement.scrollHeight ? (this.storage("scroll", false),
-                    false) : true;
-            }, 1e3);
-            this.AutoScroll = move => {
+            },
+            AutoScroll(move) {
                 requestAnimationFrame(() => {
-                    if (this.Up_scroll && move < 0) {
+                    if (Param2.Up_scroll && move < 0) {
                         window.scrollBy(0, move);
-                        this.TopDetected();
+                        TopDetected();
                         this.AutoScroll(move);
-                    } else if (this.Down_scroll && move > 0) {
+                    } else if (Param2.Down_scroll && move > 0) {
                         window.scrollBy(0, move);
-                        this.BottomDetected();
+                        BottomDetected();
                         this.AutoScroll(move);
                     }
                 });
-            };
-            this.ManualScroll = move => {
+            },
+            ManualScroll(move) {
                 window.scrollBy({
                     left: 0,
                     top: move,
                     behavior: "smooth"
                 });
-            };
-            this.FinalPage = link => {
-                this.IsFinalPage = link.startsWith("javascript");
-                return this.IsFinalPage;
-            };
-            this.VisibleObjects = object => object.filter(img => img.height > 0 || img.src);
-            this.ObserveObject = object => object[Math.max(object.length - 2, 0)];
-            this.DetectionValue = object => this.VisibleObjects(object).length >= Math.floor(object.length * .5);
-            this.Get_Style = () => {
-                const Style = this.Store("g", "Style") || [{
-                    BG_Color: "#595959",
-                    Img_Bw: "auto",
-                    Img_Mw: "100%"
-                }];
-                return Style[0];
-            };
-            this.ImgStyle = this.Get_Style();
-        }
-        async BlockAds() {
-            const OriginListener = EventTarget.prototype.addEventListener, Block = this.BlockListener;
-            const EventListeners = new Map();
-            EventTarget.prototype.addEventListener = function (type, listener, options) {
-                if (Block.has(type)) return;
-                if (!EventListeners.has(this)) EventListeners.set(this, []);
-                EventListeners.get(this).push({
-                    type: type,
-                    listener: listener,
-                    options: options
-                });
-                OriginListener.call(this, type, listener, options);
-            };
-            function removeBlockedListeners() {
-                EventListeners.forEach((listeners, element) => {
-                    listeners.forEach(({
-                        type,
-                        listener
-                    }) => {
-                        if (Block.has(type)) {
-                            element.removeEventListener(type, listener);
-                        }
-                    });
-                });
+            },
+            FinalPage(link) {
+                Param2.IsFinalPage = link.startsWith("javascript");
+                return Param2.IsFinalPage;
+            },
+            VisibleObjects: object => object.filter(img => img.height > 0 || img.src),
+            ObserveObject: object => object[Math.max(object.length - 2, 0)],
+            DetectionValue(object) {
+                return this.VisibleObjects(object).length >= Math.floor(object.length * .5);
             }
-            this.AddStyle(`
-                html {pointer-events: none !important;}
-                .mh_wrap, span.mh_btn:not(.contact), ${this.Id.Iframe} {pointer-events: auto;}
-            `, this.Id.Block);
-            this.AdCleanup = setInterval(() => {
-                this.$$(`iframe:not(#${this.Id.Iframe})`)?.remove();
-                removeBlockedListeners();
-            }, 500);
-        }
-        async BackgroundStyle(Color) {
-            this.Body.style.cssText = `
+        };
+    }
+    function Style(Syn2, Control2, Param2, Set2) {
+        return {
+            async BackgroundStyle(Color) {
+                Param2.Body.style.cssText = `
                 background: ${Color} !important;
             `;
-            document.documentElement.style.cssText = `
+                document.documentElement.style.cssText = `
                 overflow: visible !important;
             `;
-        }
-        async AutoReload() {
-            let click = new MouseEvent("click", {
-                bubbles: true,
-                cancelable: true
-            });
-            const observer = new IntersectionObserver(observed => {
-                observed.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.dispatchEvent(click);
-                    }
-                });
-            }, {
-                threshold: .3
-            });
-            this.$$("span.mh_btn:not(.contact):not(.read_page_link)", {
-                all: true,
-                root: this.MangaList
-            }).forEach(reloadBtn => observer.observe(reloadBtn));
-        }
-        async PictureStyle() {
-            if (this.Device.Type() == "Desktop") {
-                this.AddStyle(`
+            },
+            async PictureStyle() {
+                if (Syn2.Platform === "Desktop") {
+                    Syn2.AddStyle(`
                     .mh_comicpic img {
                         margin: auto;
                         display: block;
                         cursor: pointer;
                         vertical-align: top;
-                        width: ${this.ImgStyle.Img_Bw};
-                        max-width: ${this.ImgStyle.Img_Mw};
+                        width: ${Set2.Img_Bw};
+                        max-width: ${Set2.Img_Mw};
                     }
-                `, this.Id.Image);
-            }
-            setTimeout(() => {
-                this.AutoReload();
-            }, this.WaitPicture);
-        }
-        async HotkeySwitch(Use) {
-            let JumpState = false;
-            if (this.Device.Type() == "Desktop") {
-                if (this.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
-                    this.Down_scroll = this.storage("scroll");
-                    this.Down_scroll && this.AutoScroll(this.ScrollPixels);
+                `, Control2.IdList.Image);
                 }
-                const UP_ScrollSpeed = -this.ScrollPixels;
-                const CanScroll = Use.AutoScroll || Use.ManualScroll;
-                this.AddListener(window, "keydown", event => {
-                    const key = event.key;
-                    if (key == "ArrowLeft" && Use.TurnPage && !JumpState) {
-                        event.stopImmediatePropagation();
-                        JumpState = !this.FinalPage(this.PreviousPage);
-                        location.assign(this.PreviousPage);
-                    } else if (key == "ArrowRight" && Use.TurnPage && !JumpState) {
-                        event.stopImmediatePropagation();
-                        JumpState = !this.FinalPage(this.NextPage);
-                        location.assign(this.NextPage);
-                    } else if (key == "ArrowUp" && CanScroll) {
-                        event.stopImmediatePropagation();
-                        event.preventDefault();
-                        if (Use.ManualScroll) {
-                            this.ManualScroll(-this.Device.iH());
-                        } else {
-                            if (this.Up_scroll) {
-                                this.Up_scroll = false;
-                            } else if (!this.Up_scroll || this.Down_scroll) {
-                                this.Down_scroll = false;
-                                this.Up_scroll = true;
-                                this.AutoScroll(UP_ScrollSpeed);
-                            }
-                        }
-                    } else if (key == "ArrowDown" && CanScroll) {
-                        event.stopImmediatePropagation();
-                        event.preventDefault();
-                        if (Use.ManualScroll) {
-                            this.ManualScroll(this.Device.iH());
-                        } else {
-                            if (this.Down_scroll) {
-                                this.Down_scroll = false;
-                                this.storage("scroll", false);
-                            } else if (this.Up_scroll || !this.Down_scroll) {
-                                this.Up_scroll = false;
-                                this.Down_scroll = true;
-                                this.storage("scroll", true);
-                                this.AutoScroll(this.ScrollPixels);
-                            }
-                        }
-                    }
-                }, {
-                    capture: true
-                });
-            } else if (this.Device.Type() == "Mobile") {
-                let startX, startY, moveX, moveY;
-                const sidelineX = this.Device.iW() * .3;
-                const sidelineY = this.Device.iH() / 4 * .3;
-                this.AddListener(window, "touchstart", event => {
-                    startX = event.touches[0].clientX;
-                    startY = event.touches[0].clientY;
-                }, {
-                    passive: true
-                });
-                this.AddListener(window, "touchmove", this.Debounce(event => {
-                    moveY = event.touches[0].clientY - startY;
-                    if (Math.abs(moveY) < sidelineY) {
-                        moveX = event.touches[0].clientX - startX;
-                        if (moveX > sidelineX && !JumpState) {
-                            JumpState = !this.FinalPage(this.PreviousPage);
-                            location.assign(this.PreviousPage);
-                        } else if (moveX < -sidelineX && !JumpState) {
-                            JumpState = !this.FinalPage(this.NextPage);
-                            location.assign(this.NextPage);
-                        }
-                    }
-                }, 60), {
-                    passive: true
-                });
-            }
-        }
-        async AutoPageTurn(Mode) {
-            let self = this, hold, point, img;
-            self.Observer_Next = new IntersectionObserver(observed => {
-                observed.forEach(entry => {
-                    if (entry.isIntersecting && self.DetectionValue(img)) {
-                        self.Observer_Next.disconnect();
-                        !self.FinalPage(self.NextPage) && location.assign(self.NextPage);
-                    }
-                });
-            }, {
-                threshold: hold
-            });
-            switch (Mode) {
-                case 2:
-                    hold = .5;
-                    point = self.$$("li:nth-child(3) a.read_page_link");
-                    break;
-
-                case 3:
-                    hold = 1;
-                    point = self.$$("div.endtip2.clear");
-                    break;
-
-                case 4:
-                case 5:
-                    this.UnlimitedPageTurn(Mode == 5);
-                    break;
-
-                default:
-                    hold = .1;
-                    point = self.BottomStrip;
-            }
-            if (point) {
                 setTimeout(() => {
-                    img = self.$$("img", {
-                        all: true,
-                        root: self.MangaList
+                    const click = new MouseEvent("click", {
+                        bubbles: true,
+                        cancelable: true
                     });
-                    self.Observer_Next.observe(point);
-                }, self.WaitPicture);
+                    const observer = new IntersectionObserver(observed => {
+                        observed.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                entry.target.dispatchEvent(click);
+                            }
+                        });
+                    }, {
+                        threshold: .3
+                    });
+                    Param2.MangaList.$qa("span.mh_btn:not(.contact):not(.read_page_link)").forEach(reloadBtn => observer.observe(reloadBtn));
+                }, Control2.WaitPicture);
+            },
+            async MenuStyle() { }
+        };
+    }
+    function PageTurn(Syn2, Control2, Param2, tools) {
+        async function Unlimited(Optimized) {
+            Syn2.AddStyle(`
+            .mh_wrap, .mh_readend, .mh_footpager,
+            .fed-foot-info, #imgvalidation2022 {display: none;}
+            body {
+                margin: 0;
+                padding: 0;
             }
-        }
-        async UnlimitedPageTurn(Optimized) {
-            const self = this;
-            const iframe = document.createElement("iframe");
-            iframe.id = this.Id.Iframe;
-            iframe.src = self.NextPage;
-            this.AddStyle(`
-                .mh_wrap, .mh_readend, .mh_footpager,
-                .fed-foot-info, #imgvalidation2022 {display: none;}
-                body {
-                    margin: 0;
-                    padding: 0;
-                }
-                #${this.Id.Iframe} {
-                    margin: 0;
-                    padding: 0;
-                    height: 110vh;
-                    width: 100%;
-                    border: none;
-                }
-            `, this.Id.Scroll);
-            if (this.IsMainPage) {
-                this.Listen(window, "message", event => {
+            #${Control2.IdList.Iframe} {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 110vh;
+                border: none;
+            }
+        `, Control2.IdList.Scroll);
+            const StylelRules = Syn2.$q(`#${Control2.IdList.Scroll}`).sheet.cssRules;
+            if (Param2.IsMainPage) {
+                let Size = 0;
+                window.addEventListener("message", event => {
                     const data = event.data;
                     if (data && data.length > 0) {
-                        document.title = data[0];
-                        this.NextPage = data[3];
-                        this.PreviousPage = data[1];
-                        history.pushState(null, null, data[2]);
+                        const {
+                            Title,
+                            PreviousUrl,
+                            CurrentUrl,
+                            NextUrl,
+                            Resize,
+                            SizeSet,
+                            SizeRecord
+                        } = data[0];
+                        if (Resize) {
+                            if (Size > SizeRecord) Size -= SizeRecord;
+                            Size += Resize;
+                            StylelRules[2].style.height = `${Size}px`;
+                        } else if (SizeSet) StylelRules[2].style.height = `${SizeSet}px`; else if (Title && NextUrl && PreviousUrl && CurrentUrl) {
+                            document.title = Title;
+                            Param2.NextLink = NextUrl;
+                            Param2.PreviousLink = PreviousUrl;
+                            history.pushState(null, null, CurrentUrl);
+                        }
                     }
                 });
             } else {
-                this.AddStyle(`
-                    html {
-                        overflow: hidden !important;
-                        overflow-x: hidden !important;
-                        scrollbar-width: none !important;
-                        -ms-overflow-style: none !important;
-                    }
-                    html::-webkit-scrollbar {
-                        display: none !important;
-                    }
-                `, this.Id.ChildS);
+                Syn2.AddStyle(`
+                html {
+                    overflow: hidden !important;
+                    overflow-x: hidden !important;
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                }
+                html::-webkit-scrollbar {
+                    display: none !important;
+                }
+            `, Control2.IdList.ChildS);
                 let MainWindow = window;
-                this.Listen(window, "message", event => {
+                window.addEventListener("message", event => {
                     while (MainWindow.parent !== MainWindow) {
                         MainWindow = MainWindow.parent;
                     }
-                    MainWindow.postMessage(event.data, self.Origin);
+                    MainWindow.postMessage(event.data, Syn2.$origin);
                 });
             }
-            TriggerNextPage();
-            async function TriggerNextPage() {
+            const iframe = Syn2.createElement("iframe", {
+                id: Control2.IdList.Iframe,
+                src: Param2.NextLink
+            });
+            (() => {
                 let Img, Observer, Quantity = 0;
-                self.Observer_Next = new IntersectionObserver(observed => {
+                const Observer_Next = new IntersectionObserver(observed => {
                     observed.forEach(entry => {
-                        if (entry.isIntersecting && self.DetectionValue(Img)) {
-                            self.Observer_Next.disconnect();
+                        if (entry.isIntersecting && tools.DetectionValue(Img)) {
+                            Observer_Next.disconnect();
                             Observer.disconnect();
                             TurnPage();
                         }
@@ -438,108 +272,299 @@
                     threshold: .1
                 });
                 setTimeout(() => {
-                    Img = self.$$("img", {
-                        all: true,
-                        root: self.MangaList
-                    });
+                    Img = Param2.MangaList.$qa("img");
                     if (Img.length <= 5) {
                         TurnPage();
                         return;
                     }
-                    self.Observer(self.MangaList, () => {
-                        const Visible = self.VisibleObjects(Img), VL = Visible.length;
+                    Observer_Next.observe(tools.ObserveObject(tools.VisibleObjects(Img)));
+                    Syn2.Observer(Param2.MangaList, () => {
+                        const Visible = tools.VisibleObjects(Img);
+                        const VL = Visible.length;
                         if (VL > Quantity) {
                             Quantity = VL;
-                            self.Observer_Next.disconnect();
-                            self.Observer_Next.observe(self.ObserveObject(Visible));
+                            Observer_Next.disconnect();
+                            Observer_Next.observe(tools.ObserveObject(Visible));
                         }
                     }, {
-                        throttle: 150
+                        debounce: 300
                     }, observer => {
                         Observer = observer.ob;
                     });
-                }, self.WaitPicture);
-            }
-            async function TurnPage() {
-                let Content, CurrentUrl, StylelRules = self.$$(`#${self.Id.Scroll}`).sheet.cssRules;
-                if (self.FinalPage(self.NextPage)) {
+                }, Control2.WaitPicture);
+            })();
+            function TurnPage() {
+                let CurrentHeight = 0;
+                const Resize = new ResizeObserver(() => {
+                    const NewHeight = Param2.MangaList.offsetHeight;
+                    if (NewHeight > CurrentHeight) {
+                        window.parent.postMessage([{
+                            Resize: Param2.MangaList.offsetHeight,
+                            SizeRecord: CurrentHeight
+                        }], Syn2.$origin);
+                        CurrentHeight = NewHeight;
+                    }
+                });
+                if (tools.FinalPage(Param2.NextLink)) {
+                    if (Optimized) {
+                        window.parent.postMessage([{
+                            SizeSet: Param2.MangaList.offsetHeight + 245
+                        }], Syn2.$origin);
+                    }
                     StylelRules[0].style.display = "block";
                     return;
                 }
-                document.body.appendChild(iframe);
                 Waitload();
+                Param2.Body.appendChild(iframe);
+                Resize.observe(Param2.MangaList);
                 function Waitload() {
-                    iframe.onload = () => {
-                        CurrentUrl = iframe.contentWindow.location.href;
-                        CurrentUrl != self.NextPage && (iframe.src = self.NextPage,
-                            Waitload());
-                        Content = iframe.contentWindow.document;
+                    let IframeWindow, CurrentUrl, Content, AllImg;
+                    const Failed = () => {
+                        iframe.offAll();
+                        iframe.src = Param2.NextLink;
+                        Waitload();
+                    };
+                    const Success = () => {
+                        iframe.offAll();
+                        IframeWindow = iframe.contentWindow;
+                        CurrentUrl = IframeWindow.location.href;
+                        if (CurrentUrl !== Param2.NextLink) {
+                            Failed();
+                            return;
+                        }
+                        Content = IframeWindow.document;
                         Content.body.style.overflow = "hidden";
-                        const TopImg = self.$$("#mangalist img", {
-                            root: Content
-                        });
-                        setInterval(() => {
-                            StylelRules[2].style.height = `${Content.body.scrollHeight}px`;
-                        }, 1500);
+                        Syn2.Log("無盡翻頁", CurrentUrl);
+                        AllImg = Content.$qa("#mangalist img");
                         const UrlUpdate = new IntersectionObserver(observed => {
                             observed.forEach(entry => {
+                                var _a, _b;
                                 if (entry.isIntersecting) {
                                     UrlUpdate.disconnect();
-                                    self.Log("無盡翻頁", CurrentUrl);
-                                    const PageLink = self.$$("div.mh_readend ul a", {
-                                        all: true,
-                                        root: Content.body
-                                    });
-                                    const PreviousUrl = PageLink[0]?.href;
-                                    const NextUrl = PageLink[2]?.href;
-                                    window.parent.postMessage([Content.title, PreviousUrl, CurrentUrl, NextUrl], self.Origin);
+                                    Resize.disconnect();
+                                    const PageLink = Content.body.$qa("div.mh_readend ul a");
+                                    window.parent.postMessage([{
+                                        Title: Content.title,
+                                        CurrentUrl: CurrentUrl,
+                                        PreviousUrl: (_a = PageLink[0]) == null ? void 0 : _a.href,
+                                        NextUrl: (_b = PageLink[2]) == null ? void 0 : _b.href
+                                    }], Syn2.$origin);
                                 }
                             });
                         }, {
                             threshold: .1
                         });
-                        UrlUpdate.observe(TopImg);
+                        AllImg.forEach(async img => UrlUpdate.observe(img));
                         if (Optimized) {
-                            self.$$("title").id = self.Id.Title;
-                            const adapt = self.Device.Type() == "Desktop" ? .5 : .7;
-                            const hold = Math.min(adapt, self.Device.iH() * adapt / TopImg.clientHeight);
+                            Syn2.$q("title").id = Control2.IdList.Title;
+                            const adapt = Syn2.Platform === "Desktop" ? .5 : .7;
                             const ReleaseMemory = new IntersectionObserver(observed => {
                                 observed.forEach(entry => {
                                     if (entry.isIntersecting) {
-                                        ReleaseMemory.disconnect();
-                                        self.Get_Nodes(document).forEach(node => {
-                                            node.remove();
-                                        });
-                                        TopImg.scrollIntoView();
+                                        const targetImg = entry.target;
+                                        const ratio = Math.min(adapt, Syn2.iH * adapt / targetImg.clientHeight);
+                                        if (entry.intersectionRatio >= ratio) {
+                                            ReleaseMemory.disconnect();
+                                            tools.Get_Nodes(document).forEach(node => {
+                                                node.remove();
+                                            });
+                                            targetImg.scrollIntoView();
+                                        }
                                     }
                                 });
                             }, {
-                                threshold: hold
+                                threshold: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1]
                             });
-                            ReleaseMemory.observe(TopImg);
+                            AllImg.forEach(async img => ReleaseMemory.observe(img));
                         }
                     };
-                    iframe.onerror = () => {
-                        iframe.src = self.NextPage;
-                        Waitload();
-                    };
+                    iframe.on("load", Success);
+                    iframe.on("error", Failed);
                 }
             }
         }
-        async Injection() {
-            this.BlockAds();
-            try {
-                this.Get_Data(state => {
-                    if (state) {
-                        this.PictureStyle();
-                        Config.BGColor.Enable && this.BackgroundStyle(Config.BGColor.Color);
-                        Config.AutoTurnPage.Enable && this.AutoPageTurn(Config.AutoTurnPage.Mode);
-                        Config.RegisterHotkey.Enable && this.HotkeySwitch(Config.RegisterHotkey.Function);
-                    } else this.Log(null, "Error");
+        return {
+            async Auto(Mode) {
+                switch (Mode) {
+                    case 2:
+                    case 3:
+                        Unlimited(Mode === 3);
+                        break;
+
+                    default:
+                        setTimeout(() => {
+                            const img = Param2.MangaList.$qa("img");
+                            if (!tools.FinalPage(Param2.NextLink)) {
+                                const Observer_Next = new IntersectionObserver(observed => {
+                                    observed.forEach(entry => {
+                                        if (entry.isIntersecting && tools.DetectionValue(img)) {
+                                            location.assign(Param2.NextLink);
+                                        }
+                                    });
+                                }, {
+                                    threshold: .5
+                                });
+                                Observer_Next.observe(Param2.BottomStrip);
+                            }
+                        }, Control2.WaitPicture);
+                }
+            }
+        };
+    }
+    (async () => {
+        const tools = Tools(Syn, Config, Control, Param);
+        const Set2 = tools.GetSet();
+        const style = Style(Syn, Control, Param, Set2);
+        const turn = PageTurn(Syn, Control, Param, tools);
+        async function BlockAds() {
+            Syn.AddStyle(`
+            html {pointer-events: none !important;}
+            div[style*='position'] {display: none !important;}
+            .mh_wrap a,
+            .mh_readend a,
+            span.mh_btn:not(.contact),
+            #${Control.IdList.Iframe} {
+                pointer-events: auto !important;
+            }
+        `, Control.IdList.Block);
+            const OriginListener = EventTarget.prototype.addEventListener;
+            const Block = Control.BlockListener;
+            EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
+                apply(target, thisArg, args) {
+                    const [type, listener, options] = args;
+                    if (Block.has(type)) return;
+                    return target.apply(thisArg, args);
+                }
+            });
+            const iframe = `iframe:not(#${Control.IdList.Iframe})`;
+            const AdCleanup = () => {
+                var _a;
+                (_a = Syn.$q(iframe)) == null ? void 0 : _a.remove();
+                requestIdleCallback(AdCleanup, {
+                    timeout: 300
                 });
-            } catch (error) {
-                this.Log(null, error);
+            };
+            AdCleanup();
+        }
+        async function HotkeySwitch(Use) {
+            let JumpState = false;
+            if (Syn.Platform === "Desktop") {
+                if (Param.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
+                    Param.Down_scroll = tools.Storage("scroll");
+                    Param.Down_scroll && tools.AutoScroll(Control.ScrollPixels);
+                }
+                const UP_ScrollSpeed = -2;
+                const CanScroll = Use.AutoScroll || Use.ManualScroll;
+                Syn.onEvent(window, "keydown", event => {
+                    const key = event.key;
+                    if (key === "ArrowLeft" && Use.TurnPage && !JumpState) {
+                        event.stopImmediatePropagation();
+                        JumpState = !tools.FinalPage(Param.PreviousLink);
+                        location.assign(Param.PreviousLink);
+                    } else if (key === "ArrowRight" && Use.TurnPage && !JumpState) {
+                        event.stopImmediatePropagation();
+                        JumpState = !tools.FinalPage(Param.NextLink);
+                        location.assign(Param.NextLink);
+                    } else if (key === "ArrowUp" && CanScroll) {
+                        event.stopImmediatePropagation();
+                        event.preventDefault();
+                        if (Use.ManualScroll) {
+                            tools.ManualScroll(-Syn.iH);
+                        } else {
+                            if (Param.Up_scroll) {
+                                Param.Up_scroll = false;
+                            } else if (!Param.Up_scroll || Param.Down_scroll) {
+                                Param.Down_scroll = false;
+                                Param.Up_scroll = true;
+                                tools.AutoScroll(UP_ScrollSpeed);
+                            }
+                        }
+                    } else if (key === "ArrowDown" && CanScroll) {
+                        event.stopImmediatePropagation();
+                        event.preventDefault();
+                        if (Use.ManualScroll) {
+                            tools.ManualScroll(Syn.iH);
+                        } else {
+                            if (Param.Down_scroll) {
+                                Param.Down_scroll = false;
+                                tools.Storage("scroll", false);
+                            } else if (Param.Up_scroll || !Param.Down_scroll) {
+                                Param.Up_scroll = false;
+                                Param.Down_scroll = true;
+                                tools.Storage("scroll", true);
+                                tools.AutoScroll(Control.ScrollPixels);
+                            }
+                        }
+                    }
+                }, {
+                    capture: true
+                });
+            } else if (Syn.Platform === "Mobile") {
+                let startX, startY, moveX, moveY;
+                const sidelineX = Syn.iW * .3;
+                const sidelineY = Syn.iH / 4 * .3;
+                Syn.onEvent(window, "touchstart", event => {
+                    startX = event.touches[0].clientX;
+                    startY = event.touches[0].clientY;
+                }, {
+                    passive: true
+                });
+                Syn.onEvent(window, "touchmove", Syn.Debounce(event => {
+                    moveY = event.touches[0].clientY - startY;
+                    if (Math.abs(moveY) < sidelineY) {
+                        moveX = event.touches[0].clientX - startX;
+                        if (moveX > sidelineX && !JumpState) {
+                            JumpState = !tools.FinalPage(Param.PreviousLink);
+                            location.assign(Param.PreviousLink);
+                        } else if (moveX < -sidelineX && !JumpState) {
+                            JumpState = !tools.FinalPage(Param.NextLink);
+                            location.assign(Param.NextLink);
+                        }
+                    }
+                }, 60), {
+                    passive: true
+                });
             }
         }
-    }().Injection();
+        (() => {
+            async function Init(callback) {
+                Syn.WaitElem(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null, {
+                    timeout: 10,
+                    throttle: 30,
+                    visibility: Param.IsMainPage,
+                    timeoutResult: true
+                }).then(([Body, Title, HeadPager, Readend, Manga]) => {
+                    Param.Body = Body;
+                    const HomeLink = Title.$qa("a");
+                    Param.ContentsPage = HomeLink[0].href;
+                    Param.HomePage = HomeLink[1].href;
+                    try {
+                        const PageLink = Readend.$qa("ul a");
+                        Param.PreviousLink = PageLink[0].href;
+                        Param.NextLink = PageLink[2].href;
+                    } catch {
+                        const PageLink = HeadPager.$qa("a.mh_btn:not(.mh_bgcolor)");
+                        Param.PreviousLink = PageLink[0].href;
+                        Param.NextLink = PageLink[1].href;
+                    }
+                    Param.MangaList = Manga;
+                    Param.BottomStrip = Readend.$q("a");
+                    if ([Param.Body, Param.ContentsPage, Param.HomePage, Param.PreviousLink, Param.NextLink, Param.MangaList, Param.BottomStrip].every(Check => Check)) callback(true); else callback(false);
+                });
+            }
+            BlockAds();
+            try {
+                Init(state => {
+                    if (state) {
+                        style.PictureStyle();
+                        Config.BGColor.Enable && style.BackgroundStyle(Config.BGColor.Color);
+                        Config.AutoTurnPage.Enable && turn.Auto(Config.AutoTurnPage.Mode);
+                        Config.RegisterHotkey.Enable && HotkeySwitch(Config.RegisterHotkey.Function);
+                    } else Syn.Log(null, "Error");
+                });
+            } catch (error) {
+                Syn.Log(null, error);
+            }
+        })();
+    })();
 })();
