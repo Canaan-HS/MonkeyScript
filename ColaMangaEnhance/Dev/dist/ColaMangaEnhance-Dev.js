@@ -57,8 +57,6 @@
     // 像素, 越大越快
     WaitPicture: 1e3,
     // 載入延遲時間 (ms)
-    ResizeHandle: null,
-    // 保存 Resize 計時器
     BlockListener: /* @__PURE__ */ new Set([
       // 阻擋事件
       "auxclick",
@@ -233,7 +231,6 @@
   }
   function PageTurn(Syn2, Control2, Param2, tools) {
     async function Unlimited(Optimized) {
-      var _a, _b;
       Syn2.AddStyle(`
             .mh_wrap, .mh_readend, .mh_footpager,
             .fed-foot-info, #imgvalidation2022 {display: none;}
@@ -250,8 +247,8 @@
             }
         `, Control2.IdList.Scroll);
       const StylelRules = Syn2.$q(`#${Control2.IdList.Scroll}`).sheet.cssRules;
-      const BlockRules = (_b = (_a = Syn2.$q(`#${Control2.IdList.Block}`)) == null ? void 0 : _a.sheet) == null ? void 0 : _b.cssRules;
       if (Param2.IsMainPage) {
+        let Size = 0;
         window.addEventListener("message", (event) => {
           const data = event.data;
           if (data && data.length > 0) {
@@ -261,13 +258,15 @@
               CurrentUrl,
               NextUrl,
               Resize,
-              StopResize,
-              Recover
+              SizeSet,
+              SizeRecord
             } = data[0];
-            if (Resize) StylelRules[2].style.height = `${Resize}px`;
-            else if (StopResize) clearTimeout(Control2.ResizeHandle);
-            else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important");
-            else {
+            if (Resize) {
+              if (Size > SizeRecord) Size -= SizeRecord;
+              Size += Resize;
+              StylelRules[2].style.height = `${Size}px`;
+            } else if (SizeSet) StylelRules[2].style.height = `${SizeSet}px`;
+            else if (Title && NextUrl && PreviousUrl && CurrentUrl) {
               document.title = Title;
               Param2.NextLink = NextUrl;
               Param2.PreviousLink = PreviousUrl;
@@ -334,24 +333,28 @@
       })();
       function TurnPage() {
         let CurrentHeight = 0;
-        const Resize = (Increment = 0) => {
-          const NewHeight = Param2.Body.scrollHeight + Increment;
+        const Resize = new ResizeObserver(() => {
+          const NewHeight = Param2.MangaList.offsetHeight;
           if (NewHeight > CurrentHeight) {
+            window.parent.postMessage([{
+              Resize: Param2.MangaList.offsetHeight,
+              SizeRecord: CurrentHeight
+            }], Syn2.$origin);
             CurrentHeight = NewHeight;
-            window.parent.postMessage([{ Resize: NewHeight }], Syn2.$origin);
           }
-          Control2.ResizeHandle = setTimeout(Resize, 1200);
-        };
+        });
         if (tools.FinalPage(Param2.NextLink)) {
-          window.parent.postMessage([{ StopResize: true }], Syn2.$origin);
+          if (Optimized) {
+            window.parent.postMessage([{
+              SizeSet: Param2.MangaList.offsetHeight + 245
+            }], Syn2.$origin);
+          }
           StylelRules[0].style.display = "block";
-          window.parent.postMessage([{ Recover: true }], Syn2.$origin);
-          Resize(40);
           return;
         }
-        if (Param2.IsMainPage) Resize();
         Waitload();
         Param2.Body.appendChild(iframe);
+        Resize.observe(Param2.MangaList);
         function Waitload() {
           let IframeWindow, CurrentUrl, Content, AllImg;
           const Failed = () => {
@@ -373,15 +376,16 @@
             AllImg = Content.$qa("#mangalist img");
             const UrlUpdate = new IntersectionObserver((observed) => {
               observed.forEach((entry) => {
-                var _a2, _b2;
+                var _a, _b;
                 if (entry.isIntersecting) {
                   UrlUpdate.disconnect();
+                  Resize.disconnect();
                   const PageLink = Content.body.$qa("div.mh_readend ul a");
                   window.parent.postMessage([{
                     Title: Content.title,
                     CurrentUrl,
-                    PreviousUrl: (_a2 = PageLink[0]) == null ? void 0 : _a2.href,
-                    NextUrl: (_b2 = PageLink[2]) == null ? void 0 : _b2.href
+                    PreviousUrl: (_a = PageLink[0]) == null ? void 0 : _a.href,
+                    NextUrl: (_b = PageLink[2]) == null ? void 0 : _b.href
                   }], Syn2.$origin);
                 }
               });
@@ -448,7 +452,12 @@
       Syn.AddStyle(`
             html {pointer-events: none !important;}
             div[style*='position'] {display: none !important;}
-            .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
+            .mh_wrap a,
+            .mh_readend a,
+            span.mh_btn:not(.contact),
+            #${Control.IdList.Iframe} {
+                pointer-events: auto !important;
+            }
         `, Control.IdList.Block);
       const OriginListener = EventTarget.prototype.addEventListener;
       const Block = Control.BlockListener;
