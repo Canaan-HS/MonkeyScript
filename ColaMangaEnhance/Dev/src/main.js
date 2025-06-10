@@ -52,7 +52,12 @@ Todo 未來添加
         Syn.AddStyle(`
             html {pointer-events: none !important;}
             div[style*='position'] {display: none !important;}
-            .mh_wrap, span.mh_btn:not(.contact), ${Control.IdList.Iframe} {pointer-events: auto;}
+            .mh_wrap a,
+            .mh_readend a,
+            span.mh_btn:not(.contact),
+            #${Control.IdList.Iframe} {
+                pointer-events: auto !important;
+            }
         `, Control.IdList.Block);
 
         const OriginListener = EventTarget.prototype.addEventListener;
