@@ -22,8 +22,9 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
 // @grant        window.close
+
+// @run-at       document-body
 // ==/UserScript==
 
 (async () => {
@@ -68,9 +69,9 @@
                 let data,
                     Formula = {
                         Type: (parse) => Object.prototype.toString.call(parse).slice(8, -1),
-                        Number: (parse) => parse ? Number(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), !0),
-                        Array: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), !0),
-                        Object: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), !0),
+                        Number: (parse) => parse ? Number(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
+                        Array: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
+                        Object: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
                     };
                 return value != null
                     ? Formula[Formula.Type(value)]()
@@ -188,20 +189,29 @@
 
             /* 頁面刷新, 展示倒數 */
             this.PageRefresh = async (display, interval) => {
-                if (display) { // 展示倒數
-                    setInterval(() => { // 背景有時候會被限制, 而卡住倒數 (所以實際刷新由下方定時器觸發)
-                        document.title = `【 ${interval--}s 】 ${this.ProgressValue}`
+                if (display) { // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
+                    const start = Date.now();
+                    const Refresh = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - start) / 1000);
+                        const remaining = interval - elapsed;
+
+                        if (remaining < 0) {
+                            clearInterval(Refresh);
+                            return;
+                        };
+
+                        document.title = `【 ${remaining}s 】 ${this.ProgressValue}`;
                     }, 1e3);
                 }
 
-                setTimeout(() => { location.reload() }, (interval + 1) * 1e3); // 定時刷新
+                setTimeout(() => { location.reload() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
             };
 
             /* 展示進度於標籤 */
             this.ShowProgress = () => {
                 (new MutationObserver(() => {
                     document.title != this.ProgressValue && (document.title = this.ProgressValue);
-                })).observe(document.querySelector("title"), { childList: !0, subtree: !1 });
+                })).observe(document.querySelector("title"), { childList: 1, subtree: 0 });
                 document.title = this.ProgressValue; // 觸發一次轉換
             };
 
@@ -281,7 +291,7 @@
                     Detec.ProgressValue = `${Progress}%`; // 賦予進度值
                     !Display && Detec.ShowProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 ShowProgress 動態處理展示
                 } else if (Token > 0) {
-                    setTimeout(() => {Process(Token - 1)}, 2e3); // 試錯 (避免意外)
+                    setTimeout(() => { Process(Token - 1) }, 2e3); // 試錯 (避免意外)
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
@@ -293,12 +303,12 @@
                     window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
 
-                /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
+                    /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
                 } else if (Diff >= Self.JudgmentInterval && Progress == Record) {
                     Self.RestartLive && Restart.Ran(MaxElement); // 已最大進度對象, 進行直播重啟
                     Detec.Storage("Record", [Progress, Detec.GetTime()]);
 
-                /* 差異時間是 0 或 標題與進度值不同 = 有變化 */
+                    /* 差異時間是 0 或 標題與進度值不同 = 有變化 */
                 } else if (Diff == 0 || Progress != Record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
                     if (Progress != 0) Detec.Storage("Record", [Progress, Detec.GetTime()]);
 
@@ -308,7 +318,7 @@
             WaitElem(document, Self.EndLine, () => { // 等待頁面載入
                 Process(4); // 預設能試錯 5 次
                 Self.TryStayActive && StayActive(document);
-            }, {timeoutResult: true});
+            }, { timeoutResult: true });
             Detec.PageRefresh(Display, Self.UpdateInterval); // 頁面刷新
         }
     };
@@ -319,7 +329,7 @@
             /* 重啟直播的靜音(持續執行 15 秒) */
             this.LiveMute = async Newindow => {
                 WaitElem(Newindow.document, "video", video => {
-                    const SilentInterval = setInterval(() => { video.muted = !0 }, 5e2);
+                    const SilentInterval = setInterval(() => { video.muted = 1 }, 5e2);
                     setTimeout(() => { clearInterval(SilentInterval) }, 1.5e4);
                 })
             };
@@ -368,7 +378,7 @@
 
                 FindLive(0);
                 async function FindLive(index) { // 持續找到有在直播的頻道
-                    if ((OpenLink.length - 1) < index) return !1;
+                    if ((OpenLink.length - 1) < index) return 0;
 
                     const href = OpenLink[index].href;
                     NewWindow = !NewWindow ? window.open(href, "LiveWindow") : (NewWindow.location.assign(href), NewWindow);
@@ -395,7 +405,7 @@
                         }, 300));
 
                         NewWindow.onload = () => {
-                            observer.observe(NewWindow.document, { subtree: !0, childList: !0, characterData: !0 });
+                            observer.observe(NewWindow.document, { subtree: 1, childList: 1, characterData: 1 });
                         }
                     }
                 }
@@ -424,7 +434,7 @@
                 }, 300));
 
                 NewWindow.onload = () => {
-                    observer.observe(NewWindow.document, { subtree: !0, childList: !0, characterData: !0 });
+                    observer.observe(NewWindow.document, { subtree: 1, childList: 1, characterData: 1 });
                 }
             }
         }
@@ -444,7 +454,7 @@
 
     /* 簡易的 等待元素 */
     async function WaitElem(
-        document, selector, found, { timeout=1e4, throttle=200, timeoutResult=false } = {}
+        document, selector, found, { timeout = 1e4, throttle = 200, timeoutResult = false } = {}
     ) {
         let timer, element;
 
@@ -457,10 +467,10 @@
             }
         }, throttle));
 
-        observer.observe(document, { subtree: !0, childList: !0, characterData: !0 });
+        observer.observe(document, { subtree: 1, childList: 1, characterData: 1 });
         timer = setTimeout(() => {
             observer.disconnect();
-            timeoutResult &&found(element);
+            timeoutResult && found(element);
         }, timeout);
 
     };
