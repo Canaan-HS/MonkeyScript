@@ -22,23 +22,26 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
         // 取得樣式
         const StylelRules = Syn.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
-        // 嘗試取得阻擋廣告的樣式
-        const BlockRules = Syn.$q(`#${Control.IdList.Block}`)?.sheet?.cssRules;
 
         // 修改最上層主頁面 (根據無盡翻頁的變化)
         if (Param.IsMainPage) {
+            let Size = 0;
+
             window.addEventListener("message", event => {
                 const data = event.data;
                 if (data && data.length > 0) {
                     const {
                         Title, PreviousUrl, CurrentUrl, NextUrl,
-                        Resize, StopResize, Recover
+                        Resize, SizeSet, SizeRecord
                     } = data[0];
 
-                    if (Resize) StylelRules[2].style.height = `${Resize}px`; // 根據容器高度調整
-                    else if (StopResize) clearTimeout(Control.ResizeHandle); // 停止 Resize
-                    else if (Recover && BlockRules) BlockRules[0].style.setProperty("pointer-events", "auto", "important"); // 恢復點擊事件 (有時失敗不知道為啥)
-                    else { // 更新頁面信息
+                    if (Resize) {
+                        if (Size > SizeRecord) Size -= SizeRecord; // 減去先前的大小
+                        Size += Resize; // 以最新大小累加
+                        StylelRules[2].style.height = `${Size}px`; // 根據容器高度調整
+                    }
+                    else if (SizeSet) StylelRules[2].style.height = `${SizeSet}px`; // 設置新的大小
+                    else if (Title && NextUrl && PreviousUrl && CurrentUrl) { // 更新頁面信息
                         document.title = Title;
                         Param.NextLink = NextUrl;
                         Param.PreviousLink = PreviousUrl;
@@ -46,7 +49,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                     }
                 }
             })
-        } else { // 第二頁開始, 不斷向上找到主頁
+        } else {
             Syn.AddStyle(`
                 html {
                     overflow: hidden !important;
@@ -61,7 +64,9 @@ export default function PageTurn(Syn, Control, Param, tools) {
 
             let MainWindow = window;
             window.addEventListener("message", event => {
-                while (MainWindow.parent !== MainWindow) { MainWindow = MainWindow.parent }
+                while (MainWindow.parent !== MainWindow) {
+                    MainWindow = MainWindow.parent;
+                }
                 MainWindow.postMessage(event.data, Syn.$origin);
             })
         };
@@ -118,40 +123,34 @@ export default function PageTurn(Syn, Control, Param, tools) {
         /* 翻頁邏輯 */
         function TurnPage() {
             let CurrentHeight = 0;
-
-            const Resize = (Increment = 0) => {
-                const NewHeight = Param.Body.scrollHeight + Increment;
+            const Resize = new ResizeObserver(() => {
+                const NewHeight = Param.MangaList.offsetHeight;
 
                 if (NewHeight > CurrentHeight) {
-                    CurrentHeight = NewHeight;
-                    window.parent.postMessage([{ Resize: NewHeight }], Syn.$origin);
-                };
+                    window.parent.postMessage([{
+                        Resize: Param.MangaList.offsetHeight,
+                        SizeRecord: CurrentHeight
+                    }], Syn.$origin);
 
-                Control.ResizeHandle = setTimeout(Resize, 1200);
-            };
+                    CurrentHeight = NewHeight;
+                }
+            });
 
             if (tools.FinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (進行恢復處理)
 
-                /*
-                ? 停止先前 Resize
-                * 只在 IsMainPage 啟用 Resize 遞迴, 因此他傳遞的是以 MainPage 的 scrollHeight, 給 MainPage 的 style.height 設置
-                * 在這邊停掉先前的 Resize, 再次啟動就會變成 當前 iframe 的 scrollHeight, 給 MainPage 的 style.height 設置
-                * 這樣就能解決最後一頁過多空白的問題
-                */
-                window.parent.postMessage([{ StopResize: true }], Syn.$origin);
+                if (Optimized) {
+                    window.parent.postMessage([{
+                        SizeSet: (Param.MangaList.offsetHeight + 245),
+                    }], Syn.$origin);
+                }
 
-                StylelRules[0].style.display = "block"; // 恢復隱藏的元素
-                window.parent.postMessage([{ Recover: true }], Syn.$origin); // MainPage 恢復點擊事件 (有時沒用, 不知道為啥)
-
-                Resize(40); // 再次啟動, 並給予 40px 的增量
+                StylelRules[0].style.display = "block"; // 恢復隱藏的元素度
                 return;
             };
 
-            // 持續設置高度
-            if (Param.IsMainPage) Resize();
-
             Waitload();
-            Param.Body.appendChild(iframe);
+            Param.Body.appendChild(iframe); // 添加到 body 中
+            Resize.observe(Param.MangaList); // 持續設置高度
 
             // 等待 iframe 載入完成
             function Waitload() {
@@ -188,6 +187,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                         observed.forEach(entry => {
                             if (entry.isIntersecting) {
                                 UrlUpdate.disconnect();
+                                Resize.disconnect();
 
                                 const PageLink = Content.body.$qa("div.mh_readend ul a");
 
