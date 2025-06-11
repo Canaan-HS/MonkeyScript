@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             0.0.16
+// @version             0.0.17-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -31,9 +31,10 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(async () => {
+(() => {
+    const Backup = GM_getValue("Config", {}); // 不額外做數據驗證
 
-    const Config = Object.assign({
+    const Config = {
         RestartLive: true, // 使用重啟直播
         EndAutoClose: true, // 全部進度完成後自動關閉
         TryStayActive: true, // 嘗試讓頁面保持活躍
@@ -48,16 +49,8 @@
         JudgmentInterval: 6, // (Minute) 經過多長時間進度無增加, 就重啟直播 [設置太短會可能誤檢測]
 
         FindTag: ["drops", "啟用掉寶", "启用掉宝", "드롭활성화됨"], // 查找直播標籤, 只要有包含該字串即可
-    }, GM_getValue("Config") ?? {});
-
-    GM_registerMenuCommand("📝 Save Config", () => {
-        GM_setValue("Config", Config);
-    });
-
-    GM_registerMenuCommand("🗑️ Clear Config", () => {
-        GM_deleteValue("Config");
-        location.reload();
-    });
+        ...Backup
+    };
 
     /* 檢測邏輯 */
     class Detection {
@@ -237,12 +230,13 @@
             /* 初始化數據 */
             this.ProgressValue = ""; // 保存進度值字串
             this.CurrentTime = new Date(); // 保存當前時間
-            this.Config = Object.assign({
-                EndLine: "div.gtpIYu", // 斷開觀察者的終止線
-                AllProgress: "div.ilRKfU", // 所有的掉寶進度
-                ProgressBar: "p.mLvNZ span", // 掉寶進度數據
-                ActivityTime: "span.jSkguG", // 掉寶活動的日期
-            }, Config);
+            this.Config = {
+                ...Config,
+                EndLine: "div.bBnamT", // 斷開觀察者的終止線
+                AllProgress: "div.dyRvqw", // 所有的掉寶進度
+                ProgressBar: "p.fBbnkN span", // 掉寶進度數據
+                ActivityTime: "span.bkNtaq", // 掉寶活動的日期
+            };
         }
 
         /* 主要運行 */
@@ -362,24 +356,25 @@
                 })
             };
 
-            this.Config = Object.assign({
-                TagType: "span", // 頻道 Tag 標籤
-                Article: "article", // 直播目錄的文章
-                Offline: "p.fQYeyD", // 離線的直播 (離線文本)
-                Online: "span.hERoTc", // 正在直播的標籤 (觀看人數)
+            this.Config = {
+                ...Config,
+                Offline: "strong.krncnP", // 離線的直播 (離線標籤)
+                Online: "span.jAIlLI", // 正在觀看直播人數標籤 (觀看人數)
+                TagLabel: "span.hTTUrW", // 頻道 Tag 標籤
+                Container: "div.hTjsYU", // 頻道播放的容器
+                ContainerHandle: "div.lnRTrz .simplebar-scroll-content", // 容器滾動句柄
                 WatchLiveLink: "[data-a-target='preview-card-image-link']", // 觀看直播的連結
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
-            }, Config);
+            };
         }
 
         async Ran(Index) { // 傳入對應的頻道索引
             window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
             const Dir = this;
             const Self = Dir.Config;
-            const FindTag = new RegExp(Self.FindTag.join("|"));
 
-            let NewWindow, OpenLink, article;
+            let NewWindow;
             let Channel = document.querySelectorAll(Self.ActivityLink2)[Index];
 
             if (Channel) {
@@ -387,7 +382,7 @@
                 DirectorySearch(NewWindow);
             } else {
                 Channel = document.querySelectorAll(Self.ActivityLink1)[Index];
-                OpenLink = [...Channel.querySelectorAll("a")].reverse();
+                const OpenLink = [...Channel.querySelectorAll("a")].reverse();
 
                 FindLive(0);
                 async function FindLive(index) { // 持續找到有在直播的頻道
@@ -425,24 +420,44 @@
             }
 
             // 目錄頁面的查找邏輯
+            const Pattern = Self.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
+            const FindTag = new RegExp(Pattern, "i");
             async function DirectorySearch(NewWindow) {
+
                 const observer = new MutationObserver(Throttle(() => {
-                    article = NewWindow.document.getElementsByTagName(Self.Article);
-                    if (article.length > 10) { // 找到大於 10 個頻道
+                    const Container = NewWindow.document.querySelector(Self.Container);
+
+                    if (Container) {
                         observer.disconnect();
 
-                        // 解析 Tag
-                        const index = [...article].findIndex(element => {
-                            const Tag_box = element.querySelectorAll(Self.TagType);
-                            return Tag_box.length > 0 && [...Tag_box].some(match => FindTag.test(match.textContent.toLowerCase()));
-                        });
+                        // 取得滾動句柄
+                        const ContainerHandle = Container.closest(Self.ContainerHandle);
 
-                        if (index != -1) {
-                            article[index].querySelector(Self.WatchLiveLink).click();
-                            Self.RestartLiveMute && Dir.LiveMute(NewWindow);
-                            Self.TryStayActive && StayActive(NewWindow.document);
-                            Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
+                        const StartFind = () => {
+                            const tag = [...Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`)]
+                                .find(tag => {
+                                    tag.setAttribute("Drops-Processed", true);
+                                    return FindTag.test(tag.textContent);
+                                });
+
+                            if (tag) {
+                                const Link = tag.closest("a");
+                                Link.click();
+                                Link.click(); // 避免意外點兩次
+                                Self.RestartLiveMute && Dir.LiveMute(NewWindow);
+                                Self.TryStayActive && StayActive(NewWindow.document);
+                                Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
+                            } else if (ContainerHandle) {
+
+                                ContainerHandle.scrollTo({ // 向下滾動
+                                    top: ContainerHandle.scrollHeight
+                                })
+
+                                setTimeout(StartFind, 1500);
+                            }
                         }
+
+                        StartFind();
                     }
                 }, 300));
 
@@ -516,7 +531,20 @@
         Target.head.append(script);
     };
 
+    if (Object.keys(Backup).length > 0) {
+        GM_registerMenuCommand("🗑️ Clear Config", () => {
+            GM_deleteValue("Config");
+            location.reload();
+        });
+    } else {
+        const SaveConfig = structuredClone(Config); // 維持初始配置
+        GM_registerMenuCommand("📝 Save Config", () => {
+            GM_setValue("Config", SaveConfig);
+        });
+    }
+
     // 主運行調用
     const Restart = new RestartLive();
     Detection.Ran();
+
 })();
