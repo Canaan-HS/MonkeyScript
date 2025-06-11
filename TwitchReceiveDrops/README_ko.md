@@ -94,12 +94,3 @@
 - **GitHub 저장소**: [GitHub](https://github.com/Canaan-HS/MonkeyScript/tree/main/TwitchReceiveDrops)
 
 ---
-
-## **📦 버전 정보**
-
-**출시 버전: 0.0.16**
-
-### **업데이트 내용**
-1. `GM_notification` 제거
-
----
