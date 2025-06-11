@@ -3,7 +3,7 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      0.0.12-Beta
+// @version      0.0.12-Beta1
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -299,13 +299,16 @@
         let Img, Observer, Quantity = 0;
         const Observer_Next = new IntersectionObserver((observed) => {
           observed.forEach((entry) => {
-            if (entry.isIntersecting && tools.DetectionValue(Img)) {
+            const rect = entry.boundingClientRect;
+            const isPastTarget = rect.bottom < 0;
+            const isIntersecting = entry.isIntersecting;
+            if ((isIntersecting || isPastTarget) && tools.DetectionValue(Img)) {
               Observer_Next.disconnect();
               Observer.disconnect();
               TurnPage();
             }
           });
-        }, { threshold: 0.1 });
+        }, { threshold: 0.1, rootMargin: "0px 0px 100px 0px" });
         setTimeout(() => {
           Img = Param2.MangaList.$qa("img");
           if (Img.length <= 5) {
@@ -326,12 +329,15 @@
                 // 修改新的觀察對象
               );
             }
-          }, { debounce: 300 }, (observer) => {
+          }, { debounce: 100 }, (observer) => {
             Observer = observer.ob;
           });
         }, Control2.WaitPicture);
       })();
+      let Turned = false;
       function TurnPage() {
+        if (Turned) return;
+        Turned = true;
         let CurrentHeight = 0;
         const Resize = new ResizeObserver(() => {
           const NewHeight = Param2.MangaList.offsetHeight;
@@ -389,7 +395,7 @@
                   }], Syn2.$origin);
                 }
               });
-            }, { threshold: 0.1 });
+            }, { threshold: 0 });
             AllImg.forEach(async (img) => UrlUpdate.observe(img));
             if (Optimized) {
               Syn2.$q("title").id = Control2.IdList.Title;
@@ -408,7 +414,7 @@
                     }
                   }
                 });
-              }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] });
+              }, { threshold: [0, 0.5, 1] });
               AllImg.forEach(async (img) => ReleaseMemory.observe(img));
             }
           };
@@ -432,6 +438,7 @@
                 const Observer_Next = new IntersectionObserver((observed) => {
                   observed.forEach((entry) => {
                     if (entry.isIntersecting && tools.DetectionValue(img)) {
+                      Observer_Next.disconnect();
                       location.assign(Param2.NextLink);
                     }
                   });
@@ -449,16 +456,6 @@
     const style = Style(Syn, Control, Param, Set2);
     const turn = PageTurn(Syn, Control, Param, tools);
     async function BlockAds() {
-      Syn.AddStyle(`
-            html {pointer-events: none !important;}
-            div[style*='position'] {display: none !important;}
-            .mh_wrap a,
-            .mh_readend a,
-            span.mh_btn:not(.contact),
-            #${Control.IdList.Iframe} {
-                pointer-events: auto !important;
-            }
-        `, Control.IdList.Block);
       const OriginListener = EventTarget.prototype.addEventListener;
       const Block = Control.BlockListener;
       EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
@@ -475,6 +472,18 @@
         requestIdleCallback(AdCleanup, { timeout: 300 });
       };
       AdCleanup();
+      Syn.WaitElem("head", () => {
+        Syn.AddStyle(`
+                html {pointer-events: none !important;}
+                div[style*='position'] {display: none !important;}
+                .mh_wrap a,
+                .mh_readend a,
+                span.mh_btn:not(.contact),
+                #${Control.IdList.Iframe} {
+                    pointer-events: auto !important;
+                }
+            `, Control.IdList.Block);
+      });
     }
     async function HotkeySwitch(Use) {
       let JumpState = false;
