@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             0.0.16
+// @version             0.0.17-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -22,12 +22,17 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
 // @grant        window.close
-// @grant        GM_notification
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_deleteValue
+// @grant        GM_registerMenuCommand
+
+// @run-at       document-body
 // ==/UserScript==
 
-(async () => {
+(() => {
+    const Backup = GM_getValue("Config", {});
     const Config = {
         RestartLive: true, // 使用重啟直播
         EndAutoClose: true, // 全部進度完成後自動關閉
@@ -43,6 +48,7 @@
         JudgmentInterval: 6, // (Minute) 經過多長時間進度無增加, 就重啟直播 [設置太短會可能誤檢測]
 
         FindTag: ["drops", "啟用掉寶", "启用掉宝", "드롭활성화됨"], // 查找直播標籤, 只要有包含該字串即可
+        ...Backup
     };
     class Detection {
         constructor() {
@@ -61,11 +67,11 @@
                 let data, Formula = {
                     Type: parse => Object.prototype.toString.call(parse).slice(8, -1),
                     Number: parse => parse ? Number(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        !0),
+                        1),
                     Array: parse => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        !0),
+                        1),
                     Object: parse => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        !0)
+                        1)
                 };
                 return value != null ? Formula[Formula.Type(value)]() : (data = sessionStorage.getItem(key),
                     data != undefined ? Formula[Formula.Type(JSON.parse(data))](data) : data);
@@ -81,37 +87,27 @@
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "pt-BR": (timeStamp, currentYear) => {
-                    const ISO = {
-                        jan: "Jan", fev: "Feb", mar: "Mar", abr: "Apr", mai: "May", jun: "Jun", jul: "Jul", ago: "Aug", set: "Sep", out: "Oct", nov: "Nov", dez: "Dec", dom: "Sun", seg: "Mon", ter: "Tue", qua: "Wed", qui: "Thu", sex: "Fri", "sáb": "Sat"
-                    };
+                    const ISO = { jan: "Jan", fev: "Feb", mar: "Mar", abr: "Apr", mai: "May", jun: "Jun", jul: "Jul", ago: "Aug", set: "Sep", out: "Oct", nov: "Nov", dez: "Dec", dom: "Sun", seg: "Mon", ter: "Tue", qua: "Wed", qui: "Thu", sex: "Fri", "sáb": "Sat" };
                     const convert = timeStamp.replace(/de/g, "").replace(/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|dom|seg|ter|qua|qui|sex|sáb)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "ru-RU": (timeStamp, currentYear) => {
-                    const ISO = {
-                        "янв": "Jan", "фев": "Feb", "мар": "Mar", "апр": "Apr", "май": "May", "июн": "Jun", "июл": "Jul", "авг": "Aug", "сен": "Sep", "окт": "Oct", "ноя": "Nov", "дек": "Dec", "пн": "Mon", "вт": "Tue", "ср": "Wed", "чт": "Thu", "пт": "Fri", "сб": "Sat", "вс": "Sun"
-                    };
+                    const ISO = { "янв": "Jan", "фев": "Feb", "мар": "Mar", "апр": "Apr", "май": "May", "июн": "Jun", "июл": "Jul", "авг": "Aug", "сен": "Sep", "окт": "Oct", "ноя": "Nov", "дек": "Dec", "пн": "Mon", "вт": "Tue", "ср": "Wed", "чт": "Thu", "пт": "Fri", "сб": "Sat", "вс": "Sun" };
                     const convert = timeStamp.replace(/(янв|фев|мар|апр|май|июн|июл|авг|сен|окт|ноя|дек|пн|вт|ср|чт|пт|сб|вс)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "de-DE": (timeStamp, currentYear) => {
-                    const ISO = {
-                        jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun"
-                    };
+                    const ISO = { jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun" };
                     const convert = timeStamp.replace(/(jan|feb|mär|apr|mai|jun|jul|aug|sep|okt|nov|dez|mo|di|mi|do|fr|sa|so)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "it-IT": (timeStamp, currentYear) => {
-                    const ISO = {
-                        gen: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", mag: "May", giu: "Jun", lug: "Jul", ago: "Aug", set: "Sep", ott: "Oct", nov: "Nov", dic: "Dec", dom: "Sun", lun: "Mon", mar: "Tue", mer: "Wed", gio: "Thu", ven: "Fri", sab: "Sat"
-                    };
+                    const ISO = { gen: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", mag: "May", giu: "Jun", lug: "Jul", ago: "Aug", set: "Sep", ott: "Oct", nov: "Nov", dic: "Dec", dom: "Sun", lun: "Mon", mar: "Tue", mer: "Wed", gio: "Thu", ven: "Fri", sab: "Sat" };
                     const convert = timeStamp.replace(/(gen|feb|mar|apr|mag|giu|lug|ago|set|ott|nov|dic|dom|lun|mar|mer|gio|ven|sab)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "tr-TR": (timeStamp, currentYear) => {
-                    const ISO = {
-                        oca: "Jan", "şub": "Feb", mar: "Mar", nis: "Apr", may: "May", haz: "Jun", tem: "Jul", "ağu": "Aug", eyl: "Sep", eki: "Oct", kas: "Nov", ara: "Dec", paz: "Sun", pts: "Mon", sal: "Tue", "çar": "Wed", per: "Thu", cum: "Fri", cmt: "Sat"
-                    };
+                    const ISO = { oca: "Jan", "şub": "Feb", mar: "Mar", nis: "Apr", may: "May", haz: "Jun", tem: "Jul", "ağu": "Aug", eyl: "Sep", eki: "Oct", kas: "Nov", ara: "Dec", paz: "Sun", pts: "Mon", sal: "Tue", "çar": "Wed", per: "Thu", cum: "Fri", cmt: "Sat" };
                     const convert = timeStamp.replace(/(oca|şub|mar|nis|may|haz|tem|ağu|eyl|eki|kas|ara|paz|pts|sal|çar|per|cum|cmt)/gi, match => ISO[match.toLowerCase()]);
                     const match = convert.match(/(\d{1,2}) ([a-z]+) ([a-z]+) (\d{1,2}:\d{1,2}) (GMT[+-]\d{1,2})/i);
                     return new Date(`${match[3]} ${match[1]} ${match[2]} ${match[4]} ${match[5]} ${currentYear}`);
@@ -142,8 +138,15 @@
             };
             this.PageRefresh = async (display, interval) => {
                 if (display) {
-                    setInterval(() => {
-                        document.title = `【 ${interval--}s 】 ${this.ProgressValue}`;
+                    const start = Date.now();
+                    const Refresh = setInterval(() => {
+                        const elapsed = Math.floor((Date.now() - start) / 1e3);
+                        const remaining = interval - elapsed;
+                        if (remaining < 0) {
+                            clearInterval(Refresh);
+                            return;
+                        }
+                        document.title = `【 ${remaining}s 】 ${this.ProgressValue}`;
                     }, 1e3);
                 }
                 setTimeout(() => {
@@ -154,8 +157,8 @@
                 new MutationObserver(() => {
                     document.title != this.ProgressValue && (document.title = this.ProgressValue);
                 }).observe(document.querySelector("title"), {
-                    childList: !0,
-                    subtree: !1
+                    childList: 1,
+                    subtree: 0
                 });
                 document.title = this.ProgressValue;
             };
@@ -165,12 +168,13 @@
             };
             this.ProgressValue = "";
             this.CurrentTime = new Date();
-            this.Config = Object.assign(Config, {
-                EndLine: "div.gtpIYu",
-                AllProgress: "div.ilRKfU",
-                ProgressBar: "p.mLvNZ span",
-                ActivityTime: "span.jSkguG"
-            });
+            this.Config = {
+                ...Config,
+                EndLine: "div.bBnamT",
+                AllProgress: "div.dyRvqw",
+                ProgressBar: "p.fBbnkN span",
+                ActivityTime: "span.bkNtaq"
+            };
         }
         static async Ran() {
             let Task = 0, Progress = 0, MaxElement = 0;
@@ -239,7 +243,7 @@
             this.LiveMute = async Newindow => {
                 WaitElem(Newindow.document, "video", video => {
                     const SilentInterval = setInterval(() => {
-                        video.muted = !0;
+                        video.muted = 1;
                     }, 500);
                     setTimeout(() => {
                         clearInterval(SilentInterval);
@@ -261,32 +265,33 @@
                     });
                 });
             };
-            this.Config = Object.assign(Config, {
-                TagType: "span",
-                Article: "article",
-                Offline: "p.fQYeyD",
-                Online: "span.hERoTc",
+            this.Config = {
+                ...Config,
+                Offline: "strong.krncnP",
+                Online: "span.jAIlLI",
+                TagLabel: "span.hTTUrW",
+                Container: "div.hTjsYU",
+                ContainerHandle: "div.lnRTrz .simplebar-scroll-content",
                 WatchLiveLink: "[data-a-target='preview-card-image-link']",
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']",
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']"
-            });
+            };
         }
         async Ran(Index) {
             window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
             const Dir = this;
             const Self = Dir.Config;
-            const FindTag = new RegExp(Self.FindTag.join("|"));
-            let NewWindow, OpenLink, article;
+            let NewWindow;
             let Channel = document.querySelectorAll(Self.ActivityLink2)[Index];
             if (Channel) {
                 NewWindow = window.open(Channel.href, "LiveWindow");
                 DirectorySearch(NewWindow);
             } else {
                 Channel = document.querySelectorAll(Self.ActivityLink1)[Index];
-                OpenLink = [...Channel.querySelectorAll("a")].reverse();
+                const OpenLink = [...Channel.querySelectorAll("a")].reverse();
                 FindLive(0);
                 async function FindLive(index) {
-                    if (OpenLink.length - 1 < index) return !1;
+                    if (OpenLink.length - 1 < index) return 0;
                     const href = OpenLink[index].href;
                     NewWindow = !NewWindow ? window.open(href, "LiveWindow") : (NewWindow.location.assign(href),
                         NewWindow);
@@ -309,36 +314,49 @@
                         }, 300));
                         NewWindow.onload = () => {
                             observer.observe(NewWindow.document, {
-                                subtree: !0,
-                                childList: !0,
-                                characterData: !0
+                                subtree: 1,
+                                childList: 1,
+                                characterData: 1
                             });
                         };
                     }
                 }
             }
+            const Pattern = Self.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+            const FindTag = new RegExp(Pattern, "i");
             async function DirectorySearch(NewWindow) {
                 const observer = new MutationObserver(Throttle(() => {
-                    article = NewWindow.document.getElementsByTagName(Self.Article);
-                    if (article.length > 10) {
+                    const Container = NewWindow.document.querySelector(Self.Container);
+                    if (Container) {
                         observer.disconnect();
-                        const index = [...article].findIndex(element => {
-                            const Tag_box = element.querySelectorAll(Self.TagType);
-                            return Tag_box.length > 0 && [...Tag_box].some(match => FindTag.test(match.textContent.toLowerCase()));
-                        });
-                        if (index != -1) {
-                            article[index].querySelector(Self.WatchLiveLink).click();
-                            Self.RestartLiveMute && Dir.LiveMute(NewWindow);
-                            Self.TryStayActive && StayActive(NewWindow.document);
-                            Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
-                        }
+                        const ContainerHandle = Container.closest(Self.ContainerHandle);
+                        const StartFind = () => {
+                            const tag = [...Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`)].find(tag => {
+                                tag.setAttribute("Drops-Processed", true);
+                                return FindTag.test(tag.textContent);
+                            });
+                            if (tag) {
+                                const Link = tag.closest("a");
+                                Link.click();
+                                Link.click();
+                                Self.RestartLiveMute && Dir.LiveMute(NewWindow);
+                                Self.TryStayActive && StayActive(NewWindow.document);
+                                Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
+                            } else if (ContainerHandle) {
+                                ContainerHandle.scrollTo({
+                                    top: ContainerHandle.scrollHeight
+                                });
+                                setTimeout(StartFind, 1500);
+                            }
+                        };
+                        StartFind();
                     }
                 }, 300));
                 NewWindow.onload = () => {
                     observer.observe(NewWindow.document, {
-                        subtree: !0,
-                        childList: !0,
-                        characterData: !0
+                        subtree: 1,
+                        childList: 1,
+                        characterData: 1
                     });
                 };
             }
@@ -369,9 +387,9 @@
             }
         }, throttle));
         observer.observe(document, {
-            subtree: !0,
-            childList: !0,
-            characterData: !0
+            subtree: 1,
+            childList: 1,
+            characterData: 1
         });
         timer = setTimeout(() => {
             observer.disconnect();
@@ -403,6 +421,17 @@
             };
         `;
         Target.head.append(script);
+    }
+    if (Object.keys(Backup).length > 0) {
+        GM_registerMenuCommand("🗑️ Clear Config", () => {
+            GM_deleteValue("Config");
+            location.reload();
+        });
+    } else {
+        const SaveConfig = structuredClone(Config);
+        GM_registerMenuCommand("📝 Save Config", () => {
+            GM_setValue("Config", SaveConfig);
+        });
     }
     const Restart = new RestartLive();
     Detection.Ran();
