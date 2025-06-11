@@ -26,35 +26,156 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(new class {
+(new class Pornhub_Hide {
     constructor() {
-        this.StyalRules = null; this.display = async (a, c) => { requestAnimationFrame(() => { this.StyalRules[0].style.setProperty("cursor", a, "important"); this.StyalRules[1].style.setProperty("display", c, "important") }) }; this.Device = {
-            iW: () => window.innerWidth, _Cache: void 0, get Platform() {
-                this._Cache || (void 0 !== navigator.userAgentData?.mobile ? this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop" : window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches ? this._Cache = "Mobile" : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ?
-                    this._Cache = "Mobile" : this._Cache = "Desktop"); return this._Cache
+        this.StyalRules = null;
+        this.display = async (ms, ps) => {
+            requestAnimationFrame(() => {
+                this.StyalRules[0].style.setProperty("cursor", ms, "important");
+                this.StyalRules[1].style.setProperty("display", ps, "important");
+            });
+        };
+        this.Device = {
+            iW: () => window.innerWidth,
+            _Cache: undefined,
+            get Platform() {
+                if (!this._Cache) {
+                    if (navigator.userAgentData?.mobile !== undefined) {
+                        this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+                    } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
+                        this._Cache = "Mobile";
+                    } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                        this._Cache = "Mobile";
+                    } else {
+                        this._Cache = "Desktop";
+                    }
+                }
+                return this._Cache;
             }
-        }; this.throttle = (a, c) => { let e = 0; return (...b) => { const f = Date.now(); f - e >= c && (e = f, a(...b)) } }; this.Runtime = (a = null) => a ? `${((performance.now() - a) / 1E3).toFixed(3)}s` : performance.now()
-    } async WaitMap(a, c, e, { object: b = document, throttle: f = 0 } = {}) {
-        let l, d; const g = new MutationObserver(this.throttle(() => { d = a.map(h => document.querySelector(h)); d.every(h => null !== h && "undefined" !== typeof h) && (g.disconnect(), clearTimeout(l), e(d)) }, f)); g.observe(b, {
-            childList: !0,
-            subtree: !0
-        }); l = setTimeout(() => { g.disconnect(); e(d) }, 1E3 * c)
-    } async AddStyle(a, c = "New-Style", e = !0) { let b = document.getElementById(c); if (!b) b = document.createElement("style"), b.id = c, document.head.appendChild(b); else if (!e) return; b.textContent += a } async Injection() {
-        const a = this, c = a.Runtime(), e = a.Device.Platform; let b, f; a.WaitMap(["Desktop" === e ? ".video-wrapper div" : "Mobile" === e ? ".mgp_videoWrapper" : ".video-wrapper div", "video.mgp_videoElement", "div[class*='mgp_progress']"], 8, l => {
-            const [d, g, h] = l; if (d && g && h) if ("Desktop" ===
-                e) {
-                    a.AddStyle("body {cursor: default;}.Hidden {display: block;}", "Mouse-Hide"); a.StyalRules = document.getElementById("Mouse-Hide").sheet.cssRules; h.parentNode.classList.add("Hidden"); async function k() { f = !0; clearTimeout(b); a.display("default", "block"); b = setTimeout(() => { a.display("none", "none") }, 2100) } d.addEventListener("pointerleave", () => { a.display("default", "block"); clearTimeout(b); f = !1 }, { passive: !0 }); d.addEventListener("pointermove", a.throttle(() => k(), 200), { passive: !0 }); d.addEventListener("pointerdown",
-                        () => { f && k() }, { passive: !0 }); document.addEventListener("keydown", a.throttle(() => { console.log("keydown"); f && k() }, 1200)); console.log("\u001b[1m\u001b[32m%s\u001b[0m", `Hidden Injection Success: ${a.Runtime(c)}`)
-            } else if ("Mobile" === e) {
-                let k, p, m, q = g.playbackRate; d.addEventListener("touchstart", n => { k = .2 * a.Device.iW(); p = n.touches[0].clientX }, { passive: !0 }); d.addEventListener("touchmove", a.throttle(n => {
+        };
+        this.throttle = (func, delay) => {
+            let lastTime = 0;
+            return (...args) => {
+                const now = Date.now();
+                if (now - lastTime >= delay) {
+                    lastTime = now;
+                    func(...args);
+                }
+            };
+        };
+        this.Runtime = (time = null) => !time ? performance.now() : `${((performance.now() - time) / 1e3).toFixed(3)}s`;
+    }
+    async WaitMap(selectors, timeout, callback, {
+        object = document,
+        throttle = 0
+    } = {}) {
+        let timer, elements;
+        const observer = new MutationObserver(this.throttle(() => {
+            elements = selectors.map(selector => document.querySelector(selector));
+            if (elements.every(element => element !== null && typeof element !== "undefined")) {
+                observer.disconnect();
+                clearTimeout(timer);
+                callback(elements);
+            }
+        }, throttle));
+        observer.observe(object, {
+            childList: true,
+            subtree: true
+        });
+        timer = setTimeout(() => {
+            observer.disconnect();
+            callback(elements);
+        }, 1e3 * timeout);
+    }
+    async AddStyle(Rule, ID = "New-Style", RepeatAdd = true) {
+        let style = document.getElementById(ID);
+        if (!style) {
+            style = document.createElement("style");
+            style.id = ID;
+            document.head.appendChild(style);
+        } else if (!RepeatAdd) return;
+        style.textContent += Rule;
+    }
+    async Injection() {
+        const Self = this, StartTime = Self.Runtime(), Platform = Self.Device.Platform;
+        const FindObject = Platform === "Desktop" ? ".video-wrapper div" : Platform === "Mobile" ? ".mgp_videoWrapper" : ".video-wrapper div";
+        let MouseHide, onTarget;
+        Self.WaitMap([FindObject, "video.mgp_videoElement", "div[class*='mgp_progress']"], 8, call => {
+            const [target, video, bar] = call;
+            if (!target || !video || !bar) {
+                console.log("[1m[31m%s[0m", `Injection Failed: ${this.Runtime(StartTime)}`);
+                console.table({
+                    "Failed Data": {
+                        Target: target,
+                        Video: video,
+                        Bar: bar
+                    }
+                });
+                return;
+            }
+            if (Platform === "Desktop") {
+                Self.AddStyle("body {cursor: default;}.Hidden {display: block;}", "Mouse-Hide");
+                Self.StyalRules = document.getElementById("Mouse-Hide").sheet.cssRules;
+                bar.parentNode.classList.add("Hidden");
+                async function TriggerHide() {
+                    onTarget = true;
+                    clearTimeout(MouseHide);
+                    Self.display("default", "block");
+                    MouseHide = setTimeout(() => {
+                        Self.display("none", "none");
+                    }, 2100);
+                }
+                target.addEventListener("pointerleave", () => {
+                    Self.display("default", "block");
+                    clearTimeout(MouseHide);
+                    onTarget = false;
+                }, {
+                    passive: true
+                });
+                target.addEventListener("pointermove", Self.throttle(() => TriggerHide(), 200), {
+                    passive: true
+                });
+                target.addEventListener("pointerdown", () => {
+                    onTarget && TriggerHide();
+                }, {
+                    passive: true
+                });
+                document.addEventListener("keydown", Self.throttle(() => {
+                    console.log("keydown");
+                    onTarget && TriggerHide();
+                }, 1200));
+                console.log("[1m[32m%s[0m", `Hidden Injection Success: ${Self.Runtime(StartTime)}`);
+            } else if (Platform === "Mobile") {
+                let sidelineX, startX, moveX, PlaybackRate = video.playbackRate;
+                target.addEventListener("touchstart", event => {
+                    sidelineX = Self.Device.iW() * .2;
+                    startX = event.touches[0].clientX;
+                }, {
+                    passive: true
+                });
+                target.addEventListener("touchmove", Self.throttle(event => {
                     requestAnimationFrame(() => {
-                        m = n.touches[0].clientX - p; if (m > k) {
-                            const r = (q + (m - k) / 3 * .3).toPrecision(2); g.playbackRate =
-                                Math.min(r, 16)
+                        moveX = event.touches[0].clientX - startX;
+                        if (moveX > sidelineX) {
+                            const exceed = (moveX - sidelineX) / 3;
+                            const NewPlaybackRate = (PlaybackRate + exceed * .3).toPrecision(2);
+                            video.playbackRate = Math.min(NewPlaybackRate, 16);
                         }
-                    })
-                }, 200), { passive: !0 }); d.addEventListener("touchend", () => { g.playbackRate = q }, { passive: !0 }); console.log("\u001b[1m\u001b[32m%s\u001b[0m", `Accelerate Injection Success: ${a.Runtime(c)}`)
-            } else console.log("\u001b[1m\u001b[31m%s\u001b[0m", `Unsupported platform: ${a.Runtime(c)}`); else console.log("\u001b[1m\u001b[31m%s\u001b[0m", `Injection Failed: ${this.Runtime(c)}`), console.table({ "Failed Data": { Target: d, Video: g, Bar: h } })
-        }, { throttle: 100 })
+                    });
+                }, 200), {
+                    passive: true
+                });
+                target.addEventListener("touchend", () => {
+                    video.playbackRate = PlaybackRate;
+                }, {
+                    passive: true
+                });
+                console.log("[1m[32m%s[0m", `Accelerate Injection Success: ${Self.Runtime(StartTime)}`);
+            } else {
+                console.log("[1m[31m%s[0m", `Unsupported platform: ${Self.Runtime(StartTime)}`);
+            }
+        }, {
+            throttle: 100
+        });
     }
 }).Injection();
