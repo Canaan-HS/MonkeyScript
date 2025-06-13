@@ -80,13 +80,17 @@ export default function PageTurn(Syn, Control, Param, tools) {
             let Img, Observer, Quantity = 0;
             const Observer_Next = new IntersectionObserver(observed => { // 觀察器
                 observed.forEach(entry => {
-                    if (entry.isIntersecting && tools.DetectionValue(Img)) {
+                    const rect = entry.boundingClientRect;
+                    const isPastTarget = rect.bottom < 0;
+                    const isIntersecting = entry.isIntersecting;
+
+                    if ((isIntersecting || isPastTarget) && tools.DetectionValue(Img)) {
                         Observer_Next.disconnect();
                         Observer.disconnect();
                         TurnPage();
                     }
                 });
-            }, { threshold: .1 });
+            }, { threshold: .1, rootMargin: '0px 0px 100px 0px' });
 
             setTimeout(() => {
                 Img = Param.MangaList.$qa("img"); // 取得當前狀態
@@ -114,14 +118,19 @@ export default function PageTurn(Syn, Control, Param, tools) {
                         )
                     }
 
-                }, { debounce: 300 }, observer => {
+                }, { debounce: 100 }, observer => {
                     Observer = observer.ob;
                 });
+
             }, Control.WaitPicture);
         })();
 
         /* 翻頁邏輯 */
+        let Turned = false;
         function TurnPage() {
+            if (Turned) return;
+            Turned = true;
+
             let CurrentHeight = 0;
             const Resize = new ResizeObserver(() => {
                 const NewHeight = Param.MangaList.offsetHeight;
@@ -199,7 +208,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                                 }], Syn.$origin);
                             }
                         });
-                    }, { threshold: .1 });
+                    }, { threshold: 0 });
                     AllImg.forEach(async img => UrlUpdate.observe(img));
 
                     if (Optimized) {
@@ -224,7 +233,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                                     }
                                 }
                             });
-                        }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] });
+                        }, { threshold: [0, .5, 1] });
 
                         AllImg.forEach(async img => ReleaseMemory.observe(img));
                     }
@@ -252,6 +261,7 @@ export default function PageTurn(Syn, Control, Param, tools) {
                             const Observer_Next = new IntersectionObserver(observed => {
                                 observed.forEach(entry => {
                                     if (entry.isIntersecting && tools.DetectionValue(img)) {
+                                        Observer_Next.disconnect();
                                         location.assign(Param.NextLink);
                                     }
                                 });
