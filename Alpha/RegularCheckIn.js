@@ -277,6 +277,8 @@
                         navigator.onLine && newDate > new Date(CheckInDate) // 有網路時, 當前時間 > 簽到時間
                         || RecordDate && isPrevious(newDate, new Date(RecordDate)) // 判斷紀錄時間是前一天
                     ) { // 執行簽到
+                        SetNewRecord(newDate); // 更新記錄 (避免多次觸發, 嘗試提前更新記錄)
+
                         let Index = 0;
                         const EnabledTask = new Set(Tasks);
 
@@ -287,8 +289,6 @@
                                 CreateRequest(Task).Run();
                             }, Math.max(Index++ * 2000)); // 每個任務間隔 2 秒
                         }
-
-                        SetNewRecord(newDate); // 更新記錄
                     } else DisplayTrigger(newDate, new Date(CheckInDate));
 
                 } else throw new Error("沒有時間戳記錄");
@@ -392,8 +392,7 @@
                     GM_setValue(Config.TaskKey, [...EnabledTask]);
                     EnableTask(); // 遞迴更新狀態
                 }, 200), {
-                    id: `CheckIn-${Index}`,
-                    autoClose
+                    id: `CheckIn-${Index}`
                 })
 
             }
