@@ -25,10 +25,10 @@
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.3.1/dist/index.umd.min.js
 // ==/UserScript==
 
-(async ()=> {
+(async () => {
 
     const Config = {
-        Dev: true,
+        Dev: false,
         TaskKey: "RunTasks", // 任務列表 Key
         TimerKey: "TaskTimer", // 時間戳 Key
         RegisterKey: "RegisterTime", // 註冊時間 Key
@@ -89,7 +89,7 @@
     function CreateRequest({ Name, API, verifyStatus }) {
 
         const deBug = (Result) => {
-            console.table(Object.assign({name: Name}, Result));
+            console.table(Object.assign({ name: Name }, Result));
         };
 
         return {
@@ -98,7 +98,7 @@
 
                 try {
                     CheckIn = Qmsg.loading(`${Name} 簽到中`);
-                } catch (error) {}
+                } catch (error) { }
 
                 GM_xmlhttpRequest({
                     method: "POST",
@@ -127,7 +127,7 @@
 
     const ListenerRecord = new WeakMap();
     Object.assign(EventTarget.prototype, {
-        one(type, listener, add={}) {
+        one(type, listener, add = {}) {
             this.addEventListener(type, listener, add);
         },
         onEvent(type, listener, options = {}) {
@@ -145,7 +145,7 @@
         }
     });
 
-    const RegisterTask = (()=> {
+    const RegisterTask = (() => {
         let Stop = false;
         let Registered = false;
 
@@ -160,7 +160,7 @@
             GM_removeValueChangeListener(Listeners);
 
             // 恢復預設狀態
-            requestIdleCallback(()=> {
+            requestIdleCallback(() => {
                 Stop = false;
                 Registered = false;
             })
@@ -168,7 +168,7 @@
 
         // 註冊變化監聽器
         async function Listener(name) {
-            Listeners = GM_addValueChangeListener(name, function(key, old_value, new_value, remote) {
+            Listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
                 if (remote) { // 來自其他窗口修改
                     DestroyReset();
                     console.log("舊詢輪已被停止");
@@ -184,16 +184,16 @@
             const [
                 day_ms, minute_ms, seconds_ms
             ] = [
-                (8.64e7), (3.6e6), (6e4)
-            ];
+                    (8.64e7), (3.6e6), (6e4)
+                ];
 
             const [
                 hour, minute, seconds,
             ] = [
-                Math.floor((ms % day_ms) / minute_ms),
-                Math.floor((ms % minute_ms) / seconds_ms),
-                Math.floor((ms % seconds_ms) / 1e3)
-            ];
+                    Math.floor((ms % day_ms) / minute_ms),
+                    Math.floor((ms % minute_ms) / seconds_ms),
+                    Math.floor((ms % seconds_ms) / 1e3)
+                ];
 
             console.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`);
         };
@@ -277,6 +277,15 @@
                     ) { // 執行簽到
                         SetNewRecord(newDate); // 更新記錄 (避免多次觸發, 嘗試提前更新記錄)
 
+                        // ! 暫時檢測
+                        console.log({
+                            "網路狀態": navigator.onLine,
+                            "當前時間": TimeFormat(newDate),
+                            "簽到觸發": newDate > new Date(CheckInDate),
+                            "紀錄時間": RecordDate,
+                            "前一天": isPrevious(newDate, new Date(RecordDate))
+                        });
+
                         let Index = 0;
                         const EnabledTask = new Set(Tasks);
 
@@ -317,7 +326,7 @@
         }
     })();
 
-    (()=> {
+    (() => {
 
         // 判斷是否為 url
         function isValidURL(string) {
@@ -334,7 +343,7 @@
             let lastTime = 0;
             let timerId;
 
-            return function(...args) {
+            return function (...args) {
                 const now = Date.now();
                 const isRapid = now - lastTime < delay;
 
@@ -354,8 +363,8 @@
             const [major1, minor1, patch1] = version.split('.').map(Number);
             const [major2, minor2, patch2] = targetVersion.split('.').map(Number);
 
-            return major1 > major2 || 
-                (major1 === major2 && minor1 > minor2) || 
+            return major1 > major2 ||
+                (major1 === major2 && minor1 > minor2) ||
                 (major1 === major2 && minor1 === minor2 && patch1 > patch2);
         };
 
@@ -390,7 +399,8 @@
                     GM_setValue(Config.TaskKey, [...EnabledTask]);
                     EnableTask(); // 遞迴更新狀態
                 }, 200), {
-                    id: `CheckIn-${Index}`
+                    id: `CheckIn-${Index}`,
+                    autoClose
                 })
 
             }
