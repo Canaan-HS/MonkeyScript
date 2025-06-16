@@ -85,8 +85,6 @@
         }
     ];
 
-    'use strict';
-
     // 建立簽到請求
     function CreateRequest({ Name, API, verifyStatus }) {
 
