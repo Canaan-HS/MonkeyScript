@@ -35,7 +35,7 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1597491/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 
@@ -44,25 +44,28 @@
 // @resource     jgrowl-css https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.css
 // ==/UserScript==
 
+// ! 目前 Google 的油猴插件有奇怪的 BUG, 等待測試修正
+
 (async () => {
     const domain = Syn.$domain;
     const { Transl } = Language();
 
     (async function ImportStyle() {
-        let show_style, button_style, button_hover, jGrowl_style, acc_style;
-        if (domain == "e-hentai.org") {
-            button_hover = "color: #8f4701;"
-            jGrowl_style = "background-color: #5C0D12; color: #fefefe;"
-            show_style = "background-color: #fefefe; border: 3px ridge #34353b;"
-            acc_style = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;"
-            button_style = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;"
-        } else if (domain == "exhentai.org") {
-            button_hover = "color: #989898;"
-            jGrowl_style = "background-color: #fefefe; color: #5C0D12;"
-            show_style = "background-color: #34353b; border: 2px ridge #5C0D12;"
-            acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;"
-            button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;"
-            Syn.AddStyle(`
+        Syn.WaitElem("head").then(() => {
+            let show_style, button_style, button_hover, jGrowl_style, acc_style;
+            if (domain === "e-hentai.org") {
+                button_hover = "color: #8f4701;"
+                jGrowl_style = "background-color: #5C0D12; color: #fefefe;"
+                show_style = "background-color: #fefefe; border: 3px ridge #34353b;"
+                acc_style = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;"
+                button_style = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;"
+            } else if (domain === "exhentai.org") {
+                button_hover = "color: #989898;"
+                jGrowl_style = "background-color: #fefefe; color: #5C0D12;"
+                show_style = "background-color: #34353b; border: 2px ridge #5C0D12;"
+                acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;"
+                button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;"
+                Syn.AddStyle(`
                 body {
                     padding: 2px;
                     color: #f1f1f1;
@@ -70,8 +73,8 @@
                     background: #34353b;
                 }
             `);
-        };
-        Syn.AddStyle(`
+            };
+            Syn.AddStyle(`
             ${GM_getResourceText("jgrowl-css")}
             .jGrowl {
                 ${jGrowl_style}
@@ -249,6 +252,7 @@
                 }
             }
         `, "AutoLogin-Style");
+        })
     })();
 
     (async function Main($Cookie, $Shared) {
@@ -603,12 +607,6 @@
                 const Favorites = Syn.gV("Favorites", {});
                 const favorite = Favorites[save_key];
 
-                // 創建收藏按鈕
-                const favoriteButton = Syn.createElement(container, "div", {
-                    class: favorite ? "cancelFavorite" : "addFavorite",
-                    text: favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏")
-                });
-
                 // 添加收藏 邏輯
                 const addfavorite = async (Favorites) => {
                     const img = getComputedStyle(thumbnail); // 縮略圖樣式
@@ -649,20 +647,29 @@
                 };
 
                 favorite && addfavorite(Favorites); // 當前為收藏狀態時, 進行狀態更新
-                Syn.onEvent(favoriteButton, "click", () => { // 點擊事件
-                    const Favorites = Syn.gV("Favorites", {});
 
-                    if (Favorites[save_key]) {
-                        delete Favorites[save_key];
-                        Syn.sV("Favorites", Favorites);
-                        favoriteButton.$text(Transl("💖 添加收藏"));
-                        favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
-                        return;
-                    };
+                // 創建收藏按鈕
+                const favoriteButton = Syn.createElement(container, "div", {
+                    class: favorite ? "cancelFavorite" : "addFavorite",
+                    text: favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏"),
+                    on: {
+                        type: "click",
+                        listener: () => {
+                            const Favorites = Syn.gV("Favorites", {});
 
-                    addfavorite(Favorites);
-                    favoriteButton.$text(Transl("💘 取消收藏"));
-                    favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
+                            if (Favorites[save_key]) {
+                                delete Favorites[save_key];
+                                Syn.sV("Favorites", Favorites);
+                                favoriteButton.$text(Transl("💖 添加收藏"));
+                                favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
+                                return;
+                            };
+
+                            addfavorite(Favorites);
+                            favoriteButton.$text(Transl("💘 取消收藏"));
+                            favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
+                        },
+                    }
                 });
             }, { raf: true });
         };
@@ -697,8 +704,13 @@
                     const mode = !select ? "t" : select.value; // 展示的模式 (m:Minimal, p:Minimal+, l:Compact, e:Extended, t: Thumbnail)
 
                     if (!select) {
-                        const newform = Syn.createElement("form", { id: "favform", name: "favform", action: "", method: "post" });
-                        newform.$iHtml(`<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>`);
+                        const newform = Syn.createElement("form", {
+                            id: "favform",
+                            name: "favform",
+                            action: "",
+                            method: "post",
+                            innerHTML: `<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>`
+                        });
                         ido.appendChild(newform);
                     };
 
@@ -747,7 +759,7 @@
                         httpRequest("https://exhentai.org/mytags", root => {
                             for (const user of root.$qa("div[id^='usertag_']:not(#usertag_0)")) {
                                 const input = user.$q("div:nth-of-type(2) input");
-                            
+
                                 if (input.checked) {
                                     const tag = user.$q("div.gt");
                                     usertags[tag.title] = tag.style;
@@ -756,7 +768,7 @@
 
                             RenderTags();
                         })
-                    
+
                     };
 
                     let count = 0;
@@ -886,18 +898,18 @@
                                             ${PostName}
                                             <div>
                                                 ${(() => {
-                                                    let count = 0;
-                                                    let result = '';
-                                                    for (const [tagCategory, tagList] of json.tags) {
-                                                        for (const tag of tagList) {
-                                                            if (count >= 10) break;
-                                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
-                                                            count++;
-                                                        }
-                                                        if (count >= 10) break;
-                                                    }
-                                                    return result;
-                                                })()}
+                                    let count = 0;
+                                    let result = '';
+                                    for (const [tagCategory, tagList] of json.tags) {
+                                        for (const tag of tagList) {
+                                            if (count >= 10) break;
+                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
+                                            count++;
+                                        }
+                                        if (count >= 10) break;
+                                    }
+                                    return result;
+                                })()}
                                             </div>
                                             ${Glfnote}
                                         </a>
@@ -943,7 +955,7 @@
                                                         <table>
                                                             <tbody>
                                                                 ${json.tags.map(([tagCategory, tagList]) => {
-                                                                    return `
+                                return `
                                                                         <tr>
                                                                             <td class="tc">${tagCategory}</td>
                                                                             <td>
@@ -951,7 +963,7 @@
                                                                             </td>
                                                                         </tr>
                                                                     `;
-                                                                }).join('')}
+                            }).join('')}
                                                             </tbody>
                                                         </table>
                                                     </div>
