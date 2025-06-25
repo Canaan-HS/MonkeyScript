@@ -51,21 +51,20 @@
     const { Transl } = Language();
 
     (async function ImportStyle() {
-        Syn.WaitElem("head").then(() => {
-            let show_style, button_style, button_hover, jGrowl_style, acc_style;
-            if (domain === "e-hentai.org") {
-                button_hover = "color: #8f4701;"
-                jGrowl_style = "background-color: #5C0D12; color: #fefefe;"
-                show_style = "background-color: #fefefe; border: 3px ridge #34353b;"
-                acc_style = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;"
-                button_style = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;"
-            } else if (domain === "exhentai.org") {
-                button_hover = "color: #989898;"
-                jGrowl_style = "background-color: #fefefe; color: #5C0D12;"
-                show_style = "background-color: #34353b; border: 2px ridge #5C0D12;"
-                acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;"
-                button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;"
-                Syn.AddStyle(`
+        let show_style, button_style, button_hover, jGrowl_style, acc_style;
+        if (domain === "e-hentai.org") {
+            button_hover = "color: #8f4701;"
+            jGrowl_style = "background-color: #5C0D12; color: #fefefe;"
+            show_style = "background-color: #fefefe; border: 3px ridge #34353b;"
+            acc_style = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;"
+            button_style = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;"
+        } else if (domain === "exhentai.org") {
+            button_hover = "color: #989898;"
+            jGrowl_style = "background-color: #fefefe; color: #5C0D12;"
+            show_style = "background-color: #34353b; border: 2px ridge #5C0D12;"
+            acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;"
+            button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;"
+            Syn.AddStyle(`
                 body {
                     padding: 2px;
                     color: #f1f1f1;
@@ -73,8 +72,8 @@
                     background: #34353b;
                 }
             `);
-            };
-            Syn.AddStyle(`
+        };
+        Syn.AddStyle(`
             ${GM_getResourceText("jgrowl-css")}
             .jGrowl {
                 ${jGrowl_style}
@@ -252,7 +251,6 @@
                 }
             }
         `, "AutoLogin-Style");
-        })
     })();
 
     (async function Main($Cookie, $Shared) {
