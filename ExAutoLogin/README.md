@@ -22,7 +22,7 @@
 - When enabled, automatically checks login status every 10 minutes when entering the site and performs automatic login
 
 ### **Shared Account Login**
-- Use the Cookies I personally provided to log in (Shared accounts updated on May 4, 2025 | 5 sets in total) [Please notify me if they expire]
+- Use the Cookies I personally provided to log in (2025-6-25 | 5) [Please notify me if they expire]
 - Account expiration is due to website restrictions. Updates require time and effort, and I cannot monitor them constantly. If I receive numerous negative reviews due to expired accounts again, I will discontinue maintaining this script
 
 ### **Local Favorites**
@@ -93,10 +93,10 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.34-Beta2**
+**Release Version: 0.0.34-Beta3**
 
 ### **Update Content**
-1. Fixed bug where the share menu wouldn't open
+1. Library update
 
 ### **⭐ Favorites Function**
 1. Supports tag coloring (using account settings)
