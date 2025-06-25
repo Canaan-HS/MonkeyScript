@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/06/04
+// @version      2025/06/25
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -141,8 +141,8 @@ const Syn = (() => {
         $qa: document.$qa.bind(document),
         Qa: (root, selector) => Selector(root, selector, true),
         html: document.documentElement,
-        head: document.head,
-        body: document.body,
+        head: document.head ?? Selector(document, "head", false),
+        body: document.body ?? Selector(document, "body", false),
         img: document.images,
         link: document.links,
         script: document.scripts,
@@ -489,7 +489,14 @@ const Syn = (() => {
         if (!element) {
             element = document.createElement(type);
             element.id = id;
-            document.head.appendChild(element);
+
+            // ? 應對新版瀏覽器, 奇怪的 Bug (暫時處理方式)
+            const head = Sugar.head;
+            if (head) head.appendChild(element);
+            else WaitElem("head").then(head => {
+                Sugar.head = head;
+                head.appendChild(element);
+            });
         } else if (!repeatAdd) return;
         element.textContent += rule;
     };
