@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      0.0.34-Beta2
+// @version      0.0.34-Beta3
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
@@ -24,8 +24,16 @@
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @run-at       document-start
+// @require      https://update.greasyfork.org/scripts/487608/1613825/SyntaxLite_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
+
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.js
+// @resource     jgrowl-css https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.css
+
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
@@ -34,548 +42,1199 @@
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1565376/SyntaxLite_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
-
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.js
-// @resource     jgrowl-css https://cdnjs.cloudflare.com/ajax/libs/jquery-jgrowl/1.5.1/jquery.jgrowl.min.css
+// @run-at       document-start
 // ==/UserScript==
+
 (async () => {
-    async function E(g, h, n) { $.jGrowl(`&emsp;&emsp;${g}&emsp;&emsp;`, { theme: h, life: n, speed: "slow" }) } const G = Syn.$domain, c = function (g) {
-        const h = Syn.TranslMatcher({
-            Traditional: {}, Simplified: {
-                "\ud83c\udf6a \u5171\u4eab\u767b\u5165": "\ud83c\udf6a \u5171\u4eab\u767b\u5f55", "\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c": "\ud83d\udfe2 \u542f\u7528\u68c0\u6d4b", "\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c": "\ud83d\udd34 \u7981\u7528\u68c0\u6d4b", "\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae": "\ud83d\udcc2 \u5c55\u5f00\u83dc\u5355",
-                "\ud83d\udcc1 \u647a\u758a\u83dc\u55ae": "\ud83d\udcc1 \u6298\u53e0\u83dc\u5355", "\ud83d\udcdc \u81ea\u52d5\u7372\u53d6": "\ud83d\udcdc \u81ea\u52a8\u83b7\u53d6", "\ud83d\udcdd \u624b\u52d5\u8f38\u5165": "\ud83d\udcdd \u624b\u52a8\u8f93\u5165", "\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58": "\ud83d\udd0d \u67e5\u770b\u5df2\u4fdd\u5b58", "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165": "\ud83d\udd03 \u624b\u52a8\u6ce8\u5165", "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165": "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5f55\u4fe1\u606f",
-                "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf": "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf", "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf": "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf", "\u5e33\u6236": "\u8d26\u53f7", "\u66f4\u65b0": "\u66f4\u65b0", "\u767b\u5165": "\u767b\u5f55", "\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0": "\u9996\u6b21\u4f7f\u7528\u8bf7\u5148\u66f4\u65b0", "\u78ba\u8a8d\u9078\u64c7\u7684 Cookies": "\u786e\u8ba4\u6240\u9009 Cookies", "\u78ba\u8a8d\u4fdd\u5b58": "\u786e\u8ba4\u4fdd\u5b58", "\u53d6\u6d88\u9000\u51fa": "\u53d6\u6d88",
-                "\u9000\u51fa\u9078\u55ae": "\u5173\u95ed\u83dc\u5355", "\u4fdd\u5b58\u6210\u529f!": "\u4fdd\u5b58\u6210\u529f\uff01", "\u66f4\u6539\u4fdd\u5b58": "\u4fdd\u5b58\u66f4\u6539", "\u5df2\u4fdd\u5b58\u8b8a\u66f4": "\u66f4\u6539\u5df2\u4fdd\u5b58", "\u8a2d\u7f6e Cookies": "\u8bbe\u7f6e Cookies", "\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb": "\u4ec5\u767b\u5f55 Ex \u65f6\u9700\u8981\u586b\u5199", "\u5fc5\u586b\u9805\u76ee": "\u5fc5\u586b\u9879", "\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539": "\u4ee5\u4e0b\u4e3a\u9009\u586b\u9879\uff0c\u53ef\u4e0d\u4fee\u6539",
-                "[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58": "[\u786e\u8ba4\u8f93\u5165\u65e0\u8bef] \u70b9\u51fb\u5173\u95ed\u83dc\u5355\u4fdd\u5b58", "\u7576\u524d\u8a2d\u7f6e Cookies": "\u5f53\u524d Cookies \u8bbe\u7f6e", "\u5e33\u6236\u9078\u64c7": "\u9009\u62e9\u8d26\u53f7", "\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236": "\u672a\u83b7\u53d6\u5230 Cookies\uff01\n\n\u8bf7\u5148\u767b\u5f55\u8d26\u53f7", "\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e": "\u672a\u68c0\u6d4b\u5230\u53ef\u6ce8\u5165\u7684 Cookies\uff01\n\n\u8bf7\u5728\u83dc\u5355\u4e2d\u8fdb\u884c\u8bbe\u7f6e",
-                "\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210": "\u5171\u4eab\u6570\u636e\u66f4\u65b0\u5b8c\u6210", "\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0": "\u5171\u4eab\u6570\u636e\u65e0\u9700\u66f4\u65b0", "\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557": "\u5171\u4eab\u6570\u636e\u83b7\u53d6\u5931\u8d25", "\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165": "\u6ca1\u6709\u5df2\u4fdd\u5b58\u7684 Cookie\uff0c\u65e0\u6cd5\u542f\u7528\u81ea\u52a8\u767b\u5f55", "\u8acb\u6c42\u70ba\u7a7a\u6578\u64da": "\u8bf7\u6c42\u6570\u636e\u4e3a\u7a7a",
-                "\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684": "\u8fde\u63a5\u5f02\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u4e0d\u6b63\u786e", "\u8acb\u6c42\u932f\u8aa4: ": "\u8bf7\u6c42\u9519\u8bef\uff1a"
-            }, Japan: {
-                "\ud83c\udf6a \u5171\u4eab\u767b\u5165": "\ud83c\udf6a \u5171\u6709\u30ed\u30b0\u30a4\u30f3", "\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c": "\ud83d\udfe2 \u691c\u51fa\u3092\u6709\u52b9\u5316", "\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c": "\ud83d\udd34 \u691c\u51fa\u3092\u7121\u52b9\u5316",
-                "\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae": "\ud83d\udcc2 \u30e1\u30cb\u30e5\u30fc\u5c55\u958b", "\ud83d\udcc1 \u647a\u758a\u83dc\u55ae": "\ud83d\udcc1 \u30e1\u30cb\u30e5\u30fc\u6298\u308a\u305f\u305f\u307f", "\ud83d\udcdc \u81ea\u52d5\u7372\u53d6": "\ud83d\udcdc \u81ea\u52d5\u53d6\u5f97", "\ud83d\udcdd \u624b\u52d5\u8f38\u5165": "\ud83d\udcdd \u624b\u52d5\u5165\u529b", "\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58": "\ud83d\udd0d \u4fdd\u5b58\u3092\u8868\u793a", "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165": "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165",
-                "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165": "\ud83d\uddd1\ufe0f \u30ed\u30b0\u30a4\u30f3\u3092\u30af\u30ea\u30a2", "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf": "\ud83d\udc96 \u304a\u6c17\u306b\u5165\u308a\u306b\u8ffd\u52a0", "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf": "\ud83d\udc98 \u304a\u6c17\u306b\u5165\u308a\u304b\u3089\u524a\u9664", "\u5e33\u6236": "\u30a2\u30ab\u30a6\u30f3\u30c8", "\u66f4\u65b0": "\u66f4\u65b0", "\u767b\u5165": "\u30ed\u30b0\u30a4\u30f3", "\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0": "\u521d\u3081\u3066\u3054\u5229\u7528\u306e\u969b\u306f\u3001\u5148\u306b\u66f4\u65b0\u3057\u3066\u304f\u3060\u3055\u3044",
-                "\u78ba\u8a8d\u9078\u64c7\u7684 Cookies": "\u9078\u629e\u3057\u305fCookie\u3092\u78ba\u8a8d", "\u78ba\u8a8d\u4fdd\u5b58": "\u4fdd\u5b58\u3092\u78ba\u8a8d", "\u53d6\u6d88\u9000\u51fa": "\u7d42\u4e86\u3092\u30ad\u30e3\u30f3\u30bb\u30eb", "\u9000\u51fa\u9078\u55ae": "\u30e1\u30cb\u30e5\u30fc\u3092\u7d42\u4e86", "\u4fdd\u5b58\u6210\u529f!": "\u4fdd\u5b58\u306b\u6210\u529f\u3057\u307e\u3057\u305f\uff01", "\u66f4\u6539\u4fdd\u5b58": "\u5909\u66f4\u3092\u4fdd\u5b58", "\u5df2\u4fdd\u5b58\u8b8a\u66f4": "\u5909\u66f4\u304c\u4fdd\u5b58\u3055\u308c\u307e\u3057\u305f",
-                "\u8a2d\u7f6e Cookies": "Cookie\u3092\u8a2d\u5b9a", "\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb": "Ex\u30ed\u30b0\u30a4\u30f3\u306b\u306e\u307f\u5fc5\u8981", "\u5fc5\u586b\u9805\u76ee": "\u5fc5\u9808\u9805\u76ee", "\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539": "\u4ee5\u4e0b\u306f\u4efb\u610f\u3001\u5909\u66f4\u3057\u306a\u304f\u3066\u3082\u69cb\u3044\u307e\u305b\u3093", "[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58": "[\u5165\u529b\u304c\u6b63\u3057\u3044\u3053\u3068\u3092\u78ba\u8a8d] \u30e1\u30cb\u30e5\u30fc\u7d42\u4e86\u3092\u62bc\u3057\u3066\u4fdd\u5b58",
-                "\u7576\u524d\u8a2d\u7f6e Cookies": "\u73fe\u5728\u306eCookie\u8a2d\u5b9a", "\u5e33\u6236\u9078\u64c7": "\u30a2\u30ab\u30a6\u30f3\u30c8\u9078\u629e", "\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236": "Cookie\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\uff01\n\n\u307e\u305a\u30a2\u30ab\u30a6\u30f3\u30c8\u306b\u30ed\u30b0\u30a4\u30f3\u3057\u3066\u304f\u3060\u3055\u3044", "\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e": "\u6ce8\u5165\u53ef\u80fd\u306aCookie\u304c\u691c\u51fa\u3055\u308c\u307e\u305b\u3093\u3067\u3057\u305f\uff01\n\n\u30e1\u30cb\u30e5\u30fc\u304b\u3089\u8a2d\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044",
-                "\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210": "\u5171\u6709\u30c7\u30fc\u30bf\u306e\u66f4\u65b0\u304c\u5b8c\u4e86\u3057\u307e\u3057\u305f", "\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0": "\u5171\u6709\u30c7\u30fc\u30bf\u306e\u66f4\u65b0\u306f\u4e0d\u8981\u3067\u3059", "\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557": "\u5171\u6709\u30c7\u30fc\u30bf\u306e\u53d6\u5f97\u306b\u5931\u6557\u3057\u307e\u3057\u305f", "\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165": "\u4fdd\u5b58\u3055\u308c\u305fCookie\u304c\u306a\u3044\u305f\u3081\u3001\u81ea\u52d5\u30ed\u30b0\u30a4\u30f3\u3092\u6709\u52b9\u306b\u3067\u304d\u307e\u305b\u3093",
-                "\u8acb\u6c42\u70ba\u7a7a\u6578\u64da": "\u30ea\u30af\u30a8\u30b9\u30c8\u306b\u30c7\u30fc\u30bf\u304c\u3042\u308a\u307e\u305b\u3093", "\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684": "\u63a5\u7d9a\u30a8\u30e9\u30fc\u3001\u66f4\u65b0\u30a2\u30c9\u30ec\u30b9\u304c\u9593\u9055\u3063\u3066\u3044\u308b\u53ef\u80fd\u6027\u304c\u3042\u308a\u307e\u3059", "\u8acb\u6c42\u932f\u8aa4: ": "\u30ea\u30af\u30a8\u30b9\u30c8\u30a8\u30e9\u30fc: "
-            }, Korea: {
-                "\ud83c\udf6a \u5171\u4eab\u767b\u5165": "\ud83c\udf6a \uacf5\uc720 \ub85c\uadf8\uc778",
-                "\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c": "\ud83d\udfe2 \uac10\uc9c0 \ud65c\uc131\ud654", "\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c": "\ud83d\udd34 \uac10\uc9c0 \ube44\ud65c\uc131\ud654", "\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae": "\ud83d\udcc2 \uba54\ub274 \ud3bc\uce58\uae30", "\ud83d\udcc1 \u647a\u758a\u83dc\u55ae": "\ud83d\udcc1 \uba54\ub274 \uc811\uae30", "\ud83d\udcdc \u81ea\u52d5\u7372\u53d6": "\ud83d\udcdc \uc790\ub3d9 \uac00\uc838\uc624\uae30", "\ud83d\udcdd \u624b\u52d5\u8f38\u5165": "\ud83d\udcdd \uc218\ub3d9 \uc785\ub825",
-                "\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58": "\ud83d\udd0d \uc800\uc7a5\ub41c \ud56d\ubaa9 \ubcf4\uae30", "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165": "\ud83d\udd03 \uc218\ub3d9 \uc8fc\uc785", "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165": "\ud83d\uddd1\ufe0f \ub85c\uadf8\uc778 \uc815\ubcf4 \uc0ad\uc81c", "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf": "\ud83d\udc96 \uc990\uaca8\ucc3e\uae30\uc5d0 \ucd94\uac00", "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf": "\ud83d\udc98 \uc990\uaca8\ucc3e\uae30 \uc81c\uac70", "\u78ba\u8a8d\u9078\u64c7\u7684 Cookies": "\uc120\ud0dd\ud55c \ucfe0\ud0a4 \ud655\uc778",
-                "\u5e33\u6236": "\uacc4\uc815", "\u66f4\u65b0": "\uc5c5\ub370\uc774\ud2b8", "\u767b\u5165": "\ub85c\uadf8\uc778", "\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0": "\ucc98\uc74c \uc0ac\uc6a9\ud558\uae30 \uc804\uc5d0 \uba3c\uc800 \uc5c5\ub370\uc774\ud2b8\ud574 \uc8fc\uc138\uc694", "\u78ba\u8a8d\u4fdd\u5b58": "\uc800\uc7a5 \ud655\uc778", "\u53d6\u6d88\u9000\u51fa": "\uc885\ub8cc \ucde8\uc18c", "\u9000\u51fa\u9078\u55ae": "\uba54\ub274 \uc885\ub8cc", "\u4fdd\u5b58\u6210\u529f!": "\uc800\uc7a5 \uc131\uacf5!", "\u66f4\u6539\u4fdd\u5b58": "\ubcc0\uacbd\uc0ac\ud56d \uc800\uc7a5",
-                "\u5df2\u4fdd\u5b58\u8b8a\u66f4": "\ubcc0\uacbd\uc0ac\ud56d\uc774 \uc800\uc7a5\ub418\uc5c8\uc2b5\ub2c8\ub2e4", "\u8a2d\u7f6e Cookies": "\ucfe0\ud0a4 \uc124\uc815", "\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb": "Ex \ub85c\uadf8\uc778\uc5d0\ub9cc \ud544\uc694", "\u5fc5\u586b\u9805\u76ee": "\ud544\uc218 \ud56d\ubaa9", "\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539": "\uc544\ub798\ub294 \uc120\ud0dd\uc0ac\ud56d, \ubcc0\uacbd\ud558\uc9c0 \uc54a\uc544\ub3c4 \ub429\ub2c8\ub2e4", "[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58": "[\uc785\ub825\uc774 \uc815\ud655\ud55c\uc9c0 \ud655\uc778] \uba54\ub274 \uc885\ub8cc\ub97c \ub20c\ub7ec \uc800\uc7a5",
-                "\u7576\u524d\u8a2d\u7f6e Cookies": "\ud604\uc7ac \uc124\uc815\ub41c \ucfe0\ud0a4", "\u5e33\u6236\u9078\u64c7": "\uacc4\uc815 \uc120\ud0dd", "\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236": "\ucfe0\ud0a4\ub97c \uac00\uc838\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4!\n\n\uba3c\uc800 \uacc4\uc815\uc5d0 \ub85c\uadf8\uc778\ud574 \uc8fc\uc138\uc694", "\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e": "\uc8fc\uc785 \uac00\ub2a5\ud55c \ucfe0\ud0a4\uac00 \uac10\uc9c0\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4!\n\n\uba54\ub274\uc5d0\uc11c \uc124\uc815\ud574 \uc8fc\uc138\uc694",
-                "\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210": "\uacf5\uc720 \ub370\uc774\ud130 \uc5c5\ub370\uc774\ud2b8 \uc644\ub8cc", "\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0": "\uacf5\uc720 \ub370\uc774\ud130 \uc5c5\ub370\uc774\ud2b8 \ubd88\ud544\uc694", "\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557": "\uacf5\uc720 \ub370\uc774\ud130 \uac00\uc838\uc624\uae30 \uc2e4\ud328", "\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165": "\uc800\uc7a5\ub41c \ucfe0\ud0a4\uac00 \uc5c6\uc5b4 \uc790\ub3d9 \ub85c\uadf8\uc778\uc744 \ud65c\uc131\ud654\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4",
-                "\u8acb\u6c42\u70ba\u7a7a\u6578\u64da": "\uc694\uccad\uc5d0 \ub370\uc774\ud130\uac00 \uc5c6\uc2b5\ub2c8\ub2e4", "\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684": "\uc5f0\uacb0 \uc624\ub958, \uc5c5\ub370\uc774\ud2b8 \uc8fc\uc18c\uac00 \uc798\ubabb\ub418\uc5c8\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4", "\u8acb\u6c42\u932f\u8aa4: ": "\uc694\uccad \uc624\ub958: "
-            }, Russia: {
-                "\ud83c\udf6a \u5171\u4eab\u767b\u5165": "\ud83c\udf6a \u041e\u0431\u0449\u0438\u0439 \u0432\u0445\u043e\u0434",
-                "\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c": "\ud83d\udfe2 \u0412\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u043e\u0431\u043d\u0430\u0440\u0443\u0436\u0435\u043d\u0438\u0435", "\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c": "\ud83d\udd34 \u041e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u043e\u0431\u043d\u0430\u0440\u0443\u0436\u0435\u043d\u0438\u0435", "\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae": "\ud83d\udcc2 \u0420\u0430\u0437\u0432\u0435\u0440\u043d\u0443\u0442\u044c \u043c\u0435\u043d\u044e", "\ud83d\udcc1 \u647a\u758a\u83dc\u55ae": "\ud83d\udcc1 \u0421\u0432\u0435\u0440\u043d\u0443\u0442\u044c \u043c\u0435\u043d\u044e",
-                "\ud83d\udcdc \u81ea\u52d5\u7372\u53d6": "\ud83d\udcdc \u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u0435", "\ud83d\udcdd \u624b\u52d5\u8f38\u5165": "\ud83d\udcdd \u0420\u0443\u0447\u043d\u043e\u0439 \u0432\u0432\u043e\u0434", "\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58": "\ud83d\udd0d \u041f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u043e\u0433\u043e", "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165": "\ud83d\udd03 \u0420\u0443\u0447\u043d\u043e\u0435 \u0432\u043d\u0435\u0434\u0440\u0435\u043d\u0438\u0435",
-                "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165": "\ud83d\uddd1\ufe0f \u041e\u0447\u0438\u0441\u0442\u0438\u0442\u044c \u0432\u0445\u043e\u0434", "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf": "\ud83d\udc96 \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0432 \u0438\u0437\u0431\u0440\u0430\u043d\u043d\u043e\u0435", "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf": "\ud83d\udc98 \u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0438\u0437 \u0438\u0437\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e", "\u5e33\u6236": "\u0410\u043a\u043a\u0430\u0443\u043d\u0442",
-                "\u66f4\u65b0": "\u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c", "\u767b\u5165": "\u0412\u043e\u0439\u0442\u0438", "\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0": "\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u0435 \u043f\u0435\u0440\u0435\u0434 \u043f\u0435\u0440\u0432\u044b\u043c \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0438\u0435\u043c", "\u78ba\u8a8d\u9078\u64c7\u7684 Cookies": "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u044b\u0435 Cookies",
-                "\u78ba\u8a8d\u4fdd\u5b58": "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435", "\u53d6\u6d88\u9000\u51fa": "\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c \u0432\u044b\u0445\u043e\u0434", "\u9000\u51fa\u9078\u55ae": "\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u043c\u0435\u043d\u044e", "\u4fdd\u5b58\u6210\u529f!": "\u0421\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0443\u0441\u043f\u0435\u0448\u043d\u043e!", "\u66f4\u6539\u4fdd\u5b58": "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f",
-                "\u5df2\u4fdd\u5b58\u8b8a\u66f4": "\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b", "\u8a2d\u7f6e Cookies": "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430 Cookies", "\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb": "\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430 \u0432 Ex", "\u5fc5\u586b\u9805\u76ee": "\u041e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0435 \u043f\u043e\u043b\u0435",
-                "\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539": "\u041d\u0435\u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e \u043d\u0438\u0436\u0435, \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u043d\u0435 \u0442\u0440\u0435\u0431\u0443\u044e\u0442\u0441\u044f", "[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58": "[\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u0432\u0432\u043e\u0434\u0430] \u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u043c\u0435\u043d\u044e \u0434\u043b\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f",
-                "\u7576\u524d\u8a2d\u7f6e Cookies": "\u0422\u0435\u043a\u0443\u0449\u0438\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 Cookies", "\u5e33\u6236\u9078\u64c7": "\u0412\u044b\u0431\u043e\u0440 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430", "\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236": "Cookies \u043d\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u044b !!\n\n\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u043e\u0439\u0434\u0438\u0442\u0435 \u0432 \u0430\u043a\u043a\u0430\u0443\u043d\u0442",
-                "\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e": "\u041d\u0435 \u043e\u0431\u043d\u0430\u0440\u0443\u0436\u0435\u043d\u044b Cookies \u0434\u043b\u044f \u0432\u043d\u0435\u0434\u0440\u0435\u043d\u0438\u044f !!\n\n\u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u0432 \u043c\u0435\u043d\u044e", "\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043e\u0431\u0449\u0438\u0445 \u0434\u0430\u043d\u043d\u044b\u0445 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e",
-                "\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043e\u0431\u0449\u0438\u0445 \u0434\u0430\u043d\u043d\u044b\u0445 \u043d\u0435 \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f", "\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557": "\u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u0438\u044f \u043e\u0431\u0449\u0438\u0445 \u0434\u0430\u043d\u043d\u044b\u0445", "\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165": "\u041d\u0435\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0445 cookies, \u043d\u0435\u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e \u0432\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0432\u0445\u043e\u0434",
-                "\u8acb\u6c42\u70ba\u7a7a\u6578\u64da": "\u0417\u0430\u043f\u0440\u043e\u0441 \u0441\u043e\u0434\u0435\u0440\u0436\u0438\u0442 \u043f\u0443\u0441\u0442\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435", "\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u044f, \u0430\u0434\u0440\u0435\u0441 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043c\u043e\u0436\u0435\u0442 \u0431\u044b\u0442\u044c \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u043c",
-                "\u8acb\u6c42\u932f\u8aa4: ": "\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u043f\u0440\u043e\u0441\u0430: "
-            }, English: {
-                "\ud83c\udf6a \u5171\u4eab\u767b\u5165": "\ud83c\udf6a Shared Login", "\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c": "\ud83d\udfe2 Enable Detection", "\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c": "\ud83d\udd34 Disable Detection", "\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae": "\ud83d\udcc2 Expand Menu", "\ud83d\udcc1 \u647a\u758a\u83dc\u55ae": "\ud83d\udcc1 Collapse Menu", "\ud83d\udcdc \u81ea\u52d5\u7372\u53d6": "\ud83d\udcdc Auto Retrieve",
-                "\ud83d\udcdd \u624b\u52d5\u8f38\u5165": "\ud83d\udcdd Manual Input", "\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58": "\ud83d\udd0d View Saved", "\ud83d\udd03 \u624b\u52d5\u6ce8\u5165": "\ud83d\udd03 Manual Injection", "\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165": "\ud83d\uddd1\ufe0f Clear Login", "\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf": "\ud83d\udc96 Add to Favorites", "\ud83d\udc98 \u53d6\u6d88\u6536\u85cf": "\ud83d\udc98 Remove from Favorites", "\u5e33\u6236": "Account", "\u66f4\u65b0": "Update", "\u767b\u5165": "Login",
-                "\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0": "Please update before first use", "\u78ba\u8a8d\u9078\u64c7\u7684 Cookies": "Confirm Selected Cookies", "\u78ba\u8a8d\u4fdd\u5b58": "Confirm Save", "\u53d6\u6d88\u9000\u51fa": "Cancel Exit", "\u9000\u51fa\u9078\u55ae": "Exit Menu", "\u4fdd\u5b58\u6210\u529f!": "Save Successful!", "\u66f4\u6539\u4fdd\u5b58": "Save Changes", "\u5df2\u4fdd\u5b58\u8b8a\u66f4": "Changes Saved", "\u8a2d\u7f6e Cookies": "Set Cookies", "\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb": "Required for Ex Login Only",
-                "\u5fc5\u586b\u9805\u76ee": "Required Field", "\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539": "Optional Fields Below - No Changes Required", "[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58": "[Confirm Input is Correct] Press Exit Menu to Save", "\u7576\u524d\u8a2d\u7f6e Cookies": "Current Cookie Settings", "\u5e33\u6236\u9078\u64c7": "Account Selection", "\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236": "No Cookies Retrieved!\n\nPlease Login First",
-                "\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e": "No Injectable Cookies Detected!\n\nPlease Configure in Menu", "\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210": "Shared Data Update Complete", "\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0": "Shared Data Update Not Needed", "\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557": "Shared Data Retrieval Failed", "\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165": "No Saved Cookies - Unable to Enable Auto-Login",
-                "\u8acb\u6c42\u70ba\u7a7a\u6578\u64da": "Request Contains No Data", "\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684": "Connection Error - Update Address May Be Incorrect", "\u8acb\u6c42\u932f\u8aa4: ": "Request Error: "
-            }
-        }, g); return { Transl: n => h[n] ?? n }
-    }(Syn.$lang).Transl; (async function () {
-        let g, h, n, k, p; "e-hentai.org" == G ? (n = "color: #8f4701;", k = "background-color: #5C0D12; color: #fefefe;", g = "background-color: #fefefe; border: 3px ridge #34353b;", p = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;",
-            h = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;") : "exhentai.org" == G && (n = "color: #989898;", k = "background-color: #fefefe; color: #5C0D12;", g = "background-color: #34353b; border: 2px ridge #5C0D12;", p = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;", h = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;", Syn.AddStyle("\n                body {\n                    padding: 2px;\n                    color: #f1f1f1;\n                    text-align: center;\n                    background: #34353b;\n                }\n            "));
+    const domain = Syn.$domain;
+    const {
+        Transl
+    } = Language();
+    (async function ImportStyle() {
+        let show_style, button_style, button_hover, jGrowl_style, acc_style;
+        if (domain === "e-hentai.org") {
+            button_hover = "color: #8f4701;";
+            jGrowl_style = "background-color: #5C0D12; color: #fefefe;";
+            show_style = "background-color: #fefefe; border: 3px ridge #34353b;";
+            acc_style = "color: #5C0D12; background-color: #fefefe; border: 2px solid #B5A4A4;";
+            button_style = "color: #5C0D12; border: 2px solid #B5A4A4; background-color: #fefefe;";
+        } else if (domain === "exhentai.org") {
+            button_hover = "color: #989898;";
+            jGrowl_style = "background-color: #fefefe; color: #5C0D12;";
+            show_style = "background-color: #34353b; border: 2px ridge #5C0D12;";
+            acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;";
+            button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;";
+            Syn.AddStyle(`
+                body {
+                    padding: 2px;
+                    color: #f1f1f1;
+                    text-align: center;
+                    background: #34353b;
+                }
+            `);
+        }
         Syn.AddStyle(`
-                ${GM_getResourceText("jgrowl-css")}
-                .jGrowl {
-                    ${k}
-                    top: 2rem;
-                    left: 50%;
-                    width: auto;
-                    z-index: 9999;
-                    font-size: 1.3rem;
-                    border-radius: 2px;
-                    text-align: center;
-                    white-space: nowrap;
-                    transform: translateX(-50%);
+            ${GM_getResourceText("jgrowl-css")}
+            .jGrowl {
+                ${jGrowl_style}
+                top: 2rem;
+                left: 50%;
+                width: auto;
+                z-index: 9999;
+                font-size: 1.3rem;
+                border-radius: 2px;
+                text-align: center;
+                white-space: nowrap;
+                transform: translateX(-50%);
+            }
+            .modal-background {
+                top: 50%;
+                left: 50%;
+                opacity: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 8888;
+                overflow: auto;
+                position: fixed;
+                transition: 0.6s ease;
+                background-color: rgba(0,0,0,0);
+                transform: translate(-50%, -50%) scale(0.3);
+            }
+            .acc-modal {
+                ${show_style}
+                width: 18%;
+                overflow: auto;
+                margin: 11rem auto;
+                border-radius: 10px;
+            }
+            .acc-select-flex {
+                display: flex;
+                align-items: center;
+                flex-direction: initial;
+                justify-content: space-around;
+            }
+            .acc-button-flex {
+                display: flex;
+                padding: 0 0 15px 0;
+                justify-content: center;
+            }
+            .acc-select {
+                ${acc_style}
+                padding: 4px;
+                min-width: 10rem;
+                margin: 1.1rem 1.4rem 1.5rem 1.4rem;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 1.2rem;
+                text-align: center;
+                border-radius: 5px;
+            }
+            .show-modal {
+                ${show_style}
+                width: 25%;
+                padding: 1.5rem;
+                overflow: auto;
+                margin: 5rem auto;
+                text-align: left;
+                border-radius: 10px;
+                border-collapse: collapse;
+            }
+            .modal-button {
+                ${button_style}
+                top: 0;
+                margin: 3% 2%;
+                font-size: 14px;
+                font-weight: bold;
+                border-radius: 3px;
+            }
+            .modal-button:hover, .modal-button:focus {
+                ${button_hover}
+                cursor: pointer;
+                text-decoration: none;
+            }
+            .set-modal {
+                ${show_style}
+                width: 30%;
+                padding: 0.3rem;
+                overflow: auto;
+                border-radius: 10px;
+                text-align: center;
+                border-collapse: collapse;
+                margin: 2% auto 8px auto;
+            }
+            .set-box {
+                display: flex;
+                margin: 0.6rem;
+                font-weight: bold;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .set-list {
+                width: 95%;
+                font-weight: 550;
+                font-size: 1.1rem;
+                text-align: center;
+            }
+            hr {
+                width: 98%;
+                opacity: 0.2;
+                border: 1px solid;
+                margin-top: 1.3rem;
+            }
+            label {
+                margin: 0.4rem;
+                font-size: 0.9rem;
+            }
+            .cancelFavorite {
+                float: left;
+                cursor: pointer;
+                font-size: 1.7rem;
+                padding: 10px 0 0 20px;
+            }
+            .cancelFavorite:hover {
+                opacity: 0.5;
+            }
+            .addFavorite {
+                float: left;
+                cursor: pointer;
+                font-size: 1.7rem;
+                padding: 10px 0 0 20px;
+                transition: transform 0.2s ease;
+            }
+            .addFavorite:hover {
+                animation: heartbeat 1.5s infinite;
+            }
+            @keyframes heartbeat {
+                0% {
+                    transform: scale(1);
                 }
-                .modal-background {
-                    top: 50%;
-                    left: 50%;
-                    opacity: 0;
-                    width: 100%;
-                    height: 100%;
-                    z-index: 8888;
-                    overflow: auto;
-                    position: fixed;
-                    transition: 0.6s ease;
-                    background-color: rgba(0,0,0,0);
-                    transform: translate(-50%, -50%) scale(0.3);
+                25% {
+                    transform: scale(1.1);
                 }
-                .acc-modal {
-                    ${g}
-                    width: 18%;
-                    overflow: auto;
-                    margin: 11rem auto;
-                    border-radius: 10px;
+                50% {
+                    transform: scale(1);
                 }
-                .acc-select-flex {
-                    display: flex;
-                    align-items: center;
-                    flex-direction: initial;
-                    justify-content: space-around;
+                75% {
+                    transform: scale(1.1);
                 }
-                .acc-button-flex {
-                    display: flex;
-                    padding: 0 0 15px 0;
-                    justify-content: center;
+                100% {
+                    transform: scale(1);
                 }
-                .acc-select {
-                    ${p}
-                    padding: 4px;
-                    min-width: 10rem;
-                    margin: 1.1rem 1.4rem 1.5rem 1.4rem;
-                    font-weight: bold;
-                    cursor: pointer;
-                    font-size: 1.2rem;
-                    text-align: center;
-                    border-radius: 5px;
+            }
+            .lc {
+                padding: 1rem 0 !important;
+            }
+            .unFavorite {
+                font-size: 2rem;
+                position: relative;
+                display: inline-block;
+                transition: transform 0.2s ease;
+            }
+            .unFavorite:hover {
+                animation: shake 0.8s ease-in-out infinite;
+            }
+            @keyframes shake {
+                0% {
+                    left: 0;
                 }
-                .show-modal {
-                    ${g}
-                    width: 25%;
-                    padding: 1.5rem;
-                    overflow: auto;
-                    margin: 5rem auto;
-                    text-align: left;
-                    border-radius: 10px;
-                    border-collapse: collapse;
+                25% {
+                    left: -5px;
                 }
-                .modal-button {
-                    ${h}
-                    top: 0;
-                    margin: 3% 2%;
-                    font-size: 14px;
-                    font-weight: bold;
-                    border-radius: 3px;
+                50% {
+                    left: 5px;
                 }
-                .modal-button:hover, .modal-button:focus {
-                    ${n}
-                    cursor: pointer;
-                    text-decoration: none;
+                75% {
+                    left: -5px;
                 }
-                .set-modal {
-                    ${g}
-                    width: 30%;
-                    padding: 0.3rem;
-                    overflow: auto;
-                    border-radius: 10px;
-                    text-align: center;
-                    border-collapse: collapse;
-                    margin: 2% auto 8px auto;
+                100% {
+                    left: 0;
                 }
-                .set-box {
-                    display: flex;
-                    margin: 0.6rem;
-                    font-weight: bold;
-                    flex-direction: column;
-                    align-items: flex-start;
+            }
+        `, "AutoLogin-Style");
+    })();
+    (async function Main($Cookie, $Shared) {
+        let Share = Syn.gV("Share", {});
+        if (typeof Share === "string") {
+            Share = JSON.parse(Share);
+        }
+        const url = Syn.$url;
+        const Post_Page = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/;
+        const Favorites_Page = /https:\/\/[^\/]+\/favorites.php/;
+        const CreateMenu = async Modal => {
+            Syn.$q(".modal-background")?.remove();
+            $("body").append(Modal.replace(/>\s+</g, "><"));
+            requestAnimationFrame(() => {
+                $(".modal-background").css({
+                    opacity: "1",
+                    "background-color": "rgba(0,0,0,0.7)",
+                    transform: "translate(-50%, -50%) scale(1)"
+                });
+            });
+        };
+        const DeleteMenu = async () => {
+            const modal = $(".modal-background");
+            modal.css({
+                opacity: "0",
+                "pointer-events": "none",
+                "background-color": "rgba(0,0,0,0)",
+                transform: "translate(-50%, -50%) scale(0)"
+            });
+            setTimeout(() => {
+                modal.remove();
+            }, 1300);
+        };
+        const Expand = async () => {
+            Syn.Menu({
+                [Transl("📜 自動獲取")]: AutoGetCookie,
+                [Transl("📝 手動輸入")]: ManualSetting,
+                [Transl("🔍 查看保存")]: ViewSaveCookie,
+                [Transl("🔃 手動注入")]: CookieInjection,
+                [Transl("🗑️ 清除登入")]: ClearLogin
+            }, {
+                name: "Expand"
+            });
+        };
+        const Collapse = async () => {
+            for (let i = 1; i <= 5; i++) {
+                GM_unregisterMenuCommand("Expand-" + i);
+            }
+        };
+        const MenuToggle = async () => {
+            const state = Syn.gV("Expand", false), disp = state ? Transl("📁 摺疊菜單") : Transl("📂 展開菜單");
+            Syn.Menu({
+                [disp]: {
+                    func: () => {
+                        state ? Syn.sV("Expand", false) : Syn.sV("Expand", true);
+                        MenuToggle();
+                    },
+                    hotkey: "c",
+                    close: false
                 }
-                .set-list {
-                    width: 95%;
-                    font-weight: 550;
-                    font-size: 1.1rem;
-                    text-align: center;
+            }, {
+                name: "Switch"
+            });
+            state ? Expand() : Collapse();
+        };
+        const LoginToggle = async () => {
+            const cookie = Boolean(Syn.gJV("E/Ex_Cookies"));
+            const state = Syn.gV("Login", cookie);
+            const disp = state ? Transl("🟢 啟用檢測") : Transl("🔴 禁用檢測");
+            Syn.Menu({
+                [disp]: {
+                    func: () => {
+                        if (state) Syn.sV("Login", false); else if (cookie) Syn.sV("Login", true); else {
+                            alert(Transl("無保存的 Cookie, 無法啟用自動登入"));
+                            return;
+                        }
+                        LoginToggle();
+                    },
+                    close: false
                 }
-                hr {
-                    width: 98%;
-                    opacity: 0.2;
-                    border: 1px solid;
-                    margin-top: 1.3rem;
+            }, {
+                name: "Check"
+            });
+            Syn.Menu({
+                [Transl("🍪 共享登入")]: SharedLogin
+            });
+            MenuToggle();
+        };
+        const GlobalMenuToggle = async () => {
+            Syn.StoreListen(["Login", "Expand"], listen => {
+                listen.far && LoginToggle();
+            });
+        };
+        async function Injection() {
+            const cookie = Syn.gJV("E/Ex_Cookies");
+            const login = Syn.gV("Login", Boolean(cookie));
+            if (login && cookie) {
+                let CurrentTime = new Date();
+                let DetectionTime = Syn.Local("DetectionTime");
+                DetectionTime = DetectionTime ? new Date(DetectionTime) : new Date(CurrentTime.getTime() + 11 * 60 * 1e3);
+                const Conversion = Math.abs(DetectionTime - CurrentTime) / (1e3 * 60);
+                if (Conversion >= 10) $Cookie.Verify(cookie);
+            }
+            if (Post_Page.test(url)) CreateFavoritesButton(); else if (Favorites_Page.test(url)) AddCustomFavorites();
+            LoginToggle();
+            GlobalMenuToggle();
+        }
+        async function SharedLogin() {
+            const Igneous = $Cookie.Get().igneous;
+            const AccountQuantity = Object.keys(Share).length;
+            let Select = $(`<select id="account-select" class="acc-select"></select>`), Value;
+            for (let i = 1; i <= AccountQuantity; i++) {
+                if (Share[i][0].value === Igneous) Value = i;
+                Select.append($("<option>").attr({
+                    value: i
+                }).text(`${Transl("帳戶")} ${i}`));
+            }
+            CreateMenu(`
+                <div class="modal-background">
+                    <div class="acc-modal">
+                        <h1>${Transl("帳戶選擇")}</h1>
+                        <div class="acc-select-flex">${Select.prop("outerHTML")}</div>
+                        <div class="acc-button-flex">
+                            <button class="modal-button" id="update">${Transl("更新")}</button>
+                            <button class="modal-button" id="login">${Transl("登入")}</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            if (AccountQuantity === 0) {
+                Growl(Transl("首次使用請先更新"), "jGrowl", 2500);
+                $("#account-select").append($("<option>")).prop("disabled", true);
+            } else if (Value) $("#account-select").val(Value);
+            $(".modal-background").on("click", function (click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+                if (target.id === "login") {
+                    $Cookie.ReAdd(Share[+$("#account-select").val()]);
+                } else if (target.id === "update") {
+                    $Shared.Update().then(Data => {
+                        if (Data) {
+                            Share = Data;
+                            Syn.sJV("Share", Data);
+                            setTimeout(SharedLogin, 600);
+                        }
+                    });
+                } else if (target.className === "modal-background") {
+                    DeleteMenu();
                 }
-                label {
-                    margin: 0.4rem;
-                    font-size: 0.9rem;
+            });
+        }
+        async function Cookie_Show(cookies) {
+            CreateMenu(`
+                <div class="modal-background">
+                    <div class="show-modal">
+                    <h1 style="text-align: center;">${Transl("確認選擇的 Cookies")}</h1>
+                        <pre><b>${JSON.stringify(cookies, null, 4)}</b></pre>
+                        <div style="text-align: right;">
+                            <button class="modal-button" id="save">${Transl("確認保存")}</button>
+                            <button class="modal-button" id="close">${Transl("取消退出")}</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+            $(".modal-background").on("click", function (click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+                if (target.id === "save") {
+                    Syn.sJV("E/Ex_Cookies", cookies);
+                    Growl(Transl("保存成功!"), "jGrowl", 1500);
+                    DeleteMenu();
+                } else if (target.className === "modal-background" || target.id === "close") {
+                    DeleteMenu();
                 }
-                .cancelFavorite {
-                    float: left;
-                    cursor: pointer;
-                    font-size: 1.7rem;
-                    padding: 10px 0 0 20px;
-                }
-                .cancelFavorite:hover {
-                    opacity: 0.5;
-                }
-                .addFavorite {
-                    float: left;
-                    cursor: pointer;
-                    font-size: 1.7rem;
-                    padding: 10px 0 0 20px;
-                    transition: transform 0.2s ease;
-                }
-                .addFavorite:hover {
-                    animation: heartbeat 1.5s infinite;
-                }
-                @keyframes heartbeat {
-                    0% {
-                        transform: scale(1);
-                    }
-                    25% {
-                        transform: scale(1.1);
-                    }
-                    50% {
-                        transform: scale(1);
-                    }
-                    75% {
-                        transform: scale(1.1);
-                    }
-                    100% {
-                        transform: scale(1);
-                    }
-                }
-                .lc {
-                    padding: 1rem 0 !important;
-                }
-                .unFavorite {
-                    font-size: 2rem;
-                    position: relative;
-                    display: inline-block;
-                    transition: transform 0.2s ease;
-                }
-                .unFavorite:hover {
-                    animation: shake 0.8s ease-in-out infinite;
-                }
-                @keyframes shake {
-                    0% {
-                        left: 0;
-                    }
-                    25% {
-                        left: -5px;
-                    }
-                    50% {
-                        left: 5px;
-                    }
-                    75% {
-                        left: -5px;
-                    }
-                    100% {
-                        left: 0;
-                    }
-                }
-            `, "AutoLogin-Style")
-    })(); (async function (g, h) {
-        async function n() {
-            const a = g.Get().igneous, e = Object.keys(F).length; let d = $('<select id="account-select" class="acc-select"></select>'), l; for (let f = 1; f <= e; f++)F[f][0].value === a && (l = f), d.append($("<option>").attr({ value: f }).text(`${c("\u5e33\u6236")} ${f}`)); L(`
-                    <div class="modal-background">
-                        <div class="acc-modal">
-                            <h1>${c("\u5e33\u6236\u9078\u64c7")}</h1>
-                            <div class="acc-select-flex">${d.prop("outerHTML")}</div>
-                            <div class="acc-button-flex">
-                                <button class="modal-button" id="update">${c("\u66f4\u65b0")}</button>
-                                <button class="modal-button" id="login">${c("\u767b\u5165")}</button>
+            });
+        }
+        async function AutoGetCookie() {
+            let cookie_box = [];
+            for (const [name, value] of Object.entries($Cookie.Get())) {
+                cookie_box.push({
+                    name: name,
+                    value: value
+                });
+            }
+            cookie_box.length > 1 ? Cookie_Show(cookie_box) : alert(Transl("未獲取到 Cookies !!\n\n請先登入帳戶"));
+        }
+        async function ManualSetting() {
+            CreateMenu(`
+                <div class="modal-background">
+                    <div class="set-modal">
+                    <h1>${Transl("設置 Cookies")}</h1>
+                        <form id="set_cookies">
+                            <div id="input_cookies" class="set-box">
+                                <label>[igneous]：</label><input class="set-list" type="text" name="igneous" placeholder="${Transl("要登入 Ex 才需要填寫")}"><br>
+                                <label>[ipb_member_id]：</label><input class="set-list" type="text" name="ipb_member_id" placeholder="${Transl("必填項目")}" required><br>
+                                <label>[ipb_pass_hash]：</label><input class="set-list" type="text" name="ipb_pass_hash" placeholder="${Transl("必填項目")}" required><hr>
+                                <h3>${Transl("下方選填 也可不修改")}</h3>
+                                <label>[sl]：</label><input class="set-list" type="text" name="sl" value="dm_2"><br>
+                                <label>[sk]：</label><input class="set-list" type="text" name="sk"><br>
                             </div>
-                        </div>
+                            <button type="submit" class="modal-button" id="save">${Transl("確認保存")}</button>
+                            <button class="modal-button" id="close">${Transl("退出選單")}</button>
+                        </form>
                     </div>
-                `); 0 === e ? (E(c("\u9996\u6b21\u4f7f\u7528\u8acb\u5148\u66f4\u65b0"), "jGrowl", 2500), $("#account-select").append($("<option>")).prop("disabled", !0)) : l && $("#account-select").val(l); $(".modal-background").on("click", function (f) { f.stopImmediatePropagation(); f = f.target; "login" === f.id ? g.ReAdd(F[+$("#account-select").val()]) : "update" === f.id ? h.Update().then(m => { m && (F = m, Syn.sJV("Share", m), setTimeout(n, 600)) }) : "modal-background" === f.className && H() })
-        } async function k(a) {
-            L(`
-                    <div class="modal-background">
-                        <div class="show-modal">
-                        <h1 style="text-align: center;">${c("\u78ba\u8a8d\u9078\u64c7\u7684 Cookies")}</h1>
-                            <pre><b>${JSON.stringify(a, null, 4)}</b></pre>
-                            <div style="text-align: right;">
-                                <button class="modal-button" id="save">${c("\u78ba\u8a8d\u4fdd\u5b58")}</button>
-                                <button class="modal-button" id="close">${c("\u53d6\u6d88\u9000\u51fa")}</button>
-                            </div>
-                        </div>
+                </div>
+            `);
+            let cookie;
+            const textarea = $("<textarea>").attr({
+                style: "margin: 1.15rem auto 0 auto",
+                rows: 18,
+                cols: 40,
+                readonly: true
+            });
+            $("#set_cookies").on("submit", function (submit) {
+                submit.preventDefault();
+                submit.stopImmediatePropagation();
+                cookie = Array.from($("#set_cookies .set-list")).map(function (input) {
+                    const value = $(input).val();
+                    return value.trim() !== "" ? {
+                        name: $(input).attr("name"),
+                        value: value
+                    } : null;
+                }).filter(Boolean);
+                textarea.val(JSON.stringify(cookie, null, 4));
+                $("#set_cookies div").append(textarea);
+                Growl(Transl("[確認輸入正確] 按下退出選單保存"), "jGrowl", 2500);
+            });
+            $(".modal-background").on("click", function (click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+                if (target.className === "modal-background" || target.id === "close") {
+                    click.preventDefault();
+                    target.id === "close" && cookie && Syn.sJV("E/Ex_Cookies", cookie);
+                    DeleteMenu();
+                }
+            });
+        }
+        async function ViewSaveCookie() {
+            CreateMenu(`
+                <div class="modal-background">
+                    <div class="set-modal">
+                    <h1>${Transl("當前設置 Cookies")}</h1>
+                        <div id="view_cookies" style="margin: 0.6rem"></div>
+                        <button class="modal-button" id="save">${Transl("更改保存")}</button>
+                        <button class="modal-button" id="close">${Transl("退出選單")}</button>
                     </div>
-                `); $(".modal-background").on("click", function (e) { e.stopImmediatePropagation(); e = e.target; "save" === e.id ? (Syn.sJV("E/Ex_Cookies", a), E(c("\u4fdd\u5b58\u6210\u529f!"), "jGrowl", 1500), H()) : "modal-background" !== e.className && "close" !== e.id || H() })
-        } async function p() { let a = []; for (const [e, d] of Object.entries(g.Get())) a.push({ name: e, value: d }); 1 < a.length ? k(a) : alert(c("\u672a\u7372\u53d6\u5230 Cookies !!\n\n\u8acb\u5148\u767b\u5165\u5e33\u6236")) } async function z() {
-            L(`
-                    <div class="modal-background">
-                        <div class="set-modal">
-                        <h1>${c("\u8a2d\u7f6e Cookies")}</h1>
-                            <form id="set_cookies">
-                                <div id="input_cookies" class="set-box">
-                                    <label>[igneous]\uff1a</label><input class="set-list" type="text" name="igneous" placeholder="${c("\u8981\u767b\u5165 Ex \u624d\u9700\u8981\u586b\u5beb")}"><br>
-                                    <label>[ipb_member_id]\uff1a</label><input class="set-list" type="text" name="ipb_member_id" placeholder="${c("\u5fc5\u586b\u9805\u76ee")}" required><br>
-                                    <label>[ipb_pass_hash]\uff1a</label><input class="set-list" type="text" name="ipb_pass_hash" placeholder="${c("\u5fc5\u586b\u9805\u76ee")}" required><hr>
-                                    <h3>${c("\u4e0b\u65b9\u9078\u586b \u4e5f\u53ef\u4e0d\u4fee\u6539")}</h3>
-                                    <label>[sl]\uff1a</label><input class="set-list" type="text" name="sl" value="dm_2"><br>
-                                    <label>[sk]\uff1a</label><input class="set-list" type="text" name="sk"><br>
-                                </div>
-                                <button type="submit" class="modal-button" id="save">${c("\u78ba\u8a8d\u4fdd\u5b58")}</button>
-                                <button class="modal-button" id="close">${c("\u9000\u51fa\u9078\u55ae")}</button>
-                            </form>
-                        </div>
-                    </div>
-                `); let a; const e = $("<textarea>").attr({ style: "margin: 1.15rem auto 0 auto", rows: 18, cols: 40, readonly: !0 }); $("#set_cookies").on("submit", function (d) {
-                d.preventDefault(); d.stopImmediatePropagation(); a = Array.from($("#set_cookies .set-list")).map(function (l) { const f = $(l).val(); return "" !== f.trim() ? { name: $(l).attr("name"), value: f } : null }).filter(Boolean); e.val(JSON.stringify(a, null, 4)); $("#set_cookies div").append(e); E(c("[\u78ba\u8a8d\u8f38\u5165\u6b63\u78ba] \u6309\u4e0b\u9000\u51fa\u9078\u55ae\u4fdd\u5b58"),
-                    "jGrowl", 2500)
-            }); $(".modal-background").on("click", function (d) { d.stopImmediatePropagation(); const l = d.target; if ("modal-background" === l.className || "close" === l.id) d.preventDefault(), "close" === l.id && a && Syn.sJV("E/Ex_Cookies", a), H() })
-        } async function K() {
-            L(`
-                    <div class="modal-background">
-                        <div class="set-modal">
-                        <h1>${c("\u7576\u524d\u8a2d\u7f6e Cookies")}</h1>
-                            <div id="view_cookies" style="margin: 0.6rem"></div>
-                            <button class="modal-button" id="save">${c("\u66f4\u6539\u4fdd\u5b58")}</button>
-                            <button class="modal-button" id="close">${c("\u9000\u51fa\u9078\u55ae")}</button>
-                        </div>
-                    </div>
-                `); const a = Syn.gJV("E/Ex_Cookies", {}), e = $("<textarea>").attr({ rows: 20, cols: 50, id: "view_SC", style: "margin-top: 1.25rem;" }); e.val(JSON.stringify(a, null, 4)); $("#view_cookies").append(e); $(".modal-background").on("click", function (d) { d.stopImmediatePropagation(); d = d.target; "save" === d.id ? (Syn.sJV("E/Ex_Cookies", JSON.parse($("#view_SC").val())), E(c("\u5df2\u4fdd\u5b58\u8b8a\u66f4"), "jGrowl", 1500), H()) : "modal-background" !== d.className && "close" !== d.id || H() })
-        } async function I() {
+                </div>
+            `);
+            const cookie = Syn.gJV("E/Ex_Cookies", {});
+            const textarea = $("<textarea>").attr({
+                rows: 20,
+                cols: 50,
+                id: "view_SC",
+                style: "margin-top: 1.25rem;"
+            });
+            textarea.val(JSON.stringify(cookie, null, 4));
+            $("#view_cookies").append(textarea);
+            $(".modal-background").on("click", function (click) {
+                click.stopImmediatePropagation();
+                const target = click.target;
+                if (target.id === "save") {
+                    Syn.sJV("E/Ex_Cookies", JSON.parse($("#view_SC").val()));
+                    Growl(Transl("已保存變更"), "jGrowl", 1500);
+                    DeleteMenu();
+                } else if (target.className === "modal-background" || target.id === "close") {
+                    DeleteMenu();
+                }
+            });
+        }
+        async function CookieInjection() {
             try {
-                const a = Syn.gJV("E/Ex_Cookies");
-                if (null === a) throw Error("No Cookies"); g.ReAdd(a)
-            } catch (a) { alert(c("\u672a\u6aa2\u6e2c\u5230\u53ef\u6ce8\u5165\u7684 Cookies !!\n\n\u8acb\u5f9e\u9078\u55ae\u4e2d\u9032\u884c\u8a2d\u7f6e")) }
-        } async function U() { g.Delete(); location.reload() } function V() {
-            Syn.WaitElem(["#gd1 div", "#gd2", "#gmid"], ([a, e, d]) => {
-                const l = location.pathname, f = md5(l), m = Syn.gV("Favorites", {})[f], u = Syn.$createElement(e, "div", { class: m ? "cancelFavorite" : "addFavorite", text: m ? c("\ud83d\udc98 \u53d6\u6d88\u6536\u85cf") : c("\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf") });
-                u.$onEvent("click", () => {
-                    const w = Syn.gV("Favorites", {}); if (w[f]) delete w[f], Syn.sV("Favorites", w), u.$text(c("\ud83d\udc96 \u6dfb\u52a0\u6536\u85cf")), u.$replaceClass("cancelFavorite", "addFavorite"); else {
-                        var r = getComputedStyle(a), C = getComputedStyle(d.$q(".ir")), A = d.$q("#gdc div"), D = d.$q("#gdn a"), q = e.$q("#gj").$text() || e.$q("#gn").$text(), [, b, t] = l.match(/\/g\/([^\/]+)\/([^\/]+)\//), v = d.$q("#gdd"), x = v.$q("tr:nth-child(1) .gdt2").$text(); v = v.$q("tr:nth-child(6) .gdt2").$text(); var y = new Map; for (const M of d.$qa("#taglist tr a")) {
-                            const B =
-                                M.id.slice(3).replace(/[_]/g, " ").split(":"); y.has(B[0]) || y.set(B[0], []); y.get(B[0]).push(B[1])
-                        } r = JSON.stringify({ gid: b, tid: t, domain: G, posted: x, length: v, key: f, tags: [...y], score: C.backgroundPosition, post_title: q, artist_link: D.href, artist_text: D.$text(), icon_text: A.$text(), icon_class: A.className, img_width: r.width, img_height: r.height, img_url: r.background.match(/url\(["']?(.*?)["']?\)/)[1], favorited_time: Syn.GetDate("{year}-{month}-{date} {hour}:{minute}") }); Syn.sV("Favorites", Object.assign(w, {
-                            [f]: LZString.compress(r,
-                                9)
-                        })); u.$text(c("\ud83d\udc98 \u53d6\u6d88\u6536\u85cf")); u.$replaceClass("addFavorite", "cancelFavorite")
+                const cookie = Syn.gJV("E/Ex_Cookies");
+                if (cookie === null) throw new Error("No Cookies");
+                $Cookie.ReAdd(cookie);
+            } catch (error) {
+                alert(Transl("未檢測到可注入的 Cookies !!\n\n請從選單中進行設置"));
+            }
+        }
+        async function ClearLogin() {
+            $Cookie.Delete();
+            location.reload();
+        }
+        function CreateFavoritesButton() {
+            Syn.WaitElem(["#gd1 div", "#gd2", "#gmid"], ([thumbnail, container, info]) => {
+                const path = location.pathname;
+                const save_key = md5(path);
+                const Favorites = Syn.gV("Favorites", {});
+                const favorite = Favorites[save_key];
+                const addfavorite = async Favorites => {
+                    const img = getComputedStyle(thumbnail);
+                    const score = getComputedStyle(info.$q(".ir"));
+                    const icon = info.$q("#gdc div");
+                    const artist = info.$q("#gdn a");
+                    const title = container.$q("#gj").$text() || container.$q("#gn").$text();
+                    const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//);
+                    const detail = info.$q("#gdd");
+                    const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
+                    const length = detail.$q("tr:nth-child(6) .gdt2").$text();
+                    const tagData = new Map();
+                    for (const a of info.$qa("#taglist tr a")) {
+                        const tags = a.id.slice(3).replace(/[_]/g, " ").split(":");
+                        if (!tagData.has(tags[0])) tagData.set(tags[0], []);
+                        tagData.get(tags[0]).push(tags[1]);
                     }
-                })
-            }, { raf: !0 })
-        } function W(a, e) { GM_xmlhttpRequest({ method: "GET", url: a, responseType: "document", onload: d => { 200 === d.status && e(d.response) } }) } function X() {
-            const a = Syn.gV("Favorites"); if (a && 0 < Object.keys(a).length) {
-                const e = async function (d, l) { const f = Syn.gV("Favorites"); delete f[d]; Syn.sV("Favorites", f); l.remove() }; Syn.WaitElem(".ido", d => {
-                    let l = "tr"; const f = Syn.$createFragment(); var m = d.$q(".searchnav div:last-of-type select option[selected='selected']");
-                    const u = m ? m.value : "t"; m || (m = Syn.$createElement("form", { id: "favform", name: "favform", action: "", method: "post" }), m.$iHtml('<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>'), d.appendChild(m)); "t" === u && (l = ".gl1t"); for (const q of Object.values(a)) {
-                        const b = JSON.parse(LZString.decompress(q)); m = `<div>${b.length}</div>`; const t = `<a href="https://${b.domain}/g/${b.gid}/${b.tid}/">`; var w = `<div class="glink">${b.post_title}</div>`; const v = `<div class="glfnote" style="display:none" id="favnote_${b.gid}"></div>`;
-                        var r = `<div class="${b.icon_class}">${b.icon_text}</div>`, C = r.replace('class="cs', 'class="cn'); const x = `<div class="ir" style="background-position:${b.score};opacity:1"></div>`; var A = `<img style="height:${b.img_height}; width:${b.img_width};" alt="${b.post_title}" title="${b.post_title}" src="${b.img_url}">`, D = `
-                                <div class="glcut" id="ic${b.gid}"></div>
-                                    <div class="glthumb" id="it${b.gid}" style="top:-179px;height:400px">
-                                    <div>${A}</div>
-                            `; const y = `
-                                <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
-                                    onclick="popUp('https://${b.domain}/gallerypopups.php?gid=${b.gid}&amp;t=${b.tid}&amp;act=addfav',675,415)"
-                                    id="posted_${b.gid}" title="Favorites 0">${b.posted}
+                    const data = JSON.stringify({
+                        gid: gid,
+                        tid: tid,
+                        domain: domain,
+                        posted: posted,
+                        length: length,
+                        key: save_key,
+                        tags: [...tagData],
+                        score: score.backgroundPosition,
+                        post_title: title,
+                        artist_link: artist.href,
+                        artist_text: artist.$text(),
+                        icon_text: icon.$text(),
+                        icon_class: icon.className,
+                        img_width: img.width,
+                        img_height: img.height,
+                        img_url: img.background.match(/url\(["']?(.*?)["']?\)/)[1],
+                        favorited_time: Syn.GetDate("{year}-{month}-{date} {hour}:{minute}")
+                    });
+                    Syn.sV("Favorites", Object.assign(Favorites, {
+                        [save_key]: LZString.compress(data, 9)
+                    }));
+                };
+                favorite && addfavorite(Favorites);
+                const favoriteButton = Syn.createElement(container, "div", {
+                    class: favorite ? "cancelFavorite" : "addFavorite",
+                    text: favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏"),
+                    on: {
+                        type: "click",
+                        listener: () => {
+                            const Favorites = Syn.gV("Favorites", {});
+                            if (Favorites[save_key]) {
+                                delete Favorites[save_key];
+                                Syn.sV("Favorites", Favorites);
+                                favoriteButton.$text(Transl("💖 添加收藏"));
+                                favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
+                                return;
+                            }
+                            addfavorite(Favorites);
+                            favoriteButton.$text(Transl("💘 取消收藏"));
+                            favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
+                        }
+                    }
+                });
+            }, {
+                raf: true
+            });
+        }
+        function httpRequest(url, func) {
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: url,
+                responseType: "document",
+                onload: response => {
+                    if (response.status === 200) {
+                        func(response.response);
+                    }
+                }
+            });
+        }
+        function AddCustomFavorites() {
+            const Favorites = Syn.gV("Favorites");
+            if (Favorites && Object.keys(Favorites).length > 0) {
+                Syn.WaitElem(".ido", ido => {
+                    let delete_object = "tr";
+                    const select = ido.$q(".searchnav div:last-of-type select option[selected='selected']");
+                    const usertags = {};
+                    const favoritDB = Object.values(Favorites);
+                    const mode = !select ? "t" : select.value;
+                    if (!select) {
+                        const newform = Syn.createElement("form", {
+                            id: "favform",
+                            name: "favform",
+                            action: "",
+                            method: "post",
+                            innerHTML: `<input id="ddact" name="ddact" type="hidden" value=""><div class="itg gld"></div>`
+                        });
+                        ido.appendChild(newform);
+                    }
+                    if (mode === "t") delete_object = ".gl1t";
+                    const RenderTags = async function () {
+                        const nodes = [];
+                        const tree = document.createTreeWalker(ido, NodeFilter.SHOW_TEXT, {
+                            acceptNode: node => {
+                                const parent = node.parentNode;
+                                if (parent?.nodeName === "DIV" && parent.hasAttribute("title") && !parent.hasAttribute("id")) {
+                                    return NodeFilter.FILTER_ACCEPT;
+                                }
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                        });
+                        while (tree.nextNode()) {
+                            nodes.push(tree.currentNode.parentElement);
+                        }
+                        nodes.forEach(node => {
+                            const tags = usertags[node.title];
+                            tags && (node.style.cssText = tags.cssText);
+                        });
+                    };
+                    const GetTags = async function () {
+                        if (Object.keys(usertags).length > 0) {
+                            RenderTags();
+                            return;
+                        }
+                        httpRequest("https://exhentai.org/mytags", root => {
+                            for (const user of root.$qa("div[id^='usertag_']:not(#usertag_0)")) {
+                                const input = user.$q("div:nth-of-type(2) input");
+                                if (input.checked) {
+                                    const tag = user.$q("div.gt");
+                                    usertags[tag.title] = tag.style;
+                                }
+                            }
+                            RenderTags();
+                        });
+                    };
+                    let count = 0;
+                    const fragment = Syn.createFragment;
+                    const RenderWait = requestIdleCallback || ((cb, _) => requestAnimationFrame(cb));
+                    const RenderCard = async function () {
+                        if (fragment.hasChildNodes()) {
+                            ido.$q("tbody")?.prepend(fragment);
+                            ido.$q("#favform .gld")?.prepend(fragment);
+                            requestAnimationFrame(GetTags);
+                        }
+                    };
+                    for (const data of favoritDB) {
+                        const json = JSON.parse(LZString.decompress(data));
+                        const Pages = `<div>${json.length}</div>`;
+                        const PostUrl = `<a href="https://${json.domain}/g/${json.gid}/${json.tid}/">`;
+                        const PostName = `<div class="glink">${json.post_title}</div>`;
+                        const Glfnote = `<div class="glfnote" style="display:none" id="favnote_${json.gid}"></div>`;
+                        const Thumbnail = `<div class="${json.icon_class}">${json.icon_text}</div>`;
+                        const ThumbnailCN = Thumbnail.replace('class="cs', 'class="cn');
+                        const Position = `<div class="ir" style="background-position:${json.score};opacity:1"></div>`;
+                        const PreviewImg = `<img style="height:${json.img_height}; width:${json.img_width};" alt="${json.post_title}" title="${json.post_title}" src="${json.img_url}">`;
+                        const FullPreview = `
+                            <div class="glcut" id="ic${json.gid}"></div>
+                                <div class="glthumb" id="it${json.gid}" style="top:-179px;height:400px">
+                                <div>${PreviewImg}</div>
+                        `;
+                        const Posted = `
+                            <div style="border-color:#000;background-color:rgba(0,0,0,.1)"
+                                onclick="popUp('https://${json.domain}/gallerypopups.php?gid=${json.gid}&amp;t=${json.tid}&amp;act=addfav',675,415)"
+                                id="posted_${json.gid}" title="Favorites 0">${json.posted}
+                            </div>
+                        `;
+                        const Postedpop = Posted.replace("posted_", "postedpop_");
+                        const Gldown = `
+                            <div class="gldown">
+                                <a href="https://${json.domain}/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}"
+                                    onclick="return popUp('https://${json.domain}/gallerytorrents.php?gid=${json.gid}&amp;t=${json.tid}',610,590)"
+                                    rel="nofollow"><img src="https://${json.domain}/img/t.png" alt="T" title="Show torrents">
+                                </a>
+                            </div>
+                        `;
+                        const unFavorite = `
+                            <div class="lc">
+                                <div id="${json.key}" class="unFavorite">💔</div>
+                            </div>
+                        `;
+                        if (mode === "m" || mode === "p") {
+                            const tr = Syn.createElement("tr");
+                            tr.$iHtml(`
+                                <td class="gl1m glcat">${Thumbnail}</td>
+                                <td class="gl2m">
+                                    ${FullPreview}
+                                        <div>
+                                            <div>
+                                                ${Thumbnail}
+                                                ${Postedpop}
+                                            </div>
+                                            <div>
+                                                ${Position}
+                                                ${Pages}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ${Posted}
+                                </td>
+                                <td class="gl6m">${Gldown}</td>
+                                <td class="gl3m glname" onmouseover="show_image_pane(${json.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
+                                    ${PostUrl}
+                                        ${PostName}
+                                        ${Glfnote}
+                                    </a>
+                                </td>
+                                <td class="gl4m">
+                                    ${Position}
+                                </td>
+                                <td class="glfm glfav">${json.favorited_time}</td>
+                                <td class="glfm" style="text-align:center; padding-left:3px">
+                                    ${unFavorite}
+                                </td>
+                            `.replace(/>\s+</g, "><"));
+                            fragment.prepend(tr);
+                        } else if (mode === "l") {
+                            const tr = Syn.createElement("tr");
+                            const posted = json.posted.split(" ");
+                            tr.$iHtml(`
+                                <tr>
+                                    <td class="gl1c glcat">${ThumbnailCN}</td>
+                                    <td class="gl2c">
+                                        ${FullPreview}
+                                            <div>
+                                                <div>
+                                                    ${ThumbnailCN}
+                                                    ${Postedpop}
+                                                </div>
+                                                <div>
+                                                    ${Position}
+                                                    ${Pages}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            ${Posted}
+                                            ${Position}
+                                            ${Gldown}
+                                        </div>
+                                    </td>
+                                    <td class="gl3c glname" onmouseover="show_image_pane(${json.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
+                                        ${PostUrl}
+                                            ${PostName}
+                                            <div>
+                                                ${(() => {
+                                    let count = 0;
+                                    let result = "";
+                                    for (const [tagCategory, tagList] of json.tags) {
+                                        for (const tag of tagList) {
+                                            if (count >= 10) break;
+                                            result += `<div class="gt" title="${tagCategory}:${tag}">${tag}</div>`;
+                                            count++;
+                                        }
+                                        if (count >= 10) break;
+                                    }
+                                    return result;
+                                })()}
+                                            </div>
+                                            ${Glfnote}
+                                        </a>
+                                    </td>
+                                    <td class="glfc glfav">
+                                        <p>${posted[0]}</p>
+                                        <p>${posted[1]}</p>
+                                    </td>
+                                    <td class="glfc" style="text-align:center; padding-left:3px">
+                                        ${unFavorite}
+                                    </td>
+                                </tr>
+                            `.replace(/>\s+</g, "><"));
+                            fragment.prepend(tr);
+                        } else if (mode === "e") {
+                            const tr = Syn.createElement("tr");
+                            tr.$iHtml(`
+                                <tr>
+                                    <td class="gl1e" style="width:250px">
+                                        <div style="height: ${json.img_height}; width:250px">
+                                            ${PostUrl}
+                                                ${PreviewImg}
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="gl2e">
+                                        <div>
+                                            <div class="gl3e">
+                                                ${ThumbnailCN}
+                                                ${Posted}
+                                                ${Position}
+                                                <div><a href="${json.artist_link}">${json.artist_text}</a></div>
+                                                ${Pages}
+                                                ${Gldown}
+                                            <div>
+                                                <p>Favorited:</p><p>${json.favorited_time}</p>
+                                            </div>
+                                            </div>
+                                            ${PostUrl}
+                                                <div class="gl4e glname" style="min-height:${json.img_height}">
+                                                    ${PostName}
+                                                    <div>
+                                                        <table>
+                                                            <tbody>
+                                                                ${json.tags.map(([tagCategory, tagList]) => {
+                                return `
+                                                                        <tr>
+                                                                            <td class="tc">${tagCategory}</td>
+                                                                            <td>
+                                                                                ${tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join("")}
+                                                                            </td>
+                                                                        </tr>
+                                                                    `;
+                            }).join("")}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    ${Glfnote}
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td class="glfe" style="text-align:center; padding-left:8px">
+                                        ${unFavorite}
+                                    </td>
+                                </tr>
+                            `.replace(/>\s+</g, "><"));
+                            fragment.prepend(tr);
+                        } else if (mode === "t") {
+                            const div = Syn.createElement("div", {
+                                class: "gl1t"
+                            });
+                            div.$iHtml(`
+                                <div class="gl4t glname glft">
+                                    <div>
+                                        ${PostUrl}
+                                            <span class="glink">${json.post_title}</span>
+                                        </a>
+                                    </div>
+                                    <div style="transform: translateY(-70%);">
+                                        ${unFavorite}
+                                    </div>
                                 </div>
-                            `, M = y.replace("posted_", "postedpop_"), B = `
-                                <div class="gldown">
-                                    <a href="https://${b.domain}/gallerytorrents.php?gid=${b.gid}&amp;t=${b.tid}"
-                                        onclick="return popUp('https://${b.domain}/gallerytorrents.php?gid=${b.gid}&amp;t=${b.tid}',610,590)"
-                                        rel="nofollow"><img src="https://${b.domain}/img/t.png" alt="T" title="Show torrents">
+                                <div class="gl3t" style="height: ${json.img_height}; width:250px">
+                                    ${PostUrl}
+                                        ${PreviewImg}
                                     </a>
                                 </div>
-                            `, N = `
-                                <div class="lc">
-                                    <div id="${b.key}" class="unFavorite">\ud83d\udc94</div>
+                                ${Glfnote}
+                                <div class="gl5t">
+                                    <div>
+                                        ${Thumbnail}
+                                        ${Posted}
+                                    </div>
+                                    <div>
+                                        ${Position}
+                                        ${Pages}
+                                        ${Gldown}
+                                    </div>
                                 </div>
-                            `; "m" === u || "p" === u ? (C = Syn.$createElement("tr"), C.$iHtml(`
-                                    <td class="gl1m glcat">${r}</td>
-                                    <td class="gl2m">
-                                        ${D}
-                                            <div>
-                                                <div>
-                                                    ${r}
-                                                    ${M}
-                                                </div>
-                                                <div>
-                                                    ${x}
-                                                    ${m}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        ${y}
-                                    </td>
-                                    <td class="gl6m">${B}</td>
-                                    <td class="gl3m glname" onmouseover="show_image_pane(${b.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                        ${t}
-                                            ${w}
-                                            ${v}
-                                        </a>
-                                    </td>
-                                    <td class="gl4m">
-                                        ${x}
-                                    </td>
-                                    <td class="glfm glfav">${b.favorited_time}</td>
-                                    <td class="glfm" style="text-align:center; padding-left:3px">
-                                        ${N}
-                                    </td>
-                                `.replace(/>\s+</g, "><")), f.prepend(C)) : "l" === u ? (r = Syn.$createElement("tr"), A = b.posted.split(" "), r.$iHtml(`
-                                    <tr>
-                                        <td class="gl1c glcat">${C}</td>
-                                        <td class="gl2c">
-                                            ${D}
-                                                <div>
-                                                    <div>
-                                                        ${C}
-                                                        ${M}
-                                                    </div>
-                                                    <div>
-                                                        ${x}
-                                                        ${m}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                ${y}
-                                                ${x}
-                                                ${B}
-                                            </div>
-                                        </td>
-                                        <td class="gl3c glname" onmouseover="show_image_pane(${b.gid});preload_pane_image(0,0)" onmouseout="hide_image_pane()">
-                                            ${t}
-                                                ${w}
-                                                <div>
-                                                    ${(() => { let J = 0, O = ""; for (const [P, Y] of b.tags) { for (const R of Y) { if (10 <= J) break; O += `<div class="gt" title="${P}:${R}">${R}</div>`; J++ } if (10 <= J) break } return O })()}
-                                                </div>
-                                                ${v}
-                                            </a>
-                                        </td>
-                                        <td class="glfc glfav">
-                                            <p>${A[0]}</p>
-                                            <p>${A[1]}</p>
-                                        </td>
-                                        <td class="glfc" style="text-align:center; padding-left:3px">
-                                            ${N}
-                                        </td>
-                                    </tr>
-                                `.replace(/>\s+</g, "><")), f.prepend(r)) : "e" === u ? (D = Syn.$createElement("tr"), D.$iHtml(`
-                                    <tr>
-                                        <td class="gl1e" style="width:250px">
-                                            <div style="height: ${b.img_height}; width:250px">
-                                                ${t}
-                                                    ${A}
-                                                </a>
-                                            </div>
-                                        </td>
-                                        <td class="gl2e">
-                                            <div>
-                                                <div class="gl3e">
-                                                    ${C}
-                                                    ${y}
-                                                    ${x}
-                                                    <div><a href="${b.artist_link}">${b.artist_text}</a></div>
-                                                    ${m}
-                                                    ${B}
-                                                <div>
-                                                    <p>Favorited:</p><p>${b.favorited_time}</p>
-                                                </div>
-                                                </div>
-                                                ${t}
-                                                    <div class="gl4e glname" style="min-height:${b.img_height}">
-                                                        ${w}
-                                                        <div>
-                                                            <table>
-                                                                <tbody>
-                                                                    ${b.tags.map(([J, O]) => `
-                                                                                <tr>
-                                                                                    <td class="tc">${J}</td>
-                                                                                    <td>
-                                                                                        ${O.map(P => `<div class="gtl" title="${J}:${P}">${P}</div>`).join("")}
-                                                                                    </td>
-                                                                                </tr>
-                                                                            `).join("")}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                        ${v}
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        </td>
-                                        <td class="glfe" style="text-align:center; padding-left:8px">
-                                            ${N}
-                                        </td>
-                                    </tr>
-                                `.replace(/>\s+</g, "><")), f.prepend(D)) : "t" === u && (w = Syn.$createElement("div", { class: "gl1t" }), w.$iHtml(`
-                                    <div class="gl4t glname glft">
-                                        <div>
-                                            ${t}
-                                                <span class="glink">${b.post_title}</span>
-                                            </a>
-                                        </div>
-                                        <div style="transform: translateY(-70%);">
-                                            ${N}
-                                        </div>
-                                    </div>
-                                    <div class="gl3t" style="height: ${b.img_height}; width:250px">
-                                        ${t}
-                                            ${A}
-                                        </a>
-                                    </div>
-                                    ${v}
-                                    <div class="gl5t">
-                                        <div>
-                                            ${r}
-                                            ${y}
-                                        </div>
-                                        <div>
-                                            ${x}
-                                            ${m}
-                                            ${B}
-                                        </div>
-                                    </div>
-                                `.replace(/>\s+</g, "><")), f.prepend(w))
-                    } f && (d.$q("tbody")?.prepend(f), d.$q("#favform .gld")?.prepend(f), requestAnimationFrame(() => { W("https://exhentai.org/mytags", q => { const b = {}; for (const t of q.$qa("div[id^='usertag_']:not(#usertag_0)")) t.$q("div:nth-of-type(2) input").checked && (q = t.$q("div.gt"), b[q.title] = q.style); Syn.$qa(".glname tr td:nth-of-type(2)").forEach(t => { t.childNodes.forEach(v => { const x = b[v.title]; x && (v.style.cssText = x.cssText) }) }) }); Syn.$q("#nb")?.scrollIntoView() }));
-                    d.$onEvent("click", q => { q = q.target; "unFavorite" === q.className && e(q.id, q.closest(l)) })
-                })
+                            `.replace(/>\s+</g, "><"));
+                            fragment.prepend(div);
+                        }
+                        ++count;
+                        if (count === 50) {
+                            count = 0;
+                            RenderWait(RenderCard, {
+                                timeout: 1e3
+                            });
+                        }
+                    }
+                    RenderCard();
+                    Syn.onEvent(ido, "click", event => {
+                        const target = event.target;
+                        if (target.className === "unFavorite") {
+                            const Favorites = Syn.gV("Favorites");
+                            delete Favorites[target.id];
+                            Syn.sV("Favorites", Favorites);
+                            target.closest(delete_object).remove();
+                        }
+                    });
+                });
             }
-        } let F = Syn.gV("Share", {}); "string" === typeof F && (F = JSON.parse(F)); const S = Syn.$url, Z = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/, aa = /https:\/\/[^\/]+\/favorites.php/, L = async a => { Syn.$q(".modal-background")?.remove(); $(Syn.$body).append(a.replace(/>\s+</g, "><")); requestAnimationFrame(() => { $(".modal-background").css({ opacity: "1", "background-color": "rgba(0,0,0,0.7)", transform: "translate(-50%, -50%) scale(1)" }) }) }, H = async () => { const a = $(".modal-background"); a.css({ opacity: "0", "pointer-events": "none", "background-color": "rgba(0,0,0,0)", transform: "translate(-50%, -50%) scale(0)" }); setTimeout(() => { a.remove() }, 1300) }, ba = async () => {
-                Syn.Menu({
-                    [c("\ud83d\udcdc \u81ea\u52d5\u7372\u53d6")]: { func: () => p() }, [c("\ud83d\udcdd \u624b\u52d5\u8f38\u5165")]: { func: () => z() }, [c("\ud83d\udd0d \u67e5\u770b\u4fdd\u5b58")]: { func: () => K() }, [c("\ud83d\udd03 \u624b\u52d5\u6ce8\u5165")]: { func: () => I() }, [c("\ud83d\uddd1\ufe0f \u6e05\u9664\u767b\u5165")]: {
-                        func: () =>
-                            U()
+        }
+        return {
+            Injection: Injection
+        };
+    })(CookieFactory(), SharedFactory()).then(Main => {
+        Main.Injection();
+    });
+    async function Growl(message, theme, life) {
+        $.jGrowl(`&emsp;&emsp;${message}&emsp;&emsp;`, {
+            theme: theme,
+            life: life,
+            speed: "slow"
+        });
+    }
+    function SharedFactory() {
+        async function Get() {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    responseType: "json",
+                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/refs/heads/main/Share/ExShare.json",
+                    onload: response => {
+                        if (response.status === 200) {
+                            const data = response.response;
+                            if (typeof data === "object" && Object.keys(data).length > 0) {
+                                resolve(data);
+                            } else {
+                                console.error(Transl("請求為空數據"));
+                                resolve({});
+                            }
+                        } else {
+                            console.error(Transl("連線異常，更新地址可能是錯的"));
+                            resolve({});
+                        }
+                    },
+                    onerror: error => {
+                        console.error(Transl("請求錯誤: "), error);
+                        resolve({});
                     }
-                }, "Expand")
-            }, ca = async () => { for (let a = 1; 5 >= a; a++)GM_unregisterMenuCommand("Expand-" + a) }, T = async () => { const a = Syn.gV("Expand", !1), e = a ? c("\ud83d\udcc1 \u647a\u758a\u83dc\u55ae") : c("\ud83d\udcc2 \u5c55\u958b\u83dc\u55ae"); Syn.Menu({ [e]: { func: () => { a ? Syn.sV("Expand", !1) : Syn.sV("Expand", !0); T() }, hotkey: "c", close: !1 } }, "Switch"); a ? ba() : ca() }, Q = async () => {
-                const a = !!Syn.gJV("E/Ex_Cookies"), e = Syn.gV("Login", a), d = e ? c("\ud83d\udfe2 \u555f\u7528\u6aa2\u6e2c") : c("\ud83d\udd34 \u7981\u7528\u6aa2\u6e2c"); Syn.Menu({
-                    [d]: {
-                        func: () => { if (e) Syn.sV("Login", !1); else if (a) Syn.sV("Login", !0); else { alert(c("\u7121\u4fdd\u5b58\u7684 Cookie, \u7121\u6cd5\u555f\u7528\u81ea\u52d5\u767b\u5165")); return } Q() }, close: !1
-                    }
-                }, "Check"); Syn.Menu({ [c("\ud83c\udf6a \u5171\u4eab\u767b\u5165")]: { func: () => n() } }); T()
-            }, da = async () => { Syn.StoreListen(["Login", "Expand"], a => { a.far && Q() }) }; return {
-                Injection: async function () {
-                    const a = Syn.gJV("E/Ex_Cookies"); if (Syn.gV("Login", !!a) && a) {
-                        let e = new Date, d = Syn.Local("DetectionTime"); d = d ? new Date(d) : new Date(e.getTime() +
-                            66E4); 10 <= Math.abs(d - e) / 6E4 && g.Verify(a)
-                    } Z.test(S) ? V() : aa.test(S) && X(); Q(); da()
+                });
+            });
+        }
+        async function Update() {
+            const Shared = await Get();
+            if (Object.keys(Shared).length > 0) {
+                const localHash = md5(Syn.gV("Share", ""));
+                const remoteHash = md5(JSON.stringify(Shared));
+                if (localHash !== remoteHash) {
+                    Growl(Transl("共享數據更新完成"), "jGrowl", 1500);
+                    return Shared;
+                } else {
+                    Growl(Transl("共享數據無需更新"), "jGrowl", 1500);
+                }
+            } else {
+                Growl(Transl("共享數據獲取失敗"), "jGrowl", 2500);
+            }
+            return false;
+        }
+        return {
+            Update: Update
+        };
+    }
+    function CookieFactory() {
+        const Today = new Date();
+        Today.setFullYear(Today.getFullYear() + 1);
+        const Expires = Today.toUTCString();
+        const UnixUTC = new Date(0).toUTCString();
+        let RequiredCookie = ["ipb_member_id", "ipb_pass_hash"];
+        if (domain == "exhentai.org") RequiredCookie.unshift("igneous");
+        return {
+            Get: () => {
+                return Syn.cookie().split("; ").reduce((acc, cookie) => {
+                    const [name, value] = cookie.split("=");
+                    acc[decodeURIComponent(name)] = decodeURIComponent(value);
+                    return acc;
+                }, {});
+            },
+            Add: function (CookieObject) {
+                Syn.Local("DetectionTime", {
+                    value: Syn.GetDate()
+                });
+                for (const Cookie of CookieObject) {
+                    Syn.cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
+                }
+                location.reload();
+            },
+            Delete: function () {
+                Object.keys(this.Get()).forEach(Name => {
+                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
+                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
+                });
+            },
+            ReAdd: function (Cookies) {
+                this.Delete();
+                this.Add(Cookies);
+            },
+            Verify: function (Cookies) {
+                const Cookie = this.Get();
+                const VCookie = new Set(Object.keys(Cookie));
+                const Result = RequiredCookie.every(key => VCookie.has(key) && Cookie[key] !== "mystery");
+                if (!Result) {
+                    this.ReAdd(Cookies);
+                } else {
+                    Syn.Local("DetectionTime", {
+                        value: Syn.GetDate()
+                    });
                 }
             }
-    })(function () {
-        const g = new Date; g.setFullYear(g.getFullYear() + 1); const h = g.toUTCString(), n = (new Date(0)).toUTCString(); let k = ["ipb_member_id", "ipb_pass_hash"]; "exhentai.org" == G && k.unshift("igneous"); return {
-            Get: () => Syn.$cookie().split("; ").reduce((p, z) => { const [K, I] = z.split("="); p[decodeURIComponent(K)] = decodeURIComponent(I); return p }, {}), Add: function (p) {
-                Syn.Local("DetectionTime", { value: Syn.GetDate() }); for (const z of p) Syn.$cookie(`${encodeURIComponent(z.name)}=${encodeURIComponent(z.value)}; domain=.${G}; path=/; expires=${h};`);
-                location.reload()
-            }, Delete: function () { Object.keys(this.Get()).forEach(p => { Syn.$cookie(`${p}=; expires=${n}; path=/;`); Syn.$cookie(`${p}=; expires=${n}; path=/; domain=.${G}`) }) }, ReAdd: function (p) { this.Delete(); this.Add(p) }, Verify: function (p) { const z = this.Get(), K = new Set(Object.keys(z)); k.every(I => K.has(I) && "mystery" !== z[I]) ? Syn.Local("DetectionTime", { value: Syn.GetDate() }) : this.ReAdd(p) }
-        }
-    }(), function () {
-        async function g() {
-            return new Promise((h, n) => {
-                GM_xmlhttpRequest({
-                    method: "GET", responseType: "json",
-                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/refs/heads/main/Share/ExShare.json", onload: k => { 200 === k.status ? (k = k.response, "object" === typeof k && 0 < Object.keys(k).length ? h(k) : (console.error(c("\u8acb\u6c42\u70ba\u7a7a\u6578\u64da")), h({}))) : (console.error(c("\u9023\u7dda\u7570\u5e38\uff0c\u66f4\u65b0\u5730\u5740\u53ef\u80fd\u662f\u932f\u7684")), h({})) }, onerror: k => { console.error(c("\u8acb\u6c42\u932f\u8aa4: "), k); h({}) }
-                })
-            })
-        } return {
-            Update: async function () {
-                const h = await g(); if (0 < Object.keys(h).length) {
-                    const n =
-                        md5(Syn.gV("Share", "")), k = md5(JSON.stringify(h)); if (n !== k) return E(c("\u5171\u4eab\u6578\u64da\u66f4\u65b0\u5b8c\u6210"), "jGrowl", 1500), h; E(c("\u5171\u4eab\u6578\u64da\u7121\u9700\u66f4\u65b0"), "jGrowl", 1500)
-                } else E(c("\u5171\u4eab\u6578\u64da\u7372\u53d6\u5931\u6557"), "jGrowl", 2500); return !1
+        };
+    }
+    function Language() {
+        const Word = Syn.TranslMatcher({
+            Traditional: {},
+            Simplified: {
+                "🍪 共享登入": "🍪 共享登录",
+                "🟢 啟用檢測": "🟢 启用检测",
+                "🔴 禁用檢測": "🔴 禁用检测",
+                "📂 展開菜單": "📂 展开菜单",
+                "📁 摺疊菜單": "📁 折叠菜单",
+                "📜 自動獲取": "📜 自动获取",
+                "📝 手動輸入": "📝 手动输入",
+                "🔍 查看保存": "🔍 查看已保存",
+                "🔃 手動注入": "🔃 手动注入",
+                "🗑️ 清除登入": "🗑️ 清除登录信息",
+                "💖 添加收藏": "💖 添加收藏",
+                "💘 取消收藏": "💘 取消收藏",
+                "帳戶": "账号",
+                "更新": "更新",
+                "登入": "登录",
+                "首次使用請先更新": "首次使用请先更新",
+                "確認選擇的 Cookies": "确认所选 Cookies",
+                "確認保存": "确认保存",
+                "取消退出": "取消",
+                "退出選單": "关闭菜单",
+                "保存成功!": "保存成功！",
+                "更改保存": "保存更改",
+                "已保存變更": "更改已保存",
+                "設置 Cookies": "设置 Cookies",
+                "要登入 Ex 才需要填寫": "仅登录 Ex 时需要填写",
+                "必填項目": "必填项",
+                "下方選填 也可不修改": "以下为选填项，可不修改",
+                "[確認輸入正確] 按下退出選單保存": "[确认输入无误] 点击关闭菜单保存",
+                "當前設置 Cookies": "当前 Cookies 设置",
+                "帳戶選擇": "选择账号",
+                "未獲取到 Cookies !!\n\n請先登入帳戶": "未获取到 Cookies！\n\n请先登录账号",
+                "未檢測到可注入的 Cookies !!\n\n請從選單中進行設置": "未检测到可注入的 Cookies！\n\n请在菜单中进行设置",
+                "共享數據更新完成": "共享数据更新完成",
+                "共享數據無需更新": "共享数据无需更新",
+                "共享數據獲取失敗": "共享数据获取失败",
+                "無保存的 Cookie, 無法啟用自動登入": "没有已保存的 Cookie，无法启用自动登录",
+                "請求為空數據": "请求数据为空",
+                "連線異常，更新地址可能是錯的": "连接异常，更新地址可能不正确",
+                "請求錯誤: ": "请求错误："
+            },
+            Japan: {
+                "🍪 共享登入": "🍪 共有ログイン",
+                "🟢 啟用檢測": "🟢 検出を有効化",
+                "🔴 禁用檢測": "🔴 検出を無効化",
+                "📂 展開菜單": "📂 メニュー展開",
+                "📁 摺疊菜單": "📁 メニュー折りたたみ",
+                "📜 自動獲取": "📜 自動取得",
+                "📝 手動輸入": "📝 手動入力",
+                "🔍 查看保存": "🔍 保存を表示",
+                "🔃 手動注入": "🔃 手動注入",
+                "🗑️ 清除登入": "🗑️ ログインをクリア",
+                "💖 添加收藏": "💖 お気に入りに追加",
+                "💘 取消收藏": "💘 お気に入りから削除",
+                "帳戶": "アカウント",
+                "更新": "更新",
+                "登入": "ログイン",
+                "首次使用請先更新": "初めてご利用の際は、先に更新してください",
+                "確認選擇的 Cookies": "選択したCookieを確認",
+                "確認保存": "保存を確認",
+                "取消退出": "終了をキャンセル",
+                "退出選單": "メニューを終了",
+                "保存成功!": "保存に成功しました！",
+                "更改保存": "変更を保存",
+                "已保存變更": "変更が保存されました",
+                "設置 Cookies": "Cookieを設定",
+                "要登入 Ex 才需要填寫": "Exログインにのみ必要",
+                "必填項目": "必須項目",
+                "下方選填 也可不修改": "以下は任意、変更しなくても構いません",
+                "[確認輸入正確] 按下退出選單保存": "[入力が正しいことを確認] メニュー終了を押して保存",
+                "當前設置 Cookies": "現在のCookie設定",
+                "帳戶選擇": "アカウント選択",
+                "未獲取到 Cookies !!\n\n請先登入帳戶": "Cookieを取得できませんでした！\n\nまずアカウントにログインしてください",
+                "未檢測到可注入的 Cookies !!\n\n請從選單中進行設置": "注入可能なCookieが検出されませんでした！\n\nメニューから設定してください",
+                "共享數據更新完成": "共有データの更新が完了しました",
+                "共享數據無需更新": "共有データの更新は不要です",
+                "共享數據獲取失敗": "共有データの取得に失敗しました",
+                "無保存的 Cookie, 無法啟用自動登入": "保存されたCookieがないため、自動ログインを有効にできません",
+                "請求為空數據": "リクエストにデータがありません",
+                "連線異常，更新地址可能是錯的": "接続エラー、更新アドレスが間違っている可能性があります",
+                "請求錯誤: ": "リクエストエラー: "
+            },
+            Korea: {
+                "🍪 共享登入": "🍪 공유 로그인",
+                "🟢 啟用檢測": "🟢 감지 활성화",
+                "🔴 禁用檢測": "🔴 감지 비활성화",
+                "📂 展開菜單": "📂 메뉴 펼치기",
+                "📁 摺疊菜單": "📁 메뉴 접기",
+                "📜 自動獲取": "📜 자동 가져오기",
+                "📝 手動輸入": "📝 수동 입력",
+                "🔍 查看保存": "🔍 저장된 항목 보기",
+                "🔃 手動注入": "🔃 수동 주입",
+                "🗑️ 清除登入": "🗑️ 로그인 정보 삭제",
+                "💖 添加收藏": "💖 즐겨찾기에 추가",
+                "💘 取消收藏": "💘 즐겨찾기 제거",
+                "確認選擇的 Cookies": "선택한 쿠키 확인",
+                "帳戶": "계정",
+                "更新": "업데이트",
+                "登入": "로그인",
+                "首次使用請先更新": "처음 사용하기 전에 먼저 업데이트해 주세요",
+                "確認保存": "저장 확인",
+                "取消退出": "종료 취소",
+                "退出選單": "메뉴 종료",
+                "保存成功!": "저장 성공!",
+                "更改保存": "변경사항 저장",
+                "已保存變更": "변경사항이 저장되었습니다",
+                "設置 Cookies": "쿠키 설정",
+                "要登入 Ex 才需要填寫": "Ex 로그인에만 필요",
+                "必填項目": "필수 항목",
+                "下方選填 也可不修改": "아래는 선택사항, 변경하지 않아도 됩니다",
+                "[確認輸入正確] 按下退出選單保存": "[입력이 정확한지 확인] 메뉴 종료를 눌러 저장",
+                "當前設置 Cookies": "현재 설정된 쿠키",
+                "帳戶選擇": "계정 선택",
+                "未獲取到 Cookies !!\n\n請先登入帳戶": "쿠키를 가져오지 못했습니다!\n\n먼저 계정에 로그인해 주세요",
+                "未檢測到可注入的 Cookies !!\n\n請從選單中進行設置": "주입 가능한 쿠키가 감지되지 않았습니다!\n\n메뉴에서 설정해 주세요",
+                "共享數據更新完成": "공유 데이터 업데이트 완료",
+                "共享數據無需更新": "공유 데이터 업데이트 불필요",
+                "共享數據獲取失敗": "공유 데이터 가져오기 실패",
+                "無保存的 Cookie, 無法啟用自動登入": "저장된 쿠키가 없어 자동 로그인을 활성화할 수 없습니다",
+                "請求為空數據": "요청에 데이터가 없습니다",
+                "連線異常，更新地址可能是錯的": "연결 오류, 업데이트 주소가 잘못되었을 수 있습니다",
+                "請求錯誤: ": "요청 오류: "
+            },
+            Russia: {
+                "🍪 共享登入": "🍪 Общий вход",
+                "🟢 啟用檢測": "🟢 Включить обнаружение",
+                "🔴 禁用檢測": "🔴 Отключить обнаружение",
+                "📂 展開菜單": "📂 Развернуть меню",
+                "📁 摺疊菜單": "📁 Свернуть меню",
+                "📜 自動獲取": "📜 Автоматическое получение",
+                "📝 手動輸入": "📝 Ручной ввод",
+                "🔍 查看保存": "🔍 Просмотр сохраненного",
+                "🔃 手動注入": "🔃 Ручное внедрение",
+                "🗑️ 清除登入": "🗑️ Очистить вход",
+                "💖 添加收藏": "💖 Добавить в избранное",
+                "💘 取消收藏": "💘 Удалить из избранного",
+                "帳戶": "Аккаунт",
+                "更新": "Обновить",
+                "登入": "Войти",
+                "首次使用請先更新": "Пожалуйста, обновите перед первым использованием",
+                "確認選擇的 Cookies": "Подтвердить выбранные Cookies",
+                "確認保存": "Подтвердить сохранение",
+                "取消退出": "Отменить выход",
+                "退出選單": "Выйти из меню",
+                "保存成功!": "Сохранение успешно!",
+                "更改保存": "Сохранить изменения",
+                "已保存變更": "Изменения сохранены",
+                "設置 Cookies": "Настройка Cookies",
+                "要登入 Ex 才需要填寫": "Требуется только для входа в Ex",
+                "必填項目": "Обязательное поле",
+                "下方選填 也可不修改": "Необязательно ниже, изменения не требуются",
+                "[確認輸入正確] 按下退出選單保存": "[Подтвердите правильность ввода] Нажмите Выйти из меню для сохранения",
+                "當前設置 Cookies": "Текущие настройки Cookies",
+                "帳戶選擇": "Выбор аккаунта",
+                "未獲取到 Cookies !!\n\n請先登入帳戶": "Cookies не получены !!\n\nПожалуйста, сначала войдите в аккаунт",
+                "未檢測到可注入的 Cookies !!\n\n請從選單中進行設置": "Не обнаружены Cookies для внедрения !!\n\nПожалуйста, настройте в меню",
+                "共享數據更新完成": "Обновление общих данных завершено",
+                "共享數據無需更新": "Обновление общих данных не требуется",
+                "共享數據獲取失敗": "Ошибка получения общих данных",
+                "無保存的 Cookie, 無法啟用自動登入": "Нет сохраненных cookies, невозможно включить автоматический вход",
+                "請求為空數據": "Запрос содержит пустые данные",
+                "連線異常，更新地址可能是錯的": "Ошибка соединения, адрес обновления может быть неверным",
+                "請求錯誤: ": "Ошибка запроса: "
+            },
+            English: {
+                "🍪 共享登入": "🍪 Shared Login",
+                "🟢 啟用檢測": "🟢 Enable Detection",
+                "🔴 禁用檢測": "🔴 Disable Detection",
+                "📂 展開菜單": "📂 Expand Menu",
+                "📁 摺疊菜單": "📁 Collapse Menu",
+                "📜 自動獲取": "📜 Auto Retrieve",
+                "📝 手動輸入": "📝 Manual Input",
+                "🔍 查看保存": "🔍 View Saved",
+                "🔃 手動注入": "🔃 Manual Injection",
+                "🗑️ 清除登入": "🗑️ Clear Login",
+                "💖 添加收藏": "💖 Add to Favorites",
+                "💘 取消收藏": "💘 Remove from Favorites",
+                "帳戶": "Account",
+                "更新": "Update",
+                "登入": "Login",
+                "首次使用請先更新": "Please update before first use",
+                "確認選擇的 Cookies": "Confirm Selected Cookies",
+                "確認保存": "Confirm Save",
+                "取消退出": "Cancel Exit",
+                "退出選單": "Exit Menu",
+                "保存成功!": "Save Successful!",
+                "更改保存": "Save Changes",
+                "已保存變更": "Changes Saved",
+                "設置 Cookies": "Set Cookies",
+                "要登入 Ex 才需要填寫": "Required for Ex Login Only",
+                "必填項目": "Required Field",
+                "下方選填 也可不修改": "Optional Fields Below - No Changes Required",
+                "[確認輸入正確] 按下退出選單保存": "[Confirm Input is Correct] Press Exit Menu to Save",
+                "當前設置 Cookies": "Current Cookie Settings",
+                "帳戶選擇": "Account Selection",
+                "未獲取到 Cookies !!\n\n請先登入帳戶": "No Cookies Retrieved!\n\nPlease Login First",
+                "未檢測到可注入的 Cookies !!\n\n請從選單中進行設置": "No Injectable Cookies Detected!\n\nPlease Configure in Menu",
+                "共享數據更新完成": "Shared Data Update Complete",
+                "共享數據無需更新": "Shared Data Update Not Needed",
+                "共享數據獲取失敗": "Shared Data Retrieval Failed",
+                "無保存的 Cookie, 無法啟用自動登入": "No Saved Cookies - Unable to Enable Auto-Login",
+                "請求為空數據": "Request Contains No Data",
+                "連線異常，更新地址可能是錯的": "Connection Error - Update Address May Be Incorrect",
+                "請求錯誤: ": "Request Error: "
             }
-        }
-    }()).then(g => { g.Injection() })
+        });
+        return {
+            Transl: Str => Word[Str] ?? Str
+        };
+    }
 })();
