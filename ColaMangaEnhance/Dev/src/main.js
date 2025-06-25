@@ -49,6 +49,17 @@ Todo 未來添加
 
     /* 阻擋廣告 (目前無效) */
     async function BlockAds() {
+        Syn.AddStyle(`
+            html {pointer-events: none !important;}
+            div[style*='position'] {display: none !important;}
+            .mh_wrap a,
+            .mh_readend a,
+            span.mh_btn:not(.contact),
+            #${Control.IdList.Iframe} {
+                pointer-events: auto !important;
+            }
+        `, Control.IdList.Block);
+
         const OriginListener = EventTarget.prototype.addEventListener;
         const Block = Control.BlockListener;
 
@@ -68,20 +79,6 @@ Todo 未來添加
         };
 
         AdCleanup();
-
-        // ? 奇怪的 Bug, 加一個等待 head 的函數
-        Syn.WaitElem("head", () => {
-            Syn.AddStyle(`
-                html {pointer-events: none !important;}
-                div[style*='position'] {display: none !important;}
-                .mh_wrap a,
-                .mh_readend a,
-                span.mh_btn:not(.contact),
-                #${Control.IdList.Iframe} {
-                    pointer-events: auto !important;
-                }
-            `, Control.IdList.Block);
-        });
     };
 
     /* 快捷切換上下頁 和 自動滾動 */
