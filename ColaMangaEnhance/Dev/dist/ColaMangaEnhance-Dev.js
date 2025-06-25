@@ -16,7 +16,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/487608/1597491/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1613825/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -456,6 +456,16 @@
     const style = Style(Syn, Control, Param, Set2);
     const turn = PageTurn(Syn, Control, Param, tools);
     async function BlockAds() {
+      Syn.AddStyle(`
+            html {pointer-events: none !important;}
+            div[style*='position'] {display: none !important;}
+            .mh_wrap a,
+            .mh_readend a,
+            span.mh_btn:not(.contact),
+            #${Control.IdList.Iframe} {
+                pointer-events: auto !important;
+            }
+        `, Control.IdList.Block);
       const OriginListener = EventTarget.prototype.addEventListener;
       const Block = Control.BlockListener;
       EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
@@ -472,18 +482,6 @@
         requestIdleCallback(AdCleanup, { timeout: 300 });
       };
       AdCleanup();
-      Syn.WaitElem("head", () => {
-        Syn.AddStyle(`
-                html {pointer-events: none !important;}
-                div[style*='position'] {display: none !important;}
-                .mh_wrap a,
-                .mh_readend a,
-                span.mh_btn:not(.contact),
-                #${Control.IdList.Iframe} {
-                    pointer-events: auto !important;
-                }
-            `, Control.IdList.Block);
-      });
     }
     async function HotkeySwitch(Use) {
       let JumpState = false;
