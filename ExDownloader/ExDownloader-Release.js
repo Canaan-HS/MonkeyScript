@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      0.0.17-Beta
+// @version      0.0.17-Beta1
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -24,7 +24,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1615053/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -39,7 +39,7 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(async () => {
+(function () {
     const Config = {
         Dev: true,            // 開發模式 (會顯示除錯訊息)
         ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
@@ -211,8 +211,8 @@
                 const progressUpdate = 100 / (totalTime * 1e3 / updateInterval);
                 let fakeProgress = 0;
                 const progressInterval = setInterval(() => {
-                    if (fakeProgress < 99.99) {
-                        fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
+                    if (fakeProgress < 99) {
+                        fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
                         if (progressCallback) progressCallback(fakeProgress);
                     } else {
                         clearInterval(progressInterval);
@@ -240,7 +240,7 @@
         }
         return Compression;
     }
-    const words = {
+    const Dict = {
         Traditional: {
             "範圍設置": "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n"
         },
@@ -270,7 +270,7 @@
             "下載失敗數據": "下载失败数据",
             "內頁跳轉數據": "内页跳转数据",
             "圖片連結數據": "图片链接数据",
-            "等待失敗重試...": "等待失败后重试...",
+            "等待失敗重試...": "等待失败重试...",
             "請求錯誤重新加載頁面": "请求错误，请刷新页面",
             "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "检测到图片集！\n\n是否按反向顺序下载？",
             "下載數據不完整將清除緩存, 建議刷新頁面後重載": "下载数据不完整，将清除缓存。建议刷新页面后重试",
@@ -303,7 +303,7 @@
             "下載失敗數據": "ダウンロード失敗データ",
             "內頁跳轉數據": "内部ページリダイレクトデータ",
             "圖片連結數據": "画像リンクデータ",
-            "等待失敗重試...": "失敗後の再試行を待機中...",
+            "等待失敗重試...": "失敗の再試行を待機中...",
             "請求錯誤重新加載頁面": "リクエストエラー。ページを再読み込みしてください",
             "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "画像集が検出されました！\n\n逆順でダウンロードしますか？",
             "下載數據不完整將清除緩存, 建議刷新頁面後重載": "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
@@ -402,7 +402,7 @@
             "下載失敗數據": "Failed Download Data",
             "內頁跳轉數據": "Internal Page Navigation Data",
             "圖片連結數據": "Image Link Data",
-            "等待失敗重試...": "Waiting to retry after failure...",
+            "等待失敗重試...": "Waiting for failed retry...",
             "請求錯誤重新加載頁面": "Request error. Please reload the page.",
             "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Image collection detected!\n\nDo you want to download in reverse order?",
             "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
@@ -415,9 +415,9 @@
         const Compression = Compressor(Syn.WorkerCreation);
         let Lang, OriginalTitle, CompressMode, ModeDisplay;
         function Language() {
-            const ML = Syn.TranslMatcher(words);
+            const Matcher = Syn.TranslMatcher(Dict);
             return {
-                Transl: Str => ML[Str] ?? Str
+                Transl: Str => Matcher[Str] ?? Str
             };
         }
         class DownloadCore {
@@ -452,6 +452,7 @@
             }
             async Reset() {
                 DConfig.Scope = false;
+                this.Worker.terminate();
                 const Button = Syn.$q("#ExDB");
                 DConfig.Lock = false;
                 Button.disabled = false;
@@ -679,7 +680,6 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                 }, {
                     dev: Config.Dev
                 });
-                this.Worker.terminate();
                 this.Button.$text(Lang.Transl("開始下載"));
                 DConfig.CurrentDownloadMode ? this.PackDownload(DataMap) : this.SingleDownload(DataMap);
             }
@@ -810,12 +810,9 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                     }
                 }
                 Start(Data);
-                Syn.Menu({
-                    [Lang.Transl("📥 強制壓縮下載")]: {
-                        func: () => Force(),
-                        hotkey: "d"
-                    }
-                }, "Enforce");
+                GM_registerMenuCommand(Lang.Transl("📥 強制壓縮下載"), Force, {
+                    id: "Enforce"
+                });
             }
             async SingleDownload(Data) {
                 const self = this;
@@ -900,7 +897,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
             }
             async Compression(Zip) {
                 const self = this;
-                GM_unregisterMenuCommand("Enforce-1");
+                GM_unregisterMenuCommand("Enforce");
                 function ErrorProcess(result) {
                     Syn.title(OriginalTitle);
                     DConfig.DisplayCache = Lang.Transl("壓縮失敗");
@@ -991,7 +988,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                     }
                 `;
                     const Style = Syn.$domain === "e-hentai.org" ? E_Style : Ex_Style;
-                    Syn.AddStyle(`${Position}${Style}`, "Button-style", false);
+                    Syn.AddStyle(`${Position}${Style}`, "Button-style");
                 };
             }
             async DownloadModeSwitch() {
@@ -1017,16 +1014,20 @@ ${scope}`);
                         id: "ExDB",
                         class: "Download_Button",
                         disabled: DConfig.Lock ? true : false,
-                        text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay
-                    });
-                    Syn.one(download_button, "click", () => {
-                        DConfig.Lock = true;
-                        download_button.disabled = true;
-                        download_button.$text(Lang.Transl("開始下載"));
-                        this.TaskInstance = new DownloadCore(download_button);
-                    }, {
-                        capture: true,
-                        passive: true
+                        text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay,
+                        on: {
+                            type: "click",
+                            listener: () => {
+                                DConfig.Lock = true;
+                                download_button.disabled = true;
+                                download_button.$text(Lang.Transl("開始下載"));
+                                this.TaskInstance = new DownloadCore(download_button);
+                            },
+                            add: {
+                                capture: true,
+                                passive: true
+                            }
+                        }
                     });
                 });
             }
