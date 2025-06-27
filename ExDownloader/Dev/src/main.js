@@ -67,6 +67,7 @@ import Dict from './language.js';
         async Reset() {
             Config.CompleteClose && window.close();
             Config.ResetScope && (DConfig.Scope = false);
+            this.Worker.terminate(); // 關閉後台請求工作
 
             // 切換下載狀態時, 原先的按鈕會被刪除, 所以需要重新找到按鈕
             const Button = Syn.$q("#ExDB");
@@ -183,8 +184,8 @@ import Dict from './language.js';
             function GetLink(index, url, page) {
                 try {
                     // ? 這邊不知道為啥 $q 不行, 改用原生的
-                    const Resample = page.querySelector("#img");
-                    const Original = page.querySelector("#i6 div:last-of-type a")?.href || "#";
+                    const Resample = Syn.Q(page, "#img");
+                    const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
 
                     if (!Resample) { // 處理找不到圖片的錯誤
                         Syn.Log(null, {
@@ -224,8 +225,8 @@ import Dict from './language.js';
         /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
         ReGetImageData(Index, Url) {
             function GetLink(index, url, page) {
-                const Resample = page.querySelector("#img");
-                const Original = page.querySelector("#i6 div:last-of-type a")?.href || "#";
+                const Resample = Syn.Q(page, "#img");
+                const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
 
                 if (!Resample) return false;
 
@@ -294,7 +295,6 @@ import Dict from './language.js';
                 { dev: Config.Dev }
             );
 
-            this.Worker.terminate();
             this.Button.$text(Lang.Transl("開始下載"));
             DConfig.CurrentDownloadMode
                 ? this.PackDownload(DataMap)
@@ -448,11 +448,7 @@ import Dict from './language.js';
             };
 
             Start(Data);
-            Syn.Menu({
-                [Lang.Transl("📥 強制壓縮下載")]: {
-                    func: () => Force(), hotkey: "d"
-                }
-            }, "Enforce");
+            GM_registerMenuCommand(Lang.Transl("📥 強制壓縮下載"), Force, { id: "Enforce" });
         };
 
         /* 單圖 下載 */
@@ -552,7 +548,7 @@ import Dict from './language.js';
         /* 壓縮輸出 */
         async Compression(Zip) {
             const self = this;
-            GM_unregisterMenuCommand("Enforce-1"); // 刪除強制下載按鈕
+            GM_unregisterMenuCommand("Enforce"); // 刪除強制下載按鈕
 
             function ErrorProcess(result) {
                 Syn.title(OriginalTitle);
@@ -650,7 +646,7 @@ import Dict from './language.js';
                 `;
 
                 const Style = Syn.$domain === "e-hentai.org" ? E_Style : Ex_Style;
-                Syn.AddStyle(`${Position}${Style}`, "Button-style", false);
+                Syn.AddStyle(`${Position}${Style}`, "Button-style");
             };
         };
 
@@ -683,15 +679,18 @@ import Dict from './language.js';
                     id: "ExDB",
                     class: "Download_Button",
                     disabled: DConfig.Lock ? true : false,
-                    text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay
+                    text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay,
+                    on: {
+                        type: "click",
+                        listener: () => {
+                            DConfig.Lock = true;
+                            download_button.disabled = true;
+                            download_button.$text(Lang.Transl("開始下載"));
+                            this.TaskInstance = new DownloadCore(download_button);
+                        },
+                        add: { capture: true, passive: true }
+                    }
                 })
-
-                Syn.one(download_button, "click", () => {
-                    DConfig.Lock = true;
-                    download_button.disabled = true;
-                    download_button.$text(Lang.Transl("開始下載"));
-                    this.TaskInstance = new DownloadCore(download_button);
-                }, { capture: true, passive: true });
             });
         };
 
