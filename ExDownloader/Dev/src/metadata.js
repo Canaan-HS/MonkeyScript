@@ -8,7 +8,7 @@ export default `
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      0.0.17-Beta
+// @version      0.0.17-Beta1
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -26,7 +26,7 @@ export default `
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/495339/1613824/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1615053/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
