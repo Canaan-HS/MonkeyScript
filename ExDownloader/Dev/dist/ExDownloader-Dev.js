@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      0.0.17-Beta
+// @version      0.0.17-Beta1
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -24,7 +24,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1615053/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -39,55 +39,76 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(async () => {
+(function () {
   const Config = {
-    Dev: true,            // 開發模式 (會顯示除錯訊息)
-    ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
-    Original: false,      // 是否下載原圖
-    ResetScope: true,     // 下載完成後 重置範圍設置
-    CompleteClose: false, // 下載完成自動關閉
+    Dev: true,
+    // 開發模式 (會顯示除錯訊息)
+    ReTry: 10,
+    // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
+    Original: false,
+    // 是否下載原圖
+    ResetScope: true,
+    // 下載完成後 重置範圍設置
+    CompleteClose: false
+    // 下載完成自動關閉
   };
   const DConfig = {
     Compr_Level: 9,
+    // 壓縮的等級
     MIN_CONCURRENCY: 5,
+    // 最小併發數
     MAX_CONCURRENCY: 16,
+    // 最大併發數
     TIME_THRESHOLD: 1e3,
+    // 響應時間閥值（初始值，會動態調整）
     MAX_Delay: 2500,
+    // 最大延遲
     Home_ID: 100,
+    // 主頁初始延遲
     Home_ND: 80,
+    // 主頁最小延遲
     Image_ID: 34,
+    // 圖頁初始延遲
     Image_ND: 28,
+    // 圖頁最小延遲
     Download_IT: 6,
+    // 下載初始線程
     Download_ID: 600,
+    // 下載初始延遲
     Download_ND: 300,
+    // 下載最小延遲
     Lock: false,
+    // 鎖定狀態
     SortReverse: false,
+    // 排序反轉
+    // 新增的網絡和響應時間監控參數
     responseHistory: [],
+    // 儲存最近的響應時間
     networkCondition: "normal",
+    // 網絡狀態: 'good', 'normal', 'poor'
     lastNetworkCheck: 0,
+    // 上次網絡檢查時間
     networkCheckInterval: 3e4,
+    // 網絡檢查間隔(10秒)
     adaptiveFactors: {
-      good: {
-        delayFactor: .8,
-        threadFactor: 1.2
-      },
-      normal: {
-        delayFactor: 1,
-        threadFactor: 1
-      },
-      poor: {
-        delayFactor: 1.5,
-        threadFactor: .7
-      }
+      // 不同網絡條件下的調整因子
+      good: { delayFactor: 0.8, threadFactor: 1.2 },
+      normal: { delayFactor: 1, threadFactor: 1 },
+      poor: { delayFactor: 1.5, threadFactor: 0.7 }
     },
     Scope: void 0,
+    // 下載範圍
     DisplayCache: void 0,
+    // 緩存展示時的字串
     CurrentDownloadMode: void 0,
+    // 紀錄當前模式
     KeyCache: void 0,
+    // 緩存鍵
     GetKey: function () {
       if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
       return this.KeyCache;
     },
+    // 檢測網絡狀態
     checkNetworkCondition: function () {
       const now = Date.now();
       if (now - this.lastNetworkCheck < this.networkCheckInterval) {
@@ -106,7 +127,7 @@
       } else {
         if (this.responseHistory.length >= 5) {
           const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-          if (avgResponseTime < this.TIME_THRESHOLD * .7) {
+          if (avgResponseTime < this.TIME_THRESHOLD * 0.7) {
             this.networkCondition = "good";
           } else if (avgResponseTime > this.TIME_THRESHOLD * 1.3) {
             this.networkCondition = "poor";
@@ -117,6 +138,7 @@
       }
       return this.networkCondition;
     },
+    // 更新響應時間閾值
     updateThreshold: function (newResponseTime) {
       this.responseHistory.push(newResponseTime);
       if (this.responseHistory.length > 10) {
@@ -127,34 +149,33 @@
         this.TIME_THRESHOLD = Math.max(500, Math.min(2e3, avg * 1.2));
       }
     },
+    // 動態調整函數
     Dynamic: function (Time, Delay, Thread = null, MIN_Delay) {
       const ResponseTime = Date.now() - Time;
       this.updateThreshold(ResponseTime);
       const networkState = this.checkNetworkCondition();
-      const {
-        delayFactor,
-        threadFactor
-      } = this.adaptiveFactors[networkState];
+      const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
       const ratio = ResponseTime / this.TIME_THRESHOLD;
       let delay, thread;
       if (ResponseTime > this.TIME_THRESHOLD) {
-        delay = Math.min(Delay * (1 + Math.log10(ratio) * .3 * delayFactor), this.MAX_Delay);
+        delay = Math.min(Delay * (1 + Math.log10(ratio) * 0.3 * delayFactor), this.MAX_Delay);
         if (Thread != null) {
-          thread = Math.max(Thread * Math.pow(.9, ratio) * threadFactor, this.MIN_CONCURRENCY);
+          thread = Math.max(Thread * Math.pow(0.9, ratio) * threadFactor, this.MIN_CONCURRENCY);
           return [Math.floor(delay), Math.floor(thread)];
         } else {
           return Math.floor(delay);
         }
       } else {
-        delay = Math.max(Delay * (1 - (1 - ratio) * .2 * (1 / delayFactor)), MIN_Delay);
+        delay = Math.max(Delay * (1 - (1 - ratio) * 0.2 * (1 / delayFactor)), MIN_Delay);
         if (Thread != null) {
-          thread = Math.min(Thread * (1 + (1 - ratio) * .3 * threadFactor), this.MAX_CONCURRENCY);
+          thread = Math.min(Thread * (1 + (1 - ratio) * 0.3 * threadFactor), this.MAX_CONCURRENCY);
           return [Math.ceil(delay), Math.ceil(thread)];
         } else {
           return Math.ceil(delay);
         }
       }
     },
+    // 獲取當前網絡狀態的診斷信息
     getNetworkDiagnostics: function () {
       return {
         networkCondition: this.networkCondition,
@@ -187,8 +208,9 @@
         this.files = {};
         this.tasks = [];
       }
+      // 存入 blob 進行壓縮
       async file(name, blob) {
-        const task = new Promise(async resolve => {
+        const task = new Promise(async (resolve) => {
           const buffer = await blob.arrayBuffer();
           this.files[name] = new Uint8Array(buffer);
           resolve();
@@ -196,23 +218,25 @@
         this.tasks.push(task);
         return task;
       }
+      // 估算壓縮耗時
       estimateCompressionTime() {
         let totalSize = 0;
-        Object.values(this.files).forEach(file => {
+        Object.values(this.files).forEach((file) => {
           totalSize += file.length;
         });
         const bytesPerSecond = 60 * 1024 ** 2;
         const estimatedTime = totalSize / bytesPerSecond;
         return estimatedTime;
       }
+      // 生成壓縮
       async generateZip(options = {}, progressCallback) {
         const updateInterval = 30;
         const totalTime = this.estimateCompressionTime();
         const progressUpdate = 100 / (totalTime * 1e3 / updateInterval);
         let fakeProgress = 0;
         const progressInterval = setInterval(() => {
-          if (fakeProgress < 99.99) {
-            fakeProgress = Math.min(fakeProgress + progressUpdate, 99.99);
+          if (fakeProgress < 99) {
+            fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
             if (progressCallback) progressCallback(fakeProgress);
           } else {
             clearInterval(progressInterval);
@@ -224,23 +248,18 @@
           worker.postMessage({
             files: this.files,
             level: options.level || 5
-          }, Object.values(this.files).map(buf => buf.buffer));
-          worker.onmessage = e => {
+          }, Object.values(this.files).map((buf) => buf.buffer));
+          worker.onmessage = (e) => {
             clearInterval(progressInterval);
-            const {
-              error,
-              data
-            } = e.data;
-            error ? reject(error) : resolve(new Blob([data], {
-              type: "application/zip"
-            }));
+            const { error, data } = e.data;
+            error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
           };
         });
       }
     }
     return Compression;
   }
-  const words = {
+  const Dict = {
     Traditional: {
       "範圍設置": "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n"
     },
@@ -270,7 +289,7 @@
       "下載失敗數據": "下载失败数据",
       "內頁跳轉數據": "内页跳转数据",
       "圖片連結數據": "图片链接数据",
-      "等待失敗重試...": "等待失败后重试...",
+      "等待失敗重試...": "等待失败重试...",
       "請求錯誤重新加載頁面": "请求错误，请刷新页面",
       "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "检测到图片集！\n\n是否按反向顺序下载？",
       "下載數據不完整將清除緩存, 建議刷新頁面後重載": "下载数据不完整，将清除缓存。建议刷新页面后重试",
@@ -303,7 +322,7 @@
       "下載失敗數據": "ダウンロード失敗データ",
       "內頁跳轉數據": "内部ページリダイレクトデータ",
       "圖片連結數據": "画像リンクデータ",
-      "等待失敗重試...": "失敗後の再試行を待機中...",
+      "等待失敗重試...": "失敗の再試行を待機中...",
       "請求錯誤重新加載頁面": "リクエストエラー。ページを再読み込みしてください",
       "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "画像集が検出されました！\n\n逆順でダウンロードしますか？",
       "下載數據不完整將清除緩存, 建議刷新頁面後重載": "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
@@ -402,7 +421,7 @@
       "下載失敗數據": "Failed Download Data",
       "內頁跳轉數據": "Internal Page Navigation Data",
       "圖片連結數據": "Image Link Data",
-      "等待失敗重試...": "Waiting to retry after failure...",
+      "等待失敗重試...": "Waiting for failed retry...",
       "請求錯誤重新加載頁面": "Request error. Please reload the page.",
       "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Image collection detected!\n\nDo you want to download in reverse order?",
       "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
@@ -415,9 +434,9 @@
     const Compression = Compressor(Syn.WorkerCreation);
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
     function Language() {
-      const ML = Syn.TranslMatcher(words);
+      const Matcher = Syn.TranslMatcher(Dict);
       return {
-        Transl: Str => ML[Str] ?? Str
+        Transl: (Str) => Matcher[Str] ?? Str
       };
     }
     class DownloadCore {
@@ -447,16 +466,19 @@
                     }
                 }
             `);
-        this.GetTotal = page => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
+        this.GetTotal = (page) => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
         this.GetHomeData();
       }
+      /* 按鈕與狀態重置 */
       async Reset() {
         DConfig.Scope = false;
+        this.Worker.terminate();
         const Button = Syn.$q("#ExDB");
         DConfig.Lock = false;
         Button.disabled = false;
         Button.$text(`✓ ${ModeDisplay}`);
       }
+      /* 獲取主頁連結數據 */
       async GetHomeData() {
         const Name = Syn.NameFilter(Syn.$q("#gj").$text() || Syn.$q("#gn").$text());
         const CacheData = Syn.Session(DConfig.GetKey());
@@ -473,39 +495,17 @@
         }
         const Pages = this.GetTotal(Syn.$qa("#gdd td.gdt2"));
         let Delay = DConfig.Home_ID;
-        this.Worker.postMessage({
-          index: 0,
-          url: Url,
-          time: Date.now(),
-          delay: Delay
-        });
+        this.Worker.postMessage({ index: 0, url: Url, time: Date.now(), delay: Delay });
         for (let index = 1; index < Pages; index++) {
-          this.Worker.postMessage({
-            index: index,
-            url: `${Url}?p=${index}`,
-            time: Date.now(),
-            delay: Delay
-          });
+          this.Worker.postMessage({ index, url: `${Url}?p=${index}`, time: Date.now(), delay: Delay });
         }
-        this.Worker.onmessage = e => {
-          const {
-            index,
-            url,
-            html,
-            time,
-            delay,
-            error
-          } = e.data;
+        this.Worker.onmessage = (e) => {
+          const { index, url, html, time, delay, error } = e.data;
           Delay = DConfig.Dynamic(time, delay, null, DConfig.Home_ND);
-          error ? this.Worker.postMessage({
-            index: index,
-            url: url,
-            time: time,
-            delay: delay
-          }) : GetLink(index, Syn.DomParse(html));
+          error ? this.Worker.postMessage({ index, url, time, delay }) : GetLink(index, Syn.DomParse(html));
         };
         const self = this;
-        const HomeData = new Map();
+        const HomeData = /* @__PURE__ */ new Map();
         let Task = 0;
         function GetLink(index, page) {
           try {
@@ -513,6 +513,7 @@
             for (const link of page.$qa("#gdt a")) {
               Cache.push(link.href);
             }
+            ;
             HomeData.set(index, Cache);
             DConfig.DisplayCache = `[${++Task}/${Pages}]`;
             Syn.title(DConfig.DisplayCache);
@@ -522,47 +523,35 @@
               for (let index2 = 0; index2 < HomeData.size; index2++) {
                 Cache2.push(...HomeData.get(index2));
               }
+              ;
               const Processed = [...new Set(Cache2)];
-              Syn.Log(Lang.Transl("內頁跳轉數據"), `${Name}
-${JSON.stringify(Processed, null, 4)}`, {
-                dev: Config.Dev
-              });
+              Syn.Log(
+                Lang.Transl("內頁跳轉數據"),
+                `${Name}
+${JSON.stringify(Processed, null, 4)}`,
+                { dev: Config.Dev }
+              );
               self.GetImageData(Processed);
             }
+            ;
           } catch (error) {
             alert(Lang.Transl("請求錯誤重新加載頁面"));
             location.reload();
           }
         }
       }
+      /* 獲取圖片連結數據 */
       async GetImageData(JumpList) {
         const Pages = JumpList.length;
         let Delay = DConfig.Image_ID;
         let Task = 0;
         for (let index = 0; index < Pages; index++) {
-          this.Worker.postMessage({
-            index: index,
-            url: JumpList[index],
-            time: Date.now(),
-            delay: Delay
-          });
+          this.Worker.postMessage({ index, url: JumpList[index], time: Date.now(), delay: Delay });
         }
-        this.Worker.onmessage = e => {
-          const {
-            index,
-            url,
-            html,
-            time,
-            delay,
-            error
-          } = e.data;
+        this.Worker.onmessage = (e) => {
+          const { index, url, html, time, delay, error } = e.data;
           Delay = DConfig.Dynamic(time, delay, null, DConfig.Image_ND);
-          error ? this.Worker.postMessage({
-            index: index,
-            url: url,
-            time: time,
-            delay: delay
-          }) : GetLink(index, url, Syn.DomParse(html));
+          error ? this.Worker.postMessage({ index, url, time, delay }) : GetLink(index, url, Syn.DomParse(html));
         };
         const self = this;
         const ImageData = [];
@@ -573,15 +562,13 @@ ${JSON.stringify(Processed, null, 4)}`, {
             const Original = ((_a = page.querySelector("#i6 div:last-of-type a")) == null ? void 0 : _a.href) || "#";
             if (!Resample) {
               Syn.Log(null, {
-                page: page,
-                Resample: Resample,
-                Original: Original
-              }, {
-                dev: Config.Dev,
-                type: "error"
-              });
+                page,
+                Resample,
+                Original
+              }, { dev: Config.Dev, type: "error" });
               return;
             }
+            ;
             const Link = Config.Original && !Original.endsWith("#") ? Original : Resample.src || Resample.href;
             ImageData.push([index, {
               PageUrl: url,
@@ -593,20 +580,18 @@ ${JSON.stringify(Processed, null, 4)}`, {
             if (Task === Pages) {
               ImageData.sort((a, b) => a[0] - b[0]);
               const Processed = new Map(ImageData);
-              Syn.Session(DConfig.GetKey(), {
-                value: Processed
-              });
+              Syn.Session(DConfig.GetKey(), { value: Processed });
               self.StartTask(Processed);
             }
+            ;
           } catch (error) {
-            Syn.Log(null, error, {
-              dev: Config.Dev,
-              type: "error"
-            });
+            Syn.Log(null, error, { dev: Config.Dev, type: "error" });
             Task++;
           }
         }
       }
+      // ! 調整邏輯, 待測試
+      /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
       ReGetImageData(Index, Url2) {
         function GetLink(index, url, page) {
           var _a;
@@ -617,72 +602,59 @@ ${JSON.stringify(Processed, null, 4)}`, {
           return [index, url, Link];
         }
         let Token = Config.ReTry;
-        return new Promise(resolve => {
-          this.Worker.postMessage({
-            index: Index,
-            url: Url2,
-            time: Date.now(),
-            delay: DConfig.Image_ID
-          });
-          this.Worker.onmessage = e => {
-            const {
-              index,
-              url,
-              html,
-              time,
-              delay,
-              error
-            } = e.data;
+        return new Promise((resolve) => {
+          this.Worker.postMessage({ index: Index, url: Url2, time: Date.now(), delay: DConfig.Image_ID });
+          this.Worker.onmessage = (e) => {
+            const { index, url, html, time, delay, error } = e.data;
             if (Token <= 0) return resolve(false);
             if (error) {
-              this.Worker.postMessage({
-                Index: Index,
-                url: Url2,
-                time: time,
-                delay: delay
-              });
+              this.Worker.postMessage({ Index, url: Url2, time, delay });
             } else {
               const result = GetLink(index, url, Syn.DomParse(html));
-              if (result) resolve(result); else {
-                this.Worker.postMessage({
-                  Index: Index,
-                  url: Url2,
-                  time: time,
-                  delay: delay
-                });
+              if (result) resolve(result);
+              else {
+                this.Worker.postMessage({ Index, url: Url2, time, delay });
               }
             }
             Token--;
           };
         });
       }
+      /* 任務啟動器 (配置處理) */
       StartTask(DataMap) {
-        Syn.Log(Lang.Transl("圖片連結數據"), `${this.ComicName}
-${JSON.stringify([...DataMap], null, 4)}`, {
-          dev: Config.Dev
-        });
+        Syn.Log(
+          Lang.Transl("圖片連結數據"),
+          `${this.ComicName}
+${JSON.stringify([...DataMap], null, 4)}`,
+          { dev: Config.Dev }
+        );
         if (DConfig.Scope) {
           DataMap = new Map(Syn.ScopeParsing(DConfig.Scope, [...DataMap]));
         }
         if (DConfig.SortReverse) {
           const Size = DataMap.size - 1;
-          DataMap = new Map([...DataMap.entries()].map(([index, url]) => [Size - index, url]));
+          DataMap = new Map(
+            [...DataMap.entries()].map(([index, url]) => [Size - index, url])
+            // 用原始長度 - 索引值 進行反向替換
+          );
         }
-        Syn.Log(Lang.Transl("任務配置"), {
-          ReTry: Config.ReTry,
-          Original: Config.Original,
-          ResetScope: Config.ResetScope,
-          CompleteClose: Config.CompleteClose,
-          SortReverse: DConfig.SortReverse,
-          DownloadMode: DConfig.CurrentDownloadMode,
-          CompressionLevel: DConfig.Compr_Level
-        }, {
-          dev: Config.Dev
-        });
-        this.Worker.terminate();
+        Syn.Log(
+          Lang.Transl("任務配置"),
+          {
+            ReTry: Config.ReTry,
+            Original: Config.Original,
+            ResetScope: Config.ResetScope,
+            CompleteClose: Config.CompleteClose,
+            SortReverse: DConfig.SortReverse,
+            DownloadMode: DConfig.CurrentDownloadMode,
+            CompressionLevel: DConfig.Compr_Level
+          },
+          { dev: Config.Dev }
+        );
         this.Button.$text(Lang.Transl("開始下載"));
         DConfig.CurrentDownloadMode ? this.PackDownload(DataMap) : this.SingleDownload(DataMap);
       }
+      /* 打包壓縮 下載 */
       async PackDownload(Data) {
         const self = this;
         const Zip = new Compression();
@@ -701,12 +673,8 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
         function Force() {
           if (Total > 0) {
             const SortData = [...Data].sort((a, b) => a[0] - b[0]);
-            SortData.splice(0, 0, {
-              ErrorPage: SortData.map(item => ++item[0]).join(",")
-            });
-            Syn.Log(Lang.Transl("下載失敗數據"), JSON.stringify(SortData, null, 4), {
-              type: "error"
-            });
+            SortData.splice(0, 0, { ErrorPage: SortData.map((item) => ++item[0]).join(",") });
+            Syn.Log(Lang.Transl("下載失敗數據"), JSON.stringify(SortData, null, 4), { type: "error" });
           }
           Enforce = true;
           Init();
@@ -716,9 +684,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           if (!ClearCache) {
             ClearCache = true;
             sessionStorage.removeItem(DConfig.GetKey());
-            Syn.Log(Lang.Transl("清理警告"), Lang.Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
-              type: "warn"
-            });
+            Syn.Log(Lang.Transl("清理警告"), Lang.Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
           }
         }
         function StatusUpdate(time, index, iurl, blob, error = false) {
@@ -755,7 +721,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
               timeout: 15e3,
               method: "GET",
               responseType: "blob",
-              onload: response => {
+              onload: (response) => {
                 clearTimeout(timeout);
                 if (response.finalUrl !== Iurl && `${response.status}`.startsWith("30")) {
                   Request(Index, response.finalUrl);
@@ -783,17 +749,9 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           for (const [Index, Uri] of DataMap.entries()) {
             if (Enforce) break;
             if (ReGet) {
-              Syn.Log(Lang.Transl("重新取得數據"), {
-                Uri: Uri.PageUrl
-              }, {
-                dev: Config.Dev
-              });
+              Syn.Log(Lang.Transl("重新取得數據"), { Uri: Uri.PageUrl }, { dev: Config.Dev });
               const Result = await self.ReGetImageData(Index, Uri.PageUrl);
-              Syn.Log(Lang.Transl("取得結果"), {
-                Result: Result
-              }, {
-                dev: Config.Dev
-              });
+              Syn.Log(Lang.Transl("取得結果"), { Result }, { dev: Config.Dev });
               if (Result) {
                 const [Index2, Purl, Iurl] = Result;
                 Request(Index2, Iurl);
@@ -810,13 +768,9 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           }
         }
         Start(Data);
-        Syn.Menu({
-          [Lang.Transl("📥 強制壓縮下載")]: {
-            func: () => Force(),
-            hotkey: "d"
-          }
-        }, "Enforce");
+        GM_registerMenuCommand(Lang.Transl("📥 強制壓縮下載"), Force, { id: "Enforce" });
       }
+      /* 單圖 下載 */
       async SingleDownload(Data) {
         const self = this;
         let Total = Data.size;
@@ -833,9 +787,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           if (!ClearCache) {
             ClearCache = true;
             sessionStorage.removeItem(DConfig.GetKey());
-            Syn.Log(Lang.Transl("清理警告"), Lang.Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
-              type: "warn"
-            });
+            Syn.Log(Lang.Transl("清理警告"), Lang.Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
           }
         }
         async function Request(Index, Purl, Iurl, Retry) {
@@ -857,17 +809,14 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                 onerror: () => {
                   if (Retry > 0) {
                     [Delay, Thread] = DConfig.Dynamic(time, Delay, Thread, DConfig.Download_ND);
-                    Syn.Log(null, `[Delay:${Delay}|Thread:${Thread}|Retry:${Retry}] : [${Iurl}]`, {
-                      dev: Config.Dev,
-                      type: "error"
-                    });
+                    Syn.Log(null, `[Delay:${Delay}|Thread:${Thread}|Retry:${Retry}] : [${Iurl}]`, { dev: Config.Dev, type: "error" });
                     --Task;
                     setTimeout(() => {
-                      self.ReGetImageData(Index, Purl).then(data => {
+                      self.ReGetImageData(Index, Purl).then((data) => {
                         const [Index2, Purl2, Iurl2] = data;
                         Request(Index2, Purl2, Iurl2, Retry - 1);
                         reject();
-                      }).catch(err => {
+                      }).catch((err) => {
                         RunClear();
                         reject();
                       });
@@ -898,18 +847,15 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           this.Reset();
         }, 3e3);
       }
+      /* 壓縮輸出 */
       async Compression(Zip) {
         const self = this;
-        GM_unregisterMenuCommand("Enforce-1");
+        GM_unregisterMenuCommand("Enforce");
         function ErrorProcess(result) {
           Syn.title(OriginalTitle);
           DConfig.DisplayCache = Lang.Transl("壓縮失敗");
           self.Button.$text(DConfig.DisplayCache);
-          Syn.Log(DConfig.DisplayCache, result, {
-            dev: Config.Dev,
-            type: "error",
-            collapsed: false
-          });
+          Syn.Log(DConfig.DisplayCache, result, { dev: Config.Dev, type: "error", collapsed: false });
           setTimeout(() => {
             self.Button.disabled = false;
             self.Button.$text(ModeDisplay);
@@ -922,11 +868,11 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
         }
         Zip.generateZip({
           level: DConfig.Compr_Level
-        }, progress => {
+        }, (progress) => {
           DConfig.DisplayCache = `${progress.toFixed(1)} %`;
           Syn.title(DConfig.DisplayCache);
           this.Button.$text(`${Lang.Transl("壓縮進度")}: ${DConfig.DisplayCache}`);
-        }).then(zip => {
+        }).then((zip) => {
           saveAs(zip, `${this.ComicName}.zip`);
           Syn.title(`✓ ${OriginalTitle}`);
           this.Button.$text(Lang.Transl("壓縮完成"));
@@ -934,7 +880,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
           setTimeout(() => {
             this.Reset();
           }, 1500);
-        }).catch(result => {
+        }).catch((result) => {
           ErrorProcess(result);
         });
       }
@@ -943,7 +889,7 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
       constructor() {
         this.E = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
         this.Ex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
-        this.Allow = Uri => this.E.test(Uri) || this.Ex.test(Uri);
+        this.Allow = (Uri) => this.E.test(Uri) || this.Ex.test(Uri);
         this.InitStyle = () => {
           const Position = `
                     .Download_Button {
@@ -991,14 +937,16 @@ ${JSON.stringify([...DataMap], null, 4)}`, {
                     }
                 `;
           const Style = Syn.$domain === "e-hentai.org" ? E_Style : Ex_Style;
-          Syn.AddStyle(`${Position}${Style}`, "Button-style", false);
+          Syn.AddStyle(`${Position}${Style}`, "Button-style");
         };
       }
+      /* 下載模式切換 */
       async DownloadModeSwitch() {
         CompressMode ? Syn.sV("CompressedMode", false) : Syn.sV("CompressedMode", true);
         Syn.$q("#ExDB").remove();
         this.ButtonCreation();
       }
+      /* 下載範圍設置 */
       async DownloadRangeSetting() {
         let scope = prompt(Lang.Transl("範圍設置")) || false;
         if (scope) {
@@ -1007,29 +955,30 @@ ${scope}`);
           if (yes) DConfig.Scope = scope;
         }
       }
+      /* 按鈕創建 */
       async ButtonCreation() {
-        Syn.WaitElem("#gd2", null, {
-          raf: true
-        }).then(gd2 => {
+        Syn.WaitElem("#gd2", null, { raf: true }).then((gd2) => {
           CompressMode = Syn.gV("CompressedMode", []);
           ModeDisplay = CompressMode ? Lang.Transl("壓縮下載") : Lang.Transl("單圖下載");
           const download_button = Syn.createElement(gd2, "button", {
             id: "ExDB",
             class: "Download_Button",
             disabled: DConfig.Lock ? true : false,
-            text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay
-          });
-          Syn.one(download_button, "click", () => {
-            DConfig.Lock = true;
-            download_button.disabled = true;
-            download_button.$text(Lang.Transl("開始下載"));
-            this.TaskInstance = new DownloadCore(download_button);
-          }, {
-            capture: true,
-            passive: true
+            text: DConfig.Lock ? Lang.Transl("下載中鎖定") : ModeDisplay,
+            on: {
+              type: "click",
+              listener: () => {
+                DConfig.Lock = true;
+                download_button.disabled = true;
+                download_button.$text(Lang.Transl("開始下載"));
+                this.TaskInstance = new DownloadCore(download_button);
+              },
+              add: { capture: true, passive: true }
+            }
           });
         });
       }
+      /* 初始化創建 */
       static async Init() {
         const Core = new ButtonCore();
         if (Core.Allow(Url)) {
@@ -1052,4 +1001,5 @@ ${scope}`);
     }
     ButtonCore.Init();
   })();
+
 })();
