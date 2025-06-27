@@ -183,9 +183,8 @@ import Dict from './language.js';
             const ImageData = []; // 保存圖片數據
             function GetLink(index, url, page) {
                 try {
-                    // ? 這邊不知道為啥 $q 不行, 改用原生的
-                    const Resample = Syn.Q(page, "#img");
-                    const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
+                    const Resample = page.$q("#img");
+                    const Original = page.$q("#i6 div:last-of-type a")?.href || "#";
 
                     if (!Resample) { // 處理找不到圖片的錯誤
                         Syn.Log(null, {
@@ -225,8 +224,8 @@ import Dict from './language.js';
         /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
         ReGetImageData(Index, Url) {
             function GetLink(index, url, page) {
-                const Resample = Syn.Q(page, "#img");
-                const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
+                const Resample = page.$q("#img");
+                const Original = page.$q("#i6 div:last-of-type a")?.href || "#";
 
                 if (!Resample) return false;
 
