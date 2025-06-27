@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/06/25
+// @version      2025/06/27
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -61,7 +61,7 @@ const Syn = (() => {
         }
 
         if (!all && head === '#') { // ID選擇器 (#id)
-            return document.getElementById(headless);
+            return root.getElementById(headless);
         }
 
         if (selector[0] === '.') { // 類選擇器 (.class)
