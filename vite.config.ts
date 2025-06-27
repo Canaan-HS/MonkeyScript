@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
 // 要開發的對應配置
-import config from './ColaMangaEnhance/Dev/config.ts';
+import config from './ExDownloader/Dev/config.ts';
 
 const entry: string = config.entry;
 const build: object = config.build;
