@@ -84,13 +84,11 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.17-Beta**
+**Release Version: 0.0.17-Beta1**
 
-### **Update Content**
-1. Library update
-2. Modified compression logic
-3. Optimized dynamic adjustment
-4. Architecture adjustment
+### **Changelog**
+1. Library updates
+2. Fixed some known bugs
 
 ### **Known Issues**
 ❗️ Currently not sure if it's a website issue or something else, logic that previously worked now has numerous problems, starting to get a bit frustrated
