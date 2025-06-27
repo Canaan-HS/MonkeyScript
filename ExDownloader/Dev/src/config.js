@@ -1,6 +1,6 @@
 /* 使用者配置 */
 export const Config = {
-    Dev: true,           // 開發模式 (會顯示除錯訊息)
+    Dev: true,            // 開發模式 (會顯示除錯訊息)
     ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
     Original: false,      // 是否下載原圖
     ResetScope: true,     // 下載完成後 重置範圍設置
