@@ -37,11 +37,11 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1615054/SyntaxLite_min.js
 
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
 // ==/UserScript==
 
 (async () => {
@@ -260,7 +260,7 @@
             Postview: async () => { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
-                const width = Syn.iW() / 2;
+                const width = Syn.iW / 2;
                 Syn.AddStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -299,6 +299,19 @@
                     }
                 `, "Image-Custom-Style", false);
                 ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
+
+                // 全局修改功能
+                Syn.StoreListen(Object.values(SaveKey), call => {
+                    if (call.far) {
+                        if (Syn.Type(call.nv) === "String") {
+                            MenuTrigger();
+                        } else {
+                            for (const [key, value] of Object.entries(call.nv)) {
+                                Style_Pointer[key](value);
+                            }
+                        }
+                    }
+                });
             },
             PostExtra: async () => { // 觀看帖子頁圖示
                 Syn.AddStyle(`
@@ -311,193 +324,182 @@
                     #next_box a:hover {
                         background-color: ${Color};
                     }
-            `, "Post-Extra", false);
+                `, "Post-Extra", false);
             },
-            Menu: () => {
+            Menu: () => { // 回傳創建菜單所需資訊
                 const set = UserSet.MenuSet();
-                Syn.AddScript(`
-                    function check(value) {
-                        return value.toString().length > 4 || value > 1000
-                            ? 1000 : value < 0 ? "" : value;
-                    }
-                `, "Menu-Settings", false);
-                Syn.AddStyle(`
-                    .modal-background {
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        display: flex;
-                        z-index: 9999;
-                        overflow: auto;
-                        position: fixed;
-                        pointer-events: none;
-                    }
-                    /* 模態介面 */
-                    .modal-interface {
-                        top: ${set.Top};
-                        left: ${set.Left};
-                        margin: 0;
-                        display: flex;
-                        overflow: auto;
-                        position: fixed;
-                        border-radius: 5px;
-                        pointer-events: auto;
-                        background-color: #2C2E3E;
-                        border: 3px solid #EE2B47;
-                    }
-                    /* 模態內容盒 */
-                    .modal-box {
-                        padding: 0.5rem;
-                        height: 50vh;
-                        width: 32vw;
-                    }
-                    /* 菜單框架 */
-                    .menu {
-                        width: 5.5vw;
-                        overflow: auto;
-                        text-align: center;
-                        vertical-align: top;
-                        border-radius: 2px;
-                        border: 2px solid #F6F6F6;
-                    }
-                    /* 菜單文字標題 */
-                    .menu-text {
-                        color: #EE2B47;
-                        cursor: default;
-                        padding: 0.2rem;
-                        margin: 0.3rem;
-                        margin-bottom: 1.5rem;
-                        white-space: nowrap;
-                        border-radius: 10px;
-                        border: 4px solid #f05d73;
-                        background-color: #1f202c;
-                    }
-                    /* 菜單選項按鈕 */
-                    .menu-options {
-                        cursor: pointer;
-                        font-size: 1.4rem;
-                        color: #F6F6F6;
-                        font-weight: bold;
-                        border-radius: 5px;
-                        margin-bottom: 1.2rem;
-                        border: 5px inset #EE2B47;
-                        background-color: #6e7292;
-                        transition: color 0.8s, background-color 0.8s;
-                    }
-                    .menu-options:hover {
-                        color: #EE2B47;
-                        background-color: #F6F6F6;
-                    }
-                    .menu-options:disabled {
-                        color: #6e7292;
-                        cursor: default;
-                        background-color: #c5c5c5;
-                        border: 5px inset #faa5b2;
-                    }
-                    /* 設置內容框架 */
-                    .content {
-                        height: 48vh;
-                        width: 28vw;
-                        overflow: auto;
-                        padding: 0px 1rem;
-                        border-radius: 2px;
-                        vertical-align: top;
-                        border-top: 2px solid #F6F6F6;
-                        border-right: 2px solid #F6F6F6;
-                    }
-                    .narrative { color: #EE2B47; }
-                    .Image-input-settings {
-                        width: 8rem;
-                        color: #F6F6F6;
-                        text-align: center;
-                        font-size: 1.5rem;
-                        border-radius: 15px;
-                        border: 3px inset #EE2B47;
-                        background-color: #202127;
-                    }
-                    .Image-input-settings:disabled {
-                        border: 3px inset #faa5b2;
-                        background-color: #5a5a5a;
-                    }
-                    /* 底部按鈕框架 */
-                    .button-area {
-                        display: flex;
-                        padding: 0.3rem;
-                        border-left: none;
-                        border-radius: 2px;
-                        border: 2px solid #F6F6F6;
-                        justify-content: space-between;
-                    }
-                    .button-area select {
-                        color: #F6F6F6;
-                        margin-right: 1.5rem;
-                        border: 3px inset #EE2B47;
-                        background-color: #6e7292;
-                    }
-                    /* 底部選項 */
-                    .button-options {
-                        color: #F6F6F6;
-                        cursor: pointer;
-                        font-size: 0.8rem;
-                        font-weight: bold;
-                        border-radius: 10px;
-                        white-space: nowrap;
-                        background-color: #6e7292;
-                        border: 3px inset #EE2B47;
-                        transition: color 0.5s, background-color 0.5s;
-                    }
-                    .button-options:hover {
-                        color: #EE2B47;
-                        background-color: #F6F6F6;
-                    }
-                    .button-space { margin: 0 0.6rem; }
-                    .form-hidden {
-                        width: 0;
-                        height: 0;
-                        opacity: 0;
-                        padding: 10px;
-                        overflow: hidden;
-                        transition: opacity 0.8s, height 0.8s, width 0.8s;
-                    }
-                    .toggle-menu {
-                        width: 0;
-                        height: 0;
-                        padding: 0;
-                        margin: 0;
-                    }
-                    /* 整體框線 */
-                    table, td {
-                        margin: 0px;
-                        padding: 0px;
-                        overflow: auto;
-                        border-spacing: 0px;
-                    }
-                    .modal-background p {
-                        display: flex;
-                        flex-wrap: nowrap;
-                    }
-                    option { color: #F6F6F6; }
-                    ul {
-                        list-style: none;
-                        padding: 0px;
-                        margin: 0px;
-                    }
-                `, "Menu-Custom-Style", false);
-                MenuRule = Syn.$q("#Menu-Custom-Style")?.sheet.cssRules;
 
-                // 全局修改功能
-                Syn.StoreListen(Object.values(SaveKey), call => {
-                    if (call.far) {
-                        if (Syn.Type(call.nv) == "String") {
-                            MenuTrigger();
-                        } else {
-                            for (const [key, value] of Object.entries(call.nv)) {
-                                Style_Pointer[key](value);
-                            }
+                return {
+                    ImgScript: `
+                        function check(value) {
+                            return value.toString().length > 4 || value > 1000
+                                ? 1000 : value < 0 ? "" : value;
                         }
-                    }
-                });
+                    `,
+                    MenuStyle: `
+                        .modal-background {
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            z-index: 9999;
+                            overflow: auto;
+                            position: fixed;
+                            pointer-events: none;
+                        }
+                        /* 模態介面 */
+                        .modal-interface {
+                            top: ${set.Top};
+                            left: ${set.Left};
+                            margin: 0;
+                            display: flex;
+                            overflow: auto;
+                            position: fixed;
+                            border-radius: 5px;
+                            pointer-events: auto;
+                            background-color: #2C2E3E;
+                            border: 3px solid #EE2B47;
+                        }
+                        /* 模態內容盒 */
+                        .modal-box {
+                            padding: 0.5rem;
+                            height: 50vh;
+                            width: 32vw;
+                        }
+                        /* 菜單框架 */
+                        .menu {
+                            width: 5.5vw;
+                            overflow: auto;
+                            text-align: center;
+                            vertical-align: top;
+                            border-radius: 2px;
+                            border: 2px solid #F6F6F6;
+                        }
+                        /* 菜單文字標題 */
+                        .menu-text {
+                            color: #EE2B47;
+                            cursor: default;
+                            padding: 0.2rem;
+                            margin: 0.3rem;
+                            margin-bottom: 1.5rem;
+                            white-space: nowrap;
+                            border-radius: 10px;
+                            border: 4px solid #f05d73;
+                            background-color: #1f202c;
+                        }
+                        /* 菜單選項按鈕 */
+                        .menu-options {
+                            cursor: pointer;
+                            font-size: 1.4rem;
+                            color: #F6F6F6;
+                            font-weight: bold;
+                            border-radius: 5px;
+                            margin-bottom: 1.2rem;
+                            border: 5px inset #EE2B47;
+                            background-color: #6e7292;
+                            transition: color 0.8s, background-color 0.8s;
+                        }
+                        .menu-options:hover {
+                            color: #EE2B47;
+                            background-color: #F6F6F6;
+                        }
+                        .menu-options:disabled {
+                            color: #6e7292;
+                            cursor: default;
+                            background-color: #c5c5c5;
+                            border: 5px inset #faa5b2;
+                        }
+                        /* 設置內容框架 */
+                        .content {
+                            height: 48vh;
+                            width: 28vw;
+                            overflow: auto;
+                            padding: 0px 1rem;
+                            border-radius: 2px;
+                            vertical-align: top;
+                            border-top: 2px solid #F6F6F6;
+                            border-right: 2px solid #F6F6F6;
+                        }
+                        .narrative { color: #EE2B47; }
+                        .Image-input-settings {
+                            width: 8rem;
+                            color: #F6F6F6;
+                            text-align: center;
+                            font-size: 1.5rem;
+                            border-radius: 15px;
+                            border: 3px inset #EE2B47;
+                            background-color: #202127;
+                        }
+                        .Image-input-settings:disabled {
+                            border: 3px inset #faa5b2;
+                            background-color: #5a5a5a;
+                        }
+                        /* 底部按鈕框架 */
+                        .button-area {
+                            display: flex;
+                            padding: 0.3rem;
+                            border-left: none;
+                            border-radius: 2px;
+                            border: 2px solid #F6F6F6;
+                            justify-content: space-between;
+                        }
+                        .button-area select {
+                            color: #F6F6F6;
+                            margin-right: 1.5rem;
+                            border: 3px inset #EE2B47;
+                            background-color: #6e7292;
+                        }
+                        /* 底部選項 */
+                        .button-options {
+                            color: #F6F6F6;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: bold;
+                            border-radius: 10px;
+                            white-space: nowrap;
+                            background-color: #6e7292;
+                            border: 3px inset #EE2B47;
+                            transition: color 0.5s, background-color 0.5s;
+                        }
+                        .button-options:hover {
+                            color: #EE2B47;
+                            background-color: #F6F6F6;
+                        }
+                        .button-space { margin: 0 0.6rem; }
+                        .form-hidden {
+                            width: 0;
+                            height: 0;
+                            opacity: 0;
+                            padding: 10px;
+                            overflow: hidden;
+                            transition: opacity 0.8s, height 0.8s, width 0.8s;
+                        }
+                        .toggle-menu {
+                            width: 0;
+                            height: 0;
+                            padding: 0;
+                            margin: 0;
+                        }
+                        /* 整體框線 */
+                        table, td {
+                            margin: 0px;
+                            padding: 0px;
+                            overflow: auto;
+                            border-spacing: 0px;
+                        }
+                        .modal-background p {
+                            display: flex;
+                            flex-wrap: nowrap;
+                        }
+                        option { color: #F6F6F6; }
+                        ul {
+                            list-style: none;
+                            padding: 0px;
+                            margin: 0px;
+                        }
+                    `
+                }
             }
         };
 
@@ -616,7 +618,8 @@
                     Log: Log,
                     Transl: (Str) => ML[Str] ?? Str
                 }
-            }, ...UserSet, Style, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
+            },
+            ...UserSet, Style, MenuRule, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
         };
     })();
 
@@ -693,8 +696,6 @@
                     /* 就算沒開啟原圖功能, 還是需要導入 Postview (暫時寫在這) */
                     DLL.Style.Postview(); // 導入 Post 頁面樣式
                     Call("Content"); // 呼叫功能
-
-                    DLL.Style.Menu(); // 導入 菜單樣式
                     MenuTrigger(); // 創建菜單
                 }
             }
@@ -950,7 +951,7 @@
 
         return {
             SidebarCollapse: async (Config) => { /* 收縮側邊攔 */
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
 
                 Syn.AddStyle(`
                     .global-sidebar {
@@ -1076,7 +1077,7 @@
 
                 // 監聽點擊事件
                 const [Device, Newtab, Active, Insert] = [
-                    Syn.Platform(),
+                    Syn.Platform,
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
                     Config.newtab_insert ?? false,
@@ -1102,7 +1103,7 @@
                         setTimeout(() => {
                             text.focus() // 設置焦點
                             setTimeout(() => { // 避免還沒設置好焦點就觸發
-                                Syn.one(text, "blur", () => {
+                                text.on("blur", () => {
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name); // 修改顯示名
@@ -1164,7 +1165,7 @@
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
             KeyScroll: async (Config) => { /* 快捷自動滾動 */
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
 
                 // 滾動配置
                 const Scroll_Requ = {
@@ -1177,11 +1178,11 @@
 
                 const [TopDetected, BottomDetected] = [ // 到頂 和 到底 的檢測
                     Syn.Throttle(() => {
-                        Up_scroll = Syn.sY() == 0
+                        Up_scroll = Syn.sY == 0
                             ? false : true
                     }, 600),
                     Syn.Throttle(() => {
-                        Down_scroll = Syn.sY() + Syn.iH() >= Syn.html.scrollHeight
+                        Down_scroll = Syn.sY + Syn.iH >= Syn.html.scrollHeight
                             ? false : true
                     }, 600)
                 ];
@@ -1303,10 +1304,13 @@
                     preact.render([...elements], fragment2);
 
                     // 覆蓋 UI
+                    menu[0].replaceChildren(fragment1);
+                    menu[0].$sAttr("QuickPostToggle", "true");
+
                     requestAnimationFrame(() => {
-                        menu[0].replaceChildren(fragment1);
                         menu[1].replaceChildren(fragment2);
-                    });
+                        menu[1].$sAttr("QuickPostToggle", "true");
+                    })
 
                     // 更新分頁狀態
                     function UpdatePagination(currentButtons, otherButtons, newActiveIndex) {
@@ -1431,7 +1435,7 @@
                 }
             },
             CardText: async (Config) => { /* 帖子說明文字效果 */
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
 
                 switch (Config.mode) {
                     case 2:
@@ -1968,17 +1972,21 @@
         const shadowID = "shadow";
         if (Syn.$q(`#${shadowID}`)) return;
 
+        // 取得設置
         const set = DLL.ImgSet();
         const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing]; // 這樣寫是為了讓讀取保存設置可以按照順序 (菜單有索引問題)
 
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
 
+        // 取得樣式依賴
+        const { ImgScript, MenuStyle } = DLL.Style.Menu();
+
         // 創建陰影環境
         const fragment = Syn.createFragment;
         const shadow = Syn.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
-        const script = Syn.createElement("script", { id: "Img-Script", text: Syn.$q("#Menu-Settings").$text() });
-        const style = Syn.createElement("style", { id: "Menu-Style", text: Syn.$q("#Menu-Custom-Style").$text() });
+        const script = Syn.createElement("script", { id: "Img-Script", text: ImgScript });
+        const style = Syn.createElement("style", { id: "Menu-Style", text: MenuStyle });
 
         // 調整選項
         const UnitOptions = `
@@ -2076,6 +2084,7 @@
 
         $language.val(Log ?? "en-US"); // 添加語言設置
         $interface.draggable({ cursor: "grabbing" }); // 添加可拖動效果
+        DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
 
         // 菜單調整依賴
         const Menu_Requ = {
@@ -2086,10 +2095,6 @@
             Menu_Save: () => { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-
-                //! 設置到樣式表內 不用重整可以直接改變 (但總有奇怪 Bug, 時而正常時而不行)
-                DLL.Style_Pointer.Top(top);
-                DLL.Style_Pointer.Left(left);
                 Syn.sV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
             },
             Img_Save: () => {
@@ -2139,6 +2144,7 @@
 
             Menu_Requ.Menu_Save();
             Menu_Requ.Menu_Close();
+
             MenuTrigger(Updata => {
                 Create_Menu(Updata.Log, Updata.Transl); // 重新創建
             });
