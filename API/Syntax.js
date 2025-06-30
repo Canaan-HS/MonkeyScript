@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/06/27
+// @version      2025/06/30
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -1109,7 +1109,7 @@ const Syn = (() => {
      * @example
      *
      * dV("數據A") // 刪除數據
-     * lV() // 列出所有數據
+     * aV() // 列出所有數據
      * sV("存儲鍵", "數據") // 儲存數據
      * gV("存儲鍵", "錯誤回傳") // 取得數據
      * sJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
@@ -1118,7 +1118,7 @@ const Syn = (() => {
     const StoreVerify = (val) => val === void 0 || val === null ? null : val;
     const StoreCall = {
         dV: key => GM_deleteValue(key),
-        lV: () => StoreVerify(GM_listValues()),
+        aV: () => StoreVerify(GM_listValues()),
         sV: (key, value) => GM_setValue(key, value),
         gV: (key, error) => StoreVerify(GM_getValue(key, error)),
         sJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
@@ -1158,80 +1158,93 @@ const Syn = (() => {
         })
     };
 
-    return {
-        ...DeviceCall, ...Sugar, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, EventRecord, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
-        FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
-        Menu, StoreListen,
+    /* ========== [ 其他 ] ========== */
 
-        /**
-         * * { 創建 Worker 工作文件 }
-         * @param {string} code - 運行代碼
-         * @returns {Worker}    - 創建的 Worker 連結
-         */
-        WorkerCreation: (code) => {
-            const blob = new Blob([code], { type: "application/javascript" });
-            return new Worker(URL.createObjectURL(blob));
-        },
-
-        /**
-         * * { 暫停異步函數 }
-         * @param {Integer} delay - 延遲毫秒
-         * @returns { Promise }
-         */
-        Sleep: (delay) => new Promise(resolve => setTimeout(resolve, delay)),
-
-        /**
-         * * { 解析請求後的頁面, 成可查詢的 html 文檔 }
-         * @param {htnl} html - 要解析成 html 的文檔
-         * @returns {htnl}    - html 文檔
-         */
-        DomParse: (html) => Parser.parseFromString(html, "text/html"),
-
-        /**
-         * * { 清除不能用做檔名的字串 }
-         * @param {string} name - 要修正的字串
-         * @returns {string}    - 排除後的字串
-         */
-        NameFilter: (name) => name.replace(/[\/\?<>\\:\*\|":]/g, ""),
-
-        /**
-         * * { 取得下載圖片時的填充量 }
-         * @param {number} pages - 下載物件的長度
-         * @returns {number}     - 返回填充的值
-         *
-         * @example
-         * const box = [下載圖片的連結]
-         * const Fill = GetFill(box);
-         */
-        GetFill: (pages) => Math.max(2, `${pages}`.length),
-
-        /**
-         * * { 解析網址字串的副檔名 }
-         * @param {string} link - 含有副檔名的連結
-         * @returns {string}    - 回傳副檔名字串
-         */
-        ExtensionName: (link) => {
-            try {
-                return link.match(/\.([^.]+)$/)[1].toLowerCase() || "webp";
-            } catch {
-                return "webp";
-            }
-        },
-
-        /**
-         * ! 使用 this 勿修改為匿名函數
-         * * { 回傳下載圖片的尾數 }
-         * @param {number} index   - 圖片的頁數
-         * @param {number} padding - 填充量 [由 GetFill() 取得填充量]
-         * @param {string} filler  - 用於填充的字串
-         * @param {string} type    - 圖片的副檔名, 輸入圖片的連結
-         * @returns {string}       - 經填充後的尾數
-         */
-        Mantissa: function (index, padding, filler = "0", type = null) {
-            return type
-                ? `${++index}`.padStart(padding, filler) + `.${this.ExtensionName(type)}`
-                : `${++index}`.padStart(padding, filler);
+    function _KeepGetterMerge(...sources) {
+        const target = {};
+        for (const source of sources) {
+            if (!source) continue;
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
         }
+        return target;
     };
+
+    return _KeepGetterMerge(
+        DeviceCall, Sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
+        {
+            ...AddCall, ...StorageCall, ...StoreCall,
+            Type, EventRecord, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem, Throttle, Debounce, ScopeParsing,
+            FormatTemplate, OutputTXT, OutputJson, Runtime, GetDate, TranslMatcher,
+            Menu, StoreListen,
+
+            /**
+             * * { 創建 Worker 工作文件 }
+             * @param {string} code - 運行代碼
+             * @returns {Worker}    - 創建的 Worker 連結
+             */
+            WorkerCreation: (code) => {
+                const blob = new Blob([code], { type: "application/javascript" });
+                return new Worker(URL.createObjectURL(blob));
+            },
+
+            /**
+             * * { 暫停異步函數 }
+             * @param {Integer} delay - 延遲毫秒
+             * @returns { Promise }
+             */
+            Sleep: (delay) => new Promise(resolve => setTimeout(resolve, delay)),
+
+            /**
+             * * { 解析請求後的頁面, 成可查詢的 html 文檔 }
+             * @param {htnl} html - 要解析成 html 的文檔
+             * @returns {htnl}    - html 文檔
+             */
+            DomParse: (html) => Parser.parseFromString(html, "text/html"),
+
+            /**
+             * * { 清除不能用做檔名的字串 }
+             * @param {string} name - 要修正的字串
+             * @returns {string}    - 排除後的字串
+             */
+            NameFilter: (name) => name.replace(/[\/\?<>\\:\*\|":]/g, ""),
+
+            /**
+             * * { 取得下載圖片時的填充量 }
+             * @param {number} pages - 下載物件的長度
+             * @returns {number}     - 返回填充的值
+             *
+             * @example
+             * const box = [下載圖片的連結]
+             * const Fill = GetFill(box);
+             */
+            GetFill: (pages) => Math.max(2, `${pages}`.length),
+
+            /**
+             * * { 解析網址字串的副檔名 }
+             * @param {string} link - 含有副檔名的連結
+             * @returns {string}    - 回傳副檔名字串
+             */
+            ExtensionName: (link) => {
+                try {
+                    return link.match(/\.([^.]+)$/)[1].toLowerCase() || "webp";
+                } catch {
+                    return "webp";
+                }
+            },
+
+            /**
+             * ! 使用 this 勿修改為匿名函數
+             * * { 回傳下載圖片的尾數 }
+             * @param {number} index   - 圖片的頁數
+             * @param {number} padding - 填充量 [由 GetFill() 取得填充量]
+             * @param {string} filler  - 用於填充的字串
+             * @param {string} type    - 圖片的副檔名, 輸入圖片的連結
+             * @returns {string}       - 經填充後的尾數
+             */
+            Mantissa: function (index, padding, filler = "0", type = null) {
+                return type
+                    ? `${++index}`.padStart(padding, filler) + `.${this.ExtensionName(type)}`
+                    : `${++index}`.padStart(padding, filler);
+            }
+        });
 })();
