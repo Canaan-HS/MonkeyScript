@@ -127,15 +127,14 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.49-Beta12**
+**Release Version: 0.0.49-Beta13**
 
-### **Updates**
-1. Adaptation to website changes
-2. Modified page change monitoring logic
-3. Fixed and enhanced TextToLink matching
+### **What’s New**
+1. Library updates
+2. Adapted to recent website changes
+3. Fixed known bugs
 
 ### **Known Issues**
-1. The current modifications to page change monitoring and loading wait methods are experimental (anomalies may occur due to environmental differences)
-2. After modifying menu positions, although changes are visible during debugging, actual application requires a refresh to take effect
+1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
 
 ---
