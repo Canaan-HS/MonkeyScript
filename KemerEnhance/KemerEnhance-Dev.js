@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta12
+// @version      0.0.49-Beta13
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -16,6 +16,7 @@
 // @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
 // @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
 
+// @connect      *
 // @match        *://kemono.su/*
 // @match        *://coomer.su/*
 // @match        *://nekohouse.su/*
@@ -27,8 +28,12 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @connect      *
-// @run-at       document-end
+
+// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
@@ -37,11 +42,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
-
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+// @run-at       document-end
 // ==/UserScript==
 
 (async () => {
