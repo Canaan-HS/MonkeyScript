@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.49-Beta12
+// @version      0.0.49-Beta13
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -16,6 +16,7 @@
 // @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
 // @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
 
+// @connect      *
 // @match        *://kemono.su/*
 // @match        *://coomer.su/*
 // @match        *://nekohouse.su/*
@@ -27,8 +28,12 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @connect      *
-// @run-at       document-end
+
+// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
@@ -37,11 +42,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @require      https://update.greasyfork.org/scripts/487608/1576506/SyntaxLite_min.js
-
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.0/preact.umd.min.js
+// @run-at       document-end
 // ==/UserScript==
 
 (async () => {
@@ -91,7 +92,7 @@
             }
         }
     };
-    let Url = Syn.$url();
+    let Url = Syn.$url;
     const DLL = (() => {
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
         const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
@@ -105,7 +106,7 @@
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
             nekohouse: "#bb91ff !important"
-        }[Syn.$domain().split(".")[0]];
+        }[Syn.$domain.split(".")[0]];
         const SaveKey = {
             Img: "ImgStyle",
             Lang: "Language",
@@ -252,7 +253,7 @@
             },
             Postview: async () => {
                 const set = UserSet.ImgSet();
-                const width = Syn.iW() / 2;
+                const width = Syn.iW / 2;
                 Syn.AddStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -291,6 +292,17 @@
                     }
                 `, "Image-Custom-Style", false);
                 ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
+                Syn.StoreListen(Object.values(SaveKey), call => {
+                    if (call.far) {
+                        if (Syn.Type(call.nv) === "String") {
+                            MenuTrigger();
+                        } else {
+                            for (const [key, value] of Object.entries(call.nv)) {
+                                Style_Pointer[key](value);
+                            }
+                        }
+                    }
+                });
             },
             PostExtra: async () => {
                 Syn.AddStyle(`
@@ -303,191 +315,181 @@
                     #next_box a:hover {
                         background-color: ${Color};
                     }
-            `, "Post-Extra", false);
+                `, "Post-Extra", false);
             },
             Menu: () => {
                 const set = UserSet.MenuSet();
-                Syn.AddScript(`
-                    function check(value) {
-                        return value.toString().length > 4 || value > 1000
-                            ? 1000 : value < 0 ? "" : value;
-                    }
-                `, "Menu-Settings", false);
-                Syn.AddStyle(`
-                    .modal-background {
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        display: flex;
-                        z-index: 9999;
-                        overflow: auto;
-                        position: fixed;
-                        pointer-events: none;
-                    }
-                    /* 模態介面 */
-                    .modal-interface {
-                        top: ${set.Top};
-                        left: ${set.Left};
-                        margin: 0;
-                        display: flex;
-                        overflow: auto;
-                        position: fixed;
-                        border-radius: 5px;
-                        pointer-events: auto;
-                        background-color: #2C2E3E;
-                        border: 3px solid #EE2B47;
-                    }
-                    /* 模態內容盒 */
-                    .modal-box {
-                        padding: 0.5rem;
-                        height: 50vh;
-                        width: 32vw;
-                    }
-                    /* 菜單框架 */
-                    .menu {
-                        width: 5.5vw;
-                        overflow: auto;
-                        text-align: center;
-                        vertical-align: top;
-                        border-radius: 2px;
-                        border: 2px solid #F6F6F6;
-                    }
-                    /* 菜單文字標題 */
-                    .menu-text {
-                        color: #EE2B47;
-                        cursor: default;
-                        padding: 0.2rem;
-                        margin: 0.3rem;
-                        margin-bottom: 1.5rem;
-                        white-space: nowrap;
-                        border-radius: 10px;
-                        border: 4px solid #f05d73;
-                        background-color: #1f202c;
-                    }
-                    /* 菜單選項按鈕 */
-                    .menu-options {
-                        cursor: pointer;
-                        font-size: 1.4rem;
-                        color: #F6F6F6;
-                        font-weight: bold;
-                        border-radius: 5px;
-                        margin-bottom: 1.2rem;
-                        border: 5px inset #EE2B47;
-                        background-color: #6e7292;
-                        transition: color 0.8s, background-color 0.8s;
-                    }
-                    .menu-options:hover {
-                        color: #EE2B47;
-                        background-color: #F6F6F6;
-                    }
-                    .menu-options:disabled {
-                        color: #6e7292;
-                        cursor: default;
-                        background-color: #c5c5c5;
-                        border: 5px inset #faa5b2;
-                    }
-                    /* 設置內容框架 */
-                    .content {
-                        height: 48vh;
-                        width: 28vw;
-                        overflow: auto;
-                        padding: 0px 1rem;
-                        border-radius: 2px;
-                        vertical-align: top;
-                        border-top: 2px solid #F6F6F6;
-                        border-right: 2px solid #F6F6F6;
-                    }
-                    .narrative { color: #EE2B47; }
-                    .Image-input-settings {
-                        width: 8rem;
-                        color: #F6F6F6;
-                        text-align: center;
-                        font-size: 1.5rem;
-                        border-radius: 15px;
-                        border: 3px inset #EE2B47;
-                        background-color: #202127;
-                    }
-                    .Image-input-settings:disabled {
-                        border: 3px inset #faa5b2;
-                        background-color: #5a5a5a;
-                    }
-                    /* 底部按鈕框架 */
-                    .button-area {
-                        display: flex;
-                        padding: 0.3rem;
-                        border-left: none;
-                        border-radius: 2px;
-                        border: 2px solid #F6F6F6;
-                        justify-content: space-between;
-                    }
-                    .button-area select {
-                        color: #F6F6F6;
-                        margin-right: 1.5rem;
-                        border: 3px inset #EE2B47;
-                        background-color: #6e7292;
-                    }
-                    /* 底部選項 */
-                    .button-options {
-                        color: #F6F6F6;
-                        cursor: pointer;
-                        font-size: 0.8rem;
-                        font-weight: bold;
-                        border-radius: 10px;
-                        white-space: nowrap;
-                        background-color: #6e7292;
-                        border: 3px inset #EE2B47;
-                        transition: color 0.5s, background-color 0.5s;
-                    }
-                    .button-options:hover {
-                        color: #EE2B47;
-                        background-color: #F6F6F6;
-                    }
-                    .button-space { margin: 0 0.6rem; }
-                    .form-hidden {
-                        width: 0;
-                        height: 0;
-                        opacity: 0;
-                        padding: 10px;
-                        overflow: hidden;
-                        transition: opacity 0.8s, height 0.8s, width 0.8s;
-                    }
-                    .toggle-menu {
-                        width: 0;
-                        height: 0;
-                        padding: 0;
-                        margin: 0;
-                    }
-                    /* 整體框線 */
-                    table, td {
-                        margin: 0px;
-                        padding: 0px;
-                        overflow: auto;
-                        border-spacing: 0px;
-                    }
-                    .modal-background p {
-                        display: flex;
-                        flex-wrap: nowrap;
-                    }
-                    option { color: #F6F6F6; }
-                    ul {
-                        list-style: none;
-                        padding: 0px;
-                        margin: 0px;
-                    }
-                `, "Menu-Custom-Style", false);
-                MenuRule = Syn.$q("#Menu-Custom-Style")?.sheet.cssRules;
-                Syn.StoreListen(Object.values(SaveKey), call => {
-                    if (call.far) {
-                        if (Syn.Type(call.nv) == "String") {
-                            MenuTrigger();
-                        } else {
-                            for (const [key, value] of Object.entries(call.nv)) {
-                                Style_Pointer[key](value);
-                            }
+                return {
+                    ImgScript: `
+                        function check(value) {
+                            return value.toString().length > 4 || value > 1000
+                                ? 1000 : value < 0 ? "" : value;
                         }
-                    }
-                });
+                    `,
+                    MenuStyle: `
+                        .modal-background {
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            display: flex;
+                            z-index: 9999;
+                            overflow: auto;
+                            position: fixed;
+                            pointer-events: none;
+                        }
+                        /* 模態介面 */
+                        .modal-interface {
+                            top: ${set.Top};
+                            left: ${set.Left};
+                            margin: 0;
+                            display: flex;
+                            overflow: auto;
+                            position: fixed;
+                            border-radius: 5px;
+                            pointer-events: auto;
+                            background-color: #2C2E3E;
+                            border: 3px solid #EE2B47;
+                        }
+                        /* 模態內容盒 */
+                        .modal-box {
+                            padding: 0.5rem;
+                            height: 50vh;
+                            width: 32vw;
+                        }
+                        /* 菜單框架 */
+                        .menu {
+                            width: 5.5vw;
+                            overflow: auto;
+                            text-align: center;
+                            vertical-align: top;
+                            border-radius: 2px;
+                            border: 2px solid #F6F6F6;
+                        }
+                        /* 菜單文字標題 */
+                        .menu-text {
+                            color: #EE2B47;
+                            cursor: default;
+                            padding: 0.2rem;
+                            margin: 0.3rem;
+                            margin-bottom: 1.5rem;
+                            white-space: nowrap;
+                            border-radius: 10px;
+                            border: 4px solid #f05d73;
+                            background-color: #1f202c;
+                        }
+                        /* 菜單選項按鈕 */
+                        .menu-options {
+                            cursor: pointer;
+                            font-size: 1.4rem;
+                            color: #F6F6F6;
+                            font-weight: bold;
+                            border-radius: 5px;
+                            margin-bottom: 1.2rem;
+                            border: 5px inset #EE2B47;
+                            background-color: #6e7292;
+                            transition: color 0.8s, background-color 0.8s;
+                        }
+                        .menu-options:hover {
+                            color: #EE2B47;
+                            background-color: #F6F6F6;
+                        }
+                        .menu-options:disabled {
+                            color: #6e7292;
+                            cursor: default;
+                            background-color: #c5c5c5;
+                            border: 5px inset #faa5b2;
+                        }
+                        /* 設置內容框架 */
+                        .content {
+                            height: 48vh;
+                            width: 28vw;
+                            overflow: auto;
+                            padding: 0px 1rem;
+                            border-radius: 2px;
+                            vertical-align: top;
+                            border-top: 2px solid #F6F6F6;
+                            border-right: 2px solid #F6F6F6;
+                        }
+                        .narrative { color: #EE2B47; }
+                        .Image-input-settings {
+                            width: 8rem;
+                            color: #F6F6F6;
+                            text-align: center;
+                            font-size: 1.5rem;
+                            border-radius: 15px;
+                            border: 3px inset #EE2B47;
+                            background-color: #202127;
+                        }
+                        .Image-input-settings:disabled {
+                            border: 3px inset #faa5b2;
+                            background-color: #5a5a5a;
+                        }
+                        /* 底部按鈕框架 */
+                        .button-area {
+                            display: flex;
+                            padding: 0.3rem;
+                            border-left: none;
+                            border-radius: 2px;
+                            border: 2px solid #F6F6F6;
+                            justify-content: space-between;
+                        }
+                        .button-area select {
+                            color: #F6F6F6;
+                            margin-right: 1.5rem;
+                            border: 3px inset #EE2B47;
+                            background-color: #6e7292;
+                        }
+                        /* 底部選項 */
+                        .button-options {
+                            color: #F6F6F6;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                            font-weight: bold;
+                            border-radius: 10px;
+                            white-space: nowrap;
+                            background-color: #6e7292;
+                            border: 3px inset #EE2B47;
+                            transition: color 0.5s, background-color 0.5s;
+                        }
+                        .button-options:hover {
+                            color: #EE2B47;
+                            background-color: #F6F6F6;
+                        }
+                        .button-space { margin: 0 0.6rem; }
+                        .form-hidden {
+                            width: 0;
+                            height: 0;
+                            opacity: 0;
+                            padding: 10px;
+                            overflow: hidden;
+                            transition: opacity 0.8s, height 0.8s, width 0.8s;
+                        }
+                        .toggle-menu {
+                            width: 0;
+                            height: 0;
+                            padding: 0;
+                            margin: 0;
+                        }
+                        /* 整體框線 */
+                        table, td {
+                            margin: 0px;
+                            padding: 0px;
+                            overflow: auto;
+                            border-spacing: 0px;
+                        }
+                        .modal-background p {
+                            display: flex;
+                            flex-wrap: nowrap;
+                        }
+                        option { color: #F6F6F6; }
+                        ul {
+                            list-style: none;
+                            padding: 0px;
+                            margin: 0px;
+                        }
+                    `
+                };
             }
         };
         const Word = {
@@ -593,7 +595,7 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain().startsWith("nekohouse"),
+            IsNeko: Syn.$domain.startsWith("nekohouse"),
             Language: () => {
                 const Log = Syn.gV(SaveKey.Lang);
                 const ML = Syn.TranslMatcher(Word, Log);
@@ -604,6 +606,7 @@
             },
             ...UserSet,
             Style: Style,
+            MenuRule: MenuRule,
             Color: Color,
             SaveKey: SaveKey,
             Style_Pointer: Style_Pointer,
@@ -666,7 +669,6 @@
                 if (DLL.IsAllPreview()) Call("Preview"); else if (DLL.IsContent()) {
                     DLL.Style.Postview();
                     Call("Content");
-                    DLL.Style.Menu();
                     MenuTrigger();
                 }
             }
@@ -685,7 +687,7 @@
             subtree: true,
             characterData: true
         });
-        Syn.$body.$sAttr("Enhance", true);
+        Syn.body.$sAttr("Enhance", true);
     });
     function Global_Function() {
         const LoadFunc = {
@@ -723,7 +725,7 @@
                         },
                         JumpTrigger: async root => {
                             const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                            root.$onEvent("click", event => {
+                            Syn.onEvent(root, "click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
                                 if (!target || target.$hAttr("download")) return;
                                 event.preventDefault();
@@ -798,7 +800,7 @@
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
                         Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) {
-                            const edit = Syn.$createElement("fix_edit", {
+                            const edit = Syn.createElement("fix_edit", {
                                 id: id,
                                 class: "edit_artist",
                                 text: "Edit"
@@ -898,7 +900,7 @@
         };
         return {
             SidebarCollapse: async Config => {
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
                 Syn.AddStyle(`
                     .global-sidebar {
                         opacity: 0;
@@ -925,7 +927,7 @@
             },
             BlockAds: async Config => {
                 if (DLL.IsNeko) return;
-                const cookieString = Syn.$cookie();
+                const cookieString = Syn.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
                 if (!hasCookies) {
@@ -937,33 +939,34 @@
                         [required[1]]: 1
                     };
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.$cookie(`${key}=${value}; domain=.${Syn.$domain()}; path=/; expires=${expires};`);
+                        Syn.cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
                     }
                 }
+                if (Syn.$q("#Ad-blocking-style")) return;
                 Syn.AddStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
-                `, "Ad-blocking-style", false);
-                Syn.AddScript(String.raw`
-                    const domains = new Set([
-                        "go.mnaspm.com", "go.reebr.com",
-                        "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
-                    ]);
-
-                    // 舊版白名單正則轉換
-                    // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
-
-                    const XMLRequest = XMLHttpRequest.prototype.open;
-                    const Ad_observer = new MutationObserver(() => {
-                        XMLHttpRequest.prototype.open = function(method, Url) {
-                            try {
-                                if (Url.endsWith(".m3u8") || domains.has(new URL(Url).host)) { return }
-                            } catch {}
-
-                            XMLRequest.apply(this, arguments);
-                        };
-                    });
-                    Ad_observer.observe(document.head, {childList: true, subtree: true});
-                `, "Ad-blocking-script", false);
+                `, "Ad-blocking-style");
+                const domains = new Set(["go.mnaspm.com", "go.reebr.com", "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"]);
+                const originalRequest = XMLHttpRequest;
+                XMLHttpRequest = new Proxy(originalRequest, {
+                    construct: function (target, args) {
+                        const xhr = new target(...args);
+                        return new Proxy(xhr, {
+                            get: function (target, prop, receiver) {
+                                if (prop === "open") {
+                                    return function (method, url) {
+                                        try {
+                                            if (typeof url !== "string" || url.endsWith(".m3u8")) return;
+                                            if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return;
+                                        } catch { }
+                                        return target[prop].apply(target, arguments);
+                                    };
+                                }
+                                return Reflect.get(target, prop, receiver);
+                            }
+                        });
+                    }
+                });
             },
             TextToLink: async Config => {
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
@@ -998,13 +1001,13 @@
             FixArtist: async Config => {
                 DLL.Style.Global();
                 const Func = LoadFunc.FixArtist_Dependent();
-                const [Device, Newtab, Active, Insert] = [Syn.Platform(), Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.$body.$onEvent("click", event => {
+                const [Device, Newtab, Active, Insert] = [Syn.Platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                Syn.onEvent(Syn.body, "click", event => {
                     const target = event.target;
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
                         const display = target.nextElementSibling;
-                        const text = Syn.$createElement("textarea", {
+                        const text = Syn.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`
                         });
@@ -1015,7 +1018,7 @@
                         setTimeout(() => {
                             text.focus();
                             setTimeout(() => {
-                                text.$one("blur", () => {
+                                text.on("blur", () => {
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name);
@@ -1058,7 +1061,7 @@
                             }
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
-                            Syn.$createElement(card_items, "fix-trigger", {
+                            Syn.createElement(card_items, "fix-trigger", {
                                 style: "display: none;"
                             });
                         }
@@ -1080,7 +1083,7 @@
                 }
             },
             BackToTop: async Config => {
-                Syn.$body.$onEvent("pointerup", event => {
+                Syn.onEvent(Syn.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, {
                     capture: true,
@@ -1089,7 +1092,7 @@
                 });
             },
             KeyScroll: async Config => {
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
                     Scroll_Interval: 800
@@ -1097,9 +1100,9 @@
                 const UP_ScrollSpeed = Scroll_Requ.Scroll_Pixels * -1;
                 let Scroll, Up_scroll = false, Down_scroll = false;
                 const [TopDetected, BottomDetected] = [Syn.Throttle(() => {
-                    Up_scroll = Syn.sY() == 0 ? false : true;
+                    Up_scroll = Syn.sY == 0 ? false : true;
                 }, 600), Syn.Throttle(() => {
-                    Down_scroll = Syn.sY() + Syn.iH() >= Syn.$html.scrollHeight ? false : true;
+                    Down_scroll = Syn.sY + Syn.iH >= Syn.html.scrollHeight ? false : true;
                 }, 600)];
                 switch (Config.mode) {
                     case 2:
@@ -1131,7 +1134,7 @@
                             }
                         };
                 }
-                window.$onEvent("keydown", Syn.Throttle(event => {
+                Syn.onEvent(window, "keydown", Syn.Throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1164,7 +1167,7 @@
         return {
             NewTabOpens: async Config => {
                 const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.$body.$onEvent("click", event => {
+                Syn.onEvent(Syn.body, "click", event => {
                     const target = event.target.closest("article a");
                     target && (event.preventDefault(), !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
                         active: Active,
@@ -1204,13 +1207,15 @@
                     })), preact.h(Rendering, {
                         textContent: ">"
                     })];
-                    const fragment1 = Syn.$createFragment();
-                    const fragment2 = Syn.$createFragment();
+                    const fragment1 = Syn.createFragment;
+                    const fragment2 = Syn.createFragment;
                     preact.render([...elements], fragment1);
                     preact.render([...elements], fragment2);
+                    menu[0].replaceChildren(fragment1);
+                    menu[0].$sAttr("QuickPostToggle", "true");
                     requestAnimationFrame(() => {
-                        menu[0].replaceChildren(fragment1);
                         menu[1].replaceChildren(fragment2);
+                        menu[1].$sAttr("QuickPostToggle", "true");
                     });
                     function UpdatePagination(currentButtons, otherButtons, newActiveIndex) {
                         [currentButtons, otherButtons].flat().forEach(btn => {
@@ -1244,7 +1249,7 @@
                         });
                     }
                     let request_lock = false;
-                    Syn.$q("section").$onEvent("click", event => {
+                    Syn.onEvent("section", "click", event => {
                         const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                         if (!target || request_lock) return;
                         event.preventDefault();
@@ -1317,7 +1322,7 @@
                 }
             },
             CardText: async Config => {
-                if (Syn.Platform() === "Mobile") return;
+                if (Syn.Platform === "Mobile") return;
                 switch (Config.mode) {
                     case 2:
                         Syn.AddStyle(`
@@ -1368,10 +1373,10 @@
                             onload: response => {
                                 if (DLL.IsNeko) {
                                     const Main = response.responseXML.$q("main");
-                                    const View = Syn.$createElement("View", {
+                                    const View = Syn.createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = Syn.$createFragment();
+                                    const Buffer = Syn.createFragment;
                                     for (const br of Main.$qa("br")) {
                                         Buffer.append(document.createTextNode(br.previousSibling.$text()), br);
                                     }
@@ -1379,16 +1384,16 @@
                                     Browse.appendChild(View);
                                 } else {
                                     const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Syn.$createElement("View", {
+                                    const View = Syn.createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = Syn.$createFragment();
+                                    const Buffer = Syn.createFragment;
                                     const password = ResponseJson["password"];
                                     if (password) {
-                                        Buffer.append(document.createTextNode(`password: ${password}`), Syn.$createElement("br"));
+                                        Buffer.append(document.createTextNode(`password: ${password}`), Syn.createElement("br"));
                                     }
                                     for (const text of ResponseJson["file_list"]) {
-                                        Buffer.append(document.createTextNode(text), Syn.$createElement("br"));
+                                        Buffer.append(document.createTextNode(text), Syn.createElement("br"));
                                     }
                                     View.appendChild(Buffer);
                                     Browse.appendChild(View);
@@ -1416,7 +1421,7 @@
                                 old_main.replaceChildren(...Main.childNodes);
                                 history.pushState(null, null, url);
                                 const Title = XML.$q("title")?.$text();
-                                Title && Syn.$title(Title);
+                                Title && Syn.title(Title);
                                 setTimeout(() => {
                                     Syn.WaitElem(".post__content, .scrape__content", null, {
                                         raf: true,
@@ -1500,13 +1505,20 @@
                             all: true,
                             timeout: 5
                         }).then(post => {
+                            Syn.AddStyle(`
+                                .fluid_video_wrapper {
+                                    height: 50% !important;
+                                    width: 65% !important;
+                                    border-radius: 8px !important;
+                                }
+                            `, "Video_Effects", false);
                             const move = Config.mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
                                 return data;
                             }));
                             for (const li of parents) {
-                                const WaitLoad = new MutationObserver(() => {
+                                const WaitLoad = new MutationObserver(Syn.Debounce(() => {
                                     WaitLoad.disconnect();
                                     let [video, summary] = [li.$q("video"), li.$q("summary")];
                                     if (!video || !summary) return;
@@ -1518,7 +1530,7 @@
                                     element.$text(element.$text().replace("Download", ""));
                                     summary.$text("");
                                     summary.appendChild(element);
-                                });
+                                }, 100));
                                 WaitLoad.observe(li, {
                                     attributes: true,
                                     characterData: true,
@@ -1538,10 +1550,7 @@
                     timeout: 5
                 }).then(thumbnail => {
                     const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const HrefParse = element => {
-                        const Uri = element.href || element.$gAttr("href");
-                        return Uri.startsWith("http") ? Uri : `${Syn.$origin()}${Uri}`;
-                    };
+                    const HrefParse = element => element.href || element.$gAttr("href");
                     const Origina_Requ = {
                         Reload: async (Img, Retry) => {
                             if (Retry > 0) {
@@ -1557,13 +1566,13 @@
                                         Img.classList.remove("Image-loading-indicator");
                                     };
                                     Img.onerror = function () {
-                                        Origina_Requ.Reload(Img, Retry - 1);
+                                        Origina_Requ.Reload(Img, --Retry);
                                     };
-                                }, 1e3);
+                                }, 3e3);
                             }
                         },
                         FailedClick: async () => {
-                            Syn.$q(".post__files, .scrape__files").$one("click", event => {
+                            Syn.one(".post__files, .scrape__files", "click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -1597,7 +1606,7 @@
                             }));
                         },
                         Request: async function (Container, Url, Result) {
-                            const indicator = Syn.$createElement(Container, "div", {
+                            const indicator = Syn.createElement(Container, "div", {
                                 class: "progress-indicator",
                                 text: "0%"
                             });
@@ -1735,7 +1744,7 @@
                     raf: true,
                     timeout: 5
                 }).then(comments => {
-                    const [Prev, Next, Svg, Span, Buffer] = [Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Syn.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Syn.$createFragment()];
+                    const [Prev, Next, Svg, Span, Buffer] = [Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Syn.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Syn.createFragment];
                     Svg.id = "To_top";
                     Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
@@ -1750,13 +1759,13 @@
                     Span.id = "Next_box";
                     Span.style = "float: right; cursor: pointer;";
                     Span.appendChild(Next_btn);
-                    Svg.$one("click", () => {
+                    Syn.one(Svg, "click", () => {
                         Syn.$q("header").scrollIntoView();
                     }, {
                         capture: true,
                         passive: true
                     });
-                    Next_btn.$one("click", () => {
+                    Syn.one(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
                             GetNextPage(Next_btn.$gAttr("jump"), Syn.$q("main"));
                         } else {
@@ -1810,9 +1819,7 @@
             Transl: Transl
         });
         Syn.Menu({
-            [Transl("📝 設置選單")]: {
-                func: () => Create_Menu(Log, Transl)
-            }
+            [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl)
         });
     }
     function Create_Menu(Log, Transl) {
@@ -1821,20 +1828,24 @@
         const set = DLL.ImgSet();
         const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing];
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
-        const fragment = Syn.$createFragment();
-        const shadow = Syn.$createElement("div", {
+        const {
+            ImgScript,
+            MenuStyle
+        } = DLL.Style.Menu();
+        const fragment = Syn.createFragment;
+        const shadow = Syn.createElement("div", {
             id: shadowID
         });
         const shadowRoot = shadow.attachShadow({
             mode: "open"
         });
-        const script = Syn.$createElement("script", {
+        const script = Syn.createElement("script", {
             id: "Img-Script",
-            text: Syn.$q("#Menu-Settings").$text()
+            text: ImgScript
         });
-        const style = Syn.$createElement("style", {
+        const style = Syn.createElement("style", {
             id: "Menu-Style",
-            text: Syn.$q("#Menu-Custom-Style").$text()
+            text: MenuStyle
         });
         const UnitOptions = `
             <select class="Image-input-settings" style="margin-left: 1rem;">
@@ -1917,7 +1928,7 @@
         `);
         fragment.append(script, style);
         shadowRoot.appendChild(fragment);
-        $(Syn.$body).append(shadow);
+        $(Syn.body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
@@ -1927,6 +1938,7 @@
         $interface.draggable({
             cursor: "grabbing"
         });
+        DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
         const Menu_Requ = {
             Menu_Close: () => {
                 $background?.off();
@@ -1935,8 +1947,6 @@
             Menu_Save: () => {
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                DLL.Style_Pointer.Top(top);
-                DLL.Style_Pointer.Left(left);
                 Syn.sV(DLL.SaveKey.Menu, {
                     Top: top,
                     Left: left
