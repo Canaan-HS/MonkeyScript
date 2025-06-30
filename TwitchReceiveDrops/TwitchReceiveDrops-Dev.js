@@ -35,6 +35,8 @@
     const Backup = GM_getValue("Config", {}); // 不額外做數據驗證
 
     const Config = {
+        Dev: false, // 開發打印
+
         RestartLive: true, // 使用重啟直播
         EndAutoClose: true, // 全部進度完成後自動關閉
         TryStayActive: true, // 嘗試讓頁面保持活躍
@@ -253,20 +255,26 @@
             const Process = (Token) => {
 
                 // 這邊寫這麼複雜是為了處理, (1: 只有一個, 2: 存在兩個以上, 3: 存在兩個以上但有些過期)
-                const All_Data = document.querySelectorAll(Self.AllProgress);
-                if (All_Data && All_Data.length > 0) {
+                const AllProgress = DevTrace("AllProgress", document.querySelectorAll(Self.AllProgress));
+
+                if (AllProgress && AllProgress.length > 0) {
                     const Adapter = Detec.Adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
 
-                    All_Data.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
+                    AllProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
+                        const ActivityTime = DevTrace("ActivityTime", data.querySelector(Self.ActivityTime));
+
                         Detec.ExpiredCleanup(
                             data, // 物件整體
                             Adapter, // 適配器
-                            data.querySelector(Self.ActivityTime).textContent, // 時間戳
+                            ActivityTime?.textContent, // 時間戳
                             NotExpired => { // 取得未過期的物件
-                                // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 All_Data 遍歷)
+                                // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 AllProgress 遍歷)
                                 NotExpired.querySelectorAll("button").forEach(draw => { draw.click() });
+
+                                const ProgressBar = DevTrace("ProgressBar", NotExpired.querySelectorAll(Self.ProgressBar));
+
                                 // 紀錄為第幾個任務數, 與掉寶進度
-                                Progress_Info[Task++] = [...NotExpired.querySelectorAll(Self.ProgressBar)].map(progress => +progress.textContent);
+                                Progress_Info[Task++] = [...ProgressBar].map(progress => +progress.textContent);
                             }
                         )
                     });
@@ -363,7 +371,6 @@
                 TagLabel: "span.hzGgmO", // 頻道 Tag 標籤
                 Container: "div.hTjsYU", // 頻道播放的容器
                 ContainerHandle: "div.lnRTrz .simplebar-scroll-content", // 容器滾動句柄
-                WatchLiveLink: "[data-a-target='preview-card-image-link']", // 觀看直播的連結
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
             };
@@ -394,16 +401,16 @@
                     if (href.includes("directory")) { // 是目錄頁面
                         DirectorySearch(NewWindow);
                     } else {
-                        let Offline, Nowlive;
+                        let Offline, Online;
                         const observer = new MutationObserver(Throttle(() => {
-                            Nowlive = NewWindow.document.querySelector(Self.Online);
-                            Offline = NewWindow.document.querySelector(Self.Offline);
+                            Online = DevTrace("Online", NewWindow.document.querySelector(Self.Online));
+                            Offline = DevTrace("Offline", NewWindow.document.querySelector(Self.Offline));
 
                             if (Offline) {
                                 observer.disconnect();
                                 FindLive(index + 1);
 
-                            } else if (Nowlive) {
+                            } else if (Online) {
                                 observer.disconnect();
                                 Self.RestartLiveMute && Dir.LiveMute(NewWindow);
                                 Self.TryStayActive && StayActive(NewWindow.document);
@@ -425,16 +432,18 @@
             async function DirectorySearch(NewWindow) {
 
                 const observer = new MutationObserver(Throttle(() => {
-                    const Container = NewWindow.document.querySelector(Self.Container);
+                    const Container = DevTrace("Container", NewWindow.document.querySelector(Self.Container));
 
                     if (Container) {
                         observer.disconnect();
 
                         // 取得滾動句柄
-                        const ContainerHandle = Container.closest(Self.ContainerHandle);
+                        const ContainerHandle = DevTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
 
                         const StartFind = () => {
-                            const tag = [...Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`)]
+                            const TagLabel = DevTrace("TagLabel", Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`));
+
+                            const tag = [...TagLabel]
                                 .find(tag => {
                                     tag.setAttribute("Drops-Processed", true);
                                     return FindTag.test(tag.textContent);
@@ -478,6 +487,49 @@
                 func(...args);
             }
         }
+    };
+
+    /* 開發模式追蹤 */
+    function DevTrace(tag, element) {
+        if (!Config.Dev) return element;
+
+        const isEmpty = !element || (element.length !== undefined && element.length === 0);
+
+        const baseStyle = 'padding: 2px 6px; border-radius: 3px; font-weight: bold; margin: 0 2px;';
+        const tagStyle = `${baseStyle} background: linear-gradient(45deg, #667eea 0%, #764ba2 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);`;
+
+        let statusStyle, statusIcon, statusText;
+
+        if (isEmpty) {
+            statusStyle = `${baseStyle} background: linear-gradient(45deg, #e74c3c 0%, #c0392b 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);`;
+            statusIcon = '❌';
+            statusText = 'NOT FOUND';
+        } else {
+            statusStyle = `${baseStyle} background: linear-gradient(45deg, #2ecc71 0%, #27ae60 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);`;
+            statusIcon = '✅';
+            statusText = 'FOUND';
+        }
+
+        console.groupCollapsed(
+            `%c🔍 ${tag} %c${statusIcon} ${statusText}`,
+            tagStyle,
+            statusStyle
+        );
+
+        if (isEmpty) {
+            console.log(
+                `%c📭 Element: %c${element === null ? 'null' : 'empty NodeList'}`,
+                'color: #e74c3c; font-weight: bold;',
+                'color: #c0392b; font-style: italic;'
+            );
+        } else {
+            console.log('%c📦 Element:', 'color: #27ae60; font-weight: bold;', element);
+        }
+
+        console.trace('🎯 Source');
+        console.groupEnd();
+
+        return element;
     };
 
     /* 簡易的 等待元素 */
