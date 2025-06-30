@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/06/27
+// @version      2025/06/30
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -978,7 +978,7 @@ const Syn = (() => {
      * @example
      *
      * dV("數據A") // 刪除數據
-     * lV() // 列出所有數據
+     * aV() // 列出所有數據
      * sV("存儲鍵", "數據") // 儲存數據
      * gV("存儲鍵", "錯誤回傳") // 取得數據
      * sJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
@@ -987,7 +987,7 @@ const Syn = (() => {
     const StoreVerify = (val) => val === void 0 || val === null ? null : val;
     const StoreCall = {
         dV: key => GM_deleteValue(key),
-        lV: () => StoreVerify(GM_listValues()),
+        aV: () => StoreVerify(GM_listValues()),
         sV: (key, value) => GM_setValue(key, value),
         gV: (key, error) => StoreVerify(GM_getValue(key, error)),
         sJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
@@ -1027,9 +1027,24 @@ const Syn = (() => {
         })
     };
 
-    return {
-        ...DeviceCall, ...Sugar, ...AddCall, ...StorageCall, ...StoreCall,
-        Type, EventRecord, one, onEvent, offEvent, onUrlChange, Log, Observer, WaitElem,
-        Throttle, Debounce, OutputJson, Runtime, GetDate, TranslMatcher, Menu, StoreListen
+    /* ========== [ 其他 ] ========== */
+
+    function _KeepGetterMerge(...sources) {
+        const target = {};
+        for (const source of sources) {
+            if (!source) continue;
+            Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+        }
+        return target;
     };
+
+    return _KeepGetterMerge(
+        DeviceCall, Sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
+        {
+            ...AddCall, ...StorageCall, ...StoreCall,
+            Type, EventRecord, one, onEvent, offEvent, onUrlChange,
+            Log, Observer, WaitElem, Throttle, Debounce, OutputJson,
+            Runtime, GetDate, TranslMatcher, Menu, StoreListen
+        }
+    );
 })();
