@@ -190,44 +190,23 @@ export default function Fetch(
                 async function processQueue() {
                     if (queue.length > 0) {
                         const {index, title, url} = queue.shift();
-                        XmlRequest(index, title, url);
+                        FetchRequest(index, title, url);
                         processQueue();
                     } else {processing = false}
-                }
-                async function XmlRequest(index, title, url) {
-                    let xhr = new XMLHttpRequest();
-                    xhr.responseType = "text";
-                    xhr.open("GET", url, true);
-                    xhr.onload = function() {
-                        if (xhr.status === 200) {
-                            postMessage({ index, title, url, text: xhr.response, error: false });
-                        } else if (xhr.status === 429) {
-                            postMessage({ index, title, url, text: "", error: true });
-                        } else {
-                            FetchRequest(index, title, url);
-                        }
-                    }
-                    xhr.onerror = function() {
-                        if (xhr.status === 429) {
-                            postMessage({ index, title, url, text: "", error: true });
-                        } else {
-                            FetchRequest(index, title, url);
-                        }
-                    }
-                    xhr.send();
                 }
                 async function FetchRequest(index, title, url) {
                     fetch(url).then(response => {
                         if (response.ok) {
-                            response.text().then(text => {
-                                postMessage({ index, title, url, text, error: false });
+                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
+                            response.text().then(content => {
+                                postMessage({ index, title, url, content, error: false });
                             });
                         } else {
-                            postMessage({ index, title, url, text: "", error: true });
+                            postMessage({ index, title, url, content: "", error: true });
                         }
                     })
                     .catch(error => {
-                        postMessage({ index, title, url, text: "", error: true });
+                        postMessage({ index, title, url, content: "", error: true });
                     });
                 }
             `);
@@ -346,10 +325,10 @@ export default function Fetch(
                 this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url) });
 
                 // 等待主頁數據
-                const HomePage = await new Promise((resolve, reject) => {
+                const HomeData = await new Promise((resolve, reject) => {
                     this.Worker.onmessage = async (e) => {
-                        const { index, title, url, text, error } = e.data;
-                        if (!error) resolve({ index, title, url, text });
+                        const { index, title, url, content, error } = e.data;
+                        if (!error) resolve({ index, title, url, content });
                         else {
                             Syn.Log(error, { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
@@ -359,7 +338,7 @@ export default function Fetch(
                 });
 
                 // 等待內容數據
-                await this.FetchContent(HomePage);
+                await this.FetchContent(HomeData);
 
                 this.Pages++;
                 this.Pages <= this.FinalPages
@@ -375,17 +354,49 @@ export default function Fetch(
             }
         };
 
+        /* 測試進階抓取數據 */
+        async FetchTest(Id) {
+            Process.Lock = true;
+
+            this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(this.FirstURL) });
+            const HomeData = await new Promise((resolve, reject) => {
+                this.Worker.onmessage = async (e) => {
+                    const { index, title, url, content, error } = e.data;
+                    if (!error) resolve({ index, title, url, content });
+                    else {
+                        Syn.Log(error, { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
+                        await this.TooMany_TryAgain(url);
+                        this.Worker.postMessage({ index: index, title: title, url: url });
+                    };
+                }
+            });
+
+            const { content } = HomeData;
+
+            Object.assign(HomeData, { content: JSON.parse(content) });
+            Syn.Log("HomeData", HomeData, { collapsed: false });
+
+            // 恢復 FetchContent 處理數據格式
+            const Cloned_HomeData = structuredClone(HomeData);
+            Cloned_HomeData.content.results = [{ Id }]; // 修改數據
+            Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content); // 轉換為字符串
+
+            await this.FetchContent(Cloned_HomeData);
+            Syn.Log("PostDate", this.DataDict, { collapsed: false });
+            this.Reset();
+        };
+
         /* 獲取帖子內部數據 */
         async FetchContent(Data) {
             this.Progress = 0; // 重置進度
-            const { index, title, url, text } = Data; // 解構數據
+            const { index, title, url, content } = Data; // 解構數據
 
             // 解析處理的數據
             if (Process.IsNeko) {
 
             } else {
                 /* ----- 這邊是主頁的數據 ----- */
-                const Json = JSON.parse(text);
+                const Json = JSON.parse(content);
 
                 if (Json) {
 
@@ -408,14 +419,14 @@ export default function Fetch(
                         const resolvers = new Map(); // 用於存儲每個 Promise
 
                         this.Worker.onmessage = async (e) => {
-                            const { index, title, url, text, error } = e.data;
+                            const { index, title, url, content, error } = e.data;
 
                             if (resolvers.has(index)) {
                                 const { resolve, reject } = resolvers.get(index);
 
                                 try {
                                     if (!error) {
-                                        const Json = JSON.parse(text);
+                                        const Json = JSON.parse(content);
 
                                         if (Json) {
                                             const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
@@ -537,6 +548,12 @@ export default function Fetch(
 
         /* ===== 輸出生成 ===== */
 
+        async Reset() {
+            Process.Lock = false;
+            this.Worker.terminate();
+            Syn.title(this.TitleCache);
+        };
+
         async ToTxt() {
             let Content = "";
             for (const value of Object.values(this.DataDict)) {
@@ -551,9 +568,7 @@ export default function Fetch(
             if (Content.endsWith('\n')) Content = Content.slice(0, -1); // 去除末行空白
 
             Syn.OutputTXT(Content, this.MetaDict[Transl("作者")], () => {
-                Process.Lock = false;
-                this.Worker.terminate();
-                Syn.title(this.TitleCache);
+                this.Reset();
             })
         };
 
@@ -566,9 +581,7 @@ export default function Fetch(
             );
 
             Syn.OutputJson(Json_data, this.MetaDict[Transl("作者")], () => {
-                Process.Lock = false;
-                this.Worker.terminate();
-                Syn.title(this.TitleCache);
+                this.Reset();
             });
         };
 
