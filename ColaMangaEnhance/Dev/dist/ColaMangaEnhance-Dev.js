@@ -16,7 +16,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/487608/1613825/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -450,13 +450,12 @@
       }
     };
   }
-  (async () => {
-    const tools = Tools(Syn, Config, Control, Param);
-    const Set2 = tools.GetSet();
-    const style = Style(Syn, Control, Param, Set2);
-    const turn = PageTurn(Syn, Control, Param, tools);
-    async function BlockAds() {
-      Syn.AddStyle(`
+  const tools = Tools(Syn, Config, Control, Param);
+  const Set2 = tools.GetSet();
+  const style = Style(Syn, Control, Param, Set2);
+  const turn = PageTurn(Syn, Control, Param, tools);
+  async function BlockAds() {
+    Syn.AddStyle(`
             html {pointer-events: none !important;}
             div[style*='position'] {display: none !important;}
             .mh_wrap a,
@@ -466,145 +465,143 @@
                 pointer-events: auto !important;
             }
         `, Control.IdList.Block);
-      const OriginListener = EventTarget.prototype.addEventListener;
-      const Block = Control.BlockListener;
-      EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
-        apply(target, thisArg, args) {
-          const [type, listener, options] = args;
-          if (Block.has(type)) return;
-          return target.apply(thisArg, args);
+    const OriginListener = EventTarget.prototype.addEventListener;
+    const Block = Control.BlockListener;
+    EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
+      apply(target, thisArg, args) {
+        const [type, listener, options] = args;
+        if (Block.has(type)) return;
+        return target.apply(thisArg, args);
+      }
+    });
+    const iframe = `iframe:not(#${Control.IdList.Iframe})`;
+    const AdCleanup = () => {
+      var _a;
+      (_a = Syn.$q(iframe)) == null ? void 0 : _a.remove();
+      requestIdleCallback(AdCleanup, { timeout: 300 });
+    };
+    AdCleanup();
+  }
+  async function HotkeySwitch(Use) {
+    let JumpState = false;
+    if (Syn.Platform === "Desktop") {
+      if (Param.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
+        Param.Down_scroll = tools.Storage("scroll");
+        Param.Down_scroll && tools.AutoScroll(Control.ScrollPixels);
+      }
+      const UP_ScrollSpeed = -2;
+      const CanScroll = Use.AutoScroll || Use.ManualScroll;
+      Syn.onEvent(window, "keydown", (event) => {
+        const key = event.key;
+        if (key === "ArrowLeft" && Use.TurnPage && !JumpState) {
+          event.stopImmediatePropagation();
+          JumpState = !tools.FinalPage(Param.PreviousLink);
+          location.assign(Param.PreviousLink);
+        } else if (key === "ArrowRight" && Use.TurnPage && !JumpState) {
+          event.stopImmediatePropagation();
+          JumpState = !tools.FinalPage(Param.NextLink);
+          location.assign(Param.NextLink);
+        } else if (key === "ArrowUp" && CanScroll) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          if (Use.ManualScroll) {
+            tools.ManualScroll(-Syn.iH);
+          } else {
+            if (Param.Up_scroll) {
+              Param.Up_scroll = false;
+            } else if (!Param.Up_scroll || Param.Down_scroll) {
+              Param.Down_scroll = false;
+              Param.Up_scroll = true;
+              tools.AutoScroll(UP_ScrollSpeed);
+            }
+          }
+        } else if (key === "ArrowDown" && CanScroll) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          if (Use.ManualScroll) {
+            tools.ManualScroll(Syn.iH);
+          } else {
+            if (Param.Down_scroll) {
+              Param.Down_scroll = false;
+              tools.Storage("scroll", false);
+            } else if (Param.Up_scroll || !Param.Down_scroll) {
+              Param.Up_scroll = false;
+              Param.Down_scroll = true;
+              tools.Storage("scroll", true);
+              tools.AutoScroll(Control.ScrollPixels);
+            }
+          }
         }
-      });
-      const iframe = `iframe:not(#${Control.IdList.Iframe})`;
-      const AdCleanup = () => {
-        var _a;
-        (_a = Syn.$q(iframe)) == null ? void 0 : _a.remove();
-        requestIdleCallback(AdCleanup, { timeout: 300 });
-      };
-      AdCleanup();
-    }
-    async function HotkeySwitch(Use) {
-      let JumpState = false;
-      if (Syn.Platform === "Desktop") {
-        if (Param.IsMainPage && Use.KeepScroll && Use.AutoScroll && !Use.ManualScroll) {
-          Param.Down_scroll = tools.Storage("scroll");
-          Param.Down_scroll && tools.AutoScroll(Control.ScrollPixels);
-        }
-        const UP_ScrollSpeed = -2;
-        const CanScroll = Use.AutoScroll || Use.ManualScroll;
-        Syn.onEvent(window, "keydown", (event) => {
-          const key = event.key;
-          if (key === "ArrowLeft" && Use.TurnPage && !JumpState) {
-            event.stopImmediatePropagation();
+      }, { capture: true });
+    } else if (Syn.Platform === "Mobile") {
+      let startX, startY, moveX, moveY;
+      const sidelineX = Syn.iW * 0.3;
+      const sidelineY = Syn.iH / 4 * 0.3;
+      Syn.onEvent(window, "touchstart", (event) => {
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+      }, { passive: true });
+      Syn.onEvent(window, "touchmove", Syn.Debounce((event) => {
+        moveY = event.touches[0].clientY - startY;
+        if (Math.abs(moveY) < sidelineY) {
+          moveX = event.touches[0].clientX - startX;
+          if (moveX > sidelineX && !JumpState) {
             JumpState = !tools.FinalPage(Param.PreviousLink);
             location.assign(Param.PreviousLink);
-          } else if (key === "ArrowRight" && Use.TurnPage && !JumpState) {
-            event.stopImmediatePropagation();
+          } else if (moveX < -sidelineX && !JumpState) {
             JumpState = !tools.FinalPage(Param.NextLink);
             location.assign(Param.NextLink);
-          } else if (key === "ArrowUp" && CanScroll) {
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            if (Use.ManualScroll) {
-              tools.ManualScroll(-Syn.iH);
-            } else {
-              if (Param.Up_scroll) {
-                Param.Up_scroll = false;
-              } else if (!Param.Up_scroll || Param.Down_scroll) {
-                Param.Down_scroll = false;
-                Param.Up_scroll = true;
-                tools.AutoScroll(UP_ScrollSpeed);
-              }
-            }
-          } else if (key === "ArrowDown" && CanScroll) {
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            if (Use.ManualScroll) {
-              tools.ManualScroll(Syn.iH);
-            } else {
-              if (Param.Down_scroll) {
-                Param.Down_scroll = false;
-                tools.Storage("scroll", false);
-              } else if (Param.Up_scroll || !Param.Down_scroll) {
-                Param.Up_scroll = false;
-                Param.Down_scroll = true;
-                tools.Storage("scroll", true);
-                tools.AutoScroll(Control.ScrollPixels);
-              }
-            }
           }
-        }, { capture: true });
-      } else if (Syn.Platform === "Mobile") {
-        let startX, startY, moveX, moveY;
-        const sidelineX = Syn.iW * 0.3;
-        const sidelineY = Syn.iH / 4 * 0.3;
-        Syn.onEvent(window, "touchstart", (event) => {
-          startX = event.touches[0].clientX;
-          startY = event.touches[0].clientY;
-        }, { passive: true });
-        Syn.onEvent(window, "touchmove", Syn.Debounce((event) => {
-          moveY = event.touches[0].clientY - startY;
-          if (Math.abs(moveY) < sidelineY) {
-            moveX = event.touches[0].clientX - startX;
-            if (moveX > sidelineX && !JumpState) {
-              JumpState = !tools.FinalPage(Param.PreviousLink);
-              location.assign(Param.PreviousLink);
-            } else if (moveX < -sidelineX && !JumpState) {
-              JumpState = !tools.FinalPage(Param.NextLink);
-              location.assign(Param.NextLink);
-            }
-          }
-        }, 60), { passive: true });
-      }
+        }
+      }, 60), { passive: true });
     }
-    (() => {
-      async function Init(callback) {
-        Syn.WaitElem(
-          ["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"],
-          null,
-          { timeout: 10, throttle: 30, visibility: Param.IsMainPage, timeoutResult: true }
-        ).then(([Body, Title, HeadPager, Readend, Manga]) => {
-          Param.Body = Body;
-          const HomeLink = Title.$qa("a");
-          Param.ContentsPage = HomeLink[0].href;
-          Param.HomePage = HomeLink[1].href;
-          try {
-            const PageLink = Readend.$qa("ul a");
-            Param.PreviousLink = PageLink[0].href;
-            Param.NextLink = PageLink[2].href;
-          } catch {
-            const PageLink = HeadPager.$qa("a.mh_btn:not(.mh_bgcolor)");
-            Param.PreviousLink = PageLink[0].href;
-            Param.NextLink = PageLink[1].href;
-          }
-          Param.MangaList = Manga;
-          Param.BottomStrip = Readend.$q("a");
-          if ([
-            Param.Body,
-            Param.ContentsPage,
-            Param.HomePage,
-            Param.PreviousLink,
-            Param.NextLink,
-            Param.MangaList,
-            Param.BottomStrip
-          ].every((Check) => Check)) callback(true);
-          else callback(false);
-        });
-      }
-      BlockAds();
-      try {
-        Init((state) => {
-          if (state) {
-            style.PictureStyle();
-            Config.BGColor.Enable && style.BackgroundStyle(Config.BGColor.Color);
-            Config.AutoTurnPage.Enable && turn.Auto(Config.AutoTurnPage.Mode);
-            Config.RegisterHotkey.Enable && HotkeySwitch(Config.RegisterHotkey.Function);
-          } else Syn.Log(null, "Error");
-        });
-      } catch (error) {
-        Syn.Log(null, error);
-      }
-    })();
+  }
+  (() => {
+    async function Init(callback) {
+      Syn.WaitElem(
+        ["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"],
+        null,
+        { timeout: 10, throttle: 30, visibility: Param.IsMainPage, timeoutResult: true }
+      ).then(([Body, Title, HeadPager, Readend, Manga]) => {
+        Param.Body = Body;
+        const HomeLink = Title.$qa("a");
+        Param.ContentsPage = HomeLink[0].href;
+        Param.HomePage = HomeLink[1].href;
+        try {
+          const PageLink = Readend.$qa("ul a");
+          Param.PreviousLink = PageLink[0].href;
+          Param.NextLink = PageLink[2].href;
+        } catch {
+          const PageLink = HeadPager.$qa("a.mh_btn:not(.mh_bgcolor)");
+          Param.PreviousLink = PageLink[0].href;
+          Param.NextLink = PageLink[1].href;
+        }
+        Param.MangaList = Manga;
+        Param.BottomStrip = Readend.$q("a");
+        if ([
+          Param.Body,
+          Param.ContentsPage,
+          Param.HomePage,
+          Param.PreviousLink,
+          Param.NextLink,
+          Param.MangaList,
+          Param.BottomStrip
+        ].every((Check) => Check)) callback(true);
+        else callback(false);
+      });
+    }
+    BlockAds();
+    try {
+      Init((state) => {
+        if (state) {
+          style.PictureStyle();
+          Config.BGColor.Enable && style.BackgroundStyle(Config.BGColor.Color);
+          Config.AutoTurnPage.Enable && turn.Auto(Config.AutoTurnPage.Mode);
+          Config.RegisterHotkey.Enable && HotkeySwitch(Config.RegisterHotkey.Function);
+        } else Syn.Log(null, "Error");
+      });
+    } catch (error) {
+      Syn.Log(null, error);
+    }
   })();
-
 })();
