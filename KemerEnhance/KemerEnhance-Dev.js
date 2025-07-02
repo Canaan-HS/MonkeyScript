@@ -1315,7 +1315,6 @@
                             const request = GM_xmlhttpRequest({
                                 method: "GET",
                                 url,
-                                nocache: false,
                                 onload: response => {
                                     if (abortSignal?.aborted) return reject(new Error('Aborted'));
 
