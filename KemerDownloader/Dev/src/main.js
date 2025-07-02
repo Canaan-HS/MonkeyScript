@@ -123,16 +123,15 @@ const { Transl } = (() => { // 取得對應語言翻譯
         if (card.length == 0) { throw new Error("No links found") }
 
         let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
+        if (scope == null) return;
 
-        if (scope != null) {
-            scope = scope == "" ? "1-50" : scope;
-            for (const link of Syn.ScopeParsing(scope, card)) {
-                GM_openInTab(link.href, {
-                    insert: false,
-                    setParent: false
-                });
-                await Syn.Sleep(Config.BatchOpenDelay);
-            }
+        scope = scope === "" ? "1-50" : scope;
+        for (const link of Syn.ScopeParsing(scope, card)) {
+            GM_openInTab(link.href, {
+                insert: false,
+                setParent: false
+            });
+            await Syn.Sleep(Config.BatchOpenDelay);
         }
     }
 
@@ -179,6 +178,20 @@ const { Transl } = (() => { // 取得對應語言翻譯
                     },
                     [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
                 }, { reset: true });
+
+                if (Config.Dev && !Process.IsNeko) {
+                    Syn.Menu({
+                        "🛠️ 開發者獲取": () => {
+                            const ID = prompt("輸入請求的 ID");
+                            if (ID == null || ID === "") return; // 開發用的不做防呆
+
+                            let Instantiate = null;
+                            Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
+                            FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
+                            Instantiate.FetchTest(); // 只專注於測試 進階抓取, 如果用一般模式會報錯
+                        },
+                    }, { index: 3 });
+                }
             }
         };
 
