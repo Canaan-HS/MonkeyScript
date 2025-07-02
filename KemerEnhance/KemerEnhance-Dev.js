@@ -51,6 +51,7 @@
         Global: {
             BlockAds: { mode: 0, enable: true }, // 阻擋廣告
             BackToTop: { mode: 0, enable: true }, // 翻頁後回到頂部
+            CacheFetch: { mode: 0, enable: true }, // 緩存 Fetch 請求 (僅限 JSON)
             KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
             DeleteNotice: { mode: 0, enable: true }, // 刪除上方公告
             SidebarCollapse: { mode: 0, enable: true }, // 側邊攔摺疊
@@ -635,6 +636,7 @@
         const Order = {
             Global: [
                 "BlockAds",
+                "CacheFetch",
                 "SidebarCollapse",
                 "DeleteNotice",
                 "TextToLink",
@@ -1019,7 +1021,7 @@
                             get: function (target, prop, receiver) {
                                 if (prop === 'open') {
                                     return function (method, url) {
-                                        try {
+                                        try {  
                                             if (typeof url !== 'string' || url.endsWith(".m3u8")) return;
                                             if ((
                                                 url.startsWith('http') || url.startsWith('//')
@@ -1033,6 +1035,48 @@
                         })
                     }
                 });
+            },
+            CacheFetch: async (Config) => { /* 緩存請求 */
+                if (DLL.IsNeko) return;
+
+                Syn.AddScript(`
+                    const cache = new Map();
+                    const originalFetch = window.fetch;
+
+                    window.fetch = function (...args) {
+                        const url = args[0].url;
+
+                        // 檢查緩存
+                        if (cache.has(url)) {
+                            const cached = cache.get(url);
+                            return Promise.resolve(new Response(cached.body, {
+                                status: cached.status,
+                                headers: cached.headers
+                            }));
+                        }
+
+                        // 請求並緩存
+                        return originalFetch.apply(this, args)
+                            .then(async response => {
+
+                                // 只處理JSON，直接獲取文本避免解析開銷
+                                if (response.headers.get('content-type')?.includes('json')) {
+                                    const text = await response.clone().text();
+
+                                    // 緩存結構
+                                    cache.set(url, {
+                                        body: text,
+                                        status: response.status,
+                                        headers: response.headers
+                                    });
+                                }
+
+                                return response;
+                            }).catch(error => {
+                                return originalFetch.apply(this, args);
+                            })
+                    };
+                `, "Cache-Fetch", false);
             },
             TextToLink: async (Config) => { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
@@ -1119,7 +1163,7 @@
 
                         const jump = target.$gAttr("jump");
                         if (!target.parentNode.matches("fix_cont") && jump) {
-                            !Newtab || DLL.IsSearch() && Device == "Mobile"
+                            !Newtab || DLL.IsSearch() && Device === "Mobile"
                                 ? location.assign(jump)
                                 : GM_openInTab(jump, { active: Active, insert: Insert });
                         } else if (jump) { // 內容頁面
