@@ -94,3 +94,12 @@
 - **GitHub 저장소**: [GitHub](https://github.com/Canaan-HS/MonkeyScript/tree/main/TwitchReceiveDrops)
 
 ---
+
+## **📦 버전 정보**
+
+**릴리스 버전: 0.0.17-Beta1**
+
+### **업데이트**
+1. 웹사이트 변경 사항 적응 수정
+
+---
