@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             0.0.17-Beta
+// @version             0.0.17-Beta1
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -233,9 +233,9 @@
             this.Config = {
                 ...Config,
                 EndLine: "div.bBnamT", // 斷開觀察者的終止線
-                AllProgress: "div.dyRvqw", // 所有的掉寶進度
-                ProgressBar: "p.fBbnkN span", // 掉寶進度數據
-                ActivityTime: "span.bkNtaq", // 掉寶活動的日期
+                AllProgress: "div.jtROCr", // 所有的掉寶進度
+                ProgressBar: "p.flIPIR span", // 掉寶進度數據
+                ActivityTime: "span.jPfhdt", // 掉寶活動的日期
             };
         }
 
@@ -360,7 +360,7 @@
                 ...Config,
                 Offline: "strong.krncnP", // 離線的直播 (離線標籤)
                 Online: "span.jAIlLI", // 正在觀看直播人數標籤 (觀看人數)
-                TagLabel: "span.hTTUrW", // 頻道 Tag 標籤
+                TagLabel: "span.hzGgmO", // 頻道 Tag 標籤
                 Container: "div.hTjsYU", // 頻道播放的容器
                 ContainerHandle: "div.lnRTrz .simplebar-scroll-content", // 容器滾動句柄
                 WatchLiveLink: "[data-a-target='preview-card-image-link']", // 觀看直播的連結
