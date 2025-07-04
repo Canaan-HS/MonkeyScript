@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             0.0.17-Beta
+// @version             0.0.17-Beta1
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -34,6 +34,8 @@
 (() => {
     const Backup = GM_getValue("Config", {});
     const Config = {
+        Dev: false, // 開發打印
+
         RestartLive: true, // 使用重啟直播
         EndAutoClose: true, // 全部進度完成後自動關閉
         TryStayActive: true, // 嘗試讓頁面保持活躍
@@ -171,9 +173,9 @@
             this.Config = {
                 ...Config,
                 EndLine: "div.bBnamT",
-                AllProgress: "div.dyRvqw",
-                ProgressBar: "p.fBbnkN span",
-                ActivityTime: "span.bkNtaq"
+                AllProgress: "div.jtROCr",
+                ProgressBar: "p.flIPIR span",
+                ActivityTime: "span.jPfhdt"
             };
         }
         static async Ran() {
@@ -183,15 +185,17 @@
             const Self = Detec.Config;
             const Display = Self.UpdateDisplay;
             const Process = Token => {
-                const All_Data = document.querySelectorAll(Self.AllProgress);
-                if (All_Data && All_Data.length > 0) {
+                const AllProgress = DevTrace("AllProgress", document.querySelectorAll(Self.AllProgress));
+                if (AllProgress && AllProgress.length > 0) {
                     const Adapter = Detec.Adapter[document.documentElement.lang];
-                    All_Data.forEach(data => {
-                        Detec.ExpiredCleanup(data, Adapter, data.querySelector(Self.ActivityTime).textContent, NotExpired => {
+                    AllProgress.forEach(data => {
+                        const ActivityTime = DevTrace("ActivityTime", data.querySelector(Self.ActivityTime));
+                        Detec.ExpiredCleanup(data, Adapter, ActivityTime?.textContent, NotExpired => {
                             NotExpired.querySelectorAll("button").forEach(draw => {
                                 draw.click();
                             });
-                            Progress_Info[Task++] = [...NotExpired.querySelectorAll(Self.ProgressBar)].map(progress => +progress.textContent);
+                            const ProgressBar = DevTrace("ProgressBar", NotExpired.querySelectorAll(Self.ProgressBar));
+                            Progress_Info[Task++] = [...ProgressBar].map(progress => +progress.textContent);
                         });
                     });
                     const OldTask = Detec.Storage("Task") ?? {};
@@ -269,10 +273,9 @@
                 ...Config,
                 Offline: "strong.krncnP",
                 Online: "span.jAIlLI",
-                TagLabel: "span.hTTUrW",
+                TagLabel: "span.hzGgmO",
                 Container: "div.hTjsYU",
                 ContainerHandle: "div.lnRTrz .simplebar-scroll-content",
-                WatchLiveLink: "[data-a-target='preview-card-image-link']",
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']",
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']"
             };
@@ -298,14 +301,14 @@
                     if (href.includes("directory")) {
                         DirectorySearch(NewWindow);
                     } else {
-                        let Offline, Nowlive;
+                        let Offline, Online;
                         const observer = new MutationObserver(Throttle(() => {
-                            Nowlive = NewWindow.document.querySelector(Self.Online);
-                            Offline = NewWindow.document.querySelector(Self.Offline);
+                            Online = DevTrace("Online", NewWindow.document.querySelector(Self.Online));
+                            Offline = DevTrace("Offline", NewWindow.document.querySelector(Self.Offline));
                             if (Offline) {
                                 observer.disconnect();
                                 FindLive(index + 1);
-                            } else if (Nowlive) {
+                            } else if (Online) {
                                 observer.disconnect();
                                 Self.RestartLiveMute && Dir.LiveMute(NewWindow);
                                 Self.TryStayActive && StayActive(NewWindow.document);
@@ -326,12 +329,13 @@
             const FindTag = new RegExp(Pattern, "i");
             async function DirectorySearch(NewWindow) {
                 const observer = new MutationObserver(Throttle(() => {
-                    const Container = NewWindow.document.querySelector(Self.Container);
+                    const Container = DevTrace("Container", NewWindow.document.querySelector(Self.Container));
                     if (Container) {
                         observer.disconnect();
-                        const ContainerHandle = Container.closest(Self.ContainerHandle);
+                        const ContainerHandle = DevTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
                         const StartFind = () => {
-                            const tag = [...Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`)].find(tag => {
+                            const TagLabel = DevTrace("TagLabel", Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`));
+                            const tag = [...TagLabel].find(tag => {
                                 tag.setAttribute("Drops-Processed", true);
                                 return FindTag.test(tag.textContent);
                             });
@@ -371,6 +375,31 @@
                 func(...args);
             }
         };
+    }
+    function DevTrace(tag, element) {
+        if (!Config.Dev) return element;
+        const isEmpty = !element || element.length !== undefined && element.length === 0;
+        const baseStyle = "padding: 2px 6px; border-radius: 3px; font-weight: bold; margin: 0 2px;";
+        const tagStyle = `${baseStyle} background: linear-gradient(45deg, #667eea 0%, #764ba2 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);`;
+        let statusStyle, statusIcon, statusText;
+        if (isEmpty) {
+            statusStyle = `${baseStyle} background: linear-gradient(45deg, #e74c3c 0%, #c0392b 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);`;
+            statusIcon = "❌";
+            statusText = "NOT FOUND";
+        } else {
+            statusStyle = `${baseStyle} background: linear-gradient(45deg, #2ecc71 0%, #27ae60 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);`;
+            statusIcon = "✅";
+            statusText = "FOUND";
+        }
+        console.groupCollapsed(`%c🔍 ${tag} %c${statusIcon} ${statusText}`, tagStyle, statusStyle);
+        if (isEmpty) {
+            console.log(`%c📭 Element: %c${element === null ? "null" : "empty NodeList"}`, "color: #e74c3c; font-weight: bold;", "color: #c0392b; font-style: italic;");
+        } else {
+            console.log("%c📦 Element:", "color: #27ae60; font-weight: bold;", element);
+        }
+        console.trace("🎯 Source");
+        console.groupEnd();
+        return element;
     }
     async function WaitElem(document, selector, found, {
         timeout = 1e4,
