@@ -94,10 +94,9 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.17-Beta**
+**Release Version: 0.0.17-Beta1**
 
 ### **Updates**
-1. Website changes adaptation fix (testing)
-2. Temporarily added save configuration (experimental) [manual save in plugin menu]
+1. Website changes adaptation fix
 
 ---
