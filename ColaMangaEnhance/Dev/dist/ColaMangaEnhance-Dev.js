@@ -33,7 +33,7 @@
     AutoTurnPage: {
       // 自動翻頁
       Enable: true,
-      Mode: 3
+      Mode: 1
       // 1 = 快速 | 2 = 一般無盡 | 3 = 優化無盡
     },
     RegisterHotkey: {
