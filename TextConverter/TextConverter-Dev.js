@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      0.0.1-Beta2
+// @version      0.0.1-Beta3
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
@@ -22,11 +22,12 @@
 // @icon         https://cdn-icons-png.flaticon.com/512/9616/9616859.png
 
 // @noframes
-// @run-at       document-start
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
+
+// @run-at       document-start
 // ==/UserScript==
 
 /**
