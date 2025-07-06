@@ -1,5 +1,5 @@
 export const Config = {
-    Dev: true, // 顯示請求資訊, 與錯誤資訊
+    Dev: false, // 顯示請求資訊, 與錯誤資訊
     ContainsVideo: false, // 下載時包含影片
     CompleteClose: false, // 下載完成後關閉
     ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
