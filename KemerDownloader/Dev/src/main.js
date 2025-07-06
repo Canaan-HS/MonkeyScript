@@ -169,6 +169,11 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
                 Syn.Menu({
                     [Transl("📑 獲取帖子數據")]: () => {
+                        if (Process.IsNeko) { // 暫時還沒修復 (懶得修)
+                            alert("Temporarily Not Supported");
+                            return;
+                        }
+
                         if (!Process.Lock) {
                             let Instantiate = null;
                             Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
@@ -180,7 +185,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }, { reset: true });
 
                 if (Config.Dev && !Process.IsNeko) {
-                    Syn.Menu({
+                    Syn.Menu({ // 不支援 Neko, 抓取邏輯不同
                         "🛠️ 開發者獲取": () => {
                             const ID = prompt("輸入請求的 ID");
                             if (ID == null || ID === "") return; // 開發用的不做防呆
