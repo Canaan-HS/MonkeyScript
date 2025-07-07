@@ -695,7 +695,7 @@
                     this.TaskDict.set(Index, { title: Title, content: Gen });
                   }
                   ;
-                  Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
+                  Syn2.title(`（${this.Pages}）`);
                   Syn2.Log("Parsed Successful", this.TaskDict, { dev: Config2.Dev, collapsed: false });
                 } catch (error) {
                   Syn2.Log(error, { title: Title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
