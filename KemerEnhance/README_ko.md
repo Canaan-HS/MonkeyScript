@@ -30,24 +30,25 @@
 
 ## **⚙️ 추가 설정 (코드 상단)**
 
-|   **매개변수**    |                            **설명**                            | **기본값** |
-| :---------------: | :------------------------------------------------------------: | :--------: |
-|    `BlockAds`     |                        간단한 광고 차단                        |   `true`   |
-|    `BackToTop`    |              게시물 페이지 전환 후 자동 상단 이동              |   `true`   |
-|    `KeyScroll`    |                  키보드 단축키 ↑↓ 자동 스크롤                  |   `true`   |
-|  `DeleteNotice`   |                         공지사항 삭제                          |   `true`   |
-| `SidebarCollapse` |               사이드바 접기, 마우스 접근 시 복원               |   `true`   |
-|    `FixArtist`    |     Pixiv 이름으로 사이트 표시 이름 수정, 사용자 정의 가능     |   `true`   |
-|   `TextToLink`    |      텍스트 형식의 링크 문자열을 클릭 가능한 링크로 변환       |   `true`   |
-|    `CardZoom`     |                    미리보기 카드 크기 조정                     |   `true`   |
-|    `CardText`     |                 미리보기 카드 텍스트 효과 조정                 |   `true`   |
-| `QuickPostToggle` |       게시물 미리보기 빠른 전환 (현재 nekohouse만 지원)        |   `true`   |
-|   `NewTabOpens`   |               모든 페이지 이동을 새 탭에서 열기                |   `true`   |
-|   `ExtraButton`   |   상단으로 빠르게 이동하고 직접 페이지 전환을 위한 추가 버튼   |   `true`   |
-|  `LinkBeautify`   | 다운로드 링크 미화 및 (browse ») 마우스 호버 시 내용 직접 표시 |   `true`   |
-|  `CommentFormat`  |                       댓글 레이아웃 조정                       |   `true`   |
-|  `VideoBeautify`  | 비디오 스타일 미화 및 비디오 다운로드 링크를 제목 위치에 표시  |   `true`   |
-|  `OriginalImage`  |                        자동 원본 이미지                        |   `true`   |
+|   **매개변수**    |                             **설명**                             | **기본값** |
+| :---------------: | :--------------------------------------------------------------: | :--------: |
+|    `BlockAds`     |                         간단한 광고 차단                         |   `true`   |
+|    `BackToTop`    |               게시물 페이지 전환 후 자동 상단 이동               |   `true`   |
+|   `CacheFetch`    | 동일 페이지에서 Fetch 데이터를 캐시하여 후속 동일 로딩 속도 향상 |   `true`   |
+|    `KeyScroll`    |                   키보드 단축키 ↑↓ 자동 스크롤                   |   `true`   |
+|  `DeleteNotice`   |                          공지사항 삭제                           |   `true`   |
+| `SidebarCollapse` |                사이드바 접기, 마우스 접근 시 복원                |   `true`   |
+|    `FixArtist`    |      Pixiv 이름으로 사이트 표시 이름 수정, 사용자 정의 가능      |   `true`   |
+|   `TextToLink`    |       텍스트 형식의 링크 문자열을 클릭 가능한 링크로 변환        |   `true`   |
+|    `CardZoom`     |                     미리보기 카드 크기 조정                      |   `true`   |
+|    `CardText`     |                  미리보기 카드 텍스트 효과 조정                  |   `true`   |
+| `QuickPostToggle` |        게시물 미리보기 빠른 전환 (현재 nekohouse만 지원)         |   `true`   |
+|   `NewTabOpens`   |                모든 페이지 이동을 새 탭에서 열기                 |   `true`   |
+|   `ExtraButton`   |    상단으로 빠르게 이동하고 직접 페이지 전환을 위한 추가 버튼    |   `true`   |
+|  `LinkBeautify`   |  다운로드 링크 미화 및 (browse ») 마우스 호버 시 내용 직접 표시  |   `true`   |
+|  `CommentFormat`  |                        댓글 레이아웃 조정                        |   `true`   |
+|  `VideoBeautify`  |  비디오 스타일 미화 및 비디오 다운로드 링크를 제목 위치에 표시   |   `true`   |
+|  `OriginalImage`  |                         자동 원본 이미지                         |   `true`   |
 
 ## **📜 기타 설명**
 
@@ -133,12 +134,12 @@ OriginalImage:
 
 ## **📦 버전 정보**
 
-**배포 버전: 0.0.49-Beta13**
+**릴리스 버전: 0.0.50-Beta**
 
 ### **업데이트 내용**
-1. 라이브러리 업데이트
-2. 웹사이트 구조 변경 대응
-3. 알려진 버그 수정
+1. QuickPostToggle 이동 최적화
+2. QuickPostToggle 다중 Post 지원 추가
+3. CacheFetch 기능 추가, 동일 페이지 로딩 가속화 (페이지 닫을 때 클리어)
 
 ### **알려진 문제**
 1. 가끔 페이지 로딩이 기능 실행보다 느려 기능이 작동하지 않을 수 있습니다. 페이지 새로 고침으로 대부분 해결됩니다.
