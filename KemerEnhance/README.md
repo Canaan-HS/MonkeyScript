@@ -33,6 +33,7 @@
 | :---------------: | :--------------------------------------------------------------------------------: | :---------------: |
 |    `BlockAds`     |                                 Simple ad blocker                                  |      `true`       |
 |    `BackToTop`    |            After page navigation, automatically scroll back to the top             |      `true`       |
+|   `CacheFetch`    |   Cache Fetch data under the same page to speed up subsequent identical loading    |      `true`       |
 |    `KeyScroll`    |                 Keyboard hotkey feature ↑↓ for automatic scrolling                 |      `true`       |
 |  `DeleteNotice`   |                                   Remove notices                                   |      `true`       |
 | `SidebarCollapse` |                 Sidebar collapses, restores when the mouse is near                 |      `true`       |
@@ -127,12 +128,12 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.49-Beta13**
+**Release Version: 0.0.50-Beta**
 
-### **What’s New**
-1. Library updates
-2. Adapted to recent website changes
-3. Fixed known bugs
+### **What's New**
+1. Optimized QuickPostToggle navigation
+2. Added QuickPostToggle multi-Post support
+3. Added CacheFetch functionality to accelerate loading of same pages (cleared when closing tabs)
 
 ### **Known Issues**
 1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
