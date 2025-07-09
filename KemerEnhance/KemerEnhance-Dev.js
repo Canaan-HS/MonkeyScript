@@ -733,12 +733,22 @@
                         Exclusion_Regex: /onfanbokkusuokibalab\.net/,
                         URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
                         Exclusion_Tags: new Set([
-                            "A", "IMG", "INPUT", "TEXTAREA", "SELECT", "BUTTON",
-                            "SCRIPT", "STYLE", "CODE", "SVG", "CANVAS", "IFRAME",
-                            "AUDIO", "VIDEO", "EMBED", "OBJECT", "NOSCRIPT",
-                            "OPTION", "DATALIST", "FORM", "FIELDSET", "LEGEND",
-                            "LABEL", "MAP", "AREA", "MATH", "METER", "PROGRESS",
-                            "OUTPUT", "PARAM", "SOURCE", "TRACK", "TIME", "MARK"
+                            // 腳本和樣式
+                            "SCRIPT", "STYLE", "NOSCRIPT",
+                            // 多媒體元素
+                            "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK",
+                            // 代碼和預格式化文本
+                            "CODE", "KBD", "SAMP",
+                            // 不可見或特殊功能元素
+                            "TEMPLATE", "SLOT", "PARAM", "META", "LINK",
+                            // 圖片相關
+                            "IMG", "PICTURE", "FIGURE", "FIGCAPTION",
+                            // 特殊交互元素
+                            "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT",
+                            // 表單元素
+                            "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND",
+                            // 其他交互元素
+                            "MAP", "AREA"
                         ]),
                         UrlMatch(str) {
                             // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
