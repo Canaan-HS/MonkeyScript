@@ -205,7 +205,7 @@
             });
 
             if (hasRelevantChanges) {
-                RunFactory(document); // 後續在優化成針對變化節點進行翻譯
+                RunFactory(); // 後續在優化成針對變化節點進行翻譯
             }
         }, 300));
 
