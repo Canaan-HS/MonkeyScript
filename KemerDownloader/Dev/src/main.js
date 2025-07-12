@@ -14,6 +14,7 @@ const { Syn, md5, saveAs } = monkeyWindow; // 外部函數
 import { Config, FileName, FetchSet, Process } from './config.js'; // 腳本配置
 import Dict from './language.js'; // 腳本語言
 import Fetch from './fetch.js'; // 抓取數據
+import Menu from './menu.js'; // 導入菜單模塊
 import Downloader from './downloader.js'; // 下載數據
 
 const { Transl } = (() => { // 取得對應語言翻譯
@@ -30,43 +31,45 @@ const { Transl } = (() => { // 取得對應語言翻譯
             this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
                 || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
                 || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
+
+        this.Menu = Menu(Syn, Transl, Config, FileName, FetchSet);
     }
 
     /* 按鈕創建 */
     async ButtonCreation() {
         Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then(Files => {
             Syn.AddStyle(`
-                    #Button-Container {
-                        padding: 1rem;
-                        font-size: 40% !important;
-                    }
-                    #Button-Container svg {
-                        fill: white;
-                    }
-                    .Setting_Button {
-                        cursor: pointer;
-                    }
-                    .Download_Button {
-                        color: hsl(0, 0%, 45%);
-                        padding: 6px;
-                        margin: 10px;
-                        border-radius: 8px;
-                        font-size: 1.1vw;
-                        border: 2px solid rgba(59, 62, 68, 0.7);
-                        background-color: rgba(29, 31, 32, 0.8);
-                        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                    }
-                    .Download_Button:hover {
-                        color: hsl(0, 0%, 95%);
-                        background-color: hsl(0, 0%, 45%);
-                        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                    }
-                    .Download_Button:disabled {
-                        color: hsl(0, 0%, 95%);
-                        background-color: hsl(0, 0%, 45%);
-                        cursor: Synault;
-                    }
-                `, "Download-button-style", false);
+                #Button-Container {
+                    padding: 1rem;
+                    font-size: 40% !important;
+                }
+                #Button-Container svg {
+                    fill: white;
+                }
+                .Setting_Button {
+                    cursor: pointer;
+                }
+                .Download_Button {
+                    color: hsl(0, 0%, 45%);
+                    padding: 6px;
+                    margin: 10px;
+                    border-radius: 8px;
+                    font-size: 1.1vw;
+                    border: 2px solid rgba(59, 62, 68, 0.7);
+                    background-color: rgba(29, 31, 32, 0.8);
+                    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+                .Download_Button:hover {
+                    color: hsl(0, 0%, 95%);
+                    background-color: hsl(0, 0%, 45%);
+                    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+                .Download_Button:disabled {
+                    color: hsl(0, 0%, 95%);
+                    background-color: hsl(0, 0%, 45%);
+                    cursor: Synault;
+                }
+            `, "Download-button-style", false);
 
             Syn.$q("#Button-Container")?.remove(); // 重複時刪除舊的容器
 
@@ -97,7 +100,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                                 Instantiate = new this.Download(CompressMode, ModeDisplay, target);
                                 Instantiate.DownloadTrigger();
                             } else if (target.closest("svg")) {
-                                alert("Currently Invalid");
+                                this.Menu.open(); // 打開設置菜單
                             }
                         },
                         add: { capture: true, passive: true }
@@ -111,8 +114,11 @@ const { Transl } = (() => { // 取得對應語言翻譯
             } catch (error) {
                 Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
 
-                Button.disabled = true;
-                Button.$text(Transl("無法下載"));
+                const Button = Syn.$q('#Button-Container button');
+                if (Button) {
+                    Button.disabled = true;
+                    Button.textContent = Transl("無法下載");
+                }
             }
         })
     }
@@ -193,7 +199,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                             let Instantiate = null;
                             Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
                             FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
-                            Instantiate.FetchTest(); // 只專注於測試 進階抓取, 如果用一般模式會報錯
+                            Instantiate.FetchTest(ID); // 只專注於測試 進階抓取, 如果用一般模式會報錯
                         },
                     }, { index: 3 });
                 }
