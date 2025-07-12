@@ -164,54 +164,52 @@
     };
     Dictionary.Init();
 
-    WaitElem("body", body => { // 等待頁面載入
+    WaitElem("body", () => { // 等待頁面載入
         const Transl = TranslationFactory(); // 翻譯工廠
 
-        // 轉換時的鎖
-        let lock = false;
+        const observer = new MutationObserver(DebounceCollect((mutations) => {
+            const toProcess = [];
+            const processedNodes = new WeakSet();
 
-        const RunFactory = async (root=body) => {
-            if (lock) return;
-
-            lock = true;
-            await Transl.Trigger(root);
-            lock = false;
-        };
-
-        const observer = new MutationObserver(Debounce((mutations) => {
-            if (lock) return;
-
-            // 檢查是否有需要處理的變化
-            const hasRelevantChanges = mutations.some(mutation => {
-
-                // 處理文本內容變化
-                if (mutation.type === "characterData") {
-                    return true;
+            for (const mutation of mutations) {
+                if (mutation.type === "characterData" && mutation.target.parentElement) {
+                    // 如果是文字節點
+                    const node = mutation.target.parentElement;
+                    if (!processedNodes.has(node)) {
+                        processedNodes.add(node);
+                        toProcess.push(node);
+                    }
                 }
-
-                // 處理新增節點
-                if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-                    return Array.from(mutation.addedNodes).some(node =>
-                        node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE
-                    );
+                else if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                    // 如果是子節點
+                    for (const node of mutation.addedNodes) {
+                        if ((node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) && !processedNodes.has(node)) {
+                            processedNodes.add(node);
+                            toProcess.push(node);
+                        }
+                    }
                 }
-
-                // 處理屬性變化 (placeholder)
-                if (mutation.type === "attributes" && mutation.attributeName === "placeholder") {
-                    return true;
+                else if (mutation.type === "attributes" && mutation.attributeName === "placeholder") {
+                    // 如果是 placeholder 屬性
+                    const node = mutation.target;
+                    if (!processedNodes.has(node)) {
+                        processedNodes.add(node);
+                        toProcess.push(node);
+                    }
                 }
-
-                return false;
-            });
-
-            if (hasRelevantChanges) {
-                RunFactory(); // 後續在優化成針對變化節點進行翻譯
             }
-        }, 300));
+
+            if (toProcess.length > 0) {
+                for (const node of toProcess) {
+                    Transl.Trigger(node);
+                }
+            }
+        }, 200));
+
 
         // 啟動觀察 (啟動時會觸發轉換)
         const StartOb = () => {
-            RunFactory(document);
+            Transl.Trigger(document);
             observer.observe(document, {
                 subtree: true, // 監視所有後代節點
                 childList: true, // 監視子節點添加或移除
@@ -230,8 +228,8 @@
             DisOB();
             Dictionary.RefreshDict();
 
-            // 不恢復觀察, 就由該函數直接觸發轉換
-            RecoverOB ? StartOb() : RunFactory();
+            // 恢復觀察的反轉, 與直接觸發的反轉
+            RecoverOB ? StartOb() : Transl.Trigger(document);
         };
 
         /* ----- 創建按鈕 ----- */
@@ -328,6 +326,50 @@
     });
 
     /* =========================================== */
+
+    /* 翻譯任務的調度程序 */
+    function Scheduler() {
+        let queue = [];
+        let timeout = 2000;
+        let isRunning = false;
+
+        const processQueue = (deadline) => {
+
+            while (deadline.timeRemaining() > 0 && queue.length > 0) {
+                const task = queue.shift();
+                try {
+                    task.workFn();
+                    task.resolver();
+                } catch {
+                    task.resolver();
+                }
+            }
+
+            // 如果時間用完但任務仍在，預約下一次
+            if (queue.length > 0) {
+                requestIdleCallback(processQueue, { timeout });
+            } else {
+                isRunning = false; // 所有任務完成
+            }
+        };
+
+        return {
+            wrap: (workFn) => {
+                return new Promise(resolve => {
+                    queue.push({ workFn, resolver: resolve });
+                });
+            },
+
+            start: () => {
+                if (isRunning || queue.length === 0) {
+                    return;
+                }
+
+                isRunning = true;
+                requestIdleCallback(processQueue, { timeout });
+            }
+        }
+    };
 
     /* 翻譯處理工廠 */
     function TranslationFactory() {
@@ -541,15 +583,16 @@
                     Link.remove();
                 };
             },
-            OperationText(root) {
+            OperationText(root, scheduler) {
+                requestIdleCallback
                 return Promise.all(
-                    getTextNodes(root).map(textNode => this.__FocusTextCore(textNode))
+                    getTextNodes(root).map(textNode => scheduler.wrap(() => this.__FocusTextCore(textNode)))
                 )
             },
-            OperationInput(root) {
+            OperationInput(root, scheduler) {
                 return Promise.all(
                     [...root.querySelectorAll("input[placeholder], input[value]")]
-                        .map(inputNode => this.__FocusInputCore(inputNode))
+                        .map(inputNode => scheduler.wrap(() => this.__FocusInputCore(inputNode)))
                 )
             },
         };
@@ -558,10 +601,40 @@
             Dev(root, print = true) {
                 ProcessingDataCore.Dev_Operation(root, print);
             },
-            Trigger: (root) => Promise.all([
-                ProcessingDataCore.OperationText(root),
-                ProcessingDataCore.OperationInput(root)
-            ])
+            Trigger: (root) => {
+                // 若是 Text Node，轉向 parentElement 處理
+                if (root.nodeType === Node.TEXT_NODE && root.parentElement) {
+                    const scheduler = Scheduler();
+                    const textPromise = ProcessingDataCore.OperationText(root.parentElement, scheduler);
+                    scheduler.start();
+
+                    return Promise.all([textPromise]);
+                }
+
+                // 處理整頁或一般 element 節點
+                if (
+                    root === document ||
+                    (root.nodeType === Node.ELEMENT_NODE) // 包含 document.body、div 等
+                ) {
+                    const scheduler = Scheduler();
+                    const textPromise = ProcessingDataCore.OperationText(root, scheduler);
+                    const inputPromise = ProcessingDataCore.OperationInput(root, scheduler);
+                    scheduler.start();
+
+                    return Promise.all([textPromise, inputPromise]);
+                }
+
+                // 若是可處理的 input 元素，直接處理
+                if (
+                    root.nodeType === Node.ELEMENT_NODE &&
+                    root.tagName === "INPUT" &&
+                    (root.hasAttribute("placeholder") || root.value)
+                ) {
+                    return ProcessingDataCore.__FocusInputCore(root);
+                }
+
+                return Promise.resolve(); // 其他類型忽略
+            }
         };
     };
 
@@ -827,12 +900,18 @@
         };
     };
 
-    function Debounce(func, delay = 100) {
+    function DebounceCollect(func, delay) {
         let timer = null;
-        return (...args) => {
+        let collectedMutations = []; // 用於收集所有 mutations
+
+        return (mutations) => {
+            collectedMutations.push(...mutations);
             clearTimeout(timer);
-            timer = setTimeout(function () {
-                func(...args);
+
+            timer = setTimeout(() => {
+                func(collectedMutations);
+                collectedMutations = [];
+                timer = null;
             }, delay);
         }
     };
