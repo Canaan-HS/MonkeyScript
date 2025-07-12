@@ -3,6 +3,8 @@ import { util } from 'vite-plugin-monkey';
 const Name = "YTHideTool";
 export default {
     entry: `./${Name}/Dev/src/main.js`,
+    fileName: `${Name}-Dev.js`,
+    outDir: `./${Name}/Dev/dist`,
     userscript: {
         match: [
             '*://www.youtube.com/*',
@@ -23,13 +25,5 @@ export default {
 
             util.dataUrl(`window.Syn=Syn`)
         ]
-    },
-    build: {
-        rollupOptions: {
-            output: {
-                dir: `./${Name}/Dev/dist`,
-                entryFileNames: `${Name}-Dev.js`,
-            },
-        }
     },
 };
