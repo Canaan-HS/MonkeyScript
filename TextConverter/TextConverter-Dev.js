@@ -327,6 +327,22 @@
 
     /* =========================================== */
 
+    // requestIdleCallback 的 fallback
+    const RenderWait = requestIdleCallback || ((callback) => {
+        const startTime = Date.now();
+        // 使用 setTimeout 延遲 1ms，將任務推到事件循環的末尾，模擬“空閒”
+        return setTimeout(() => {
+            // 執行回調，並傳入一個模擬的 deadline 對象
+            callback({
+                didTimeout: false, // 不處理 timeout，所以恆為 false
+                timeRemaining: () => {
+                    // 模擬一個 50ms 的時間預算, 返回預算減去已花費的時間
+                    return Math.max(0, 50 - (Date.now() - startTime));
+                },
+            });
+        }, 1);
+    });
+
     /* 翻譯任務的調度程序 */
     function Scheduler() {
         let queue = [];
@@ -347,7 +363,7 @@
 
             // 如果時間用完但任務仍在，預約下一次
             if (queue.length > 0) {
-                requestIdleCallback(processQueue, { timeout });
+                RenderWait(processQueue, { timeout });
             } else {
                 isRunning = false; // 所有任務完成
             }
@@ -366,7 +382,7 @@
                 }
 
                 isRunning = true;
-                requestIdleCallback(processQueue, { timeout });
+                RenderWait(processQueue, { timeout });
             }
         }
     };
