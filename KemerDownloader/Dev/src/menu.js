@@ -1,13 +1,25 @@
 export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
 
-    const shadowHost = document.createElement('div');
-    shadowHost.id = 'kemer-settings-host';
-    document.body.appendChild(shadowHost);
-    const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+    const shadow = Syn.createElement(document.body, "div", { id: "kemer-settings" });
+    const shadowRoot = shadow.attachShadow({ mode: 'open' });
 
-    const getMenuHTML = () => {
+    const Color = {
+        Primary: {
+            "kemono": "#e8a17d",
+            "coomer": "#99ddff",
+            "nekohouse": "#bb91ff"
+        }[Syn.$domain.split(".")[0]] || '#8e8e93',
+        Background: '#2c2c2e',
+        BackgroundLight: '#3a3a3c',
+        Border: '#545458',
+        Text: '#f5f5f7',
+        TextSecondary: '#8e8e93',
+    };
+
+    const menuHTML = () => {
         const createFormItems = (settings, category) => {
             return Object.entries(settings).map(([key, value]) => {
+
                 // 跳過不應在此處渲染的特殊鍵
                 if (key === 'Dev' || (category === 'fetch' && (key === 'Mode' || key === 'Format'))) return '';
 
@@ -88,7 +100,6 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
             return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
         };
 
-        // 從 config.js 中提取 FileName 的註解和內容
         const fileNameConfigContent = `
             \r{Time} 發表時間
             \r{Title} 標題
@@ -117,21 +128,8 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
         `;
     };
 
-    const getMenuCSS = () => {
-        const Color = {
-            Primary: {
-                "kemono": "#e8a17d",
-                "coomer": "#99ddff",
-                "nekohouse": "#bb91ff"
-            }[Syn.$domain.split(".")[0]] || '#8e8e93',
-            Background: '#2c2c2e',
-            BackgroundLight: '#3a3a3c',
-            Border: '#545458',
-            Text: '#f5f5f7',
-            TextSecondary: '#8e8e93',
-        };
-
-        return `
+    shadowRoot.innerHTML = `
+        <style>
             :host { --primary-color: ${Color.Primary}; font-size: 16px; }
             #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); }
             #modal { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: ${Color.Background}; color: ${Color.Text}; border-radius: 14px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); transform: scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
@@ -171,37 +169,45 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
             .multi-select-btn input:checked + span { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
             pre { background-color: #1c1c1e; border: 1px solid #545458; border-radius: 8px; padding: 15px; overflow-x: auto; font-size: 0.85em; line-height: 1.4; color: #e0e0e0; }
             code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; }
-        `;
-    };
+        </style>
+        ${menuHTML()}
+    `;
 
-    shadowRoot.innerHTML = `<style>${getMenuCSS()}</style>${getMenuHTML()}`;
 
-    const overlay = shadowRoot.getElementById('overlay');
-    const conditionalTrigger = shadowRoot.querySelector('input.conditional-trigger');
-    const conditionalTarget = shadowRoot.getElementById(conditionalTrigger?.dataset.controls);
+    const overlay = Syn.Q(shadowRoot, "#overlay");
+    const conditionalTrigger = Syn.Q(shadowRoot, "input.conditional-trigger");
+    const conditionalTarget = Syn.Q(shadowRoot, "#fetch-conditional-settings");
+
+    Syn.one(overlay, "click", event => {
+        const target = event.target;
+        const tagName = target.tagName;
+        const className = target.className;
+
+        if (tagName === "BUTTON") {
+            // 切換選項卡
+            if (target.classList.contains("active")) return;
+
+            Syn.Q(shadowRoot, "button.active").classList.remove("active");
+            Syn.Q(shadowRoot, "div.tab-content.active").classList.remove("active");
+
+            target.classList.add("active");
+            Syn.Q(shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
+        } else if (className === "accordion-header" || className === "accordion-icon") {
+            // 手風琴 展開/收合
+            const parent = target.closest(".accordion");
+            parent.classList.toggle("open");
+
+            const content = Syn.Q(parent, "div.accordion-content");
+            content.style.maxHeight = parent.classList.contains("open") ? content.scrollHeight + "px" : null;
+        } else if (target === overlay) {
+            close();
+        }
+
+        
+    });
+
 
     const setupEventListeners = () => {
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-        shadowRoot.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', () => {
-                const tabId = link.dataset.tab;
-                shadowRoot.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
-                shadowRoot.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                link.classList.add('active');
-                shadowRoot.getElementById(tabId).classList.add('active');
-            });
-        });
-
-        shadowRoot.querySelectorAll('.accordion-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const accordion = header.parentElement;
-                accordion.classList.toggle('open');
-                const content = accordion.querySelector('.accordion-content');
-                content.style.maxHeight = accordion.classList.contains('open') ? content.scrollHeight + "px" : null;
-            });
-        });
-
         shadowRoot.querySelectorAll('.accordion-content .tooltip-icon').forEach(icon => {
             const contentParent = icon.closest('.accordion-content');
             if (contentParent) {
