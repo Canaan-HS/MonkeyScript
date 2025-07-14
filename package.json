@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "typescript": "^5.8.3",
-    "vite": "^7.0.4",
-    "vite-plugin-monkey": "^5.0.9"
+    "vite": "^7.0.6",
+    "vite-plugin-monkey": "^6.0.0"
   }
 }
