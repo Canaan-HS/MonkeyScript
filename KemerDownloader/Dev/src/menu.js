@@ -1,4 +1,4 @@
-export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
+export default function Menu(Syn, Transl, General, FileName, FetchSet) {
 
     const shadow = Syn.createElement(document.body, "div", { id: "kemer-settings" });
     const shadowRoot = shadow.attachShadow({ mode: 'open' });
@@ -8,7 +8,7 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
             "kemono": "#e8a17d",
             "coomer": "#99ddff",
             "nekohouse": "#bb91ff"
-        }[Syn.$domain.split(".")[0]] || '#8e8e93',
+        }[Syn.$domain.split(".")[0]],
         Background: '#2c2c2e',
         BackgroundLight: '#3a3a3c',
         Border: '#545458',
@@ -20,22 +20,32 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
         const createFormItems = (settings, category) => {
             return Object.entries(settings).map(([key, value]) => {
 
-                // 跳過不應在此處渲染的特殊鍵
-                if (key === 'Dev' || (category === 'fetch' && (key === 'Mode' || key === 'Format'))) return '';
+                // 跳過不需要顯示的項目
+                if (key === "Dev" || (category === "FetchSet" && (key === "Mode" || key === "Format"))) return '';
 
-                const id = `${category}-${key}`;
-                const label = Transl(key) || key;
                 const type = typeof value;
-                const tooltipText = Transl(`${key}Help`) || '沒有可用的說明';
-                const tooltip = `<span class="tooltip-icon" data-tooltip="${tooltipText}">!</span>`;
+                const label = Transl(key);
+                const id = `${category}-${key}`;
+                const tooltip = `<span class="tooltip-icon" data-tooltip="${Transl("說明")}">!</span>`;
 
-                if (type === 'boolean') {
-                    const isConditional = key === 'UseFormat';
+                if (category === 'FetchSet' && key === 'UseFormat') {
+                    return `
+                        <input type="checkbox" id="${id}" class="conditional-trigger" style="display: none;" ${value ? 'checked' : ''}>
+                        <div class="form-row">
+                            <label for="${id}">${label}${tooltip}</label>
+                            <label class="switch" for="${id}">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        ${createFetchConditionalItems()}
+                    `;
+                }
+                else if (type === 'boolean') {
                     return `
                         <div class="form-row">
                             <label for="${id}">${label}${tooltip}</label>
                             <label class="switch">
-                                <input type="checkbox" id="${id}" ${isConditional ? 'class="conditional-trigger"' : ''} data-controls="fetch-conditional-settings" ${value ? 'checked' : ''}>
+                                <input type="checkbox" id="${id}" ${value ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
                         </div>
@@ -43,10 +53,11 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
                 } else if (key === 'FillValue') {
                     return `
                         <div class="accordion form-row-full">
-                            <div class="accordion-header">
+                            <input type="checkbox" id="accordion-${id}" class="accordion-toggle" style="display: none;">
+                            <label class="accordion-header" for="accordion-${id}">
                                 <span>${label}</span>
                                 <span class="accordion-icon">▶</span>
-                            </div>
+                            </label>
                             <div class="accordion-content">
                                 <div class="form-row">
                                     <label for="${id}-Filler">${Transl("Filler")}<span class="tooltip-icon" data-tooltip="${Transl("FillerHelp")}">!</span></label>
@@ -67,65 +78,66 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
                         </div>
                     `;
                 }
+
                 return '';
             }).join('');
         };
 
-        const createFetchConditionalItems = () => {
-            const modeHtml = `
-                <div class="form-row">
-                    <label for="fetch-Mode">${Transl("Mode")}<span class="tooltip-icon" data-tooltip="${Transl("ModeHelp")}">!</span></label>
-                    <select id="fetch-Mode">
-                        <option value="FilterMode" ${FetchSet.Mode === 'FilterMode' ? 'selected' : ''}>${Transl("FilterMode")}</option>
-                        <option value="OnlyMode" ${FetchSet.Mode === 'OnlyMode' ? 'selected' : ''}>${Transl("OnlyMode")}</option>
-                    </select>
-                </div>
-            `;
-
-            const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
-            const formatButtons = formatOptions.map(opt => `
-                <label class="multi-select-btn">
-                    <input type="checkbox" name="fetch-Format" value="${opt}" ${FetchSet.Format.includes(opt) ? 'checked' : ''}>
-                    <span>${Transl(opt)}</span>
-                </label>
-            `).join('');
-
-            const formatHtml = `
-                <div class="form-row multi-select form-row-full">
-                    <label>${Transl("Format")}<span class="tooltip-icon" data-tooltip="${Transl("FormatHelp")}">!</span></label>
-                    <div class="multi-select-group">${formatButtons}</div>
-                </div>
-            `;
-
-            return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
-        };
-
         const fileNameConfigContent = `
-            \r{Time} 發表時間
-            \r{Title} 標題
-            \r{Artist} 作者 | 繪師 ...
-            \r{Source} 來源 => (Pixiv Fanbox) 之類的標籤
-            \r{Fill} 填充 => 只適用於檔名, 位置隨意 但 必須存在該值, 不然會出錯
+            \r{Time} | ${Transl("發佈時間")}
+            \r{Title} | ${Transl("標題")}
+            \r{Artist} | ${Transl("作者|繪師")}
+            \r{Source} | ${Transl("(Pixiv Fanbox) 之類的標籤")}
+            \r{Fill} | ${Transl("只適用於檔名的填充值, 必須存在該值")}
         `;
 
         return `
             <div id="overlay">
                 <div id="modal">
-                    <div class="header"><h2>${Transl("腳本設定")}</h2></div>
+                    <div class="header"><h2>${Transl("Settings")}</h2></div>
                     <div class="tabs">
-                        <button class="tab-link active" data-tab="tab-config">${Transl("通用設定")}</button>
-                        <button class="tab-link" data-tab="tab-filename">${Transl("檔名設定")}</button>
-                        <button class="tab-link" data-tab="tab-fetch">${Transl("抓取設定")}</button>
+                        <button class="tab-link active" data-tab="tab-config">${Transl("General")}</button>
+                        <button class="tab-link" data-tab="tab-filename">${Transl("FileName")}</button>
+                        <button class="tab-link" data-tab="tab-fetch">${Transl("FetchSet")}</button>
                     </div>
-                    <div class="tab-content active" id="tab-config">${createFormItems(Config, 'config')}</div>
+                    <div class="tab-content active" id="tab-config">${createFormItems(General, 'General')}</div>
                     <div class="tab-content" id="tab-filename">
-                        ${createFormItems(FileName, 'filename')}
+                        ${createFormItems(FileName, 'FileName')}
                         <pre class="filename-config-display">${fileNameConfigContent}</pre>
                     </div>
-                    <div class="tab-content" id="tab-fetch">${createFormItems(FetchSet, 'fetch')}${createFetchConditionalItems()}</div>
+                    <div class="tab-content" id="tab-fetch">${createFormItems(FetchSet, 'FetchSet')}</div>
                 </div>
             </div>
         `;
+    };
+
+    const createFetchConditionalItems = () => {
+        const modeHtml = `
+            <div class="form-row">
+                <label for="fetch-Mode">${Transl("Mode")}<span class="tooltip-icon" data-tooltip="${Transl("模式說明")}">!</span></label>
+                <select id="fetch-Mode">
+                    <option value="FilterMode" ${FetchSet.Mode === 'FilterMode' ? 'selected' : ''}>${Transl("FilterMode")}</option>
+                    <option value="OnlyMode" ${FetchSet.Mode === 'OnlyMode' ? 'selected' : ''}>${Transl("OnlyMode")}</option>
+                </select>
+            </div>
+        `;
+
+        const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
+        const formatButtons = formatOptions.map(opt => `
+            <label class="multi-select-btn">
+                <input type="checkbox" name="fetch-Format" value="${opt}" ${FetchSet.Format.includes(opt) ? 'checked' : ''}>
+                <span>${Transl(opt)}</span>
+            </label>
+        `).join('');
+
+        const formatHtml = `
+            <div class="form-row multi-select form-row-full">
+                <label>${Transl("Format")}<span class="tooltip-icon" data-tooltip="${Transl("格式說明")}">!</span></label>
+                <div class="multi-select-group">${formatButtons}</div>
+            </div>
+        `;
+
+        return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
     };
 
     shadowRoot.innerHTML = `
@@ -145,7 +157,7 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
             .form-row label { display: flex; align-items: center; gap: 8px; font-size: 0.95em; }
             .tooltip-icon { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; border-radius: 50%; background-color: #555; color: #fff; font-weight: bold; cursor: help; position: relative; font-size: 14px; }
             .tooltip-icon.separate { margin-left: 8px; }
-            .tooltip-icon:hover::after { content: attr(data-tooltip); position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background-color: #1c1c1e; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.8em; width: max-content; max-width: 250px; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid ${Color.Border}; }
+            .tooltip-icon:hover::after { content: attr(data-tooltip); z-index: 9999; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background-color: #1c1c1e; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.8em; width: max-content; max-width: 250px; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid ${Color.Border}; }
             .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
             .switch input { opacity: 0; width: 0; height: 0; }
             .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; }
@@ -157,11 +169,13 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
             .accordion { border: 1px solid ${Color.Border}; border-radius: 8px; margin-bottom: 16px; background-color: ${Color.BackgroundLight}; overflow: hidden; }
             .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 14px; background-color: ${Color.BackgroundLight}; }
             .accordion-icon { transition: transform 0.3s ease; font-size: 12px; }
-            .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-            .accordion-content.show-tooltip { overflow: visible; }
-            .accordion.open .accordion-icon { transform: rotate(90deg); }
-            .accordion.open .accordion-content { padding: 0 14px 14px; }
-            #fetch-conditional-settings { display: none; }
+            .accordion-content { max-height: 0; overflow: hidden; position: relative; transition: max-height 0.3s ease-out, padding 0.3s ease-out; padding: 0 14px; }
+            .accordion-toggle:checked + .accordion-header .accordion-icon { transform: rotate(90deg); }
+            .accordion-toggle:checked ~ .accordion-content { max-height: 200px; padding: 14px; }
+            #fetch-conditional-settings { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+            .conditional-trigger:checked + .form-row + #fetch-conditional-settings { max-height: 500px; }
+            .conditional-trigger:checked + .form-row .switch .slider { background-color: var(--primary-color); }
+            .conditional-trigger:checked + .form-row .switch .slider:before { transform: translateX(22px); }
             .multi-select { align-items: start; }
             .multi-select-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
             .multi-select-btn input { display: none; }
@@ -175,13 +189,10 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
 
 
     const overlay = Syn.Q(shadowRoot, "#overlay");
-    const conditionalTrigger = Syn.Q(shadowRoot, "input.conditional-trigger");
-    const conditionalTarget = Syn.Q(shadowRoot, "#fetch-conditional-settings");
 
     Syn.one(overlay, "click", event => {
         const target = event.target;
         const tagName = target.tagName;
-        const className = target.className;
 
         if (tagName === "BUTTON") {
             // 切換選項卡
@@ -192,43 +203,15 @@ export default function Menu(Syn, Transl, Config, FileName, FetchSet) {
 
             target.classList.add("active");
             Syn.Q(shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
-        } else if (className === "accordion-header" || className === "accordion-icon") {
-            // 手風琴 展開/收合
-            const parent = target.closest(".accordion");
-            parent.classList.toggle("open");
-
-            const content = Syn.Q(parent, "div.accordion-content");
-            content.style.maxHeight = parent.classList.contains("open") ? content.scrollHeight + "px" : null;
         } else if (target === overlay) {
             close();
         }
 
-        
+
     });
-
-
-    const setupEventListeners = () => {
-        shadowRoot.querySelectorAll('.accordion-content .tooltip-icon').forEach(icon => {
-            const contentParent = icon.closest('.accordion-content');
-            if (contentParent) {
-                icon.addEventListener('mouseenter', () => contentParent.classList.add('show-tooltip'));
-                icon.addEventListener('mouseleave', () => contentParent.classList.remove('show-tooltip'));
-            }
-        });
-
-        if (conditionalTrigger && conditionalTarget) {
-            const toggleConditional = () => {
-                conditionalTarget.style.display = conditionalTrigger.checked ? 'block' : 'none';
-            };
-            conditionalTrigger.addEventListener('change', toggleConditional);
-            toggleConditional();
-        }
-    };
 
     const open = () => { overlay.style.display = 'flex'; setTimeout(() => overlay.classList.add('visible'), 10); };
     const close = () => { overlay.classList.remove('visible'); setTimeout(() => { overlay.style.display = 'none'; }, 200); };
-
-    setupEventListeners();
 
     return { open, close };
 }
