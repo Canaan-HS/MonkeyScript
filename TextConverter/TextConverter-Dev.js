@@ -134,11 +134,17 @@
                 );
         },
         DisplayMemory: function () {
-            const [NormalSize, ReverseSize] = [objectSize(this.NormalDict), objectSize(this.ReverseDict)];
+            const [NormalSize, ReverseSize] = [getObjectSize(this.NormalDict), getObjectSize(this.ReverseDict)];
+            const ExactMB = (
+                Dict === this.NormalDict
+                    ? NormalSize.MB
+                    : NormalSize.MB + getObjectSize(Dict).MB
+            ) + ReverseSize.MB;
+
             alert(`字典緩存大小
-                \r一般字典大小: ${NormalSize.KB} KB
-                \r反轉字典大小: ${ReverseSize.KB} KB
-                \r全部緩存大小: ${NormalSize.MB * 2 + ReverseSize.MB} MB
+                \r一般字典大小: ${NormalSize.MB} MB
+                \r反轉字典大小: ${ReverseSize.MB} MB
+                \r全部緩存大小: ${ExactMB} MB
             `);
         },
         ReleaseMemory: function () { // 釋放翻譯字典緩存 (不包含自定)
@@ -156,7 +162,7 @@
         const RunFactory = () => Transl.Trigger(body);
 
         const observer = new MutationObserver(Debounce((mutations) => {
-            const hasRelevantChanges = mutations.some(mutation => 
+            const hasRelevantChanges = mutations.some(mutation =>
                 mutation.type === "childList" || mutation.type === "characterData"
             );
             hasRelevantChanges && RunFactory(); // 監聽到變化就觸發轉換
@@ -541,58 +547,169 @@
         }
     };
 
-    /* 獲取對象大小 */
-    function objectSize(object) {
-        const Type = (obj) => Object.prototype.toString.call(obj).slice(8, -1);
+    /* 獲取對象大小 (估算 誤差大概 1~5% 以內) */
+    function getObjectSize(object) {
+        const visited = new WeakSet();
+
+        // V8 內存對齊
+        const alignSize = (size) => Math.ceil(size / 8) * 8;
+
+        // 類型檢測
+        const Type = (obj) => {
+            if (obj === null) return 'Null';
+            if (obj === undefined) return 'Undefined';
+            return Object.prototype.toString.call(obj).slice(8, -1);
+        };
+
+        // 計算集合類型大小
         const calculateCollectionSize = (value, cache, iteratee) => {
             if (!value || cache.has(value)) return 0;
             cache.add(value);
-            let bytes = 0;
+
+            let bytes = 16; // 集合對象基礎開銷
+            const size = value.size || value.length || 0;
+            bytes += size * 8; // 索引/鍵的指針開銷
+
             for (const item of iteratee(value)) {
-                bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
-                bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+                if (item[0] !== undefined) {
+                    bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
+                }
+                if (item[1] !== undefined) {
+                    bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+                }
             }
-            return bytes;
-        };
-        const Calculate = {
-            Boolean: () => 4,
-            Date: () => 8,
-            Number: () => 8,
-            String: (value) => value.length * 2,
-            RegExp: (value) => value.toString().length * 2,
-            Symbol: (value) => (value.description || '').length * 2,
-            DataView: (value) => value.byteLength,
-            TypedArray: (value) => value.byteLength,
-            ArrayBuffer: (value) => value.byteLength,
-            Array: (value, cache) => calculateCollectionSize(value, cache, function* (arr) {
-                for (const item of arr) {
-                    yield [item];
-                }
-            }),
-            Set: (value, cache) => calculateCollectionSize(value, cache, function* (set) {
-                for (const item of set) {
-                    yield [item];
-                }
-            }),
-            Object: (value, cache) => calculateCollectionSize(value, cache, function* (obj) {
-                for (const key in obj) {
-                    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                        yield [key, obj[key]];
-                    }
-                }
-            }),
-            Map: (value, cache) => calculateCollectionSize(value, cache, function* (map) {
-                for (const [key, val] of map) {
-                    yield [key, val];
-                }
-            })
+
+            return alignSize(bytes);
         };
 
-        const bytes = Calculate[Type(object)]?.(object, new WeakSet()) ?? 0;
+        // 計算字符串實際佔用
+        const calculateStringSize = (value) => {
+            let bytes = 12; // 字符串對象開銷
+
+            for (let i = 0; i < value.length; i++) {
+                const code = value.charCodeAt(i);
+                if (code < 0x80) bytes += 1;
+                else if (code < 0x800) bytes += 2;
+                else if (code < 0x10000) bytes += 3;
+                else bytes += 4;
+            }
+
+            return alignSize(bytes);
+        };
+
+        // 主計算邏輯
+        const Calculate = {
+            // 基礎類型
+            Undefined: () => 0,
+            Null: () => 0,
+            Boolean: () => 4,
+            Number: () => 8,
+            BigInt: (value) => alignSize(Math.ceil(value.toString(2).length / 8) + 8),
+            String: calculateStringSize,
+            Symbol: (value) => alignSize((value.description || '').length * 2 + 8),
+
+            // 日期和正則
+            Date: () => 8,
+            RegExp: (value) => alignSize(value.toString().length * 2 + 8),
+
+            // 函數
+            Function: (value) => alignSize(value.toString().length * 2 + 16),
+
+            // ArrayBuffer 和 TypedArray
+            ArrayBuffer: (value) => alignSize(value.byteLength + 16),
+            DataView: (value) => alignSize(value.byteLength + 24),
+            Int8Array: (value) => alignSize(value.byteLength + 24),
+            Uint8Array: (value) => alignSize(value.byteLength + 24),
+            Uint8ClampedArray: (value) => alignSize(value.byteLength + 24),
+            Int16Array: (value) => alignSize(value.byteLength + 24),
+            Uint16Array: (value) => alignSize(value.byteLength + 24),
+            Int32Array: (value) => alignSize(value.byteLength + 24),
+            Uint32Array: (value) => alignSize(value.byteLength + 24),
+            Float32Array: (value) => alignSize(value.byteLength + 24),
+            Float64Array: (value) => alignSize(value.byteLength + 24),
+            BigInt64Array: (value) => alignSize(value.byteLength + 24),
+            BigUint64Array: (value) => alignSize(value.byteLength + 24),
+
+            // 集合類型
+            Array: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (arr) {
+                    for (let i = 0; i < arr.length; i++) {
+                        yield [arr[i]];
+                    }
+                });
+            },
+
+            Set: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (set) {
+                    for (const item of set) {
+                        yield [item];
+                    }
+                });
+            },
+
+            Map: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (map) {
+                    for (const [key, val] of map) {
+                        yield [key, val];
+                    }
+                });
+            },
+
+            Object: (value, cache) => {
+                if (!value || cache.has(value)) return 0;
+                cache.add(value);
+
+                let bytes = 16; // 對象基礎開銷
+
+                // 計算自有屬性
+                const props = Object.getOwnPropertyNames(value);
+                bytes += props.length * 8; // 屬性指針開銷
+
+                for (const key of props) {
+                    bytes += calculateStringSize(key); // 鍵名開銷
+                    const propValue = value[key];
+                    bytes += Calculate[Type(propValue)]?.(propValue, cache) ?? 0;
+                }
+
+                // Symbol 屬性
+                const symbols = Object.getOwnPropertySymbols(value);
+                bytes += symbols.length * 8;
+
+                for (const sym of symbols) {
+                    bytes += Calculate.Symbol(sym);
+                    const symValue = value[sym];
+                    bytes += Calculate[Type(symValue)]?.(symValue, cache) ?? 0;
+                }
+
+                return alignSize(bytes);
+            },
+
+            // WeakMap 和 WeakSet 無法準確計算
+            WeakMap: () => 32,
+            WeakSet: () => 24,
+
+            // 其他類型
+            Error: (value) => {
+                let bytes = 32; // Error 對象基礎開銷
+                bytes += calculateStringSize(value.message || '');
+                bytes += calculateStringSize(value.stack || '');
+                return alignSize(bytes);
+            },
+
+            Promise: () => 64, // Promise 對象估算
+        };
+
+        // 開始計算
+        const type = Type(object);
+        const calculator = Calculate[type] || Calculate.Object;
+        const bytes = calculator(object, visited);
+
+        // 返回數字格式的結果
         return {
-            Bytes: bytes,
-            KB: (bytes / 1024).toFixed(2),
-            MB: (bytes / 1024 / 1024).toFixed(2)
+            bytes: bytes,
+            KB: Number((bytes / 1024).toFixed(2)),
+            MB: Number((bytes / 1024 / 1024).toFixed(2)),
+            GB: Number((bytes / 1024 / 1024 / 1024).toFixed(2))
         };
     };
 
