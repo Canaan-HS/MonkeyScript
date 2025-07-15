@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      0.0.1-Beta2
+// @version      0.0.1-Beta3
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
@@ -22,20 +22,13 @@
 // @icon         https://cdn-icons-png.flaticon.com/512/9616/9616859.png
 
 // @noframes
-// @run-at       document-start
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
 // @grant        GM_registerMenuCommand
-// ==/UserScript==
 
-/**
- * Data Reference Sources:
- * https://github.com/EhTagTranslation/Database
- * https://github.com/DominikDoom/a1111-sd-webui-tagcomplete
- * https://github.com/scooderic/exhentai-tags-chinese-translation
- * https://greasyfork.org/zh-TW/scripts/20312-e-hentai-tag-list-for-chinese
- */
+// @run-at       document-start
+// ==/UserScript==
 
 (async () => {
     const Config = {
@@ -95,7 +88,7 @@
     };
 
     /* ====================== 不瞭解不要修改下方參數 ===================== */
-    const [ LoadDict, Translation ] = [ Config.LoadDictionary, Config.TranslationReversal ];
+    const [LoadDict, Translation] = [Config.LoadDictionary, Config.TranslationReversal];
     const Dev = GM_getValue("Dev", false);
     const Update = UpdateWordsDict();
     const Transl = TranslationFactory();
@@ -107,32 +100,33 @@
     const Dictionary = {
         NormalDict: undefined,
         ReverseDict: undefined,
-        RefreshNormal: function() {
+        RefreshNormal: function () {
             this.NormalDict = Dict;
         },
-        RefreshReverse: function() {
-            this.ReverseDict = Object.entries(this.NormalDict).reduce((acc, [ key, value ]) => {
+        RefreshReverse: function () {
+            this.ReverseDict = Object.entries(this.NormalDict).reduce((acc, [key, value]) => {
                 acc[value] = key;
                 return acc;
             }, {});
         },
-        RefreshDict: function() {
+        RefreshDict: function () {
             TranslatedRecord = new Set();
-            Dict = Translated ? (Translated = false, this.ReverseDict) : (Translated = true, 
-            this.NormalDict);
+            Dict = Translated ? (Translated = false, this.ReverseDict) : (Translated = true,
+                this.NormalDict);
         },
-        DisplayMemory: function() {
-            const [ NormalSize, ReverseSize ] = [ objectSize(this.NormalDict), objectSize(this.ReverseDict) ];
+        DisplayMemory: function () {
+            const [NormalSize, ReverseSize] = [getObjectSize(this.NormalDict), getObjectSize(this.ReverseDict)];
+            const ExactMB = (Dict === this.NormalDict ? NormalSize.MB : NormalSize.MB + getObjectSize(Dict).MB) + ReverseSize.MB;
             alert(`字典緩存大小
-                \r一般字典大小: ${NormalSize.KB} KB
-                \r反轉字典大小: ${ReverseSize.KB} KB
-                \r全部緩存大小: ${NormalSize.MB * 2 + ReverseSize.MB} MB
+                \r一般字典大小: ${NormalSize.MB} MB
+                \r反轉字典大小: ${ReverseSize.MB} MB
+                \r全部緩存大小: ${ExactMB} MB
             `);
         },
-        ReleaseMemory: function() {
+        ReleaseMemory: function () {
             Dict = this.NormalDict = this.ReverseDict = {};
         },
-        Init: function() {
+        Init: function () {
             Object.assign(Dict, Customize);
             this.RefreshNormal();
             this.RefreshReverse();
@@ -141,23 +135,18 @@
     Dictionary.Init();
     WaitElem("body", body => {
         const RunFactory = () => Transl.Trigger(body);
-        const options = {
-            subtree: true,
-            childList: true,
-            characterData: true
-        };
-        let mutation;
-        const observer = new MutationObserver(Debounce((mutationsList, observer) => {
-            for (mutation of mutationsList) {
-                if (mutation.type === "childList" || mutation.type === "characterData") {
-                    RunFactory();
-                    break;
-                }
-            }
+        const observer = new MutationObserver(Debounce(mutations => {
+            const hasRelevantChanges = mutations.some(mutation => mutation.type === "childList" || mutation.type === "characterData");
+            hasRelevantChanges && RunFactory();
         }, 300));
         const StartOb = () => {
             RunFactory();
-            observer.observe(body, options);
+            observer.observe(body, {
+                subtree: true,
+                childList: true,
+                characterData: true,
+                attributeFilter: ["placeholder"]
+            });
         };
         const DisOB = () => observer.disconnect();
         !Dev && StartOb();
@@ -254,12 +243,25 @@
             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                 acceptNode: node => {
                     const tag = node.parentElement.tagName;
-                    if (tag === "STYLE" || tag === "SCRIPT") {
+                    if (tag === "STYLE" || tag === "SCRIPT" || tag === "CODE" || tag === "PRE" || tag === "NOSCRIPT" || tag === "SVG") {
                         return NodeFilter.FILTER_REJECT;
                     }
                     const content = node.textContent.trim();
-                    if (content == "") return NodeFilter.FILTER_REJECT;
-                    if (!/[\w\p{L}]/u.test(content) || /^\d+$/.test(content) || /^\d+(\.\d+)?\s*[km]$/i.test(content)) {
+                    if (!content) return NodeFilter.FILTER_REJECT;
+                    if (content.startsWith("src=") || content.startsWith("href=") || content.startsWith("data-") || content.startsWith("function ") || content.startsWith("const ") || content.startsWith("var ")) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    const codeSymbolCount = (content.match(/[{}[\]()<>]/g) || []).length;
+                    if (codeSymbolCount > content.length * .2) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (/^\d+$/.test(content)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (/^\d+(\.\d+)?\s*[km]$/i.test(content)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (!/[\w\p{L}]/u.test(content)) {
                         return NodeFilter.FILTER_REJECT;
                     }
                     return NodeFilter.FILTER_ACCEPT;
@@ -273,29 +275,29 @@
         }
         const TCore = {
             __ShortWordRegex: /[\d\p{L}]+/gu,
-            __LongWordRegex: /[\d\p{L}]+(?:[^()\[\]{}{[(\t\n])+[\d\p{L}]\.*/gu,
+            __LongWordRegex: /[\d\p{L}]+(?:[^|()\[\]{}{[(\t\n])+[\d\p{L}]\.*/gu,
             __Clean: text => text.trim().toLowerCase(),
-            Dev_MatchObj: function(text) {
+            Dev_MatchObj: function (text) {
                 const Sresult = text?.match(this.__ShortWordRegex)?.map(Short => {
                     const Clean = this.__Clean(Short);
-                    return [ Clean, Dict[Clean] ?? "" ];
+                    return [Clean, Dict[Clean] ?? ""];
                 }) ?? [];
                 const Lresult = text?.match(this.__LongWordRegex)?.map(Long => {
                     const Clean = this.__Clean(Long);
-                    return [ Clean, Dict[Clean] ?? "" ];
+                    return [Clean, Dict[Clean] ?? ""];
                 }) ?? [];
-                return [ Sresult, Lresult ].flat().filter(([ Key, Value ]) => Key && !/^\d+$/.test(Key)).reduce((acc, [ Key, Value ]) => {
+                return [Sresult, Lresult].flat().filter(([Key, Value]) => Key && !/^\d+$/.test(Key)).reduce((acc, [Key, Value]) => {
                     acc[Key] = Value;
                     return acc;
                 }, {});
             },
-            OnlyLong: function(text) {
+            OnlyLong: function (text) {
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? Long);
             },
-            OnlyShort: function(text) {
+            OnlyShort: function (text) {
                 return text?.replace(this.__ShortWordRegex, Short => Dict[this.__Clean(Short)] ?? Short);
             },
-            LongShort: function(text) {
+            LongShort: function (text) {
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? this.OnlyShort(Long));
             }
         };
@@ -321,9 +323,9 @@
         const ProcessingDataCore = {
             __FocusTextCore: Translation.FocusOnRecovery ? RefreshUICore.FocusTextRecovery : RefreshUICore.FocusTextTranslate,
             __FocusInputCore: Translation.FocusOnRecovery ? RefreshUICore.FocusInputRecovery : RefreshUICore.FocusInputTranslate,
-            Dev_Operation: function(root, print) {
+            Dev_Operation: function (root, print) {
                 const results = {};
-                [ ...getTextNodes(root).map(textNode => textNode.textContent), ...[ ...root.querySelectorAll("input[placeholder], input[value]") ].map(inputNode => [ inputNode.value, inputNode.getAttribute("placeholder") ]).flat().filter(value => value && value != "") ].map(text => Object.assign(results, TCore.Dev_MatchObj(text)));
+                [...getTextNodes(root).map(textNode => textNode.textContent), ...[...root.querySelectorAll("input[placeholder], input[value]")].map(inputNode => [inputNode.value, inputNode.getAttribute("placeholder")]).flat().filter(value => value && value != "")].map(text => Object.assign(results, TCore.Dev_MatchObj(text)));
                 if (print) console.table(results); else {
                     const Json = document.createElement("a");
                     Json.href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(results, null, 4))}`;
@@ -334,15 +336,15 @@
                     }, 500);
                 }
             },
-            OperationText: async function(root) {
+            OperationText: async function (root) {
                 return Promise.all(getTextNodes(root).map(textNode => {
                     if (TranslatedRecord.has(textNode)) return Promise.resolve();
                     TranslatedRecord.add(textNode);
                     return this.__FocusTextCore(textNode);
                 }));
             },
-            OperationInput: async function(root) {
-                return Promise.all([ ...root.querySelectorAll("input[placeholder]") ].map(inputNode => {
+            OperationInput: async function (root) {
+                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode => {
                     if (TranslatedRecord.has(inputNode)) return Promise.resolve();
                     TranslatedRecord.add(inputNode);
                     return this.__FocusInputCore(inputNode);
@@ -354,7 +356,7 @@
                 ProcessingDataCore.Dev_Operation(root, print);
             },
             Trigger: async root => {
-                await Promise.all([ ProcessingDataCore.OperationText(root), ProcessingDataCore.OperationInput(root) ]);
+                await Promise.all([ProcessingDataCore.OperationText(root), ProcessingDataCore.OperationInput(root)]);
             }
         };
     }
@@ -467,63 +469,128 @@
             }
         };
     }
-    function objectSize(object) {
-        const Type = obj => Object.prototype.toString.call(obj).slice(8, -1);
+    function getObjectSize(object) {
+        const visited = new WeakSet();
+        const alignSize = size => Math.ceil(size / 8) * 8;
+        const Type = obj => {
+            if (obj === null) return "Null";
+            if (obj === undefined) return "Undefined";
+            return Object.prototype.toString.call(obj).slice(8, -1);
+        };
         const calculateCollectionSize = (value, cache, iteratee) => {
             if (!value || cache.has(value)) return 0;
             cache.add(value);
-            let bytes = 0;
+            let bytes = 16;
+            const size = value.size || value.length || 0;
+            bytes += size * 8;
             for (const item of iteratee(value)) {
-                bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
-                bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+                if (item[0] !== undefined) {
+                    bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
+                }
+                if (item[1] !== undefined) {
+                    bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+                }
             }
-            return bytes;
+            return alignSize(bytes);
+        };
+        const calculateStringSize = value => {
+            let bytes = 12;
+            for (let i = 0; i < value.length; i++) {
+                const code = value.charCodeAt(i);
+                if (code < 128) bytes += 1; else if (code < 2048) bytes += 2; else if (code < 65536) bytes += 3; else bytes += 4;
+            }
+            return alignSize(bytes);
         };
         const Calculate = {
+            Undefined: () => 0,
+            Null: () => 0,
             Boolean: () => 4,
-            Date: () => 8,
             Number: () => 8,
-            String: value => value.length * 2,
-            RegExp: value => value.toString().length * 2,
-            Symbol: value => (value.description || "").length * 2,
-            DataView: value => value.byteLength,
-            TypedArray: value => value.byteLength,
-            ArrayBuffer: value => value.byteLength,
-            Array: (value, cache) => calculateCollectionSize(value, cache, function*(arr) {
-                for (const item of arr) {
-                    yield [ item ];
-                }
-            }),
-            Set: (value, cache) => calculateCollectionSize(value, cache, function*(set) {
-                for (const item of set) {
-                    yield [ item ];
-                }
-            }),
-            Object: (value, cache) => calculateCollectionSize(value, cache, function*(obj) {
-                for (const key in obj) {
-                    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                        yield [ key, obj[key] ];
+            BigInt: value => alignSize(Math.ceil(value.toString(2).length / 8) + 8),
+            String: calculateStringSize,
+            Symbol: value => alignSize((value.description || "").length * 2 + 8),
+            Date: () => 8,
+            RegExp: value => alignSize(value.toString().length * 2 + 8),
+            Function: value => alignSize(value.toString().length * 2 + 16),
+            ArrayBuffer: value => alignSize(value.byteLength + 16),
+            DataView: value => alignSize(value.byteLength + 24),
+            Int8Array: value => alignSize(value.byteLength + 24),
+            Uint8Array: value => alignSize(value.byteLength + 24),
+            Uint8ClampedArray: value => alignSize(value.byteLength + 24),
+            Int16Array: value => alignSize(value.byteLength + 24),
+            Uint16Array: value => alignSize(value.byteLength + 24),
+            Int32Array: value => alignSize(value.byteLength + 24),
+            Uint32Array: value => alignSize(value.byteLength + 24),
+            Float32Array: value => alignSize(value.byteLength + 24),
+            Float64Array: value => alignSize(value.byteLength + 24),
+            BigInt64Array: value => alignSize(value.byteLength + 24),
+            BigUint64Array: value => alignSize(value.byteLength + 24),
+            Array: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (arr) {
+                    for (let i = 0; i < arr.length; i++) {
+                        yield [arr[i]];
                     }
+                });
+            },
+            Set: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (set) {
+                    for (const item of set) {
+                        yield [item];
+                    }
+                });
+            },
+            Map: (value, cache) => {
+                return calculateCollectionSize(value, cache, function* (map) {
+                    for (const [key, val] of map) {
+                        yield [key, val];
+                    }
+                });
+            },
+            Object: (value, cache) => {
+                if (!value || cache.has(value)) return 0;
+                cache.add(value);
+                let bytes = 16;
+                const props = Object.getOwnPropertyNames(value);
+                bytes += props.length * 8;
+                for (const key of props) {
+                    bytes += calculateStringSize(key);
+                    const propValue = value[key];
+                    bytes += Calculate[Type(propValue)]?.(propValue, cache) ?? 0;
                 }
-            }),
-            Map: (value, cache) => calculateCollectionSize(value, cache, function*(map) {
-                for (const [ key, val ] of map) {
-                    yield [ key, val ];
+                const symbols = Object.getOwnPropertySymbols(value);
+                bytes += symbols.length * 8;
+                for (const sym of symbols) {
+                    bytes += Calculate.Symbol(sym);
+                    const symValue = value[sym];
+                    bytes += Calculate[Type(symValue)]?.(symValue, cache) ?? 0;
                 }
-            })
+                return alignSize(bytes);
+            },
+            WeakMap: () => 32,
+            WeakSet: () => 24,
+            Error: value => {
+                let bytes = 32;
+                bytes += calculateStringSize(value.message || "");
+                bytes += calculateStringSize(value.stack || "");
+                return alignSize(bytes);
+            },
+            Promise: () => 64
         };
-        const bytes = Calculate[Type(object)]?.(object, new WeakSet()) ?? 0;
+        const type = Type(object);
+        const calculator = Calculate[type] || Calculate.Object;
+        const bytes = calculator(object, visited);
         return {
-            Bytes: bytes,
-            KB: (bytes / 1024).toFixed(2),
-            MB: (bytes / 1024 / 1024).toFixed(2)
+            bytes: bytes,
+            KB: Number((bytes / 1024).toFixed(2)),
+            MB: Number((bytes / 1024 / 1024).toFixed(2)),
+            GB: Number((bytes / 1024 / 1024 / 1024).toFixed(2))
         };
     }
     function Debounce(func, delay = 100) {
         let timer = null;
         return (...args) => {
             clearTimeout(timer);
-            timer = setTimeout(function() {
+            timer = setTimeout(function () {
                 func(...args);
             }, delay);
         };
@@ -543,7 +610,7 @@
         return generate(typeof format === "string" ? format : defaultFormat);
     }
     async function Menu(Item, ID = "Menu", Index = 1) {
-        for (const [ Name, options ] of Object.entries(Item)) {
+        for (const [Name, options] of Object.entries(Item)) {
             GM_registerMenuCommand(Name, () => {
                 options.func();
             }, {
@@ -555,18 +622,28 @@
         }
     }
     async function WaitElem(selector, found) {
-        const observer = new MutationObserver(Debounce(() => {
-            const element = document.querySelector(selector);
-            if (element) {
-                observer.disconnect();
-                found(element);
-            }
-        }));
-        observer.observe(document, {
-            subtree: true,
-            childList: true,
-            attributes: true,
-            characterData: true
-        });
+        const Core = async function () {
+            let AnimationFrame;
+            let timer, result;
+            const query = () => {
+                result = document.getElementsByTagName(selector)[0];
+                if (result) {
+                    cancelAnimationFrame(AnimationFrame);
+                    clearTimeout(timer);
+                    found && found(result);
+                } else {
+                    AnimationFrame = requestAnimationFrame(query);
+                }
+            };
+            AnimationFrame = requestAnimationFrame(query);
+            timer = setTimeout(() => {
+                cancelAnimationFrame(AnimationFrame);
+            }, 1e3 * 8);
+        };
+        if (document.visibilityState === "hidden") {
+            document.addEventListener("visibilitychange", () => Core(), {
+                once: true
+            });
+        } else Core();
     }
 })();
