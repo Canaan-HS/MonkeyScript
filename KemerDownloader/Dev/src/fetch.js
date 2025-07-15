@@ -1,5 +1,5 @@
 export default function Fetch(
-    Config, Process, Transl, Syn, md5
+    General, Process, Transl, Syn, md5
 ) {
     return class FetchData {
         constructor(Delay, AdvancedFetch, ToLinkTxt) {
@@ -31,15 +31,7 @@ export default function Fetch(
                     : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy";
 
             // 預設添加的數據
-            this.InfoRules = {
-                "PostLink": Transl("帖子連結"),
-                "Timestamp": Transl("發佈日期"),
-                "TypeTag": Transl("類型標籤"),
-                "ImgLink": Transl("圖片連結"),
-                "VideoLink": Transl("影片連結"),
-                "DownloadLink": Transl("下載連結"),
-                "ExternalLink": Transl("外部連結")
-            };
+            this.InfoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
 
             // 根據類型判斷預設值
             this.Default = (Value) => {
@@ -70,9 +62,9 @@ export default function Fetch(
              */
             this.FetchGenerate = (Data) => {
                 return Object.keys(Data).reduce((acc, key) => {
-                    if (this.InfoRules.hasOwnProperty(key)) {
+                    if (this.InfoRules.has(key)) {
                         const value = this.Default(Data[key]);
-                        value && (acc[this.InfoRules[key]] = value); // 有數據的才被添加
+                        value && (acc[Transl(key)] = value); // 有數據的才被添加
                     }
                     return acc;
                 }, {});
@@ -246,7 +238,7 @@ export default function Fetch(
                         }
                     };
                 } catch (error) {
-                    Syn.Log("Error specialLinkParse", error, { dev: Config.Dev, type: "error", collapsed: false });
+                    Syn.Log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
                 }
 
                 return Cache;
@@ -268,19 +260,16 @@ export default function Fetch(
          * FetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
          */
         async FetchConfig(Mode = "FilterMode", UserSet = []) {
-            let Cache;
             switch (Mode) {
                 case "FilterMode":
                     this.OnlyMode = false;
-                    UserSet.forEach(key => delete this.InfoRules[key]);
+                    UserSet.forEach(key => this.InfoRules.delete(key));
                     break;
                 case "OnlyMode":
                     this.OnlyMode = true;
-                    Cache = Object.keys(this.InfoRules).reduce((acc, key) => {
-                        if (UserSet.includes(key)) acc[key] = this.InfoRules[key];
-                        return acc;
-                    }, {});
-                    this.InfoRules = Cache;
+                    this.InfoRules = new Set(
+                        [...this.InfoRules].filter(key => UserSet.has(key))
+                    );
                     break;
             }
         };
@@ -330,7 +319,7 @@ export default function Fetch(
                         const { index, title, url, content, error } = e.data;
                         if (!error) resolve({ index, title, url, content });
                         else {
-                            Syn.Log(error, { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
+                            Syn.Log(error, { title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
                             this.Worker.postMessage({ index: index, title: title, url: url });
                         };
@@ -364,7 +353,7 @@ export default function Fetch(
                     const { index, title, url, content, error } = e.data;
                     if (!error) resolve({ index, title, url, content });
                     else {
-                        Syn.Log(error, { title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
+                        Syn.Log(error, { title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                         await this.TooMany_TryAgain(url);
                         this.Worker.postMessage({ index: index, title: title, url: url });
                     };
@@ -478,14 +467,14 @@ export default function Fetch(
                                             };
 
                                             resolve();
-                                            Syn.title(`（${this.Pages}）`);
-                                            Syn.Log("Request Successful", this.TaskDict, { dev: Config.Dev, collapsed: false });
+                                            Syn.title(`（${this.Pages} - ${++this.Progress}）`);
+                                            Syn.Log("Request Successful", this.TaskDict, { dev: General.Dev, collapsed: false });
                                         } else throw new Error("Json Parse Failed");
                                     } else {
                                         throw new Error("Request Failed");
                                     }
                                 } catch (error) {
-                                    Syn.Log(error, { index: index, title: title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
+                                    Syn.Log(error, { index: index, title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                                     await this.TooMany_TryAgain(url); // 錯誤等待
                                     this.Worker.postMessage({ index: index, title: title, url: url });
                                 }
@@ -525,10 +514,10 @@ export default function Fetch(
                                     this.TaskDict.set(Index, { title: Title, content: Gen });
                                 };
 
-                                Syn.title(`（${this.Pages} - ${++this.Progress}）`);
-                                Syn.Log("Parsed Successful", this.TaskDict, { dev: Config.Dev, collapsed: false });
+                                Syn.title(`（${this.Pages}）`);
+                                Syn.Log("Parsed Successful", this.TaskDict, { dev: General.Dev, collapsed: false });
                             } catch (error) {
-                                Syn.Log(error, { title: Title, url: url }, { dev: Config.Dev, type: "error", collapsed: false });
+                                Syn.Log(error, { title: Title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                                 continue;
                             }
                         }
@@ -558,9 +547,9 @@ export default function Fetch(
             let Content = "";
             for (const value of Object.values(this.DataDict)) {
                 for (const link of Object.values(Object.assign({},
-                    value[Transl("圖片連結")],
-                    value[Transl("影片連結")],
-                    value[Transl("下載連結")]
+                    value[Transl("ImgLink")],
+                    value[Transl("VideoLink")],
+                    value[Transl("DownloadLink")]
                 ))) {
                     Content += `${link}\n`;
                 }
