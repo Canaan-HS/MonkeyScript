@@ -82,7 +82,7 @@
              * 2. 反轉時常常會有許多無法反轉的狀況 (通常是短句)
              */
             HotKey: true, // 啟用快捷反轉 (alt + v)
-            FocusOnRecovery: true // 是否專注於反轉
+            FocusOnRecovery: false // 是否專注於反轉
         }
     };
 
@@ -410,11 +410,15 @@
 
                 if (print) console.table(results);
                 else {
-                    const Json = document.createElement("a");
-                    Json.href = `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(results, null, 4))}`;
-                    Json.download = "MatchWords.json";
-                    Json.click();
-                    setTimeout(() => { Json.remove() }, 500);
+                    const Json = new Blob([JSON.stringify(results, null, 4)], { type: "application/json" });
+
+                    const Link = document.createElement("a");
+                    Link.href = URL.createObjectURL(Json);
+                    Link.download = "MatchWords.json";
+                    Link.click();
+
+                    URL.revokeObjectURL(Link.href);
+                    Link.remove();
                 };
             },
             OperationText: async function (root) {
