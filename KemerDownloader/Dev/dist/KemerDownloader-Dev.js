@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      0.0.21-Beta5
+// @version      0.0.21-Beta6
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -29,7 +29,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1580133/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1616381/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -47,74 +47,42 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(async () => {
+(function () {
   const Config = {
-    Dev: true, // 顯示請求資訊, 與錯誤資訊
-    ContainsVideo: false, // 下載時包含影片
-    CompleteClose: false, // 下載完成後關閉
-    ConcurrentDelay: 2, // 下載線程延遲 (秒) [壓縮下載]
-    ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
-    BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
+    Dev: false,
+    // 顯示請求資訊, 與錯誤資訊
+    ContainsVideo: false,
+    // 下載時包含影片
+    CompleteClose: false,
+    // 下載完成後關閉
+    ConcurrentDelay: 500,
+    // 下載線程延遲 (ms) [壓縮下載]
+    ConcurrentQuantity: 5,
+    // 下載線程數量 [壓縮下載]
+    BatchOpenDelay: 500
+    // 一鍵開啟帖子的延遲 (ms)
   };
-
-  /** ---------------------
-   * 暫時的 檔名修改方案
-   *
-   * 根據要添加的元素修改字串
-   * 中間的間隔可用任意字符
-   *
-   * ! 不限制大小寫, 但一定要有 {}, 不能用於命名的符號會被移除
-   *
-   * {Time} 發表時間
-   * {Title} 標題
-   * {Artist} 作者 | 繪師 ...
-   * {Source} 來源 => (Pixiv Fanbox) 之類的標籤
-   *
-   * {Fill} 填充 => ! 只適用於檔名, 位置隨意 但 必須存在該值, 不然會出錯
-   */
   const FileName = {
     FillValue: {
-      Filler: "0", // 填充元素 / 填料
-      Amount: "Auto", // 填充數量 [輸入 auto 或 任意數字]
+      Filler: "0",
+      // 填充元素 / 填料
+      Amount: "Auto"
+      // 填充數量 [輸入 auto 或 任意數字]
     },
-    CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
-    FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
-    FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
+    CompressName: "({Artist}) {Title}",
+    // 壓縮檔案名稱
+    FolderName: "{Title}",
+    // 資料夾名稱 (用空字串, 就直接沒資料夾)
+    FillName: "{Title} {Fill}"
+    // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
   };
-
-  /** ---------------------
-   * 設置 FetchData 輸出格式
-   *
-   *! 無論設置什麼, 只要沒有的數據, 就不會顯示 (會被排除掉)
-   *
-   * ----------------------
-   * 舊版 nekohouse.su
-   *
-   *
-   * ----------------------
-   * Mode
-   * 排除模式: "FilterMode" -> 預設為全部使用, 設置排除的項目
-   * 僅有模式: "OnlyMode" -> 預設為全部不使用, 設置使用的項目
-   * ----------------------
-   * Format
-   * 帖子連結: "PostLink"
-   * 發佈時間: "Timestamp"
-   * 標籤 Tag: "TypeTag" (Only AdvancedFetch)
-   * 圖片連結: "ImgLink"
-   * 影片連結: "VideoLink"
-   * 下載連結: "DownloadLink"
-   * 外部連結: "ExternalLink" (Only AdvancedFetch)
-   */
   const FetchSet = {
-    Delay: 200, // 獲取延遲 (ms) [太快會被 BAN]
-    AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
-    ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
-    UseFormat: false, // 這裡為 false 下面兩項就不生效
-    Mode: "FilterMode",
-    Format: ["Timestamp", "TypeTag"],
+    Delay: 200,
+    // 獲取延遲 (ms) [太快會被 BAN]
+    AdvancedFetch: true,
+    // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
+    ToLinkTxt: false
   };
-
-  // 不要修改
   const Process = {
     Lock: false,
     IsNeko: location.hostname.startsWith("nekohouse")
@@ -294,7 +262,7 @@
       "開帖說明": "\n\n!! Without confirmation, all posts on the current page will be opened\nEnter selection range:\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10"
     }
   };
-  function Fetch(Config2, Process2, Transl, Syn2, md52) {
+  function Fetch(Config2, Process2, Transl2, Syn2, md52) {
     return class FetchData {
       constructor(Delay, AdvancedFetch, ToLinkTxt) {
         this.MetaDict = {};
@@ -318,13 +286,13 @@
           /[?&]o=/.test(Url) ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy"
         );
         this.InfoRules = {
-          "PostLink": Transl("帖子連結"),
-          "Timestamp": Transl("發佈日期"),
-          "TypeTag": Transl("類型標籤"),
-          "ImgLink": Transl("圖片連結"),
-          "VideoLink": Transl("影片連結"),
-          "DownloadLink": Transl("下載連結"),
-          "ExternalLink": Transl("外部連結")
+          "PostLink": Transl2("帖子連結"),
+          "Timestamp": Transl2("發佈日期"),
+          "TypeTag": Transl2("類型標籤"),
+          "ImgLink": Transl2("圖片連結"),
+          "VideoLink": Transl2("影片連結"),
+          "DownloadLink": Transl2("下載連結"),
+          "ExternalLink": Transl2("外部連結")
         };
         this.Default = (Value) => {
           if (!Value) return null;
@@ -466,44 +434,23 @@
                 async function processQueue() {
                     if (queue.length > 0) {
                         const {index, title, url} = queue.shift();
-                        XmlRequest(index, title, url);
+                        FetchRequest(index, title, url);
                         processQueue();
                     } else {processing = false}
-                }
-                async function XmlRequest(index, title, url) {
-                    let xhr = new XMLHttpRequest();
-                    xhr.responseType = "text";
-                    xhr.open("GET", url, true);
-                    xhr.onload = function() {
-                        if (xhr.status === 200) {
-                            postMessage({ index, title, url, text: xhr.response, error: false });
-                        } else if (xhr.status === 429) {
-                            postMessage({ index, title, url, text: "", error: true });
-                        } else {
-                            FetchRequest(index, title, url);
-                        }
-                    }
-                    xhr.onerror = function() {
-                        if (xhr.status === 429) {
-                            postMessage({ index, title, url, text: "", error: true });
-                        } else {
-                            FetchRequest(index, title, url);
-                        }
-                    }
-                    xhr.send();
                 }
                 async function FetchRequest(index, title, url) {
                     fetch(url).then(response => {
                         if (response.ok) {
-                            response.text().then(text => {
-                                postMessage({ index, title, url, text, error: false });
+                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
+                            response.text().then(content => {
+                                postMessage({ index, title, url, content, error: false });
                             });
                         } else {
-                            postMessage({ index, title, url, text: "", error: true });
+                            postMessage({ index, title, url, content: "", error: true });
                         }
                     })
                     .catch(error => {
-                        postMessage({ index, title, url, text: "", error: true });
+                        postMessage({ index, title, url, content: "", error: true });
                     });
                 }
             `);
@@ -527,8 +474,8 @@
                 }
                 ;
                 Cache[name] = pass ? {
-                  [Transl("密碼")]: pass,
-                  [Transl("連結")]: href
+                  [Transl2("密碼")]: pass,
+                  [Transl2("連結")]: href
                 } : href;
               } else if (href) {
                 const description = ((_e = a.previousSibling) == null ? void 0 : _e.$text()) ?? "";
@@ -589,7 +536,7 @@
           Syn2.Session(this.RecordKey) && (this.FetchDelay = 0);
           this.FetchRun(Section, this.SourceURL);
         } else {
-          alert(Transl("未取得數據"));
+          alert(Transl2("未取得數據"));
         }
       }
       /* ===== 主要抓取函數 ===== */
@@ -600,10 +547,10 @@
           Section.$q("a.pagination-button-after-current");
         } else {
           this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url) });
-          const HomePage = await new Promise((resolve, reject) => {
+          const HomeData = await new Promise((resolve, reject) => {
             this.Worker.onmessage = async (e) => {
-              const { index, title, url, text, error } = e.data;
-              if (!error) resolve({ index, title, url, text });
+              const { index, title, url, content, error } = e.data;
+              if (!error) resolve({ index, title, url, content });
               else {
                 Syn2.Log(error, { title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
                 await this.TooMany_TryAgain(url);
@@ -611,7 +558,7 @@
               }
             };
           });
-          await this.FetchContent(HomePage);
+          await this.FetchContent(HomeData);
           this.Pages++;
           this.Pages <= this.FinalPages ? this.FetchRun(
             null,
@@ -619,24 +566,49 @@
           ) : (Syn2.Session(this.RecordKey, { value: true }), this.ToLinkTxt ? this.ToTxt() : this.ToJson());
         }
       }
+      /* 測試進階抓取數據 */
+      async FetchTest(Id) {
+        Process2.Lock = true;
+        this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(this.FirstURL) });
+        const HomeData = await new Promise((resolve, reject) => {
+          this.Worker.onmessage = async (e) => {
+            const { index, title, url, content: content2, error } = e.data;
+            if (!error) resolve({ index, title, url, content: content2 });
+            else {
+              Syn2.Log(error, { title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
+              await this.TooMany_TryAgain(url);
+              this.Worker.postMessage({ index, title, url });
+            }
+          };
+        });
+        const { content } = HomeData;
+        Object.assign(HomeData, { content: JSON.parse(content) });
+        Syn2.Log("HomeData", HomeData, { collapsed: false });
+        const Cloned_HomeData = structuredClone(HomeData);
+        Cloned_HomeData.content.results = [{ Id }];
+        Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content);
+        await this.FetchContent(Cloned_HomeData);
+        Syn2.Log("PostDate", this.DataDict, { collapsed: false });
+        this.Reset();
+      }
       /* 獲取帖子內部數據 */
       async FetchContent(Data) {
         var _a;
         this.Progress = 0;
-        const { index, title, url, text } = Data;
+        const { index, title, url, content } = Data;
         if (Process2.IsNeko);
         else {
-          const Json = JSON.parse(text);
+          const Json = JSON.parse(content);
           if (Json) {
             if (Object.keys(this.MetaDict).length === 0) {
               const props = Json.props;
               this.FinalPages = Math.ceil(+props.count / 50);
               this.MetaDict = {
-                [Transl("作者")]: props.name,
-                [Transl("帖子數量")]: props.count,
-                [Transl("建立時間")]: Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"),
-                [Transl("獲取頁面")]: this.SourceURL,
-                [Transl("作者網站")]: props.display_data.href
+                [Transl2("作者")]: props.name,
+                [Transl2("帖子數量")]: props.count,
+                [Transl2("建立時間")]: Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"),
+                [Transl2("獲取頁面")]: this.SourceURL,
+                [Transl2("作者網站")]: props.display_data.href
               };
             }
             const Results = Json.results;
@@ -645,12 +617,12 @@
               const resolvers = /* @__PURE__ */ new Map();
               this.Worker.onmessage = async (e) => {
                 var _a2;
-                const { index: index2, title: title2, url: url2, text: text2, error } = e.data;
+                const { index: index2, title: title2, url: url2, content: content2, error } = e.data;
                 if (resolvers.has(index2)) {
                   const { resolve, reject } = resolvers.get(index2);
                   try {
                     if (!error) {
-                      const Json2 = JSON.parse(text2);
+                      const Json2 = JSON.parse(content2);
                       if (Json2) {
                         const Post = Json2.post;
                         const Title = Post.title.trim().replace(/\n/g, " ") || `Untitled_${String(index2 + 1).padStart(2, "0")}`;
@@ -741,36 +713,37 @@
         }
       }
       /* ===== 輸出生成 ===== */
+      async Reset() {
+        Process2.Lock = false;
+        this.Worker.terminate();
+        Syn2.title(this.TitleCache);
+      }
       async ToTxt() {
         let Content = "";
         for (const value of Object.values(this.DataDict)) {
           for (const link of Object.values(Object.assign(
             {},
-            value[Transl("圖片連結")],
-            value[Transl("影片連結")],
-            value[Transl("下載連結")]
+            value[Transl2("圖片連結")],
+            value[Transl2("影片連結")],
+            value[Transl2("下載連結")]
           ))) {
             Content += `${link}
 `;
           }
         }
         if (Content.endsWith("\n")) Content = Content.slice(0, -1);
-        Syn2.OutputTXT(Content, this.MetaDict[Transl("作者")], () => {
-          Process2.Lock = false;
-          this.Worker.terminate();
-          Syn2.title(this.TitleCache);
+        Syn2.OutputTXT(Content, this.MetaDict[Transl2("作者")], () => {
+          this.Reset();
         });
       }
       async ToJson() {
         const Json_data = Object.assign(
           {},
-          { [Transl("元數據")]: this.MetaDict },
-          { [`${Transl("帖子內容")} (${Object.keys(this.DataDict).length})`]: this.DataDict }
+          { [Transl2("元數據")]: this.MetaDict },
+          { [`${Transl2("帖子內容")} (${Object.keys(this.DataDict).length})`]: this.DataDict }
         );
-        Syn2.OutputJson(Json_data, this.MetaDict[Transl("作者")], () => {
-          Process2.Lock = false;
-          this.Worker.terminate();
-          Syn2.title(this.TitleCache);
+        Syn2.OutputJson(Json_data, this.MetaDict[Transl2("作者")], () => {
+          this.Reset();
         });
       }
     };
@@ -803,28 +776,59 @@
         this.tasks.push(task);
         return task;
       }
-      // 估算壓縮耗時
-      estimateCompressionTime() {
+      // 估計壓縮耗時
+      estimateCompression() {
+        const calculateFileTime = (fileSize) => {
+          const baseBytesPerSecond = 30 * 1024 ** 2;
+          let fileTime = fileSize / baseBytesPerSecond;
+          const fileSizeMB = fileSize / (1024 * 1024);
+          if (fileSizeMB > 10) {
+            fileTime *= 1 + Math.log10(fileSizeMB / 10) * 0.15;
+          }
+          return fileTime;
+        };
+        const calculateCurveParameter = (totalSizeMB2) => {
+          let param = 5;
+          if (totalSizeMB2 > 50) {
+            const reduction = Math.min(Math.floor(totalSizeMB2 / 50) * 0.7, 3);
+            param = Math.max(5 - reduction, 1.5);
+          }
+          return param;
+        };
+        let totalEstimatedTime = 0;
         let totalSize = 0;
         Object.values(this.files).forEach((file) => {
+          totalEstimatedTime += calculateFileTime(file.length);
           totalSize += file.length;
         });
-        const bytesPerSecond = 50 * 1024 ** 2;
-        const estimatedTime = totalSize / bytesPerSecond;
-        return estimatedTime;
+        const totalSizeMB = totalSize / (1024 * 1024);
+        const fileCount = Object.keys(this.files).length;
+        if (fileCount > 5) {
+          totalEstimatedTime *= 1 + Math.min(fileCount / 100, 0.2);
+        }
+        if (totalSizeMB > 50) {
+          const intervals = Math.floor(totalSizeMB / 50);
+          totalEstimatedTime *= 1 + intervals * 0.08;
+        }
+        const curveParameter = calculateCurveParameter(totalSizeMB);
+        return {
+          estimatedInMs: totalEstimatedTime * 1e3,
+          progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
+        };
       }
       // 生成壓縮
       async generateZip(options = {}, progressCallback) {
         await Promise.all(this.tasks);
+        const startTime = performance.now();
         const updateInterval = 30;
-        const totalTime = this.estimateCompressionTime();
-        const progressUpdate = 100 / (totalTime * 1e3 / updateInterval);
-        let fakeProgress = 0;
+        const estimationData = this.estimateCompression();
+        const totalTime = estimationData.estimatedInMs;
         const progressInterval = setInterval(() => {
-          if (fakeProgress < 99) {
-            fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
-            if (progressCallback) progressCallback(fakeProgress);
-          } else {
+          const elapsedTime = performance.now() - startTime;
+          const ratio = Math.min(elapsedTime / totalTime, 0.99);
+          const fakeProgress = estimationData.progressCurve(ratio);
+          if (progressCallback) progressCallback(fakeProgress);
+          if (ratio >= 0.99) {
             clearInterval(progressInterval);
           }
         }, updateInterval);
@@ -836,6 +840,7 @@
           }, Object.values(this.files).map((buf) => buf.buffer));
           worker.onmessage = (e) => {
             clearInterval(progressInterval);
+            if (progressCallback) progressCallback(100);
             const { error, data } = e.data;
             error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
           };
@@ -843,7 +848,7 @@
       }
     };
   }
-  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, Config2, FileName2, Process2, Transl, Syn2, saveAs2) {
+  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, Config2, FileName2, Process2, Transl2, Syn2, saveAs2) {
     let Compression;
     return class Download {
       constructor(CM, MD, BT) {
@@ -980,7 +985,7 @@
           Self.Compression(CompressName, Zip, TitleCache);
         }
         Syn2.Menu({
-          [Transl("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
+          [Transl2("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
         }, { name: "Enforce" });
         FolderName = FolderName != "" ? `${FolderName}/` : "";
         function Request_update(index, url, blob, error = false) {
@@ -994,7 +999,7 @@
             }
             show = `[${++progress}/${Total}]`;
             Syn2.title(show);
-            Self.Button.$text(`${Transl("下載進度")} ${show}`);
+            Self.Button.$text(`${Transl2("下載進度")} ${show}`);
             if (progress == Total) {
               Total = Data.size;
               if (Total == 0) {
@@ -1032,9 +1037,9 @@
             }
           });
         }
-        Self.Button.$text(`${Transl("請求進度")} [${Total}/${Total}]`);
+        Self.Button.$text(`${Transl2("請求進度")} [${Total}/${Total}]`);
         const Batch = Config2.ConcurrentQuantity;
-        const Delay = Config2.ConcurrentDelay * 1e3;
+        const Delay = Config2.ConcurrentDelay;
         for (let i = 0; i < Total; i += Batch) {
           setTimeout(() => {
             for (let j = i; j < i + Batch && j < Total; j++) {
@@ -1047,34 +1052,6 @@
           error ? (Request(index, url), Syn2.Log("Download Failed", url, { dev: Config2.Dev, type: "error", collapsed: false })) : (Request_update(index, url, blob), Syn2.Log("Download Successful", url, { dev: Config2.Dev, collapsed: false }));
         };
       }
-      /* 壓縮檔案 */
-      async Compression(Name, Data, Title) {
-        this.ForceDownload = true;
-        GM_unregisterMenuCommand2("Enforce-1");
-        Data.generateZip({
-          level: 9
-        }, (progress) => {
-          const display = `${progress.toFixed(1)} %`;
-          Syn2.title(display);
-          this.Button.$text(`${Transl("封裝進度")}: ${display}`);
-        }).then((zip) => {
-          saveAs2(zip, `${Name}.zip`);
-          Syn2.title(`✓ ${Title}`);
-          this.Button.$text(Transl("下載完成"));
-          setTimeout(() => {
-            this.ResetButton();
-          }, 3e3);
-        }).catch((result) => {
-          Syn2.title(Title);
-          const ErrorShow = Transl("壓縮封裝失敗");
-          this.Button.$text(ErrorShow);
-          Syn2.Log(ErrorShow, result, { dev: Config2.Dev, type: "error", collapsed: false });
-          setTimeout(() => {
-            this.Button.disabled = false;
-            this.Button.$text(this.ModeDisplay);
-          }, 6e3);
-        });
-      }
       /* 單圖下載 */
       async SeparDownload(FillName, Data) {
         let show, url, filename, extension, stop = false, progress = 0;
@@ -1085,7 +1062,7 @@
           Process3.forEach((process) => process.abort());
         }
         Syn2.Menu({
-          [Transl("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
+          [Transl2("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
         }, { name: "Abort" });
         async function Request(index) {
           if (stop) return;
@@ -1100,7 +1077,7 @@
                 Syn2.Log("Download Successful", url, { dev: Config2.Dev, collapsed: false });
                 show = `[${++progress}/${Total}]`;
                 Syn2.title(show);
-                Self.Button.$text(`${Transl("下載進度")} ${show}`);
+                Self.Button.$text(`${Transl2("下載進度")} ${show}`);
                 resolve();
               }
             };
@@ -1131,37 +1108,64 @@
         await Promise.allSettled(Promises);
         GM_unregisterMenuCommand2("Abort-1");
         Syn2.title(`✓ ${TitleCache}`);
-        this.Button.$text(Transl("下載完成"));
+        this.Button.$text(Transl2("下載完成"));
         setTimeout(() => {
           this.ResetButton();
         }, 3e3);
       }
+      /* 壓縮檔案 */
+      async Compression(Name, Data, Title) {
+        this.ForceDownload = true;
+        GM_unregisterMenuCommand2("Enforce-1");
+        Data.generateZip({
+          level: 9
+        }, (progress) => {
+          const display = `${progress.toFixed(1)} %`;
+          Syn2.title(display);
+          this.Button.$text(`${Transl2("封裝進度")}: ${display}`);
+        }).then((zip) => {
+          saveAs2(zip, `${Name}.zip`);
+          Syn2.title(`✓ ${Title}`);
+          this.Button.$text(Transl2("下載完成"));
+          setTimeout(() => {
+            this.ResetButton();
+          }, 3e3);
+        }).catch((result) => {
+          Syn2.title(Title);
+          const ErrorShow = Transl2("壓縮封裝失敗");
+          this.Button.$text(ErrorShow);
+          Syn2.Log(ErrorShow, result, { dev: Config2.Dev, type: "error", collapsed: false });
+          setTimeout(() => {
+            this.Button.disabled = false;
+            this.Button.$text(this.ModeDisplay);
+          }, 6e3);
+        });
+      }
       /* 按鈕重置 */
       async ResetButton() {
         Process2.Lock = false;
-        const Button = Syn2.$q("#Button-Container button");
-        Button.disabled = false;
-        Button.$text(`✓ ${this.ModeDisplay}`);
+        const Button2 = Syn2.$q("#Button-Container button");
+        Button2.disabled = false;
+        Button2.$text(`✓ ${this.ModeDisplay}`);
       }
     };
   }
-  (async () => {
-    const { Transl } = (() => {
-      const Matcher = Syn.TranslMatcher(Dict);
-      return {
-        Transl: (Str) => Matcher[Str] ?? Str
-      };
-    })();
-    new class Main {
-      constructor() {
-        this.Download = null;
-        this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2), this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
-      }
-      /* 按鈕創建 */
-      async ButtonCreation() {
-        Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
-          var _a;
-          Syn.AddStyle(`
+  const { Transl } = (() => {
+    const Matcher = Syn.TranslMatcher(Dict);
+    return {
+      Transl: (Str) => Matcher[Str] ?? Str
+    };
+  })();
+  new class Main {
+    constructor() {
+      this.Download = null;
+      this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2), this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
+    }
+    /* 按鈕創建 */
+    async ButtonCreation() {
+      Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
+        var _a;
+        Syn.AddStyle(`
                     #Button-Container {
                         padding: 1rem;
                         font-size: 40% !important;
@@ -1193,117 +1197,129 @@
                         cursor: Synault;
                     }
                 `, "Download-button-style", false);
-          (_a = Syn.$q("#Button-Container")) == null ? void 0 : _a.remove();
-          let Button;
-          try {
-            Files = [...Files].filter((file) => file.$text() === "Files");
-            if (Files.length == 0) return;
-            const CompressMode = Syn.Local("Compression", { error: true });
-            const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
-            const Container = Syn.createElement("span", { id: "Button-Container" });
-            Syn.createElement(Container, "svg", {
-              // 創建設置 SVG
-              class: "Setting_Button",
-              innerHTML: `<svg xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>`
-            });
-            Button = Syn.createElement(Container, "button", {
-              // 創建 Button
-              class: "Download_Button",
-              text: Process.Lock ? Transl("下載中鎖定") : ModeDisplay,
-              disabled: Process.Lock
-            });
-            this.Download ?? (this.Download = Downloader(
-              // 懶加載 Download 類
-              GM_unregisterMenuCommand,
-              GM_xmlhttpRequest,
-              GM_download,
-              Config,
-              FileName,
-              Process,
-              Transl,
-              Syn,
-              saveAs
-            ));
-            Files[0].appendChild(Container);
-            Syn.one(Container, "click", (event) => {
-              const target = event.target;
-              if (target === Button) {
-                let Instantiate = null;
-                Instantiate = new this.Download(CompressMode, ModeDisplay, Button);
-                Instantiate.DownloadTrigger();
-              } else if (target.closest("svg")) {
-                alert("Currently Invalid");
-              }
-            }, { capture: true, passive: true });
-          } catch (error) {
-            Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
-            Button.disabled = true;
-            Button.$text(Transl("無法下載"));
-          }
-        });
-      }
-      /* 一鍵開啟當前所有帖子 */
-      async OpenAllPages() {
-        const card = Syn.$qa("article.post-card a");
-        if (card.length == 0) {
-          throw new Error("No links found");
-        }
-        let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
-        if (scope != null) {
-          scope = scope == "" ? "1-50" : scope;
-          for (const link of Syn.ScopeParsing(scope, card)) {
-            GM_openInTab(link.href, {
-              insert: false,
-              setParent: false
-            });
-            await Syn.Sleep(Config.BatchOpenDelay);
-          }
-        }
-      }
-      /* 下載模式切換 */
-      async DownloadModeSwitch() {
-        Syn.Local("Compression", { error: true }) ? Syn.Local("Compression", { value: false }) : Syn.Local("Compression", { value: true });
-        this.ButtonCreation();
-      }
-      /* 檢測創建 [ 檢測頁面創建按鈕, 創建菜單 ] */
-      async Init() {
-        let FetchData;
-        const self = this;
-        GM_info.downloadMode = "browser";
-        GM_info.isIncognito = true;
-        registerMenu(Syn.$url);
-        self.Content(Syn.$url) && self.ButtonCreation();
-        async function registerMenu(Page) {
-          if (self.Content(Page)) {
-            Syn.Menu({
-              [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
-            }, { reset: true });
-          } else if (self.Preview(Page)) {
-            FetchData ?? (FetchData = Fetch(
-              // 懶加載 FetchData 類
-              Config,
-              Process,
-              Transl,
-              Syn,
-              md5
-            ));
-            Syn.Menu({
-              [Transl("📑 獲取帖子數據")]: () => {
-                if (!Process.Lock) {
+        (_a = Syn.$q("#Button-Container")) == null ? void 0 : _a.remove();
+        try {
+          Files = [...Files].filter((file) => file.$text() === "Files");
+          if (Files.length == 0) return;
+          const CompressMode = Syn.Local("Compression", { error: true });
+          const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
+          this.Download ?? (this.Download = Downloader(
+            // 懶加載 Download 類
+            GM_unregisterMenuCommand,
+            GM_xmlhttpRequest,
+            GM_download,
+            Config,
+            FileName,
+            Process,
+            Transl,
+            Syn,
+            saveAs
+          ));
+          Syn.createElement(Files[0], "span", {
+            id: "Button-Container",
+            on: {
+              type: "click",
+              listener: (event) => {
+                const target = event.target;
+                if (target.tagName === "BUTTON") {
                   let Instantiate = null;
-                  Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                  Instantiate.FetchInit();
+                  Instantiate = new this.Download(CompressMode, ModeDisplay, target);
+                  Instantiate.DownloadTrigger();
+                } else if (target.closest("svg")) {
+                  alert("Currently Invalid");
                 }
               },
-              [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
-            }, { reset: true });
+              add: { capture: true, passive: true }
+            },
+            innerHTML: `
+                            <svg class="Setting_Button" xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
+                            <button class="Download_Button" ${Process.Lock ? "disabled" : ""}>${Process.Lock ? Transl("下載中鎖定") : ModeDisplay}</button>
+                        `
+          });
+        } catch (error) {
+          Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
+          Button.disabled = true;
+          Button.$text(Transl("無法下載"));
+        }
+      });
+    }
+    /* 一鍵開啟當前所有帖子 */
+    async OpenAllPages() {
+      const card = Syn.$qa("article.post-card a");
+      if (card.length == 0) {
+        throw new Error("No links found");
+      }
+      let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
+      if (scope == null) return;
+      scope = scope === "" ? "1-50" : scope;
+      for (const link of Syn.ScopeParsing(scope, card)) {
+        GM_openInTab(link.href, {
+          insert: false,
+          setParent: false
+        });
+        await Syn.Sleep(Config.BatchOpenDelay);
+      }
+    }
+    /* 下載模式切換 */
+    async DownloadModeSwitch() {
+      Syn.Local("Compression", { error: true }) ? Syn.Local("Compression", { value: false }) : Syn.Local("Compression", { value: true });
+      this.ButtonCreation();
+    }
+    /* 檢測創建 [ 檢測頁面創建按鈕, 創建菜單 ] */
+    async Init() {
+      let FetchData;
+      const self = this;
+      GM_info.downloadMode = "browser";
+      GM_info.isIncognito = true;
+      registerMenu(Syn.$url);
+      self.Content(Syn.$url) && self.ButtonCreation();
+      async function registerMenu(Page) {
+        if (self.Content(Page)) {
+          Syn.Menu({
+            [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
+          }, { reset: true });
+        } else if (self.Preview(Page)) {
+          FetchData ?? (FetchData = Fetch(
+            // 懶加載 FetchData 類
+            Config,
+            Process,
+            Transl,
+            Syn,
+            md5
+          ));
+          Syn.Menu({
+            [Transl("📑 獲取帖子數據")]: () => {
+              if (Process.IsNeko) {
+                alert("Temporarily Not Supported");
+                return;
+              }
+              if (!Process.Lock) {
+                let Instantiate = null;
+                Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
+                Instantiate.FetchInit();
+              }
+            },
+            [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
+          }, { reset: true });
+          if (Config.Dev && !Process.IsNeko) {
+            Syn.Menu({
+              // 不支援 Neko, 抓取邏輯不同
+              "🛠️ 開發者獲取": () => {
+                const ID = prompt("輸入請求的 ID");
+                if (ID == null || ID === "") return;
+                let Instantiate = null;
+                Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
+                Instantiate.FetchTest();
+              }
+            }, { index: 3 });
           }
         }
-        Syn.onUrlChange((change) => {
-          self.Content(change.url) && self.ButtonCreation();
-          registerMenu(change.url);
-        });
       }
-    }().Init();
-  })();
+      Syn.onUrlChange((change) => {
+        self.Content(change.url) && self.ButtonCreation();
+        registerMenu(change.url);
+      });
+    }
+  }().Init();
+
 })();
