@@ -771,7 +771,7 @@
                                             content: Gen
                                         });
                                     }
-                                    Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
+                                    Syn2.title(`（${this.Pages}）`);
                                     Syn2.Log("Parsed Successful", this.TaskDict, {
                                         dev: Config2.Dev,
                                         collapsed: false
