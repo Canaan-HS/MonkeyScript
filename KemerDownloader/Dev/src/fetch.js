@@ -478,7 +478,7 @@ export default function Fetch(
                                             };
 
                                             resolve();
-                                            Syn.title(`（${this.Pages} - ${++this.Progress}）`);
+                                            Syn.title(`（${this.Pages}）`);
                                             Syn.Log("Request Successful", this.TaskDict, { dev: Config.Dev, collapsed: false });
                                         } else throw new Error("Json Parse Failed");
                                     } else {
