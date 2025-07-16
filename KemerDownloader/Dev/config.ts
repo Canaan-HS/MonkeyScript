@@ -8,12 +8,9 @@ export default {
     userscript: {
         connect: '*',
         match: [
-            '*://kemono.su/*',
-            '*://coomer.su/*',
-            '*://nekohouse.su/*',
-            '*://*.kemono.su/*',
-            '*://*.coomer.su/*',
-            '*://*.nekohouse.su/*'
+            '*://kemono.cr/*',
+            '*://coomer.st/*',
+            '*://nekohouse.su/*'
         ],
         icon: 'https://cdn-icons-png.flaticon.com/512/2381/2381981.png',
         namespace: 'https://greasyfork.org/users/989635',
