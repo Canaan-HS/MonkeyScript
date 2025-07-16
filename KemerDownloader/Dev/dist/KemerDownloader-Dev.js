@@ -352,9 +352,8 @@
           ".psd"
         ]);
         this.Suffix = (Str) => {
-          var _a;
           try {
-            return `.${(_a = Str == null ? void 0 : Str.match(/\.([^.]+)$/)[1]) == null ? void 0 : _a.trim()}`;
+            return `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
           } catch {
             return "";
           }
@@ -455,21 +454,20 @@
                 }
             `);
         this.specialLinkParse = (Data) => {
-          var _a, _b, _c, _d, _e;
           const Cache = {};
           try {
             for (const a of Syn2.DomParse(Data).$qa("body a")) {
               const href = a.href;
               const hash = md52(href).slice(0, 16);
               if (href.startsWith("https://mega.nz")) {
-                let name = ((_a = a.previousElementSibling) == null ? void 0 : _a.$text().replace(":", "")) || hash;
+                let name = a.previousElementSibling?.$text().replace(":", "") || hash;
                 if (name === "") continue;
                 let pass = "";
                 const nextNode = a.nextElementSibling;
                 if (nextNode) {
-                  const nodeText = ((_b = [...nextNode.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)) == null ? void 0 : _b.$text()) ?? "";
+                  const nodeText = [...nextNode.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
                   if (nodeText.startsWith("Pass")) {
-                    pass = ((_d = (_c = nodeText.match(/Pass:([^<]*)/)) == null ? void 0 : _c[1]) == null ? void 0 : _d.trim()) ?? "";
+                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
                   }
                 }
                 ;
@@ -478,8 +476,8 @@
                   [Transl2("連結")]: href
                 } : href;
               } else if (href) {
-                const description = ((_e = a.previousSibling) == null ? void 0 : _e.$text()) ?? "";
-                const name = `${description} ${a == null ? void 0 : a.$text()}`.trim();
+                const description = a.previousSibling?.$text() ?? "";
+                const name = `${description} ${a?.$text()}`.trim();
                 Cache[name ? name : hash] = href;
               }
             }
@@ -593,7 +591,6 @@
       }
       /* 獲取帖子內部數據 */
       async FetchContent(Data) {
-        var _a;
         this.Progress = 0;
         const { index, title, url, content } = Data;
         if (Process2.IsNeko);
@@ -616,7 +613,6 @@
               const Tasks = [];
               const resolvers = /* @__PURE__ */ new Map();
               this.Worker.onmessage = async (e) => {
-                var _a2;
                 const { index: index2, title: title2, url: url2, content: content2, error } = e.data;
                 if (resolvers.has(index2)) {
                   const { resolve, reject } = resolvers.get(index2);
@@ -630,7 +626,7 @@
                         const ImgLink = () => {
                           //! 還需要測試
                           const ServerList = Json2.previews.filter((item) => item.server);
-                          if (((ServerList == null ? void 0 : ServerList.length) ?? 0) === 0) return;
+                          if ((ServerList?.length ?? 0) === 0) return;
                           const List = [
                             ...Post.file ? Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : [] : [],
                             ...Post.attachments
@@ -646,7 +642,7 @@
                         };
                         const Gen = this.FetchGenerate({
                           PostLink: `${this.FirstURL}/post/${Post.id}`,
-                          Timestamp: (_a2 = new Date(Post.added)) == null ? void 0 : _a2.toLocaleString(),
+                          Timestamp: new Date(Post.added)?.toLocaleString(),
                           TypeTag: Post.tags,
                           ImgLink: ImgLink(),
                           VideoLink: File.video,
@@ -658,7 +654,7 @@
                         }
                         ;
                         resolve();
-                        Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
+                        Syn2.title(`（${this.Pages}）`);
                         Syn2.Log("Request Successful", this.TaskDict, { dev: Config2.Dev, collapsed: false });
                       } else throw new Error("Json Parse Failed");
                     } else {
@@ -686,7 +682,7 @@
                   const File = this.Categorize(Title, [...Post.file ? Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : [] : [], ...Post.attachments]);
                   const Gen = this.FetchGenerate({
                     PostLink: `${this.FirstURL}/post/${Post.id}`,
-                    Timestamp: (_a = new Date(Post.published)) == null ? void 0 : _a.toLocaleString(),
+                    Timestamp: new Date(Post.published)?.toLocaleString(),
                     ImgLink: File.img,
                     VideoLink: File.video,
                     DownloadLink: File.other
@@ -695,7 +691,7 @@
                     this.TaskDict.set(Index, { title: Title, content: Gen });
                   }
                   ;
-                  Syn2.title(`（${this.Pages}）`);
+                  Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
                   Syn2.Log("Parsed Successful", this.TaskDict, { dev: Config2.Dev, collapsed: false });
                 } catch (error) {
                   Syn2.Log(error, { title: Title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
@@ -913,10 +909,9 @@
       NameAnalysis(format) {
         if (typeof format == "string") {
           return format.split(/{([^}]+)}/g).filter(Boolean).map((data) => {
-            var _a, _b;
             const LowerData = data.toLowerCase().trim();
             const isWord = /^[a-zA-Z]+$/.test(LowerData);
-            return isWord ? ((_b = (_a = this.Named_Data)[LowerData]) == null ? void 0 : _b.call(_a)) ?? "None" : data;
+            return isWord ? this.Named_Data[LowerData]?.() ?? "None" : data;
           }).join("");
         } else if (typeof format == "object") {
           const filler = String(format.Filler) || "0";
@@ -976,7 +971,7 @@
       }
       /* 打包壓縮下載 */
       async PackDownload(CompressName, FolderName, FillName, Data) {
-        Compression ?? (Compression = Compressor(Syn2));
+        Compression ??= Compressor(Syn2);
         let show, extension, progress = 0, Total = Data.size;
         const Self = this, Zip = new Compression(), TitleCache = this.OriginalTitle();
         const FillValue = this.NameAnalysis(FileName2.FillValue), Filler = FillValue[1], Amount = FillValue[0] == "auto" ? Syn2.GetFill(Total) : FillValue[0];
@@ -1164,7 +1159,6 @@
     /* 按鈕創建 */
     async ButtonCreation() {
       Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
-        var _a;
         Syn.AddStyle(`
                     #Button-Container {
                         padding: 1rem;
@@ -1197,13 +1191,13 @@
                         cursor: Synault;
                     }
                 `, "Download-button-style", false);
-        (_a = Syn.$q("#Button-Container")) == null ? void 0 : _a.remove();
+        Syn.$q("#Button-Container")?.remove();
         try {
           Files = [...Files].filter((file) => file.$text() === "Files");
           if (Files.length == 0) return;
           const CompressMode = Syn.Local("Compression", { error: true });
           const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
-          this.Download ?? (this.Download = Downloader(
+          this.Download ??= Downloader(
             // 懶加載 Download 類
             GM_unregisterMenuCommand,
             GM_xmlhttpRequest,
@@ -1214,7 +1208,7 @@
             Transl,
             Syn,
             saveAs
-          ));
+          );
           Syn.createElement(Files[0], "span", {
             id: "Button-Container",
             on: {
@@ -1279,14 +1273,14 @@
             [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
           }, { reset: true });
         } else if (self.Preview(Page)) {
-          FetchData ?? (FetchData = Fetch(
+          FetchData ??= Fetch(
             // 懶加載 FetchData 類
             Config,
             Process,
             Transl,
             Syn,
             md5
-          ));
+          );
           Syn.Menu({
             [Transl("📑 獲取帖子數據")]: () => {
               if (Process.IsNeko) {
