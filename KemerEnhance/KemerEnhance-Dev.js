@@ -117,20 +117,16 @@
         const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
         const UserSet = {
-            MenuSet: () => {
-                return Syn.gV(SaveKey.Menu, {
-                    Top: "10vh",
-                    Left: "10vw"
-                });
-            },
-            ImgSet: () => {
-                return Syn.gV(SaveKey.Img, {
-                    Width: "auto",
-                    Height: "auto",
-                    Spacing: "0px",
-                    MaxWidth: "100%",
-                });
-            }
+            MenuSet: () => Syn.gV(SaveKey.Menu, {
+                Top: "10vh",
+                Left: "10vw"
+            }),
+            ImgSet: () => Syn.gV(SaveKey.Img, {
+                Width: "auto",
+                Height: "auto",
+                Spacing: "0px",
+                MaxWidth: "100%",
+            })
         };
 
         // 動態調整圖片樣式
@@ -156,7 +152,7 @@
 
         // 功能依賴樣式
         const Style = {
-            Global: async () => { // 全域 修復所需
+            async Global() { // 全域 修復所需
                 Syn.AddStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
@@ -259,7 +255,7 @@
                     }
                 `, "Global-Effects", false);
             },
-            Postview: async () => { // 觀看帖子頁所需
+            async Postview() { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
                 const width = Syn.iW / 2;
@@ -315,7 +311,7 @@
                     }
                 });
             },
-            PostExtra: async () => { // 觀看帖子頁圖示
+            async PostExtra() { // 觀看帖子頁圖示
                 Syn.AddStyle(`
                     #main section {
                         width: 100%;
@@ -328,7 +324,7 @@
                     }
                 `, "Post-Extra", false);
             },
-            Menu: () => { // 回傳創建菜單所需資訊
+            Menu() { // 回傳創建菜單所需資訊
                 const set = UserSet.MenuSet();
 
                 return {
@@ -612,7 +608,7 @@
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
             IsNeko: Syn.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
 
-            Language: () => {
+            Language() {
                 const Log = Syn.gV(SaveKey.Lang);
                 const ML = Syn.TranslMatcher(Word, Log);
 
@@ -663,15 +659,15 @@
             Global_Cache: undefined,
             Preview_Cache: undefined,
             Content_Cache: undefined,
-            Global: function () {
+            Global() {
                 if (!this.Global_Cache) this.Global_Cache = Global_Function();
                 return this.Global_Cache;
             },
-            Preview: function () {
+            Preview() {
                 if (!this.Preview_Cache) this.Preview_Cache = Preview_Function();
                 return this.Preview_Cache;
             },
-            Content: function () {
+            Content() {
                 if (!this.Content_Cache) this.Content_Cache = Content_Function();
                 return this.Content_Cache;
             }
@@ -734,23 +730,33 @@
             TextToLink_Dependent: function (Config) {
                 if (!this.TextToLink_Cache) {
                     this.TextToLink_Cache = {
-                        Protocol_F: /^(?!(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/)/,
-                        Exclusion_F: /onfanbokkusuokibalab\.net/,
-                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()「」『』【】\[\]{}、"'”，。！？；：]|$|\s)/g,
-                        UrlMatch: function (str) {
+                        Exclusion_Regex: /onfanbokkusuokibalab\.net/,
+                        URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
+                        Exclusion_Tags: new Set([
+                            "A", "IMG", "INPUT", "TEXTAREA", "SELECT", "BUTTON",
+                            "SCRIPT", "STYLE", "CODE", "SVG", "CANVAS", "IFRAME",
+                            "AUDIO", "VIDEO", "EMBED", "OBJECT", "NOSCRIPT",
+                            "OPTION", "DATALIST", "FORM", "FIELDSET", "LEGEND",
+                            "LABEL", "MAP", "AREA", "MATH", "METER", "PROGRESS",
+                            "OUTPUT", "PARAM", "SOURCE", "TRACK", "TIME", "MARK"
+                        ]),
+                        UrlMatch(str) {
                             // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
-                            this.URL_F.lastIndex = 0;
-                            return this.URL_F.test(str);
+                            this.URL_Regex.lastIndex = 0;
+                            return this.URL_Regex.test(str);
                         },
-                        getTextNodes: function (root) {
+                        getTextNodes(root) {
                             const nodes = [];
                             const tree = document.createTreeWalker(
                                 root,
                                 NodeFilter.SHOW_TEXT,
                                 {
                                     acceptNode: (node) => {
+                                        const parentElement = node.parentElement;
+                                        if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+
                                         const content = node.$text();
-                                        if (!content || this.Exclusion_F.test(content)) return NodeFilter.FILTER_REJECT;
+                                        if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
                                         return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                     }
                                 }
@@ -760,15 +766,19 @@
                             }
                             return nodes;
                         },
-                        ParseModify: async function (father, content) { // 解析後轉換網址
-                            if (this.Exclusion_F.test(content) || father.tagName === "A") return;
-
-                            father.$iHtml(content.replace(this.URL_F, url => {
+                        ProtocolParse(url) {
+                            if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+                            if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+                            if (/^\/\//.test(url)) return "https:" + url;
+                            return url;
+                        },
+                        async ParseModify(father, content) { // 解析後轉換網址
+                            father.$iHtml(content.replace(this.URL_Regex, url => {
                                 const decode = decodeURIComponent(url).trim();
-                                return `<a href="${decode.replace(this.Protocol_F, "https://")}">${decode}</a>`;
+                                return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
                             }))
                         },
-                        JumpTrigger: async (root) => { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
+                        async JumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
                             const [Newtab, Active, Insert] = [
                                 Config.newtab ?? true,
                                 Config.newtab_active ?? false,
@@ -797,7 +807,7 @@
                         Fix_Cache: new Map(), // 修復後 用於緩存
                         Register_Eement: new Map(), // 用於存放以被註冊的元素
                         Get_Record: () => Syn.Local("fix_record_v2", { error: new Map() }),
-                        Save_Record: async function (save) {
+                        async Save_Record(save) {
                             await Syn.Local("fix_record_v2",
                                 {
                                     value: new Map([...this.Get_Record(), ...save]) // 取得完整數據並合併
@@ -818,7 +828,7 @@
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts",
                         },
-                        Fix_Request: async function (url, headers = {}) { // 請求修復數據
+                        async Fix_Request(url, headers = {}) { // 請求修復數據
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
                                     method: "GET",
@@ -830,7 +840,7 @@
                                 })
                             });
                         },
-                        Get_Pixiv_Name: async function (id) { // 取得 Pixiv 名稱
+                        async Get_Pixiv_Name(id) { // 取得 Pixiv 名稱
                             const response = await this.Fix_Request(
                                 `https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, { referer: "https://www.pixiv.net/" }
                             );
@@ -843,12 +853,12 @@
                                 return user_name;
                             } else return;
                         },
-                        Fix_Url: function (url) { // 連結網址修復
+                        Fix_Url(url) { // 連結網址修復
                             url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/); // 匹配出三段類型, 或兩段類型的格式
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) { // 修復後更新 UI
+                        async Fix_Update_Ui(href, id, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
                             const edit = Syn.createElement("fix_edit", { id, class: "edit_artist", text: "Edit" });
 
@@ -872,7 +882,7 @@
                                 }));
                             }
                         },
-                        Fix_Trigger: async function (object) { // 觸發修復
+                        async Fix_Trigger(object) { // 觸發修復
                             const { Url, TailId, Website, NameObject, TagObject } = object;
 
                             let Record = this.Record_Cache.get(TailId); // 從緩存 使用尾部 ID 取出對應紀錄
@@ -892,7 +902,7 @@
                             }
                         },
                         /* ===== 前置處理觸發 ===== */
-                        Search_Fix: async function (items) { // 針對 搜尋頁, 那種有許多用戶卡的
+                        async Search_Fix(items) { // 針對 搜尋頁, 那種有許多用戶卡的
                             items.$sAttr("fix", true); // 添加修復標籤
 
                             const url = items.href;
@@ -910,7 +920,7 @@
                                 TagObject: items.$q(".user-card__service") // 標籤物件
                             });
                         },
-                        Other_Fix: async function (artist, tag = "", href = null, reTag = "<fix_view>") { // 針對其餘頁面的修復
+                        async Other_Fix(artist, tag = "", href = null, reTag = "<fix_view>") { // 針對其餘頁面的修復
                             try {
                                 const parent = artist.parentNode;
                                 const url = href ?? parent.href;
@@ -929,7 +939,7 @@
                                 });
                             } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */ }
                         },
-                        Dynamic_Fix: async function (Listen, Element) {
+                        async Dynamic_Fix(Listen, Element) {
                             if (this.Register_Eement.has(Listen)) return;
                             this.Register_Eement.set(Listen, true);
 
@@ -953,7 +963,7 @@
         }
 
         return {
-            SidebarCollapse: async (Config) => { /* 收縮側邊攔 */
+            async SidebarCollapse(Config) { /* 收縮側邊攔 */
                 if (Syn.Platform === "Mobile") return;
 
                 Syn.AddStyle(`
@@ -974,10 +984,10 @@
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
                 `, "Collapse_Effects", false);
             },
-            DeleteNotice: async (Config) => { /* 刪除公告通知 */
+            async DeleteNotice(Config) { /* 刪除公告通知 */
                 Syn.WaitElem("aside", null, { raf: true, timeout: 5 }).then(aside => aside.remove());
             },
-            BlockAds: async (Config) => { /* (阻止/封鎖)廣告 */
+            async BlockAds(Config) { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
                 const cookieString = Syn.cookie();
@@ -1021,7 +1031,7 @@
                             get: function (target, prop, receiver) {
                                 if (prop === 'open') {
                                     return function (method, url) {
-                                        try {  
+                                        try {
                                             if (typeof url !== 'string' || url.endsWith(".m3u8")) return;
                                             if ((
                                                 url.startsWith('http') || url.startsWith('//')
@@ -1036,7 +1046,7 @@
                     }
                 });
             },
-            CacheFetch: async (Config) => { /* 緩存請求 */
+            async CacheFetch(Config) { /* 緩存請求 */
                 if (DLL.IsNeko) return;
 
                 Syn.AddScript(`
@@ -1078,7 +1088,7 @@
                     };
                 `, "Cache-Fetch", false);
             },
-            TextToLink: async (Config) => { /* 連結文本轉連結 */
+            async TextToLink(Config) { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
 
                 const Func = LoadFunc.TextToLink_Dependent(Config);
@@ -1116,7 +1126,7 @@
                     })
                 }
             },
-            FixArtist: async (Config) => { /* 修復藝術家名稱 */
+            async FixArtist(Config) { /* 修復藝術家名稱 */
                 DLL.Style.Global(); // 導入 Global 頁面樣式
                 const Func = LoadFunc.FixArtist_Dependent();
 
@@ -1204,12 +1214,12 @@
                     });
                 }
             },
-            BackToTop: async (Config) => { /* 翻頁後回到頂部 */
+            async BackToTop(Config) { /* 翻頁後回到頂部 */
                 Syn.onEvent(Syn.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
-            KeyScroll: async (Config) => { /* 快捷自動滾動 */
+            async KeyScroll(Config) { /* 快捷自動滾動 */
                 if (Syn.Platform === "Mobile") return;
 
                 // 滾動配置
@@ -1294,7 +1304,7 @@
     /* ==================== 預覽頁功能 ==================== */
     function Preview_Function() {
         return {
-            NewTabOpens: async (Config) => { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
+            async NewTabOpens(Config) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
                 const [Newtab, Active, Insert] = [
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
@@ -1312,7 +1322,7 @@
                     );
                 }, { capture: true, mark: "NewTabOpens" });
             },
-            QuickPostToggle: async (Config) => { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
+            async QuickPostToggle(Config) { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
                 if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
 
@@ -1654,7 +1664,7 @@
                     }, { capture: true, mark: "QuickPostToggle" });
                 });
             },
-            CardZoom: async (Config) => { /* 帖子預覽卡縮放效果 */
+            async CardZoom(Config) { /* 帖子預覽卡縮放效果 */
                 switch (Config.mode) {
                     case 2:
                         Syn.AddStyle(`
@@ -1686,7 +1696,7 @@
                         `, "CardZoom_Effects", false);
                 }
             },
-            CardText: async (Config) => { /* 帖子說明文字效果 */
+            async CardText(Config) { /* 帖子說明文字效果 */
                 if (Syn.Platform === "Mobile") return;
 
                 switch (Config.mode) {
@@ -1727,7 +1737,7 @@
     function Content_Function() {
         const LoadFunc = {
             LinkBeautify_Cache: undefined,
-            LinkBeautify_Dependent: function () {
+            LinkBeautify_Dependent() {
                 if (!this.LinkBeautify_Cache) {
                     this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
                         const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
@@ -1784,7 +1794,7 @@
                 return this.LinkBeautify_Cache;
             },
             ExtraButton_Cache: undefined,
-            ExtraButton_Dependent: function () {
+            ExtraButton_Dependent() {
                 // ! 這個函數目前只有 nekohouse 需要
                 if (!this.ExtraButton_Cache) {
                     this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
@@ -1826,7 +1836,7 @@
         }
 
         return {
-            LinkBeautify: async function (Config) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
+            async LinkBeautify(Config) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
                 Syn.AddStyle(`
                     .View {
                         top: -10px;
@@ -1863,7 +1873,7 @@
                     }
                 });
             },
-            VideoBeautify: async function (Config) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
+            async VideoBeautify(Config) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
                         video.forEach(media => media.$sAttr("preload", "metadata"));
@@ -1921,7 +1931,7 @@
                     });
                 }
             },
-            OriginalImage: async function (Config) { /* 自動載入原圖 */
+            async OriginalImage(Config) { /* 自動載入原圖 */
                 Syn.WaitElem(".post__thumbnail, .scrape__thumbnail", null, { raf: true, all: true, timeout: 5 }).then(thumbnail => {
                     /**
                      * 針對 Neko 網站的支援
@@ -2131,7 +2141,7 @@
                     }
                 });
             },
-            ExtraButton: async function (Config) { /* 下方額外擴充按鈕 */
+            async ExtraButton(Config) { /* 下方額外擴充按鈕 */
                 DLL.Style.PostExtra(); // 導入需求樣式
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
                 Syn.WaitElem("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
@@ -2188,7 +2198,7 @@
 
                 });
             },
-            CommentFormat: async function (Config) { /* 評論區 重新排版 */
+            async CommentFormat(Config) { /* 評論區 重新排版 */
                 Syn.AddStyle(`
                     .post__comments,
                     .scrape__comments {
@@ -2340,16 +2350,16 @@
 
         // 菜單調整依賴
         const Menu_Requ = {
-            Menu_Close: () => { // 關閉菜單
+            Menu_Close() { // 關閉菜單
                 $background?.off();
                 shadow.remove();
             },
-            Menu_Save: () => { // 保存菜單
+            Menu_Save() { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
                 Syn.sV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
             },
-            Img_Save: () => {
+            Img_Save() {
                 img_set = $imageSet.find("p"); // 獲取設定 DOM 參數
                 img_data.forEach((read, index) => {
                     img_input = img_set.eq(index).find("input");
@@ -2361,7 +2371,7 @@
                 });
                 Syn.sV(DLL.SaveKey.Img, save_cache); // 保存設置數據
             },
-            ImageSettings: async () => {
+            async ImageSettings() {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
                     event.stopPropagation();
 
