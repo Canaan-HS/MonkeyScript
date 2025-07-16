@@ -19,12 +19,9 @@ export default `
 // @description:en      One-click download of images (compressed download/single image download), create page data for json download, one-click open all current posts
 
 // @connect      *
-// @match        *://kemono.su/*
-// @match        *://coomer.su/*
+// @match        *://kemono.cr/*
+// @match        *://coomer.st/*
 // @match        *://nekohouse.su/*
-// @match        *://*.kemono.su/*
-// @match        *://*.coomer.su/*
-// @match        *://*.nekohouse.su/*
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
