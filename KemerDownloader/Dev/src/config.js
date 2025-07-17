@@ -71,7 +71,7 @@ export default function Config(Syn) {
     // 不要修改
     const Process = {
         Lock: false,
-        IsNeko: location.hostname.startsWith("nekohouse")
+        IsNeko: Syn.$domain.startsWith("nekohouse")
     };
 
     return { General, FileName, FetchSet, Process };
