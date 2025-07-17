@@ -71,7 +71,9 @@ export default function Config(Syn) {
     // 不要修改
     const Process = {
         Lock: false,
-        IsNeko: Syn.$domain.startsWith("nekohouse")
+        IsNeko: Syn.$domain.startsWith("nekohouse"),
+        ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "psd"],
+        VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"],
     };
 
     return { General, FileName, FetchSet, Process };
