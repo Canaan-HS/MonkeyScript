@@ -21,10 +21,10 @@ export default function Downloader(
                 return cache.startsWith("✓ ") ? cache.slice(2) : cache;
             };
 
-            this.videoFormat = new Set(["MP4", "MOV", "AVI", "WMV", "FLV"]);
-            this.isVideo = (str) => this.videoFormat.has(str.toUpperCase());
+            const VideoExts = new Set(Process.VideoExts);
+            this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
 
-            this.worker = Syn.WorkerCreation(`
+            this.Worker = this.CompressMode ? Syn.WorkerCreation(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -68,7 +68,7 @@ export default function Downloader(
                         postMessage({ index, url: url, blob: "", error: true });
                     }
                 }
-            `);
+            `) : null;
         }
 
         /* 解析名稱格式 */
@@ -125,11 +125,12 @@ export default function Downloader(
                 ] = Object.keys(FileName).slice(1).map(key => this.NameAnalysis(FileName[key]));
 
                 const // 這種寫法適應於還未完全載入原圖時
-                    data = [...files.children]
+                    img_data = [...files.children]
                         .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                         .filter(Boolean),
-                    video = Syn.$qa(".post__attachment a, .scrape__attachment a"),
-                    final_data = General.ContainsVideo ? [...data, ...video] : data;
+                    final_data = General.IncludeExtras
+                        ? [...img_data, ...Syn.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] // 包含下載附加內容
+                        : img_data;
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of final_data.entries()) {
@@ -175,7 +176,6 @@ export default function Downloader(
 
             // 強制下載
             async function ForceDownload() {
-                Self.worker.terminate();
                 Self.Compression(CompressName, Zip, TitleCache);
             }
 
@@ -190,10 +190,10 @@ export default function Downloader(
                 requestAnimationFrame(() => {
 
                     if (!error && blob instanceof Blob && blob.size > 0) {
-                        extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 isVideo 的資訊, 所以分別操作
+                        extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 IsVideo 的資訊, 所以分別操作
 
                         const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
-                        Self.isVideo(extension)
+                        Self.IsVideo(extension)
                             ? Zip.file(`${FolderName}${(
                                 decodeURIComponent(url).split("?f=")[1] ||
                                 Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
@@ -211,7 +211,6 @@ export default function Downloader(
                     if (progress == Total) {
                         Total = Data.size;
                         if (Total == 0) {
-                            Self.worker.terminate();
                             Self.Compression(CompressName, Zip, TitleCache);
                         } else {
                             show = "Wait for failed re download";
@@ -220,7 +219,7 @@ export default function Downloader(
                             Self.Button.$text(show);
                             setTimeout(() => {
                                 for (const [index, url] of Data.entries()) {
-                                    Self.worker.postMessage({ index: index, url: url });
+                                    Self.Worker.postMessage({ index: index, url: url });
                                 }
                             }, 1500);
                         }
@@ -228,7 +227,7 @@ export default function Downloader(
                 });
             }
 
-            // 不使用 worker 的請求, 切換窗口時, 這裡的請求就會變慢
+            // 不使用 Worker 的請求, 切換窗口時, 這裡的請求就會變慢
             async function Request(index, url) {
                 if (Self.ForceDownload) return;
                 GM_xmlhttpRequest({
@@ -259,13 +258,13 @@ export default function Downloader(
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
                     for (let j = i; j < i + Batch && j < Total; j++) {
-                        this.worker.postMessage({ index: j, url: Data.get(j) });
+                        this.Worker.postMessage({ index: j, url: Data.get(j) });
                     }
                 }, (i / Batch) * Delay);
             }
 
             // 接收消息處理
-            this.worker.onmessage = (e) => {
+            this.Worker.onmessage = (e) => {
                 const { index, url, blob, error } = e.data;
                 error
                     ? (Request(index, url), Syn.Log("Download Failed", url, { dev: General.Dev, type: "error", collapsed: false }))
@@ -311,7 +310,7 @@ export default function Downloader(
                 extension = Syn.ExtensionName(url);
 
                 const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
-                filename = Self.isVideo(extension)
+                filename = Self.IsVideo(extension)
                     ? (
                         decodeURIComponent(url).split("?f=")[1] ||
                         Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
@@ -384,6 +383,7 @@ export default function Downloader(
 
         /* 壓縮檔案 */
         async Compression(Name, Data, Title) {
+            this.Worker.terminate();
             this.ForceDownload = true;
             GM_unregisterMenuCommand("Enforce-1");
             Data.generateZip({
