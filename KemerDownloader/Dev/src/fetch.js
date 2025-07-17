@@ -30,9 +30,6 @@ export default function Fetch(
                     ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1")
                     : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy";
 
-            // 預設添加的數據
-            this.InfoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
-
             // 根據類型判斷預設值
             this.Default = (Value) => {
                 if (!Value) return null;
@@ -46,6 +43,9 @@ export default function Fetch(
 
                 return Value;
             };
+
+            // 預設添加的數據
+            this.InfoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
 
             /**
              * 生成數據
@@ -70,23 +70,17 @@ export default function Fetch(
                 }, {});
             };
 
-            // 影片類型
-            this.Video = new Set([
-                ".mp4", ".avi", ".mkv", ".mov", ".flv", ".wmv", ".webm", ".mpg", ".mpeg",
-                ".m4v", ".ogv", ".3gp", ".asf", ".ts", ".vob", ".rm", ".rmvb", ".m2ts",
-                ".f4v", ".mts"
-            ]);
+            // 將數據類型表轉為 Set
+            const ImageExts = new Set(Process.ImageExts);
+            const VideoExts = new Set(Process.VideoExts);
 
-            // 圖片類型
-            this.Image = new Set([
-                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif",
-                ".svg", ".heic", ".heif", ".raw", ".ico", ".psd"
-            ]);
+            this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
+            this.IsImage = (str) => ImageExts.has(str.replace(/^\./, "").toLowerCase());
 
             // 抓取檔案的副檔名
             this.Suffix = (Str) => {
                 try {
-                    return `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
+                    return `${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
                 } catch { // 無法判斷副檔名
                     return "";
                 }
@@ -96,7 +90,7 @@ export default function Fetch(
             this.AdvancedCategorize = (Data) => {
                 return Data.reduce((acc, file) => {
                     const url = `${file.server}/data${file.path}?f=${file.name}`;
-                    this.Video.has(file.extension) ? (acc.video[file.name] = url) : (acc.other[file.name] = url);
+                    this.IsVideo(file.extension) ? (acc.video[file.name] = url) : (acc.other[file.name] = url);
                     return acc;
                 }, { video: {}, other: {} });
             };
@@ -114,10 +108,10 @@ export default function Fetch(
                     serverNumber = (serverNumber % 4) + 1;
                     const server = `https://n${serverNumber}.${this.Host}/data`;
 
-                    if (this.Video.has(extension)) {
+                    if (this.IsVideo(extension)) {
                         acc.video[name] = `${server}${path}?f=${name}`;
-                    } else if (this.Image.has(extension)) {
-                        const name = `${Title}_${String(++imgNumber).padStart(2, "0")}${extension}`;
+                    } else if (this.IsImage(extension)) {
+                        const name = `${Title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
                         acc.img[name] = `${server}${path}?f=${name}`;
                     } else {
                         acc.other[name] = `${server}${path}?f=${name}`;
@@ -367,7 +361,7 @@ export default function Fetch(
 
             // 恢復 FetchContent 處理數據格式
             const Cloned_HomeData = structuredClone(HomeData);
-            Cloned_HomeData.content.results = [{ Id }]; // 修改數據
+            Cloned_HomeData.content.results = [{ id: Id }]; // 修改數據
             Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content); // 轉換為字符串
 
             await this.FetchContent(Cloned_HomeData);
@@ -425,7 +419,7 @@ export default function Fetch(
                                             const File = this.AdvancedCategorize(Json.attachments);
 
                                             // 獲取圖片連結
-                                            const ImgLink = () => {//! 還需要測試
+                                            const ImgLink = () => { // ! 還需要測試
                                                 const ServerList = Json.previews.filter(item => item.server); // 取得圖片伺服器
                                                 if ((ServerList?.length ?? 0) === 0) return;
 
@@ -435,16 +429,16 @@ export default function Fetch(
                                                     ...Post.attachments
                                                 ];
                                                 const Fill = Syn.GetFill(ServerList.length);
-
+                                                
                                                 // 依據篩選出有預覽圖伺服器的, 生成圖片連結
                                                 return ServerList.reduce((acc, Server, Index) => {
                                                     const extension = [List[Index].name, List[Index].path]
                                                         .map(name => this.Suffix(name))
-                                                        .find(ext => this.Image.has(ext));
+                                                        .find(ext => this.IsImage(ext));
 
                                                     if (!extension) return acc;
 
-                                                    const name = `${Title}_${Syn.Mantissa(Index, Fill, '0', extension)}`;
+                                                    const name = `${Title}_${Syn.Mantissa(Index, Fill, '0')}.${extension}`;
                                                     acc[name] = `${Server.server}/data${List[Index].path}?f=${name}`;
                                                     return acc;
                                                 }, {});
@@ -453,7 +447,7 @@ export default function Fetch(
                                             // 生成請求數據 (處理要抓什麼數據)
                                             const Gen = this.FetchGenerate({
                                                 PostLink: `${this.FirstURL}/post/${Post.id}`,
-                                                Timestamp: new Date(Post.added)?.toLocaleString(),
+                                                Timestamp: new Date(Post.published || Post.added)?.toLocaleString(),
                                                 TypeTag: Post.tags,
                                                 ImgLink: ImgLink(),
                                                 VideoLink: File.video,
@@ -539,7 +533,10 @@ export default function Fetch(
 
         async Reset() {
             Process.Lock = false;
+            this.MetaDict = {};
+            this.DataDict = {};
             this.Worker.terminate();
+            // 上方操作是主動恢復 與 釋放 GC, 並不是必要的, 因為調用下載 Class 每次都是新的實例
             Syn.title(this.TitleCache);
         };
 
@@ -557,6 +554,7 @@ export default function Fetch(
             if (Content.endsWith('\n')) Content = Content.slice(0, -1); // 去除末行空白
 
             Syn.OutputTXT(Content, this.MetaDict[Transl("作者")], () => {
+                Content = "";
                 this.Reset();
             })
         };
