@@ -97,19 +97,14 @@
 
     /* ====================== 不瞭解不要修改下方參數 ===================== */
 
-    // 解構設置
+    // 解構設置, TranslationFactory 需要 Translation 的數據, 如果晚宣告會出錯
     const [LoadDict, Translation] = [Config.LoadDictionary, Config.TranslationReversal];
 
-    // Transl 會調用 Translation 的數據, 如果晚宣告會找不到
     const Dev = GM_getValue("Dev", false); // 開發者模式
     const Update = UpdateWordsDict(); // 更新函數
-    const Transl = TranslationFactory(); // 翻譯函數
-    const Time = new Date().getTime(); // 當前時間戳
-    const Timestamp = GM_getValue("UpdateTime", false); // 紀錄時間戳
 
-    let Translated = true; // 判斷翻譯狀態 (不要修改)
-    let TranslatedRecord = new Set(); // 紀錄翻譯紀錄, 避免疊加轉換問題
     let Dict = GM_getValue("LocalWords", null) ?? await Update.Reques(); // 本地翻譯字典 (無字典立即請求, 通常只會在第一次運行)
+    let Translated = true; // 判斷翻譯狀態 (不要修改)
 
     const Dictionary = { // 字典操作
         NormalDict: undefined,
@@ -124,7 +119,6 @@
             }, {});
         },
         RefreshDict: function () { // 刷新翻譯狀態
-            TranslatedRecord = new Set(); // 刷新翻譯紀錄
             Dict = Translated
                 ? (
                     Translated = false,
@@ -160,13 +154,50 @@
     Dictionary.Init();
 
     WaitElem("body", body => { // 等待頁面載入
-        const RunFactory = () => Transl.Trigger(body);
+        const Transl = TranslationFactory(); // 翻譯工廠
+
+        // 轉換時的鎖
+        let lock = false;
+
+        const RunFactory = async () => {
+            if (lock) return;
+
+            lock = true;
+            await Transl.Trigger(body);
+            lock = false;
+        };
 
         const observer = new MutationObserver(Debounce((mutations) => {
-            const hasRelevantChanges = mutations.some(mutation =>
-                mutation.type === "childList" || mutation.type === "characterData"
-            );
-            hasRelevantChanges && RunFactory(); // 監聽到變化就觸發轉換
+            if (lock) return;
+
+            // 檢查是否有需要處理的變化
+            const hasRelevantChanges = mutations.some(mutation => {
+                // 檢查是否是我們自己的變化
+                if (mutation.attributeName === "data-translated") return false;
+
+                // 處理文本內容變化
+                if (mutation.type === "characterData") {
+                    return true;
+                }
+
+                // 處理新增節點
+                if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                    return Array.from(mutation.addedNodes).some(node =>
+                        node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE
+                    );
+                }
+
+                // 處理屬性變化 (placeholder)
+                if (mutation.type === "attributes" && mutation.attributeName === "placeholder") {
+                    return true;
+                }
+
+                return false;
+            });
+
+            if (hasRelevantChanges) {
+                RunFactory(); // 只有在有相關變化時才觸發轉換
+            }
         }, 300));
 
         // 啟動觀察 (啟動時會觸發轉換)
@@ -176,7 +207,8 @@
                 subtree: true, // 監視所有後代節點
                 childList: true, // 監視子節點添加或移除
                 characterData: true, // 監視文字內容變化
-                attributeFilter: ['placeholder'], // 監視屬性變化
+                attributes: true, // 監視屬性變化
+                attributeFilter: ['placeholder'], // 只監視 placeholder 屬性
             })
         };
 
@@ -273,7 +305,10 @@
             }, "Dev");
         };
 
-        if (!Timestamp || (Time - new Date(Timestamp).getTime()) > (36e5 * 24)) { // 24 小時更新
+        const CurrentTime = new Date().getTime(); // 當前時間戳
+        const UpdateTime = GM_getValue("UpdateTime", false); // 紀錄時間戳
+
+        if (!UpdateTime || (CurrentTime - new Date(UpdateTime).getTime()) > (36e5 * 24)) { // 24 小時更新
             Update.Reques().then(data => { // 不 await 的更新
                 Dict = data;
                 Dictionary.Init(); // 初始化
@@ -287,6 +322,21 @@
 
     /* 翻譯處理工廠 */
     function TranslationFactory() {
+        const filterTags = new Set([
+            // 腳本和樣式
+            "SCRIPT", "STYLE", "NOSCRIPT",
+            // 多媒體元素
+            "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK",
+            // 代碼和預格式化文本
+            "CODE", "PRE", "SAMP",
+            // 不可見或特殊功能元素
+            "TEMPLATE", "SLOT", "PARAM", "META", "LINK",
+            // 圖片相關
+            "IMG", "PICTURE", "FIGURE", "FIGCAPTION",
+            // 特殊交互元素
+            "MATH", "PORTAL"
+        ]);
+
         function getTextNodes(root) {
             const tree = document.createTreeWalker(
                 root,
@@ -294,9 +344,8 @@
                 {
                     acceptNode: (node) => {
                         // 標籤過濾
-                        const tag = node.parentElement.tagName;
-                        if (tag === "STYLE" || tag === "SCRIPT" || tag === "CODE" ||
-                            tag === "PRE" || tag === "NOSCRIPT" || tag === "SVG") {
+                        const tag = node.parentElement;
+                        if (!tag || filterTags.has(tag.tagName)) {
                             return NodeFilter.FILTER_REJECT;
                         }
 
@@ -305,9 +354,14 @@
                         if (!content) return NodeFilter.FILTER_REJECT;
 
                         // 過濾明顯的代碼或屬性
-                        if (content.startsWith("src=") || content.startsWith("href=") ||
-                            content.startsWith("data-") || content.startsWith("function ") ||
-                            content.startsWith("const ") || content.startsWith("var ")) {
+                        if (
+                            content.startsWith("src=") ||
+                            content.startsWith("href=") ||
+                            content.startsWith("data-") ||
+                            content.startsWith("function ") ||
+                            content.startsWith("const ") ||
+                            content.startsWith("var ")
+                        ) {
                             return NodeFilter.FILTER_REJECT;
                         }
 
@@ -379,21 +433,73 @@
 
         const RefreshUICore = {
             FocusTextRecovery: async (textNode) => {
-                textNode.textContent = TCore.OnlyLong(textNode.textContent);
-                textNode.textContent = TCore.OnlyShort(textNode.textContent);
+                const originalContent = textNode.textContent;
+                const longTranslated = TCore.OnlyLong(originalContent);
+
+                if (originalContent !== longTranslated) {
+                    textNode.textContent = longTranslated;
+                }
+
+                const shortTranslated = TCore.OnlyShort(textNode.textContent);
+                if (textNode.textContent !== shortTranslated) {
+                    textNode.textContent = shortTranslated;
+                }
             },
             FocusTextTranslate: async (textNode) => {
-                textNode.textContent = TCore.LongShort(textNode.textContent);
+                const originalContent = textNode.textContent;
+                const translated = TCore.LongShort(originalContent);
+
+                if (originalContent !== translated) {
+                    textNode.textContent = translated;
+                }
             },
             FocusInputRecovery: async (inputNode) => {
-                inputNode.value = TCore.OnlyLong(inputNode.value);
-                inputNode.value = TCore.OnlyShort(inputNode.value);
-                inputNode.setAttribute("placeholder", TCore.OnlyLong(inputNode.getAttribute("placeholder")));
-                inputNode.setAttribute("placeholder", TCore.OnlyShort(inputNode.getAttribute("placeholder")));
+                // 處理 value
+                const originalValue = inputNode.value;
+                if (originalValue) {
+                    const longTranslated = TCore.OnlyLong(originalValue);
+                    if (originalValue !== longTranslated) {
+                        inputNode.value = longTranslated;
+                    }
+
+                    const shortTranslated = TCore.OnlyShort(inputNode.value);
+                    if (inputNode.value !== shortTranslated) {
+                        inputNode.value = shortTranslated;
+                    }
+                }
+
+                // 處理 placeholder
+                const originalPlaceholder = inputNode.getAttribute("placeholder");
+                if (originalPlaceholder) {
+                    const longTranslated = TCore.OnlyLong(originalPlaceholder);
+                    if (originalPlaceholder !== longTranslated) {
+                        inputNode.setAttribute("placeholder", longTranslated);
+                    }
+
+                    const shortTranslated = TCore.OnlyShort(inputNode.getAttribute("placeholder"));
+                    if (inputNode.getAttribute("placeholder") !== shortTranslated) {
+                        inputNode.setAttribute("placeholder", shortTranslated);
+                    }
+                }
             },
             FocusInputTranslate: async (inputNode) => {
-                inputNode.value = TCore.LongShort(inputNode.value);
-                inputNode.setAttribute("placeholder", TCore.LongShort(inputNode.getAttribute("placeholder")));
+                // 處理 value
+                const originalValue = inputNode.value;
+                if (originalValue) {
+                    const translated = TCore.LongShort(originalValue);
+                    if (originalValue !== translated) {
+                        inputNode.value = translated;
+                    }
+                }
+
+                // 處理 placeholder
+                const originalPlaceholder = inputNode.getAttribute("placeholder");
+                if (originalPlaceholder) {
+                    const translated = TCore.LongShort(originalPlaceholder);
+                    if (originalPlaceholder !== translated) {
+                        inputNode.setAttribute("placeholder", translated);
+                    }
+                }
             },
         };
 
@@ -423,16 +529,12 @@
             },
             OperationText: async function (root) {
                 return Promise.all(getTextNodes(root).map(textNode => {
-                    if (TranslatedRecord.has(textNode)) return Promise.resolve(); // 無腦制止翻譯無限疊加狀況 (當然會導致記憶體使用更多) (會有疊加是因為監聽動態變化 反覆觸發)
-                    TranslatedRecord.add(textNode);
-                    return this.__FocusTextCore(textNode)
+                    return this.__FocusTextCore(textNode);
                 }));
             },
             OperationInput: async function (root) {
-                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode => {
-                    if (TranslatedRecord.has(inputNode)) return Promise.resolve();
-                    TranslatedRecord.add(inputNode);
-                    return this.__FocusInputCore(inputNode)
+                return Promise.all([...root.querySelectorAll("input[placeholder], input[value]")].map(inputNode => {
+                    return this.__FocusInputCore(inputNode);
                 }));
             },
         };
