@@ -52,9 +52,11 @@
              *
              * 可導入字典
              *
-             * ! 如果某些單字翻譯的很怪, 可以個別導入 但不導入 "Short"
+             * ! 如果某些單字翻譯的很怪, 可以個別導入 但不導入 "Short", 或是導入 "Curated_Words"
+             * ! Curated_Words 主要是, Parody, Character, Tags, 跟一些特殊單詞
              *
              * 全部: "All_Words"
+             * 精選: "Curated_Words"
              * 標籤: "Tags"
              * 語言: "Language"
              * 角色: "Character"
@@ -168,11 +170,11 @@
         // 轉換時的鎖
         let lock = false;
 
-        const RunFactory = async () => {
+        const RunFactory = async (root=body) => {
             if (lock) return;
 
             lock = true;
-            await Transl.Trigger(body);
+            await Transl.Trigger(root);
             lock = false;
         };
 
@@ -181,8 +183,6 @@
 
             // 檢查是否有需要處理的變化
             const hasRelevantChanges = mutations.some(mutation => {
-                // 檢查是否是我們自己的變化
-                if (mutation.attributeName === "data-translated") return false;
 
                 // 處理文本內容變化
                 if (mutation.type === "characterData") {
@@ -205,14 +205,13 @@
             });
 
             if (hasRelevantChanges) {
-                RunFactory(); // 只有在有相關變化時才觸發轉換
+                RunFactory(document); // 後續在優化成針對變化節點進行翻譯
             }
         }, 300));
 
         // 啟動觀察 (啟動時會觸發轉換)
         const StartOb = () => {
-            RunFactory();
-            observer.observe(body, {
+            observer.observe(document, {
                 subtree: true, // 監視所有後代節點
                 childList: true, // 監視子節點添加或移除
                 characterData: true, // 監視文字內容變化
@@ -287,12 +286,12 @@
                 },
                 "🪧 展示匹配文本": {
                     desc: "在控制台打印匹配的文本, 建議先開啟控制台在運行",
-                    func: () => Transl.Dev(body),
+                    func: () => Transl.Dev(document),
                     close: false
                 },
                 "🖨️ 輸出匹配文檔": {
                     desc: "以 Json 格式輸出, 頁面上被匹配到的所有文本",
-                    func: () => Transl.Dev(body, false)
+                    func: () => Transl.Dev(document, false)
                 },
                 "📼 展示字典緩存": {
                     desc: "顯示當前載入的字典大小",
