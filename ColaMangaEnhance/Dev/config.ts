@@ -3,6 +3,8 @@ import { util } from 'vite-plugin-monkey';
 const Name = "ColaMangaEnhance";
 export default {
     entry: `./${Name}/Dev/src/main.js`,
+    fileName: `${Name}-Dev.js`,
+    outDir: `./${Name}/Dev/dist`,
     userscript: {
         match: [
             '*://www.colamanga.com/manga-*/*/*.html',
@@ -18,13 +20,5 @@ export default {
 
             util.dataUrl(`window.Syn=Syn`)
         ]
-    },
-    build: {
-        rollupOptions: {
-            output: {
-                dir: `./${Name}/Dev/dist`,
-                entryFileNames: `${Name}-Dev.js`,
-            },
-        }
     },
 };
