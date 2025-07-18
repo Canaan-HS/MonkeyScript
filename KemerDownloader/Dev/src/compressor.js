@@ -33,56 +33,59 @@ export default function Compressor(Syn) {
         // 估計壓縮耗時
         estimateCompression() {
 
-            // 計算單個文件的估計壓縮時間(秒)
-            const calculateFileTime = (fileSize) => {
-                const baseBytesPerSecond = 30 * 1024 ** 2; // 估計每秒壓縮：30MB/s
-                let fileTime = fileSize / baseBytesPerSecond;
+            const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
+            const UNCOMPRESSIBLE_EXTENSIONS = new Set([
+                '.mp4', '.mov', '.avi', '.mkv', '.zip', '.rar',
+                '.jpg', '.jpeg', '.png', '.gif', '.webp'
+            ]);
 
-                // 檔案大小調整因子(MB)
-                const fileSizeMB = fileSize / (1024 * 1024);
-                if (fileSizeMB > 10) {
-                    // 較大的單個文件壓縮效率會降低
-                    fileTime *= (1 + Math.log10(fileSizeMB / 10) * 0.15);
-                }
+            // 為不同任務類型設定不同的基礎速度
+            const IO_BYTES_PER_SECOND = 100 * 1024 * 1024; // 假設為 100MB/s 的內存吞吐率
+            const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024; // 假設為 25MB/s 的基礎壓縮速度
 
-                return fileTime;
-            };
-
-            // 計算曲線參數
-            const calculateCurveParameter = (totalSizeMB) => {
-                let param = 5; // 基準參數
-                if (totalSizeMB > 50) {
-                    const reduction = Math.min(Math.floor(totalSizeMB / 50) * 0.7, 3);
-                    param = Math.max(5 - reduction, 1.5);
-                }
-                return param;
-            };
-
-            // 計算每個文件的壓縮時間並累加
             let totalEstimatedTime = 0;
             let totalSize = 0;
 
-            Object.values(this.files).forEach(file => {
-                totalEstimatedTime += calculateFileTime(file.length);
-                totalSize += file.length;
+            Object.entries(this.files).forEach(([name, file]) => {
+                const fileSize = file.length;
+                totalSize += fileSize;
+                const extension = ('.' + name.split('.').pop()).toLowerCase();
+
+                // 判斷任務類型
+                if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+                    // I/O 密集型任務
+                    totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+                } else {
+                    // CPU 密集型任務
+                    let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+
+                    // 對於 CPU 任務，可以保留一些基於大小的微調
+                    const fileSizeMB = fileSize / (1024 * 1024);
+                    if (fileSizeMB > 10) {
+                        cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
+                    }
+                    totalEstimatedTime += cpuTime;
+                }
             });
 
-            // 根據總大小進行微調
-            const totalSizeMB = totalSize / (1024 * 1024);
-
-            // 文件數量調整因子
+            // 檔案數量的影響 (少量檔案的固定開銷)
             const fileCount = Object.keys(this.files).length;
-            if (fileCount > 5) { // 多文件壓縮有額外開銷
-                totalEstimatedTime *= (1 + Math.min(fileCount / 100, 0.2));
+            if (fileCount > 1) {
+                totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
             }
 
-            // 總大小調整因子
-            if (totalSizeMB > 50) {
-                const intervals = Math.floor(totalSizeMB / 50);
-                totalEstimatedTime *= (1 + intervals * 0.08); // 輕微調整，因為已經在單文件層面考慮了大小
+            // 總大小的影響 (輕微)
+            const totalSizeMB = totalSize / (1024 * 1024);
+            if (totalSizeMB > 100) {
+                totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
             }
 
-            // 計算進度曲線參數
+            // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
+            const calculateCurveParameter = (totalSizeMB) => {
+                if (totalSizeMB < 50) return 5;
+                if (totalSizeMB < 500) return 4;
+                return 3;
+            };
             const curveParameter = calculateCurveParameter(totalSizeMB);
 
             return {
