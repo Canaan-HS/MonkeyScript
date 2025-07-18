@@ -328,7 +328,7 @@
             // 多媒體元素
             "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK",
             // 代碼和預格式化文本
-            "CODE", "PRE", "SAMP",
+            "CODE", "KBD", "SAMP",
             // 不可見或特殊功能元素
             "TEMPLATE", "SLOT", "PARAM", "META", "LINK",
             // 圖片相關
