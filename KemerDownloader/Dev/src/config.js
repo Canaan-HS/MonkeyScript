@@ -1,7 +1,7 @@
 export default function Config(Syn) {
     const General = {
         Dev: false, // 顯示請求資訊, 與錯誤資訊
-        ContainsVideo: false, // 下載時包含影片
+        IncludeExtras: false, // 下載時包含 影片 與 其他附加檔案
         CompleteClose: false, // 下載完成後關閉
         ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
         ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
