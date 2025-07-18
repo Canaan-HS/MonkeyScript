@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      0.0.21-Beta7
+// @version      0.0.21-Beta8
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -49,8 +49,8 @@
     const General2 = {
       Dev: false,
       // 顯示請求資訊, 與錯誤資訊
-      ContainsVideo: false,
-      // 下載時包含影片
+      IncludeExtras: false,
+      // 下載時包含 影片 與 其他附加檔案
       CompleteClose: false,
       // 下載完成後關閉
       ConcurrentDelay: 500,
@@ -91,7 +91,9 @@
     };
     const Process2 = {
       Lock: false,
-      IsNeko: location.hostname.startsWith("nekohouse")
+      IsNeko: Syn2.$domain.startsWith("nekohouse"),
+      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "psd"],
+      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"]
     };
     return { General: General2, FileName: FileName2, FetchSet: FetchSet2, Process: Process2 };
   }
@@ -367,7 +369,6 @@
           // 將預覽頁面轉成 API 連結
           /[?&]o=/.test(Url) ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy"
         );
-        this.InfoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
         this.Default = (Value) => {
           if (!Value) return null;
           const type = Syn2.Type(Value);
@@ -378,6 +379,7 @@
           }
           return Value;
         };
+        this.InfoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
         this.FetchGenerate = (Data) => {
           return Object.keys(Data).reduce((acc, key) => {
             if (this.InfoRules.has(key)) {
@@ -387,47 +389,13 @@
             return acc;
           }, {});
         };
-        this.Video = /* @__PURE__ */ new Set([
-          ".mp4",
-          ".avi",
-          ".mkv",
-          ".mov",
-          ".flv",
-          ".wmv",
-          ".webm",
-          ".mpg",
-          ".mpeg",
-          ".m4v",
-          ".ogv",
-          ".3gp",
-          ".asf",
-          ".ts",
-          ".vob",
-          ".rm",
-          ".rmvb",
-          ".m2ts",
-          ".f4v",
-          ".mts"
-        ]);
-        this.Image = /* @__PURE__ */ new Set([
-          ".jpg",
-          ".jpeg",
-          ".png",
-          ".gif",
-          ".bmp",
-          ".webp",
-          ".tiff",
-          ".tif",
-          ".svg",
-          ".heic",
-          ".heif",
-          ".raw",
-          ".ico",
-          ".psd"
-        ]);
+        const ImageExts = new Set(Process2.ImageExts);
+        const VideoExts = new Set(Process2.VideoExts);
+        this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.IsImage = (str) => ImageExts.has(str.replace(/^\./, "").toLowerCase());
         this.Suffix = (Str) => {
           try {
-            return `.${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
+            return `${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
           } catch {
             return "";
           }
@@ -435,7 +403,7 @@
         this.AdvancedCategorize = (Data) => {
           return Data.reduce((acc, file) => {
             const url = `${file.server}/data${file.path}?f=${file.name}`;
-            this.Video.has(file.extension) ? acc.video[file.name] = url : acc.other[file.name] = url;
+            this.IsVideo(file.extension) ? acc.video[file.name] = url : acc.other[file.name] = url;
             return acc;
           }, { video: {}, other: {} });
         };
@@ -448,10 +416,10 @@
             const extension = this.Suffix(name);
             serverNumber = serverNumber % 4 + 1;
             const server = `https://n${serverNumber}.${this.Host}/data`;
-            if (this.Video.has(extension)) {
+            if (this.IsVideo(extension)) {
               acc.video[name] = `${server}${path}?f=${name}`;
-            } else if (this.Image.has(extension)) {
-              const name2 = `${Title}_${String(++imgNumber).padStart(2, "0")}${extension}`;
+            } else if (this.IsImage(extension)) {
+              const name2 = `${Title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
               acc.img[name2] = `${server}${path}?f=${name2}`;
             } else {
               acc.other[name] = `${server}${path}?f=${name}`;
@@ -654,7 +622,7 @@
         Object.assign(HomeData, { content: JSON.parse(content) });
         Syn2.Log("HomeData", HomeData, { collapsed: false });
         const Cloned_HomeData = structuredClone(HomeData);
-        Cloned_HomeData.content.results = [{ Id }];
+        Cloned_HomeData.content.results = [{ id: Id }];
         Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content);
         await this.FetchContent(Cloned_HomeData);
         Syn2.Log("PostDate", this.DataDict, { collapsed: false });
@@ -695,7 +663,6 @@
                         const Title = Post.title.trim().replace(/\n/g, " ") || `Untitled_${String(index2 + 1).padStart(2, "0")}`;
                         const File = this.AdvancedCategorize(Json2.attachments);
                         const ImgLink = () => {
-                          //! 還需要測試
                           const ServerList = Json2.previews.filter((item) => item.server);
                           if ((ServerList?.length ?? 0) === 0) return;
                           const List = [
@@ -704,16 +671,16 @@
                           ];
                           const Fill = Syn2.GetFill(ServerList.length);
                           return ServerList.reduce((acc, Server, Index) => {
-                            const extension = [List[Index].name, List[Index].path].map((name2) => this.Suffix(name2)).find((ext) => this.Image.has(ext));
+                            const extension = [List[Index].name, List[Index].path].map((name2) => this.Suffix(name2)).find((ext) => this.IsImage(ext));
                             if (!extension) return acc;
-                            const name = `${Title}_${Syn2.Mantissa(Index, Fill, "0", extension)}`;
+                            const name = `${Title}_${Syn2.Mantissa(Index, Fill, "0")}.${extension}`;
                             acc[name] = `${Server.server}/data${List[Index].path}?f=${name}`;
                             return acc;
                           }, {});
                         };
                         const Gen = this.FetchGenerate({
                           PostLink: `${this.FirstURL}/post/${Post.id}`,
-                          Timestamp: new Date(Post.added)?.toLocaleString(),
+                          Timestamp: new Date(Post.published || Post.added)?.toLocaleString(),
                           TypeTag: Post.tags,
                           ImgLink: ImgLink(),
                           VideoLink: File.video,
@@ -782,6 +749,8 @@
       /* ===== 輸出生成 ===== */
       async Reset() {
         Process2.Lock = false;
+        this.MetaDict = {};
+        this.DataDict = {};
         this.Worker.terminate();
         Syn2.title(this.TitleCache);
       }
@@ -800,6 +769,7 @@
         }
         if (Content.endsWith("\n")) Content = Content.slice(0, -1);
         Syn2.OutputTXT(Content, this.MetaDict[Transl2("作者")], () => {
+          Content = "";
           this.Reset();
         });
       }
@@ -942,9 +912,9 @@
           const cache = Syn2.title();
           return cache.startsWith("✓ ") ? cache.slice(2) : cache;
         };
-        this.videoFormat = /* @__PURE__ */ new Set(["MP4", "MOV", "AVI", "WMV", "FLV"]);
-        this.isVideo = (str) => this.videoFormat.has(str.toUpperCase());
-        this.worker = Syn2.WorkerCreation(`
+        const VideoExts = new Set(Process2.VideoExts);
+        this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.Worker = this.CompressMode ? Syn2.WorkerCreation(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -988,7 +958,7 @@
                         postMessage({ index, url: url, blob: "", error: true });
                     }
                 }
-            `);
+            `) : null;
       }
       /* 解析名稱格式 */
       NameAnalysis(format) {
@@ -1037,7 +1007,7 @@
             folder_name,
             fill_name
           ] = Object.keys(FileName2).slice(1).map((key) => this.NameAnalysis(FileName2[key]));
-          const data = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), video = Syn2.$qa(".post__attachment a, .scrape__attachment a"), final_data = General2.ContainsVideo ? [...data, ...video] : data;
+          const img_data = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), final_data = General2.IncludeExtras ? [...img_data, ...Syn2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] : img_data;
           for (const [index, file] of final_data.entries()) {
             const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
             if (Uri) {
@@ -1059,7 +1029,6 @@
         const Self = this, Zip = new Compression(), TitleCache = this.OriginalTitle();
         const FillValue = this.NameAnalysis(FileName2.FillValue), Filler = FillValue[1], Amount = FillValue[0] == "auto" ? Syn2.GetFill(Total) : FillValue[0];
         async function ForceDownload() {
-          Self.worker.terminate();
           Self.Compression(CompressName, Zip, TitleCache);
         }
         Syn2.Menu({
@@ -1072,7 +1041,7 @@
             if (!error && blob instanceof Blob && blob.size > 0) {
               extension = Syn2.ExtensionName(url);
               const FileName3 = `${FillName.replace("fill", Syn2.Mantissa(index, Amount, Filler))}.${extension}`;
-              Self.isVideo(extension) ? Zip.file(`${FolderName}${decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3}`, blob) : Zip.file(`${FolderName}${FileName3}`, blob);
+              Self.IsVideo(extension) ? Zip.file(`${FolderName}${decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3}`, blob) : Zip.file(`${FolderName}${FileName3}`, blob);
               Data.delete(index);
             }
             show = `[${++progress}/${Total}]`;
@@ -1081,7 +1050,6 @@
             if (progress == Total) {
               Total = Data.size;
               if (Total == 0) {
-                Self.worker.terminate();
                 Self.Compression(CompressName, Zip, TitleCache);
               } else {
                 show = "Wait for failed re download";
@@ -1090,7 +1058,7 @@
                 Self.Button.$text(show);
                 setTimeout(() => {
                   for (const [index2, url2] of Data.entries()) {
-                    Self.worker.postMessage({ index: index2, url: url2 });
+                    Self.Worker.postMessage({ index: index2, url: url2 });
                   }
                 }, 1500);
               }
@@ -1121,11 +1089,11 @@
         for (let i = 0; i < Total; i += Batch) {
           setTimeout(() => {
             for (let j = i; j < i + Batch && j < Total; j++) {
-              this.worker.postMessage({ index: j, url: Data.get(j) });
+              this.Worker.postMessage({ index: j, url: Data.get(j) });
             }
           }, i / Batch * Delay);
         }
-        this.worker.onmessage = (e) => {
+        this.Worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
           error ? (Request(index, url), Syn2.Log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (Request_update(index, url, blob), Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
         };
@@ -1147,7 +1115,7 @@
           url = Data.get(index);
           extension = Syn2.ExtensionName(url);
           const FileName3 = `${FillName.replace("fill", Syn2.Mantissa(index, Amount, Filler))}.${extension}`;
-          filename = Self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
+          filename = Self.IsVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
           return new Promise((resolve, reject) => {
             const completed = () => {
               if (!ShowTracking[index]) {
@@ -1193,6 +1161,7 @@
       }
       /* 壓縮檔案 */
       async Compression(Name, Data, Title) {
+        this.Worker.terminate();
         this.ForceDownload = true;
         GM_unregisterMenuCommand2("Enforce-1");
         Data.generateZip({
