@@ -211,6 +211,7 @@
 
         // 啟動觀察 (啟動時會觸發轉換)
         const StartOb = () => {
+            RunFactory(document);
             observer.observe(document, {
                 subtree: true, // 監視所有後代節點
                 childList: true, // 監視子節點添加或移除
@@ -262,7 +263,7 @@
                 hotkey: "c",
                 close: false,
                 desc: "互相反轉變更後的文本",
-                func: ThePolesAreReversed
+                func: () => ThePolesAreReversed()
             }
         }, "Basic");
 
