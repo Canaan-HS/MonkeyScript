@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      0.0.21-Beta6
+// @version      0.0.21-Beta7
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -17,12 +17,9 @@
 // @description:en      One-click download of images (compressed download/single image download), create page data for json download, one-click open all current posts
 
 // @connect      *
-// @match        *://kemono.su/*
-// @match        *://coomer.su/*
+// @match        *://kemono.cr/*
+// @match        *://coomer.st/*
 // @match        *://nekohouse.su/*
-// @match        *://*.kemono.su/*
-// @match        *://*.coomer.su/*
-// @match        *://*.nekohouse.su/*
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
@@ -48,48 +45,66 @@
 // ==/UserScript==
 
 (function () {
-  const Config = {
-    Dev: false,
-    // 顯示請求資訊, 與錯誤資訊
-    ContainsVideo: false,
-    // 下載時包含影片
-    CompleteClose: false,
-    // 下載完成後關閉
-    ConcurrentDelay: 500,
-    // 下載線程延遲 (ms) [壓縮下載]
-    ConcurrentQuantity: 5,
-    // 下載線程數量 [壓縮下載]
-    BatchOpenDelay: 500
-    // 一鍵開啟帖子的延遲 (ms)
-  };
-  const FileName = {
-    FillValue: {
-      Filler: "0",
-      // 填充元素 / 填料
-      Amount: "Auto"
-      // 填充數量 [輸入 auto 或 任意數字]
-    },
-    CompressName: "({Artist}) {Title}",
-    // 壓縮檔案名稱
-    FolderName: "{Title}",
-    // 資料夾名稱 (用空字串, 就直接沒資料夾)
-    FillName: "{Title} {Fill}"
-    // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
-  };
-  const FetchSet = {
-    Delay: 200,
-    // 獲取延遲 (ms) [太快會被 BAN]
-    AdvancedFetch: true,
-    // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
-    ToLinkTxt: false
-  };
-  const Process = {
-    Lock: false,
-    IsNeko: location.hostname.startsWith("nekohouse")
-  };
+  function Config(Syn2) {
+    const General2 = {
+      Dev: false,
+      // 顯示請求資訊, 與錯誤資訊
+      ContainsVideo: false,
+      // 下載時包含影片
+      CompleteClose: false,
+      // 下載完成後關閉
+      ConcurrentDelay: 500,
+      // 下載線程延遲 (ms) [壓縮下載]
+      ConcurrentQuantity: 5,
+      // 下載線程數量 [壓縮下載]
+      BatchOpenDelay: 500,
+      // 一鍵開啟帖子的延遲 (ms)
+      ...Syn2.gJV("General", {})
+    };
+    const FileName2 = {
+      FillValue: {
+        Filler: "0",
+        // 填充元素 / 填料
+        Amount: "Auto"
+        // 填充數量 [輸入 auto 或 任意數字]
+      },
+      CompressName: "({Artist}) {Title}",
+      // 壓縮檔案名稱
+      FolderName: "{Title}",
+      // 資料夾名稱 (用空字串, 就直接沒資料夾)
+      FillName: "{Title} {Fill}",
+      // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
+      ...Syn2.gJV("FileName", {})
+    };
+    const FetchSet2 = {
+      Delay: 200,
+      // 獲取延遲 (ms) [太快會被 BAN]
+      AdvancedFetch: true,
+      // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
+      ToLinkTxt: false,
+      // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
+      UseFormat: false,
+      // 這裡為 false 下面兩項就不生效
+      Mode: "FilterMode",
+      Format: ["Timestamp", "TypeTag"],
+      ...Syn2.gJV("FetchSet", {})
+    };
+    const Process2 = {
+      Lock: false,
+      IsNeko: location.hostname.startsWith("nekohouse")
+    };
+    return { General: General2, FileName: FileName2, FetchSet: FetchSet2, Process: Process2 };
+  }
   const Dict = {
     Traditional: {
-      "開帖說明": "\n\n!! 不輸入直接確認, 將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10"
+      "PostLink": "帖子連結",
+      "Timestamp": "發佈日期",
+      "TypeTag": "類型標籤",
+      "ImgLink": "圖片連結",
+      "VideoLink": "影片連結",
+      "DownloadLink": "下載連結",
+      "ExternalLink": "外部連結",
+      "開帖說明": "\n\n!! 直接確認將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10"
     },
     Simplified: {
       "🔁 切換下載模式": "🔁 切换下载模式",
@@ -113,9 +128,23 @@
       "圖片數量": "图片数量",
       "影片數量": "视频数量",
       "下載連結": "下载链接",
-      "作者": "作者",
+      "密碼": "密码",
+      "連結": "链接",
       "時間": "时间",
       "來源": "来源",
+      "元數據": "元数据",
+      "PostLink": "帖子链接",
+      "Timestamp": "发布日期",
+      "TypeTag": "类型标签",
+      "ImgLink": "图片链接",
+      "VideoLink": "视频链接",
+      "DownloadLink": "下载链接",
+      "ExternalLink": "外部链接",
+      "帖子內容": "帖子内容",
+      "帖子數量": "帖子数量",
+      "建立時間": "建立时间",
+      "獲取頁面": "获取页面",
+      "作者網站": "作者网站",
       "未取得數據": "未获取到数据",
       "模式切換": "模式切换",
       "數據處理中": "数据处理中",
@@ -123,41 +152,56 @@
       "數據處理完成": "数据处理完成",
       "Json 數據下載": "JSON 数据下载",
       "當前帖子數": "当前帖子数",
-      "開帖說明": "\n\n!! 如果直接确认而不输入，将会打开当前页面的所有帖子\n输入选择范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10"
+      "開帖說明": "\n\n!! 直接确认将开启当前页面的所有帖子\n请输入开启范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10"
     },
     Japan: {
       "🔁 切換下載模式": "🔁 ダウンロードモード切替",
-      "📑 獲取帖子數據": "📑 投稿データ取得",
+      "📑 獲取帖子數據": "📑 投稿データを取得",
       "📃 開啟當前頁面帖子": "📃 現在のページの投稿を開く",
-      "📥 強制壓縮下載": "📥 強制圧縮ダウンロード",
-      "⛔️ 取消下載": "⛔️ ダウンロード中止",
-      "壓縮下載模式": "圧縮ダウンロードモード",
-      "單圖下載模式": "単一画像ダウンロードモード",
-      "壓縮下載": "圧縮ダウンロード",
-      "單圖下載": "単一画像ダウンロード",
+      "📥 強制壓縮下載": "📥 強制ZIPダウンロード",
+      "⛔️ 取消下載": "⛔️ ダウンロードをキャンセル",
+      "壓縮下載模式": "ZIPダウンロードモード",
+      "單圖下載模式": "個別ダウンロードモード",
+      "壓縮下載": "ZIPダウンロード",
+      "單圖下載": "個別ダウンロード",
       "開始下載": "ダウンロード開始",
       "無法下載": "ダウンロード不可",
       "下載進度": "ダウンロード進捗",
-      "封裝進度": "パッケージング進捗",
-      "壓縮封裝失敗": "圧縮パッケージング失敗",
+      "封裝進度": "パッケージ化進捗",
+      "壓縮封裝失敗": "ZIP化に失敗",
       "下載完成": "ダウンロード完了",
       "請求進度": "リクエスト進捗",
-      "下載中鎖定": "ダウンロード中ロック",
-      "原始連結": "元のリンク",
+      "下載中鎖定": "ダウンロード中はロック中",
+      "原始連結": "オリジナルリンク",
       "圖片數量": "画像数",
       "影片數量": "動画数",
       "下載連結": "ダウンロードリンク",
+      "密碼": "パスワード",
+      "連結": "リンク",
       "作者": "作者",
-      "時間": "時間",
+      "時間": "日時",
       "來源": "ソース",
-      "未取得數據": "データ未取得",
+      "元數據": "メタデータ",
+      "PostLink": "投稿リンク",
+      "Timestamp": "投稿日時",
+      "TypeTag": "種類タグ",
+      "ImgLink": "画像リンク",
+      "VideoLink": "動画リンク",
+      "DownloadLink": "ダウンロードリンク",
+      "ExternalLink": "外部リンク",
+      "帖子內容": "投稿内容",
+      "帖子數量": "投稿数",
+      "建立時間": "作成日時",
+      "獲取頁面": "ページ取得",
+      "作者網站": "作者のサイト",
+      "未取得數據": "データ取得失敗",
       "模式切換": "モード切替",
       "數據處理中": "データ処理中",
-      "當前處理頁數": "現在処理中のページ",
+      "當前處理頁數": "処理中のページ",
       "數據處理完成": "データ処理完了",
-      "Json 數據下載": "Jsonデータダウンロード",
+      "Json 數據下載": "JSONデータダウンロード",
       "當前帖子數": "現在の投稿数",
-      "開帖說明": "\n\n!! 確認を入力しないと、現在のページのすべての投稿が開かれます\n開始範囲を入力してください：\n単一項目: 1, 2, 3\n範囲指定: 1~5, 6-10\n除外設定: !5, -10"
+      "開帖說明": "\n\n!! 入力せずに確定すると、現在のページの全投稿が開かれます。\n範囲を指定して開く:\n単一: 1, 2, 3\n範囲: 1~5, 6-10\n除外: !5, -10"
     },
     Korea: {
       "🔁 切換下載模式": "🔁 다운로드 모드 전환",
@@ -166,9 +210,9 @@
       "📥 強制壓縮下載": "📥 강제 압축 다운로드",
       "⛔️ 取消下載": "⛔️ 다운로드 취소",
       "壓縮下載模式": "압축 다운로드 모드",
-      "單圖下載模式": "단일 이미지 다운로드 모드",
+      "單圖下載模式": "개별 다운로드 모드",
       "壓縮下載": "압축 다운로드",
-      "單圖下載": "단일 이미지 다운로드",
+      "單圖下載": "개별 다운로드",
       "開始下載": "다운로드 시작",
       "無法下載": "다운로드 불가",
       "下載進度": "다운로드 진행률",
@@ -179,90 +223,128 @@
       "下載中鎖定": "다운로드 중 잠금",
       "原始連結": "원본 링크",
       "圖片數量": "이미지 수",
-      "影片數量": "동영상 수",
+      "影片數量": "영상 수",
       "下載連結": "다운로드 링크",
+      "密碼": "비밀번호",
+      "連結": "링크",
       "作者": "작성자",
       "時間": "시간",
       "來源": "출처",
+      "元數據": "메타데이터",
+      "PostLink": "게시물 링크",
+      "Timestamp": "타임스탬프",
+      "TypeTag": "유형 태그",
+      "ImgLink": "이미지 링크",
+      "VideoLink": "영상 링크",
+      "DownloadLink": "다운로드 링크",
+      "ExternalLink": "외부 링크",
+      "帖子內容": "게시물 내용",
+      "帖子數量": "게시물 수",
+      "建立時間": "생성 시간",
+      "獲取頁面": "페이지 로딩",
+      "作者網站": "작성자 웹사이트",
       "未取得數據": "데이터를 가져오지 못함",
       "模式切換": "모드 전환",
       "數據處理中": "데이터 처리 중",
-      "當前處理頁數": "현재 처리 페이지",
+      "當前處理頁數": "처리 중인 페이지",
       "數據處理完成": "데이터 처리 완료",
       "Json 數據下載": "JSON 데이터 다운로드",
       "當前帖子數": "현재 게시물 수",
-      "開帖說明": "\n\n!! 확인 없이 진행하면 현재 페이지의 모든 게시물이 열립니다\n선택 범위 입력:\n단일 항목: 1, 2, 3\n범위 지정: 1~5, 6-10\n제외 항목: !5, -10"
+      "開帖說明": "\n\n!! 입력 없이 확인 시, 현재 페이지의 모든 게시물을 엽니다.\n열람 범위 입력 (예시):\n단일: 1, 2, 3\n범위: 1~5, 6-10\n제외: !5, -10"
     },
     Russia: {
-      "🔁 切換下載模式": "🔁 Переключить режим загрузки",
+      "🔁 切換下載模式": "🔁 Сменить режим загрузки",
       "📑 獲取帖子數據": "📑 Получить данные постов",
-      "📃 開啟當前頁面帖子": "📃 Открыть посты на текущей странице",
-      "📥 強制壓縮下載": "📥 Принудительная сжатая загрузка",
+      "📃 開啟當前頁面帖子": "📃 Открыть посты на странице",
+      "📥 強制壓縮下載": "📥 Принудительно скачать архивом",
       "⛔️ 取消下載": "⛔️ Отменить загрузку",
-      "壓縮下載模式": "Режим сжатой загрузки",
-      "單圖下載模式": "Режим загрузки отдельных изображений",
-      "壓縮下載": "Сжатая загрузка",
-      "單圖下載": "Загрузка отдельных изображений",
+      "壓縮下載模式": "Режим скачивания архивом",
+      "單圖下載模式": "Режим одиночной загрузки",
+      "壓縮下載": "Скачать архивом",
+      "單圖下載": "Одиночная загрузка",
       "開始下載": "Начать загрузку",
-      "無法下載": "Невозможно загрузить",
+      "無法下載": "Ошибка загрузки",
       "下載進度": "Прогресс загрузки",
       "封裝進度": "Прогресс упаковки",
-      "壓縮封裝失敗": "Ошибка сжатия",
+      "壓縮封裝失敗": "Ошибка архивации",
       "下載完成": "Загрузка завершена",
       "請求進度": "Прогресс запроса",
-      "下載中鎖定": "Заблокировано во время загрузки",
-      "原始連結": "Исходная ссылка",
-      "圖片數量": "Количество изображений",
-      "影片數量": "Количество видео",
-      "下載連結": "Ссылка для загрузки",
+      "下載中鎖定": "Блокировка на время загрузки",
+      "原始連結": "Оригинальная ссылка",
+      "圖片數量": "Кол-во изображений",
+      "影片數量": "Кол-во видео",
+      "下載連結": "Ссылка на скачивание",
+      "密碼": "Пароль",
+      "連結": "Ссылка",
       "作者": "Автор",
       "時間": "Время",
       "來源": "Источник",
-      "未取得數據": "Данные не получены",
-      "模式切換": "Переключение режима",
+      "元數據": "Метаданные",
+      "PostLink": "Ссылка на пост",
+      "Timestamp": "Дата публикации",
+      "TypeTag": "Тег типа",
+      "ImgLink": "Ссылка на изображение",
+      "VideoLink": "Ссылка на видео",
+      "DownloadLink": "Ссылка на скачивание",
+      "ExternalLink": "Внешняя ссылка",
+      "帖子內容": "Содержимое поста",
+      "帖子數量": "Количество постов",
+      "建立時間": "Время создания",
+      "獲取頁面": "Загрузка страницы",
+      "作者網站": "Сайт автора",
+      "未取得數據": "Не удалось получить данные",
+      "模式切換": "Смена режима",
       "數據處理中": "Обработка данных",
       "當前處理頁數": "Обрабатываемая страница",
-      "數據處理完成": "Обработка данных завершена",
-      "Json 數據下載": "Загрузка данных JSON",
-      "當前帖子數": "Текущее количество постов",
-      "開帖說明": "\n\n!! Без подтверждения будут открыты все посты на текущей странице\nВведите диапазон выбора:\nОтдельные элементы: 1, 2, 3\nДиапазоны: 1~5, 6-10\nИсключения: !5, -10"
+      "數據處理完成": "Обработка завершена",
+      "Json 數據下載": "Скачать JSON",
+      "當前帖子數": "Текущее кол-во постов",
+      "開帖說明": '\n\n!! Нажмите "ОК" без ввода, чтобы открыть все посты на странице.\nВведите диапазон для открытия:\nОдин пост: 1, 2, 3\nДиапазон: 1~5, 6-10\nИсключить: !5, -10'
     },
     English: {
       "🔁 切換下載模式": "🔁 Switch Download Mode",
-      "📑 獲取帖子數據": "📑 Get Post Data",
-      "📃 開啟當前頁面帖子": "📃 Open Posts on Current Page",
-      "📥 強制壓縮下載": "📥 Force Compressed Download",
+      "📑 獲取帖子數據": "📑 Fetch Post Data",
+      "📃 開啟當前頁面帖子": "📃 Open Posts on This Page",
+      "📥 強制壓縮下載": "📥 Force ZIP Download",
       "⛔️ 取消下載": "⛔️ Cancel Download",
-      "壓縮下載模式": "Compressed Download Mode",
-      "單圖下載模式": "Single Image Download Mode",
-      "壓縮下載": "Compressed Download",
-      "單圖下載": "Single Image Download",
+      "壓縮下載模式": "ZIP Download Mode",
+      "單圖下載模式": "Individual Download Mode",
+      "壓縮下載": "Download as ZIP",
+      "單圖下載": "Download Individually",
       "開始下載": "Start Download",
-      "無法下載": "Unable to Download",
+      "無法下載": "Download Failed",
       "下載進度": "Download Progress",
       "封裝進度": "Packaging Progress",
-      "壓縮封裝失敗": "Compression Failed",
+      "壓縮封裝失敗": "ZIP Packaging Failed",
       "下載完成": "Download Complete",
       "請求進度": "Request Progress",
-      "下載中鎖定": "Locked During Download",
+      "下載中鎖定": "Locked While Downloading",
       "原始連結": "Original Link",
       "圖片數量": "Image Count",
       "影片數量": "Video Count",
       "下載連結": "Download Link",
+      "密碼": "Password",
+      "連結": "Link",
       "作者": "Author",
       "時間": "Time",
       "來源": "Source",
-      "未取得數據": "No Data Retrieved",
-      "模式切換": "Mode Switch",
+      "元數據": "Metadata",
+      "帖子內容": "Post Content",
+      "帖子數量": "Number of Posts",
+      "建立時間": "Created At",
+      "獲取頁面": "Fetching Page",
+      "作者網站": "Author's Website",
+      "未取得數據": "Failed to Retrieve Data",
+      "模式切換": "Switch Mode",
       "數據處理中": "Processing Data",
       "當前處理頁數": "Processing Page",
-      "數據處理完成": "Data Processing Complete",
+      "數據處理完成": "Processing Complete",
       "Json 數據下載": "Download JSON Data",
       "當前帖子數": "Current Post Count",
-      "開帖說明": "\n\n!! Without confirmation, all posts on the current page will be opened\nEnter selection range:\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10"
+      "開帖說明": "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10"
     }
   };
-  function Fetch(Config2, Process2, Transl2, Syn2, md52) {
+  function Fetch(General2, Process2, Transl2, Syn2, md52) {
     return class FetchData {
       constructor(Delay, AdvancedFetch, ToLinkTxt) {
         this.MetaDict = {};
@@ -285,15 +367,7 @@
           // 將預覽頁面轉成 API 連結
           /[?&]o=/.test(Url) ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy"
         );
-        this.InfoRules = {
-          "PostLink": Transl2("帖子連結"),
-          "Timestamp": Transl2("發佈日期"),
-          "TypeTag": Transl2("類型標籤"),
-          "ImgLink": Transl2("圖片連結"),
-          "VideoLink": Transl2("影片連結"),
-          "DownloadLink": Transl2("下載連結"),
-          "ExternalLink": Transl2("外部連結")
-        };
+        this.InfoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
         this.Default = (Value) => {
           if (!Value) return null;
           const type = Syn2.Type(Value);
@@ -306,9 +380,9 @@
         };
         this.FetchGenerate = (Data) => {
           return Object.keys(Data).reduce((acc, key) => {
-            if (this.InfoRules.hasOwnProperty(key)) {
+            if (this.InfoRules.has(key)) {
               const value = this.Default(Data[key]);
-              value && (acc[this.InfoRules[key]] = value);
+              value && (acc[Transl2(key)] = value);
             }
             return acc;
           }, {});
@@ -483,7 +557,7 @@
             }
             ;
           } catch (error) {
-            Syn2.Log("Error specialLinkParse", error, { dev: Config2.Dev, type: "error", collapsed: false });
+            Syn2.Log("Error specialLinkParse", error, { dev: General2.Dev, type: "error", collapsed: false });
           }
           return Cache;
         };
@@ -503,19 +577,16 @@
        * FetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
        */
       async FetchConfig(Mode = "FilterMode", UserSet = []) {
-        let Cache;
         switch (Mode) {
           case "FilterMode":
             this.OnlyMode = false;
-            UserSet.forEach((key) => delete this.InfoRules[key]);
+            UserSet.forEach((key) => this.InfoRules.delete(key));
             break;
           case "OnlyMode":
             this.OnlyMode = true;
-            Cache = Object.keys(this.InfoRules).reduce((acc, key) => {
-              if (UserSet.includes(key)) acc[key] = this.InfoRules[key];
-              return acc;
-            }, {});
-            this.InfoRules = Cache;
+            this.InfoRules = new Set(
+              [...this.InfoRules].filter((key) => UserSet.has(key))
+            );
             break;
         }
       }
@@ -550,7 +621,7 @@
               const { index, title, url, content, error } = e.data;
               if (!error) resolve({ index, title, url, content });
               else {
-                Syn2.Log(error, { title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
+                Syn2.Log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
                 await this.TooMany_TryAgain(url);
                 this.Worker.postMessage({ index, title, url });
               }
@@ -573,7 +644,7 @@
             const { index, title, url, content: content2, error } = e.data;
             if (!error) resolve({ index, title, url, content: content2 });
             else {
-              Syn2.Log(error, { title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
+              Syn2.Log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
               await this.TooMany_TryAgain(url);
               this.Worker.postMessage({ index, title, url });
             }
@@ -593,7 +664,7 @@
       async FetchContent(Data) {
         this.Progress = 0;
         const { index, title, url, content } = Data;
-        if (Process2.IsNeko) ;
+        if (Process2.IsNeko);
         else {
           const Json = JSON.parse(content);
           if (Json) {
@@ -654,14 +725,14 @@
                         }
                         ;
                         resolve();
-                        Syn2.title(`（${this.Pages}）`);
-                        Syn2.Log("Request Successful", this.TaskDict, { dev: Config2.Dev, collapsed: false });
+                        Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
+                        Syn2.Log("Request Successful", this.TaskDict, { dev: General2.Dev, collapsed: false });
                       } else throw new Error("Json Parse Failed");
                     } else {
                       throw new Error("Request Failed");
                     }
                   } catch (error2) {
-                    Syn2.Log(error2, { index: index2, title: title2, url: url2 }, { dev: Config2.Dev, type: "error", collapsed: false });
+                    Syn2.Log(error2, { index: index2, title: title2, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                     await this.TooMany_TryAgain(url2);
                     this.Worker.postMessage({ index: index2, title: title2, url: url2 });
                   }
@@ -691,10 +762,10 @@
                     this.TaskDict.set(Index, { title: Title, content: Gen });
                   }
                   ;
-                  Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
-                  Syn2.Log("Parsed Successful", this.TaskDict, { dev: Config2.Dev, collapsed: false });
+                  Syn2.title(`（${this.Pages}）`);
+                  Syn2.Log("Parsed Successful", this.TaskDict, { dev: General2.Dev, collapsed: false });
                 } catch (error) {
-                  Syn2.Log(error, { title: Title, url }, { dev: Config2.Dev, type: "error", collapsed: false });
+                  Syn2.Log(error, { title: Title, url }, { dev: General2.Dev, type: "error", collapsed: false });
                   continue;
                 }
               }
@@ -719,9 +790,9 @@
         for (const value of Object.values(this.DataDict)) {
           for (const link of Object.values(Object.assign(
             {},
-            value[Transl2("圖片連結")],
-            value[Transl2("影片連結")],
-            value[Transl2("下載連結")]
+            value[Transl2("ImgLink")],
+            value[Transl2("VideoLink")],
+            value[Transl2("DownloadLink")]
           ))) {
             Content += `${link}
 `;
@@ -774,38 +845,52 @@
       }
       // 估計壓縮耗時
       estimateCompression() {
-        const calculateFileTime = (fileSize) => {
-          const baseBytesPerSecond = 30 * 1024 ** 2;
-          let fileTime = fileSize / baseBytesPerSecond;
-          const fileSizeMB = fileSize / (1024 * 1024);
-          if (fileSizeMB > 10) {
-            fileTime *= 1 + Math.log10(fileSizeMB / 10) * 0.15;
-          }
-          return fileTime;
-        };
-        const calculateCurveParameter = (totalSizeMB2) => {
-          let param = 5;
-          if (totalSizeMB2 > 50) {
-            const reduction = Math.min(Math.floor(totalSizeMB2 / 50) * 0.7, 3);
-            param = Math.max(5 - reduction, 1.5);
-          }
-          return param;
-        };
+        const IO_THRESHOLD = 50 * 1024 * 1024;
+        const UNCOMPRESSIBLE_EXTENSIONS = /* @__PURE__ */ new Set([
+          ".mp4",
+          ".mov",
+          ".avi",
+          ".mkv",
+          ".zip",
+          ".rar",
+          ".jpg",
+          ".jpeg",
+          ".png",
+          ".gif",
+          ".webp"
+        ]);
+        const IO_BYTES_PER_SECOND = 100 * 1024 * 1024;
+        const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024;
         let totalEstimatedTime = 0;
         let totalSize = 0;
-        Object.values(this.files).forEach((file) => {
-          totalEstimatedTime += calculateFileTime(file.length);
-          totalSize += file.length;
+        Object.entries(this.files).forEach(([name, file]) => {
+          const fileSize = file.length;
+          totalSize += fileSize;
+          const extension = ("." + name.split(".").pop()).toLowerCase();
+          if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+            totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+          } else {
+            let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+            const fileSizeMB = fileSize / (1024 * 1024);
+            if (fileSizeMB > 10) {
+              cpuTime *= 1 + Math.log10(fileSizeMB / 10) * 0.1;
+            }
+            totalEstimatedTime += cpuTime;
+          }
         });
-        const totalSizeMB = totalSize / (1024 * 1024);
         const fileCount = Object.keys(this.files).length;
-        if (fileCount > 5) {
-          totalEstimatedTime *= 1 + Math.min(fileCount / 100, 0.2);
+        if (fileCount > 1) {
+          totalEstimatedTime += fileCount * 0.01;
         }
-        if (totalSizeMB > 50) {
-          const intervals = Math.floor(totalSizeMB / 50);
-          totalEstimatedTime *= 1 + intervals * 0.08;
+        const totalSizeMB = totalSize / (1024 * 1024);
+        if (totalSizeMB > 100) {
+          totalEstimatedTime *= 1 + Math.log10(totalSizeMB / 100) * 0.05;
         }
+        const calculateCurveParameter = (totalSizeMB2) => {
+          if (totalSizeMB2 < 50) return 5;
+          if (totalSizeMB2 < 500) return 4;
+          return 3;
+        };
         const curveParameter = calculateCurveParameter(totalSizeMB);
         return {
           estimatedInMs: totalEstimatedTime * 1e3,
@@ -844,13 +929,13 @@
       }
     };
   }
-  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, Config2, FileName2, Process2, Transl2, Syn2, saveAs2) {
+  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Syn2, saveAs2) {
     let Compression;
     return class Download {
-      constructor(CM, MD, BT) {
-        this.Button = BT;
-        this.ModeDisplay = MD;
-        this.CompressMode = CM;
+      constructor(CompressMode, ModeDisplay, Button) {
+        this.Button = Button;
+        this.ModeDisplay = ModeDisplay;
+        this.CompressMode = CompressMode;
         this.ForceDownload = false;
         this.Named_Data = null;
         this.OriginalTitle = () => {
@@ -917,7 +1002,7 @@
           const filler = String(format.Filler) || "0";
           const amount = parseInt(format.Amount) || "auto";
           return [amount, filler];
-        } else ;
+        } else;
       }
       /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
       DownloadTrigger() {
@@ -952,20 +1037,18 @@
             folder_name,
             fill_name
           ] = Object.keys(FileName2).slice(1).map((key) => this.NameAnalysis(FileName2[key]));
-          const data = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
-          Syn2.$qa(".post__attachment a, .scrape__attachment a");
-          const final_data = data;
+          const data = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), video = Syn2.$qa(".post__attachment a, .scrape__attachment a"), final_data = General2.ContainsVideo ? [...data, ...video] : data;
           for (const [index, file] of final_data.entries()) {
             const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
             if (Uri) {
               DownloadData.set(index, Uri.startsWith("http") ? Uri : `${Syn2.$origin}${Uri}`);
             }
           }
-          if (DownloadData.size == 0) Config2.Dev = true;
+          if (DownloadData.size == 0) General2.Dev = true;
           Syn2.Log("Get Data", {
             FolderName: folder_name,
             DownloadData
-          }, { dev: Config2.Dev, collapsed: false });
+          }, { dev: General2.Dev, collapsed: false });
           this.CompressMode ? this.PackDownload(compress_name, folder_name, fill_name, DownloadData) : this.SeparDownload(fill_name, DownloadData);
         }, { raf: true });
       }
@@ -1033,8 +1116,8 @@
           });
         }
         Self.Button.$text(`${Transl2("請求進度")} [${Total}/${Total}]`);
-        const Batch = Config2.ConcurrentQuantity;
-        const Delay = Config2.ConcurrentDelay;
+        const Batch = General2.ConcurrentQuantity;
+        const Delay = General2.ConcurrentDelay;
         for (let i = 0; i < Total; i += Batch) {
           setTimeout(() => {
             for (let j = i; j < i + Batch && j < Total; j++) {
@@ -1044,7 +1127,7 @@
         }
         this.worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
-          error ? (Request(index, url), Syn2.Log("Download Failed", url, { dev: Config2.Dev, type: "error", collapsed: false })) : (Request_update(index, url, blob), Syn2.Log("Download Successful", url, { dev: Config2.Dev, collapsed: false }));
+          error ? (Request(index, url), Syn2.Log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (Request_update(index, url, blob), Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
         };
       }
       /* 單圖下載 */
@@ -1069,7 +1152,7 @@
             const completed = () => {
               if (!ShowTracking[index]) {
                 ShowTracking[index] = true;
-                Syn2.Log("Download Successful", url, { dev: Config2.Dev, collapsed: false });
+                Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false });
                 show = `[${++progress}/${Total}]`;
                 Syn2.title(show);
                 Self.Button.$text(`${Transl2("下載進度")} ${show}`);
@@ -1086,7 +1169,7 @@
               onprogress: (progress2) => {
               },
               onerror: () => {
-                Syn2.Log("Download Error", url, { dev: Config2.Dev, type: "error", collapsed: false });
+                Syn2.Log("Download Error", url, { dev: General2.Dev, type: "error", collapsed: false });
                 setTimeout(() => {
                   reject();
                   Request(index);
@@ -1129,7 +1212,7 @@
           Syn2.title(Title);
           const ErrorShow = Transl2("壓縮封裝失敗");
           this.Button.$text(ErrorShow);
-          Syn2.Log(ErrorShow, result, { dev: Config2.Dev, type: "error", collapsed: false });
+          Syn2.Log(ErrorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
           setTimeout(() => {
             this.Button.disabled = false;
             this.Button.$text(this.ModeDisplay);
@@ -1138,13 +1221,15 @@
       }
       /* 按鈕重置 */
       async ResetButton() {
+        General2.CompleteClose && window.close();
         Process2.Lock = false;
-        const Button2 = Syn2.$q("#Button-Container button");
-        Button2.disabled = false;
-        Button2.$text(`✓ ${this.ModeDisplay}`);
+        const Button = Syn2.$q("#Button-Container button");
+        Button.disabled = false;
+        Button.$text(`✓ ${this.ModeDisplay}`);
       }
     };
   }
+  const { General, FileName, FetchSet, Process } = Config(Syn);
   const { Transl } = (() => {
     const Matcher = Syn.TranslMatcher(Dict);
     return {
@@ -1153,6 +1238,7 @@
   })();
   new class Main {
     constructor() {
+      this.Menu = null;
       this.Download = null;
       this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2), this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
     }
@@ -1160,37 +1246,37 @@
     async ButtonCreation() {
       Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
         Syn.AddStyle(`
-                    #Button-Container {
-                        padding: 1rem;
-                        font-size: 40% !important;
-                    }
-                    #Button-Container svg {
-                        fill: white;
-                    }
-                    .Setting_Button {
-                        cursor: pointer;
-                    }
-                    .Download_Button {
-                        color: hsl(0, 0%, 45%);
-                        padding: 6px;
-                        margin: 10px;
-                        border-radius: 8px;
-                        font-size: 1.1vw;
-                        border: 2px solid rgba(59, 62, 68, 0.7);
-                        background-color: rgba(29, 31, 32, 0.8);
-                        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                    }
-                    .Download_Button:hover {
-                        color: hsl(0, 0%, 95%);
-                        background-color: hsl(0, 0%, 45%);
-                        font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                    }
-                    .Download_Button:disabled {
-                        color: hsl(0, 0%, 95%);
-                        background-color: hsl(0, 0%, 45%);
-                        cursor: Synault;
-                    }
-                `, "Download-button-style", false);
+                #Button-Container {
+                    padding: 1rem;
+                    font-size: 40% !important;
+                }
+                #Button-Container svg {
+                    fill: white;
+                }
+                .Setting_Button {
+                    cursor: pointer;
+                }
+                .Download_Button {
+                    color: hsl(0, 0%, 45%);
+                    padding: 6px;
+                    margin: 10px;
+                    border-radius: 8px;
+                    font-size: 1.1vw;
+                    border: 2px solid rgba(59, 62, 68, 0.7);
+                    background-color: rgba(29, 31, 32, 0.8);
+                    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+                .Download_Button:hover {
+                    color: hsl(0, 0%, 95%);
+                    background-color: hsl(0, 0%, 45%);
+                    font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
+                .Download_Button:disabled {
+                    color: hsl(0, 0%, 95%);
+                    background-color: hsl(0, 0%, 45%);
+                    cursor: Synault;
+                }
+            `, "Download-button-style", false);
         Syn.$q("#Button-Container")?.remove();
         try {
           Files = [...Files].filter((file) => file.$text() === "Files");
@@ -1202,7 +1288,7 @@
             GM_unregisterMenuCommand,
             GM_xmlhttpRequest,
             GM_download,
-            Config,
+            General,
             FileName,
             Process,
             Transl,
@@ -1231,9 +1317,12 @@
                         `
           });
         } catch (error) {
-          Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
-          Button.disabled = true;
-          Button.$text(Transl("無法下載"));
+          Syn.Log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
+          const Button = Syn.$q("#Button-Container button");
+          if (Button) {
+            Button.disabled = true;
+            Button.textContent = Transl("無法下載");
+          }
         }
       });
     }
@@ -1251,7 +1340,7 @@
           insert: false,
           setParent: false
         });
-        await Syn.Sleep(Config.BatchOpenDelay);
+        await Syn.Sleep(General.BatchOpenDelay);
       }
     }
     /* 下載模式切換 */
@@ -1275,7 +1364,7 @@
         } else if (self.Preview(Page)) {
           FetchData ??= Fetch(
             // 懶加載 FetchData 類
-            Config,
+            General,
             Process,
             Transl,
             Syn,
@@ -1290,12 +1379,13 @@
               if (!Process.Lock) {
                 let Instantiate = null;
                 Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
+                FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
                 Instantiate.FetchInit();
               }
             },
             [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
           }, { reset: true });
-          if (Config.Dev && !Process.IsNeko) {
+          if (General.Dev && !Process.IsNeko) {
             Syn.Menu({
               // 不支援 Neko, 抓取邏輯不同
               "🛠️ 開發者獲取": () => {
@@ -1303,7 +1393,8 @@
                 if (ID == null || ID === "") return;
                 let Instantiate = null;
                 Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                Instantiate.FetchTest();
+                FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
+                Instantiate.FetchTest(ID);
               }
             }, { index: 3 });
           }
