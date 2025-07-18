@@ -3,6 +3,8 @@ import { util } from 'vite-plugin-monkey';
 const Name = "ExDownloader";
 export default {
     entry: `./${Name}/Dev/src/main.js`,
+    fileName: `${Name}-Dev.js`,
+    outDir: `./${Name}/Dev/dist`,
     userscript: {
         connect: '*',
         match: ['*://e-hentai.org/g/*', '*://exhentai.org/g/*'],
@@ -15,13 +17,5 @@ export default {
 
             util.dataUrl(`window.Syn=Syn`)
         ],
-    },
-    build: {
-        rollupOptions: {
-            output: {
-                dir: `./${Name}/Dev/dist`,
-                entryFileNames: `${Name}-Dev.js`,
-            },
-        }
     },
 };
