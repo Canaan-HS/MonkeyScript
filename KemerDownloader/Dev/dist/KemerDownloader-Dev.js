@@ -593,7 +593,7 @@
       async FetchContent(Data) {
         this.Progress = 0;
         const { index, title, url, content } = Data;
-        if (Process2.IsNeko);
+        if (Process2.IsNeko) ;
         else {
           const Json = JSON.parse(content);
           if (Json) {
@@ -917,7 +917,7 @@
           const filler = String(format.Filler) || "0";
           const amount = parseInt(format.Amount) || "auto";
           return [amount, filler];
-        } else;
+        } else ;
       }
       /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
       DownloadTrigger() {
