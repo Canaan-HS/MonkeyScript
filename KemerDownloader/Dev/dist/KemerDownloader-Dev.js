@@ -364,6 +364,7 @@
         this.FetchDelay = Delay;
         this.ToLinkTxt = ToLinkTxt;
         this.AdvancedFetch = AdvancedFetch;
+        this.PostURL = (ID) => `${this.FirstURL}/post/${ID}`;
         this.PostAPI = `${this.FirstURL}/post`.replace(this.Host, `${this.Host}/api/v1`);
         this.PreviewAPI = (Url) => (
           // 將預覽頁面轉成 API 連結
@@ -391,8 +392,10 @@
         };
         const ImageExts = new Set(Process2.ImageExts);
         const VideoExts = new Set(Process2.VideoExts);
-        this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.IsImage = (str) => ImageExts.has(str.replace(/^\./, "").toLowerCase());
+        this.IsVideo = (Str) => VideoExts.has(Str.replace(/^\./, "").toLowerCase());
+        this.IsImage = (Str) => ImageExts.has(Str.replace(/^\./, "").toLowerCase());
+        this.NormalizeName = (Title, Index) => Title.trim().replace(/\n/g, " ") || `Untitled_${String(Index + 1).padStart(2, "0")}`;
+        this.NormalizeTimestamp = (Post) => new Date(Post.published || Post.added)?.toLocaleString();
         this.Suffix = (Str) => {
           try {
             return `${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
@@ -660,7 +663,7 @@
                       const Json2 = JSON.parse(content2);
                       if (Json2) {
                         const Post = Json2.post;
-                        const Title = Post.title.trim().replace(/\n/g, " ") || `Untitled_${String(index2 + 1).padStart(2, "0")}`;
+                        const Title = this.NormalizeName(Post.title, index2);
                         const File = this.AdvancedCategorize(Json2.attachments);
                         const ImgLink = () => {
                           const ServerList = Json2.previews.filter((item) => item.server);
@@ -679,8 +682,8 @@
                           }, {});
                         };
                         const Gen = this.FetchGenerate({
-                          PostLink: `${this.FirstURL}/post/${Post.id}`,
-                          Timestamp: new Date(Post.published || Post.added)?.toLocaleString(),
+                          PostLink: this.PostURL(Post.id),
+                          Timestamp: this.NormalizeTimestamp(Post),
                           TypeTag: Post.tags,
                           ImgLink: ImgLink(),
                           VideoLink: File.video,
@@ -715,12 +718,12 @@
               await Promise.allSettled(Tasks);
             } else {
               for (const [Index, Post] of Results.entries()) {
-                const Title = Post.title.trim();
+                const Title = this.NormalizeName(Post.title, Index);
                 try {
                   const File = this.Categorize(Title, [...Post.file ? Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : [] : [], ...Post.attachments]);
                   const Gen = this.FetchGenerate({
-                    PostLink: `${this.FirstURL}/post/${Post.id}`,
-                    Timestamp: new Date(Post.published)?.toLocaleString(),
+                    PostLink: this.PostURL(Post.id),
+                    Timestamp: this.NormalizeTimestamp(Post),
                     ImgLink: File.img,
                     VideoLink: File.video,
                     DownloadLink: File.other
