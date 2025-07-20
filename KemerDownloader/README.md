@@ -37,14 +37,14 @@
 
 ## **⚙️ Additional Configuration (Located at the top of the code)**
 
-|    **Parameter**     |                              **Description**                              | **Default Value** |
-| :------------------: | :-----------------------------------------------------------------------: | :---------------: |
-|        `Dev`         |         Enable developer mode to print debug info in the console          |      `false`      |
-|   `ContainsVideo`    | Download includes videos, which will significantly increase download time |      `false`      |
-|   `CompleteClose`    |        Automatically close the page after the download is complete        |      `false`      |
-|  `ConcurrentDelay`   |             Delay in seconds before sending download requests             |        `3`        |
-| `ConcurrentQuantity` |           Number of download requests initiated simultaneously            |        `5`        |
-|   `BatchOpenDelay`   |    Delay in milliseconds when opening each post in one-click post open    |       `500`       |
+|    **Parameter**     |                                            **Description**                                            | **Default Value** |
+| :------------------: | :---------------------------------------------------------------------------------------------------: | :---------------: |
+|        `Dev`         |                       Enable developer mode to print debug info in the console                        |      `false`      |
+|   `IncludeExtras`    | Include attachments other than images during download. This may significantly increase download time. |      `false`      |
+|   `CompleteClose`    |                      Automatically close the page after the download is complete                      |      `false`      |
+|  `ConcurrentDelay`   |                           Delay in seconds before sending download requests                           |        `3`        |
+| `ConcurrentQuantity` |                         Number of download requests initiated simultaneously                          |        `5`        |
+|   `BatchOpenDelay`   |                  Delay in milliseconds when opening each post in one-click post open                  |       `500`       |
 
 ---
 
@@ -90,12 +90,12 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.21-Beta7** 
+**Release Version: 0.0.21-Beta8** 
 
 ### **What's New**
 Haven't had much time to work on this project recently. The current release version's "fetch post data" function doesn't support nekohouse yet.
 
-1. Temporary domain update (some incomplete test features)
+1. Fixed bugs caused by recent website changes.
 
 ### **New Fetch Features (FetchSet)**
 
