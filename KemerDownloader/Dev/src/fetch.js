@@ -204,24 +204,24 @@ export default function Fetch(
                 }
                 async function processQueue() {
                     if (queue.length > 0) {
-                        const {index, title, url} = queue.shift();
-                        FetchRequest(index, title, url);
+                        const {index, title, url, time, delay} = queue.shift();
+                        FetchRequest(index, title, url, time, delay);
                         processQueue();
                     } else {processing = false}
                 }
-                async function FetchRequest(index, title, url) {
+                async function FetchRequest(index, title, url, time, delay) {
                     fetch(url).then(response => {
                         if (response.ok) {
                             // 目前不同網站不一定都是 Json, 所以這裡用 text()
                             response.text().then(content => {
-                                postMessage({ index, title, url, content, error: false });
+                                postMessage({ index, title, url, content, time, delay, error: false });
                             });
                         } else {
-                            postMessage({ index, title, url, content: "", error: true });
+                            postMessage({ index, title, url, content: "", time, delay, error: true });
                         }
                     })
                     .catch(error => {
-                        postMessage({ index, title, url, content: "", error: true });
+                        postMessage({ index, title, url, content: "", time, delay, error: true });
                     });
                 }
             `);
@@ -364,17 +364,20 @@ export default function Fetch(
                 const Article = Items.$qa("article");
                 // 下一頁連結由 Url 解析 ?o= + 50 取得
             } else {
-                this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url) });
+                this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url), time: Date.now(), delay: this.FetchDelay });
 
                 // 等待主頁數據
                 const HomeData = await new Promise((resolve, reject) => {
                     this.Worker.onmessage = async (e) => {
-                        const { index, title, url, content, error } = e.data;
-                        if (!error) resolve({ index, title, url, content });
+                        const { index, title, url, content, time, delay, error } = e.data;
+                        if (!error) {
+                            this.FetchDelay = Process.dynamicParam(time, delay);
+                            resolve({ index, title, url, content });
+                        }
                         else {
                             Syn.Log(error, { title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
-                            this.Worker.postMessage({ index: index, title: title, url: url });
+                            this.Worker.postMessage({ index: index, title: title, url: url, time: time, delay: delay });
                         };
                     }
                 });
@@ -424,7 +427,7 @@ export default function Fetch(
                         const resolvers = new Map(); // 用於存儲每個 Promise
 
                         this.Worker.onmessage = async (e) => {
-                            const { index, title, url, content, error } = e.data;
+                            const { index, title, url, content, time, delay, error } = e.data;
 
                             if (resolvers.has(index)) {
                                 const { resolve, reject } = resolvers.get(index);
@@ -434,6 +437,8 @@ export default function Fetch(
                                         const Json = JSON.parse(content);
 
                                         if (Json) {
+                                            this.FetchDelay = Process.dynamicParam(time, delay);
+
                                             const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
 
                                             const Title = this.NormalizeName(Post.title, index);
@@ -491,7 +496,7 @@ export default function Fetch(
                                 } catch (error) {
                                     Syn.Log(error, { index: index, title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
                                     await this.TooMany_TryAgain(url); // 錯誤等待
-                                    this.Worker.postMessage({ index: index, title: title, url: url });
+                                    this.Worker.postMessage({ index: index, title: title, url: url, time: time, delay: delay });
                                 }
                             }
                         };
@@ -500,9 +505,8 @@ export default function Fetch(
                         for (const [Index, Post] of Results.entries()) {
                             Tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(Index, { resolve, reject }); // 存儲解析器
-                                this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}` });
+                                this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}`, time: Date.now(), delay: this.FetchDelay });
                             }));
-
                             await Syn.Sleep(this.FetchDelay);
                         }
 
