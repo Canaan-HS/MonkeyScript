@@ -29,10 +29,10 @@ const { Transl } = (() => { // 取得對應語言翻譯
     constructor() {
         this.Menu = null;
         this.Download = null;
-        this.Content = (URL) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL),
-            this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
-                || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
-                || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
+        this.Content = (URL) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL);
+        this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
+            || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
+            || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL);
     }
 
     /* 按鈕創建 */
@@ -76,6 +76,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
             try {
 
                 // 創建 Span (找到含有 Files 文本的對象)
+                // ! 按鈕的創建, 根據是否啟用 IncludeExtras, 啟用時嘗試在 Downloads 也創建按鈕
                 Files = [...Files].filter(file => file.$text() === "Files");
                 if (Files.length == 0) return;
 
@@ -175,7 +176,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }, { reset: true });
             } else if (self.Preview(Page)) {
                 FetchData ??= Fetch( // 懶加載 FetchData 類
-                    General, Process, Transl, Syn, md5
+                    General, FetchSet, Process, Transl, Syn, md5
                 );
 
                 Syn.Menu({
@@ -187,9 +188,8 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
                         if (!Process.Lock) {
                             let Instantiate = null;
-                            Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                            FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
-                            Instantiate.FetchInit();
+                            Instantiate = new FetchData();
+                            Instantiate.FetchRun();
                         }
                     },
                     [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
@@ -202,8 +202,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                             if (ID == null || ID === "") return; // 開發用的不做防呆
 
                             let Instantiate = null;
-                            Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                            FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
+                            Instantiate = new FetchData();
                             Instantiate.FetchTest(ID); // 只專注於測試 進階抓取, 如果用一般模式會報錯
                         },
                     }, { index: 3 });
