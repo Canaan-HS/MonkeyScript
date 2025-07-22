@@ -26,11 +26,16 @@ export const DConfig = {
     Lock: false, // 鎖定狀態
     SortReverse: false, // 排序反轉
 
-    // 新增的網絡和響應時間監控參數
     responseHistory: [],     // 儲存最近的響應時間
     networkCondition: 'normal', // 網絡狀態: 'good', 'normal', 'poor'
     lastNetworkCheck: 0,     // 上次網絡檢查時間
-    networkCheckInterval: 3e4, // 網絡檢查間隔(10秒)
+    networkCheckInterval: 1e4, // 網絡檢查間隔(10秒)
+    networkQualityThresholds: {
+        good: 500,  // 平均響應時間 < 500ms 為 'good'
+        poor: 1500, // 平均響應時間 > 1500ms 為 'poor'
+    },
+    EMA_ALPHA: 0.3,
+    ADJUSTMENT_FACTOR: 0.25,
     adaptiveFactors: {       // 不同網絡條件下的調整因子
         good: { delayFactor: 0.8, threadFactor: 1.2 },
         normal: { delayFactor: 1.0, threadFactor: 1.0 },
@@ -47,104 +52,75 @@ export const DConfig = {
         return this.KeyCache;
     },
 
-    // 檢測網絡狀態
+    /**
+     * @description 檢測當前網絡狀況
+     * @returns {'good'|'normal'|'poor'}
+     */
     checkNetworkCondition: function () {
         const now = Date.now();
-
-        // 避免頻繁檢測
         if (now - this.lastNetworkCheck < this.networkCheckInterval) {
             return this.networkCondition;
         }
-
         this.lastNetworkCheck = now;
 
-        // 使用 Navigator API 檢測網絡狀態
         if (navigator.connection) {
-            const connection = navigator.connection;
-
-            // 基於連接類型和有效帶寬判斷
-            if (connection.effectiveType === '4g' && !connection.saveData) {
-                this.networkCondition = 'good';
-            } else if (
-                connection.effectiveType === '3g' ||
-                (connection.effectiveType === '4g' && connection.saveData)
-            ) {
-                this.networkCondition = 'normal';
-            } else {
-                this.networkCondition = 'poor';
-            }
-        } else {
-
-            // 如果 Navigator API 不可用，使用響應時間歷史判斷
-            if (this.responseHistory.length >= 5) {
-                const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-
-                if (avgResponseTime < this.TIME_THRESHOLD * 0.7) {
-                    this.networkCondition = 'good';
-                } else if (avgResponseTime > this.TIME_THRESHOLD * 1.3) {
-                    this.networkCondition = 'poor';
-                } else {
-                    this.networkCondition = 'normal';
-                }
-            }
+            const { effectiveType, saveData } = navigator.connection;
+            if (effectiveType === '4g' && !saveData) this.networkCondition = 'good';
+            else if (effectiveType === '3g' || (effectiveType === '4g' && saveData)) this.networkCondition = 'normal';
+            else this.networkCondition = 'poor';
+        } else if (this.responseHistory.length >= 5) {
+            const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
+            if (avgResponseTime < this.networkQualityThresholds.good) this.networkCondition = 'good';
+            else if (avgResponseTime > this.networkQualityThresholds.poor) this.networkCondition = 'poor';
+            else this.networkCondition = 'normal';
         }
-
         return this.networkCondition;
     },
 
-    // 更新響應時間閾值
+    /**
+     * @description 更新響應時間歷史記錄並計算新的時間閾值
+     * @param {number} newResponseTime - 最新的響應時間(ms)
+     */
     updateThreshold: function (newResponseTime) {
-        // 保存最近10次響應時間
         this.responseHistory.push(newResponseTime);
-        if (this.responseHistory.length > 10) {
-            this.responseHistory.shift();
-        }
+        if (this.responseHistory.length > 10) this.responseHistory.shift();
 
-        // 動態調整閾值
-        if (this.responseHistory.length >= 5) {
-            const avg = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-            // 限制閾值在合理範圍內
-            this.TIME_THRESHOLD = Math.max(500, Math.min(2000, avg * 1.2));
+        if (!this.TIME_THRESHOLD || this.responseHistory.length <= 1) {
+            this.TIME_THRESHOLD = newResponseTime;
+        } else {
+            this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
         }
+        this.TIME_THRESHOLD = Math.max(500, Math.min(2000, this.TIME_THRESHOLD));
     },
 
-    // 動態調整函數
-    Dynamic: function (Time, Delay, Thread = null, MIN_Delay) {
-        const ResponseTime = (Date.now() - Time);
+    /**
+     * @description 根據網絡狀況動態調整延遲和線程數
+     * @param {number} time - 請求完成的時間
+     * @param {number} currentDelay - 當前的延遲(ms)
+     * @param {number|null} currentThread - 當前的線程數 (可選)
+     * @param {number} minDelay - 最小延遲(ms)
+     * @returns {number|[number, number]} - 返回新的延遲或 [新的延遲, 新的線程數]
+     */
+    Dynamic: function (time, currentDelay, currentThread = null, minDelay = 0) {
+        const responseTime = Date.now() - time;
+        this.updateThreshold(responseTime);
 
-        // 更新響應時間歷史和閾值
-        this.updateThreshold(ResponseTime);
-
-        // 檢查網絡狀態
         const networkState = this.checkNetworkCondition();
         const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
+        const ratio = responseTime / this.TIME_THRESHOLD;
 
-        // 計算響應時間比率
-        const ratio = ResponseTime / this.TIME_THRESHOLD;
+        const delayChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * delayFactor;
+        let newDelay = currentDelay * (1 + delayChange);
+        newDelay = Math.max(minDelay, Math.min(newDelay, this.MAX_Delay));
 
-        let delay, thread;
-
-        if (ResponseTime > this.TIME_THRESHOLD) {
-            // 使用指數函數調整延遲，網絡狀況影響調整幅度
-            delay = Math.min(Delay * (1 + Math.log10(ratio) * 0.3 * delayFactor), this.MAX_Delay);
-
-            if (Thread != null) {
-                thread = Math.max(Thread * Math.pow(0.9, ratio) * threadFactor, this.MIN_CONCURRENCY);
-                return [Math.floor(delay), Math.floor(thread)];
-            } else {
-                return Math.floor(delay);
-            }
-        } else {
-            // 響應時間良好，根據網絡狀況適當減少延遲
-            delay = Math.max(Delay * (1 - (1 - ratio) * 0.2 * (1 / delayFactor)), MIN_Delay);
-
-            if (Thread != null) {
-                thread = Math.min(Thread * (1 + (1 - ratio) * 0.3 * threadFactor), this.MAX_CONCURRENCY);
-                return [Math.ceil(delay), Math.ceil(thread)];
-            } else {
-                return Math.ceil(delay);
-            }
+        if (currentThread !== null) {
+            const threadChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * threadFactor;
+            let newThread = currentThread * (1 - threadChange);
+            newThread = Math.max(this.MIN_CONCURRENCY, Math.min(newThread, this.MAX_CONCURRENCY));
+            return [Math.round(newDelay), Math.round(newThread)];
         }
+
+        return Math.round(newDelay);
     },
 
     // 獲取當前網絡狀態的診斷信息
