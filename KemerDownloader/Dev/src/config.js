@@ -3,8 +3,8 @@ export default function Config(Syn) {
         Dev: false, // 顯示請求資訊, 與錯誤資訊
         IncludeExtras: false, // 下載時包含 影片 與 其他附加檔案
         CompleteClose: false, // 下載完成後關閉
-        ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
-        ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
+        ConcurrentDelay: 600, // 下載線程延遲 (ms) [壓縮下載]
+        ConcurrentQuantity: 3, // 下載線程數量 [壓縮下載]
         BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
         ...Syn.gJV("General", {}),
     };
