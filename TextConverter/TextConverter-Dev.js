@@ -204,7 +204,7 @@
                     Transl.Trigger(node);
                 }
             }
-        }, 200));
+        }, 600));
 
 
         // 啟動觀察 (啟動時會觸發轉換)
@@ -346,7 +346,7 @@
     /* 翻譯任務的調度程序 */
     function Scheduler() {
         let queue = [];
-        let timeout = 2000;
+        let timeout = 1500;
         let isRunning = false;
 
         const processQueue = (deadline) => {
@@ -921,9 +921,8 @@
         let collectedMutations = []; // 用於收集所有 mutations
 
         return (mutations) => {
-            collectedMutations.push(...mutations);
             clearTimeout(timer);
-
+            collectedMutations.push(...mutations);
             timer = setTimeout(() => {
                 func(collectedMutations);
                 collectedMutations = [];
