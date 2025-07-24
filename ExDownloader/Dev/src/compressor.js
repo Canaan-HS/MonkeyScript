@@ -1,19 +1,18 @@
-export function Compressor(WorkerCreation) {
-    // ? 因為會載入整個 fflate, 使用持久化閉包, 避免多次創建 (不會手動清除他)
-    const worker = WorkerCreation(`
-        importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
-        onmessage = function(e) {
-            const { files, level } = e.data;
-            try {
-                const zipped = fflate.zipSync(files, { level });
-                postMessage({ data: zipped }, [zipped.buffer]);
-            } catch (err) {
-                postMessage({ error: err.message });
+export default function Compressor(Syn) {
+    const worker = Syn.WorkerCreation(`
+            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+            onmessage = function(e) {
+                const { files, level } = e.data;
+                try {
+                    const zipped = fflate.zipSync(files, { level });
+                    postMessage({ data: zipped }, [zipped.buffer]);
+                } catch (err) {
+                    postMessage({ error: err.message });
+                }
             }
-        }
-    `);
+        `);
 
-    class Compression {
+    return class Compression {
         constructor() {
             this.files = {};
             this.tasks = [];
@@ -31,36 +30,89 @@ export function Compressor(WorkerCreation) {
             return task;
         }
 
-        // 估算壓縮耗時
-        estimateCompressionTime() {
+        // 估計壓縮耗時
+        estimateCompression() {
+
+            const IO_THRESHOLD = 50 * 1024 * 1024;
+            const UNCOMPRESSIBLE_EXTENSIONS = new Set([
+                '.mp4', '.mov', '.avi', '.mkv', '.zip', '.rar',
+                '.jpg', '.jpeg', '.png', '.gif', '.webp'
+            ]);
+
+            // 為不同任務類型設定不同的基礎速度
+            const IO_BYTES_PER_SECOND = 100 * 1024 * 1024;
+            const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024;
+
+            let totalEstimatedTime = 0;
             let totalSize = 0;
 
-            Object.values(this.files).forEach(file => {
-                totalSize += file.length;
+            Object.entries(this.files).forEach(([name, file]) => {
+                const fileSize = file.length;
+                totalSize += fileSize;
+                const extension = ('.' + name.split('.').pop()).toLowerCase();
+
+                // 判斷任務類型
+                if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+                    totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+                } else {
+                    let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+                    const fileSizeMB = fileSize / (1024 * 1024);
+                    if (fileSizeMB > 10) {
+                        cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
+                    }
+                    totalEstimatedTime += cpuTime;
+                }
             });
 
-            const bytesPerSecond = 60 * 1024 ** 2; // 預估每秒壓縮 60MB/s
-            const estimatedTime = totalSize / bytesPerSecond;
-            return estimatedTime;
+            // 檔案數量的影響 (少量檔案的固定開銷)
+            const fileCount = Object.keys(this.files).length;
+            if (fileCount > 1) {
+                totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
+            }
+
+            // 總大小的影響 (輕微)
+            const totalSizeMB = totalSize / (1024 * 1024);
+            if (totalSizeMB > 100) {
+                totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
+            }
+
+            // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
+            const calculateCurveParameter = (totalSizeMB) => {
+                if (totalSizeMB < 50) return 5;
+                if (totalSizeMB < 500) return 4;
+                return 3;
+            };
+            const curveParameter = calculateCurveParameter(totalSizeMB);
+
+            return {
+                estimatedInMs: totalEstimatedTime * 1000,
+                progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
+            };
         }
 
         // 生成壓縮
         async generateZip(options = {}, progressCallback) {
-            const updateInterval = 30; // 更新頻率
-            const totalTime = this.estimateCompressionTime();
-            const progressUpdate = 100 / (totalTime * 1000 / updateInterval); // 每次更新的進度
+            await Promise.all(this.tasks); // 等待所有檔案加入
 
-            let fakeProgress = 0; // 假進度模擬
+            const startTime = performance.now();
+
+            const updateInterval = 30; // 更新頻率
+            const estimationData = this.estimateCompression();
+            const totalTime = estimationData.estimatedInMs;
+
+            // 假進度模擬, 檔案越大誤差越大
             const progressInterval = setInterval(() => {
-                if (fakeProgress < 99) {
-                    fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
-                    if (progressCallback) progressCallback(fakeProgress);
-                } else {
+                const elapsedTime = performance.now() - startTime;
+                const ratio = Math.min(elapsedTime / totalTime, 0.99); // 限制在99%以內
+                const fakeProgress = estimationData.progressCurve(ratio);
+
+                if (progressCallback) progressCallback(fakeProgress);
+
+                if (ratio >= 0.99) {
                     clearInterval(progressInterval);
                 }
             }, updateInterval);
 
-            await Promise.all(this.tasks); // 等待所有檔案加入
             return new Promise((resolve, reject) => {
                 if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
 
@@ -71,12 +123,12 @@ export function Compressor(WorkerCreation) {
 
                 worker.onmessage = (e) => {
                     clearInterval(progressInterval);
+                    if (progressCallback) progressCallback(100);
+
                     const { error, data } = e.data;
                     error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
                 };
             })
         }
-    };
-
-    return Compression;
+    }
 }
