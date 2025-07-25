@@ -562,7 +562,7 @@ export default function Fetch(
                 );
 
                 for (const link of Object.values(getLinks)) {
-                    Content += `${link}\n`;
+                    Content += `${encodeURI(link)}\n`;
                 }
             }
             if (Content.endsWith('\n')) Content = Content.slice(0, -1); // 去除末行空白
