@@ -11,12 +11,13 @@ import {
 } from 'vite-plugin-monkey/dist/client';
 const { Syn, md5, saveAs } = monkeyWindow; // 外部函數
 
-import { Config, FileName, FetchSet, Process } from './config.js'; // 腳本配置
+import Config from './config.js'; // 腳本配置
 import Dict from './language.js'; // 腳本語言
 import Fetch from './fetch.js'; // 抓取數據
 import Menu from './menu.js'; // 導入菜單模塊
 import Downloader from './downloader.js'; // 下載數據
 
+const { General, FileName, FetchSet, Process } = Config(Syn);
 const { Transl } = (() => { // 取得對應語言翻譯
     const Matcher = Syn.TranslMatcher(Dict);
     return {
@@ -32,7 +33,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
                 || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
 
-        this.Menu = Menu(Syn, Transl, Config, FileName, FetchSet);
+        this.Menu = Menu(Syn, Transl, General, FileName, FetchSet);
     }
 
     /* 按鈕創建 */
@@ -84,7 +85,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
                 this.Download ??= Downloader( // 懶加載 Download 類
                     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
-                    Config, FileName, Process, Transl, Syn, saveAs
+                    General, FileName, Process, Transl, Syn, saveAs
                 );
 
                 // 添加按鈕容器
@@ -112,7 +113,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 });
 
             } catch (error) {
-                Syn.Log("Button Creation Failed", error, { dev: Config.Dev, type: "error", collapsed: false });
+                Syn.Log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
 
                 const Button = Syn.$q('#Button-Container button');
                 if (Button) {
@@ -137,7 +138,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 insert: false,
                 setParent: false
             });
-            await Syn.Sleep(Config.BatchOpenDelay);
+            await Syn.Sleep(General.BatchOpenDelay);
         }
     }
 
@@ -170,7 +171,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }, { reset: true });
             } else if (self.Preview(Page)) {
                 FetchData ??= Fetch( // 懶加載 FetchData 類
-                    Config, Process, Transl, Syn, md5
+                    General, Process, Transl, Syn, md5
                 );
 
                 Syn.Menu({
@@ -190,7 +191,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                     [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
                 }, { reset: true });
 
-                if (Config.Dev && !Process.IsNeko) {
+                if (General.Dev && !Process.IsNeko) {
                     Syn.Menu({ // 不支援 Neko, 抓取邏輯不同
                         "🛠️ 開發者獲取": () => {
                             const ID = prompt("輸入請求的 ID");
