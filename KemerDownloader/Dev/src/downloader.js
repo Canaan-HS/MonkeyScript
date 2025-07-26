@@ -2,7 +2,7 @@ import Compressor from './compressor.js';
 
 export default function Downloader(
     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
-    Config, FileName, Process, Transl, Syn, saveAs
+    General, FileName, Process, Transl, Syn, saveAs
 ) {
     let Compression;
 
@@ -129,7 +129,7 @@ export default function Downloader(
                         .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                         .filter(Boolean),
                     video = Syn.$qa(".post__attachment a, .scrape__attachment a"),
-                    final_data = Config.ContainsVideo ? [...data, ...video] : data;
+                    final_data = General.ContainsVideo ? [...data, ...video] : data;
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of final_data.entries()) {
@@ -141,12 +141,12 @@ export default function Downloader(
                     }
                 }
 
-                if (DownloadData.size == 0) Config.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
+                if (DownloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
                 Syn.Log("Get Data", {
                     FolderName: folder_name,
                     DownloadData: DownloadData
-                }, { dev: Config.Dev, collapsed: false });
+                }, { dev: General.Dev, collapsed: false });
 
                 this.CompressMode
                     ? this.PackDownload(compress_name, folder_name, fill_name, DownloadData)
@@ -253,8 +253,8 @@ export default function Downloader(
             Self.Button.$text(`${Transl("請求進度")} [${Total}/${Total}]`);
 
             // 傳遞消息發起請求
-            const Batch = Config.ConcurrentQuantity;
-            const Delay = Config.ConcurrentDelay;
+            const Batch = General.ConcurrentQuantity;
+            const Delay = General.ConcurrentDelay;
 
             for (let i = 0; i < Total; i += Batch) {
                 setTimeout(() => {
@@ -268,8 +268,8 @@ export default function Downloader(
             this.worker.onmessage = (e) => {
                 const { index, url, blob, error } = e.data;
                 error
-                    ? (Request(index, url), Syn.Log("Download Failed", url, { dev: Config.Dev, type: "error", collapsed: false }))
-                    : (Request_update(index, url, blob), Syn.Log("Download Successful", url, { dev: Config.Dev, collapsed: false }));
+                    ? (Request(index, url), Syn.Log("Download Failed", url, { dev: General.Dev, type: "error", collapsed: false }))
+                    : (Request_update(index, url, blob), Syn.Log("Download Successful", url, { dev: General.Dev, collapsed: false }));
             }
         }
 
@@ -325,7 +325,7 @@ export default function Downloader(
                         if (!ShowTracking[index]) { // 多一個判斷是因為, 他有可能同樣的重複呼叫多次
                             ShowTracking[index] = true;
 
-                            Syn.Log("Download Successful", url, { dev: Config.Dev, collapsed: false });
+                            Syn.Log("Download Successful", url, { dev: General.Dev, collapsed: false });
 
                             show = `[${++progress}/${Total}]`;
                             Syn.title(show);
@@ -348,14 +348,14 @@ export default function Downloader(
                                 Index: index,
                                 ImgUrl: url,
                                 Progress: `${progress.loaded}/${progress.total}`
-                            }, {dev: Config.Dev, collapsed: false});
+                            }, {dev: General.Dev, collapsed: false});
 
                             DownloadTracking[index] = (progress.loaded == progress.total);
                             DownloadTracking[index] && completed();
                             */
                         },
                         onerror: () => {
-                            Syn.Log("Download Error", url, { dev: Config.Dev, type: "error", collapsed: false });
+                            Syn.Log("Download Error", url, { dev: General.Dev, type: "error", collapsed: false });
                             setTimeout(() => {
                                 reject();
                                 Request(index);
@@ -405,7 +405,7 @@ export default function Downloader(
 
                 const ErrorShow = Transl("壓縮封裝失敗");
                 this.Button.$text(ErrorShow);
-                Syn.Log(ErrorShow, result, { dev: Config.Dev, type: "error", collapsed: false });
+                Syn.Log(ErrorShow, result, { dev: General.Dev, type: "error", collapsed: false });
 
                 setTimeout(() => {
                     this.Button.disabled = false;
@@ -416,7 +416,7 @@ export default function Downloader(
 
         /* 按鈕重置 */
         async ResetButton() {
-            Config.CompleteClose && window.close();
+            General.CompleteClose && window.close();
             Process.Lock = false;
             const Button = Syn.$q("#Button-Container button");
             Button.disabled = false;
