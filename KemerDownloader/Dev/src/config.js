@@ -60,7 +60,7 @@ export default function Config(Syn) {
      */
     const FetchSet = {
         Delay: 200, // 獲取延遲 (ms) [太快會被 BAN]
-        AdvancedFetch: false, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
+        AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
         ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
         UseFormat: false, // 這裡為 false 下面兩項就不生效
         Mode: "FilterMode",
