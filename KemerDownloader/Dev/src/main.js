@@ -27,13 +27,12 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
 (new class Main {
     constructor() {
+        this.Menu = null;
         this.Download = null;
         this.Content = (URL) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL),
             this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
                 || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
                 || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL)
-
-        this.Menu = Menu(Syn, Transl, General, FileName, FetchSet);
     }
 
     /* 按鈕創建 */
@@ -162,6 +161,10 @@ const { Transl } = (() => { // 取得對應語言翻譯
         // 首次載入嘗試註冊
         registerMenu(Syn.$url);
         self.Content(Syn.$url) && self.ButtonCreation();
+
+        // 加載菜單
+        const UI = Menu(Syn, Transl, General, FileName, FetchSet);
+        this.Menu = new UI();
 
         /* 註冊菜單 */
         async function registerMenu(Page) {
