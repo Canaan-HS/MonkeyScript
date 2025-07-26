@@ -7,10 +7,10 @@ export default function Downloader(
     let Compression;
 
     return class Download {
-        constructor(CM, MD, BT) {
-            this.Button = BT;
-            this.ModeDisplay = MD;
-            this.CompressMode = CM;
+        constructor(CompressMode, ModeDisplay, Button) {
+            this.Button = Button;
+            this.ModeDisplay = ModeDisplay;
+            this.CompressMode = CompressMode;
             this.ForceDownload = false;
 
             this.Named_Data = null;
