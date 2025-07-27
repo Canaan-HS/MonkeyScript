@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.50-Beta
+// @version      0.0.50-Beta1
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -17,17 +17,13 @@
 // @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
 
 // @connect      *
-// @match        *://kemono.su/*
-// @match        *://coomer.su/*
+// @match        *://kemono.cr/*
+// @match        *://coomer.st/*
 // @match        *://nekohouse.su/*
-// @match        *://*.kemono.su/*
-// @match        *://*.coomer.su/*
-// @match        *://*.nekohouse.su/*
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
-
 
 // @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
@@ -114,20 +110,16 @@
             Menu: "MenuPoint"
         };
         const UserSet = {
-            MenuSet: () => {
-                return Syn.gV(SaveKey.Menu, {
-                    Top: "10vh",
-                    Left: "10vw"
-                });
-            },
-            ImgSet: () => {
-                return Syn.gV(SaveKey.Img, {
-                    Width: "auto",
-                    Height: "auto",
-                    Spacing: "0px",
-                    MaxWidth: "100%"
-                });
-            }
+            MenuSet: () => Syn.gV(SaveKey.Menu, {
+                Top: "10vh",
+                Left: "10vw"
+            }),
+            ImgSet: () => Syn.gV(SaveKey.Img, {
+                Width: "auto",
+                Height: "auto",
+                Spacing: "0px",
+                MaxWidth: "100%"
+            })
         };
         let ImgRule, MenuRule;
         const ImportantStyle = async (element, property, value) => {
@@ -149,7 +141,7 @@
             Spacing: value => ImportantStyle(ImgRule[1], "margin", `${value} auto`)
         };
         const Style = {
-            Global: async () => {
+            async Global() {
                 Syn.AddStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
@@ -252,7 +244,7 @@
                     }
                 `, "Global-Effects", false);
             },
-            Postview: async () => {
+            async Postview() {
                 const set = UserSet.ImgSet();
                 const width = Syn.iW / 2;
                 Syn.AddStyle(`
@@ -305,7 +297,7 @@
                     }
                 });
             },
-            PostExtra: async () => {
+            async PostExtra() {
                 Syn.AddStyle(`
                     #main section {
                         width: 100%;
@@ -318,7 +310,7 @@
                     }
                 `, "Post-Extra", false);
             },
-            Menu: () => {
+            Menu() {
                 const set = UserSet.MenuSet();
                 return {
                     ImgScript: `
@@ -597,7 +589,7 @@
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
             IsNeko: Syn.$domain.startsWith("nekohouse"),
-            Language: () => {
+            Language() {
                 const Log = Syn.gV(SaveKey.Lang);
                 const ML = Syn.TranslMatcher(Word, Log);
                 return {
@@ -634,15 +626,15 @@
             Global_Cache: undefined,
             Preview_Cache: undefined,
             Content_Cache: undefined,
-            Global: function () {
+            Global() {
                 if (!this.Global_Cache) this.Global_Cache = Global_Function();
                 return this.Global_Cache;
             },
-            Preview: function () {
+            Preview() {
                 if (!this.Preview_Cache) this.Preview_Cache = Preview_Function();
                 return this.Preview_Cache;
             },
-            Content: function () {
+            Content() {
                 if (!this.Content_Cache) this.Content_Cache = Content_Function();
                 return this.Content_Cache;
             }
@@ -696,19 +688,21 @@
             TextToLink_Dependent: function (Config) {
                 if (!this.TextToLink_Cache) {
                     this.TextToLink_Cache = {
-                        Protocol_F: /^(?!(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/)/,
-                        Exclusion_F: /onfanbokkusuokibalab\.net/,
-                        URL_F: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$))[^\s]*?(?=[（）()「」『』【】\[\]{}、"'”，。！？；：]|$|\s)/g,
-                        UrlMatch: function (str) {
-                            this.URL_F.lastIndex = 0;
-                            return this.URL_F.test(str);
+                        Exclusion_Regex: /onfanbokkusuokibalab\.net/,
+                        URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
+                        Exclusion_Tags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
+                        UrlMatch(str) {
+                            this.URL_Regex.lastIndex = 0;
+                            return this.URL_Regex.test(str);
                         },
-                        getTextNodes: function (root) {
+                        getTextNodes(root) {
                             const nodes = [];
                             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                                 acceptNode: node => {
+                                    const parentElement = node.parentElement;
+                                    if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
                                     const content = node.$text();
-                                    if (!content || this.Exclusion_F.test(content)) return NodeFilter.FILTER_REJECT;
+                                    if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
                                     return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
                             });
@@ -717,14 +711,19 @@
                             }
                             return nodes;
                         },
-                        ParseModify: async function (father, content) {
-                            if (this.Exclusion_F.test(content) || father.tagName === "A") return;
-                            father.$iHtml(content.replace(this.URL_F, url => {
+                        ProtocolParse(url) {
+                            if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+                            if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+                            if (/^\/\//.test(url)) return "https:" + url;
+                            return url;
+                        },
+                        async ParseModify(father, content) {
+                            father.$iHtml(content.replace(this.URL_Regex, url => {
                                 const decode = decodeURIComponent(url).trim();
-                                return `<a href="${decode.replace(this.Protocol_F, "https://")}">${decode}</a>`;
+                                return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
                             }));
                         },
-                        JumpTrigger: async root => {
+                        async JumpTrigger(root) {
                             const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
                             Syn.onEvent(root, "click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
@@ -752,7 +751,7 @@
                         Get_Record: () => Syn.Local("fix_record_v2", {
                             error: new Map()
                         }),
-                        Save_Record: async function (save) {
+                        async Save_Record(save) {
                             await Syn.Local("fix_record_v2", {
                                 value: new Map([...this.Get_Record(), ...save])
                             });
@@ -770,7 +769,7 @@
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts"
                         },
-                        Fix_Request: async function (url, headers = {}) {
+                        async Fix_Request(url, headers = {}) {
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
                                     method: "GET",
@@ -782,7 +781,7 @@
                                 });
                             });
                         },
-                        Get_Pixiv_Name: async function (id) {
+                        async Get_Pixiv_Name(id) {
                             const response = await this.Fix_Request(`https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, {
                                 referer: "https://www.pixiv.net/"
                             });
@@ -795,12 +794,12 @@
                                 return user_name;
                             } else return;
                         },
-                        Fix_Url: function (url) {
+                        Fix_Url(url) {
                             url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        Fix_Update_Ui: async function (href, id, name_obj, tag_obj, text) {
+                        async Fix_Update_Ui(href, id, name_obj, tag_obj, text) {
                             const edit = Syn.createElement("fix_edit", {
                                 id: id,
                                 class: "edit_artist",
@@ -819,7 +818,7 @@
                                 }));
                             }
                         },
-                        Fix_Trigger: async function (object) {
+                        async Fix_Trigger(object) {
                             const {
                                 Url,
                                 TailId,
@@ -842,7 +841,7 @@
                                 }
                             }
                         },
-                        Search_Fix: async function (items) {
+                        async Search_Fix(items) {
                             items.$sAttr("fix", true);
                             const url = items.href;
                             const img = items.$q("img");
@@ -857,7 +856,7 @@
                                 TagObject: items.$q(".user-card__service")
                             });
                         },
-                        Other_Fix: async function (artist, tag = "", href = null, reTag = "<fix_view>") {
+                        async Other_Fix(artist, tag = "", href = null, reTag = "<fix_view>") {
                             try {
                                 const parent = artist.parentNode;
                                 const url = href ?? parent.href;
@@ -876,7 +875,7 @@
                                 });
                             } catch { }
                         },
-                        Dynamic_Fix: async function (Listen, Element) {
+                        async Dynamic_Fix(Listen, Element) {
                             if (this.Register_Eement.has(Listen)) return;
                             this.Register_Eement.set(Listen, true);
                             Syn.Observer(Listen, () => {
@@ -900,7 +899,7 @@
             }
         };
         return {
-            SidebarCollapse: async Config => {
+            async SidebarCollapse(Config) {
                 if (Syn.Platform === "Mobile") return;
                 Syn.AddStyle(`
                     .global-sidebar {
@@ -920,13 +919,13 @@
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
                 `, "Collapse_Effects", false);
             },
-            DeleteNotice: async Config => {
+            async DeleteNotice(Config) {
                 Syn.WaitElem("aside", null, {
                     raf: true,
                     timeout: 5
                 }).then(aside => aside.remove());
             },
-            BlockAds: async Config => {
+            async BlockAds(Config) {
                 if (DLL.IsNeko) return;
                 const cookieString = Syn.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
@@ -969,7 +968,7 @@
                     }
                 });
             },
-            CacheFetch: async Config => {
+            async CacheFetch(Config) {
                 if (DLL.IsNeko) return;
                 Syn.AddScript(`
                     const cache = new Map();
@@ -1010,7 +1009,7 @@
                     };
                 `, "Cache-Fetch", false);
             },
-            TextToLink: async Config => {
+            async TextToLink(Config) {
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
                 const Func = LoadFunc.TextToLink_Dependent(Config);
                 if (DLL.IsContent()) {
@@ -1040,7 +1039,7 @@
                     });
                 }
             },
-            FixArtist: async Config => {
+            async FixArtist(Config) {
                 DLL.Style.Global();
                 const Func = LoadFunc.FixArtist_Dependent();
                 const [Device, Newtab, Active, Insert] = [Syn.Platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
@@ -1124,7 +1123,7 @@
                     });
                 }
             },
-            BackToTop: async Config => {
+            async BackToTop(Config) {
                 Syn.onEvent(Syn.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
                 }, {
@@ -1133,7 +1132,7 @@
                     mark: "BackToTop"
                 });
             },
-            KeyScroll: async Config => {
+            async KeyScroll(Config) {
                 if (Syn.Platform === "Mobile") return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
@@ -1207,7 +1206,7 @@
     }
     function Preview_Function() {
         return {
-            NewTabOpens: async Config => {
+            async NewTabOpens(Config) {
                 const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
                 Syn.onEvent(Syn.body, "click", event => {
                     const target = event.target.closest("article a");
@@ -1220,7 +1219,7 @@
                     mark: "NewTabOpens"
                 });
             },
-            QuickPostToggle: async Config => {
+            async QuickPostToggle(Config) {
                 if (!DLL.IsNeko) return;
                 Syn.WaitElem("menu", null, {
                     all: true,
@@ -1496,7 +1495,7 @@
                     });
                 });
             },
-            CardZoom: async Config => {
+            async CardZoom(Config) {
                 switch (Config.mode) {
                     case 2:
                         Syn.AddStyle(`
@@ -1529,7 +1528,7 @@
                         `, "CardZoom_Effects", false);
                 }
             },
-            CardText: async Config => {
+            async CardText(Config) {
                 if (Syn.Platform === "Mobile") return;
                 switch (Config.mode) {
                     case 2:
@@ -1569,7 +1568,7 @@
     function Content_Function() {
         const LoadFunc = {
             LinkBeautify_Cache: undefined,
-            LinkBeautify_Dependent: function () {
+            LinkBeautify_Dependent() {
                 if (!this.LinkBeautify_Cache) {
                     this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
                         const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file");
@@ -1616,7 +1615,7 @@
                 return this.LinkBeautify_Cache;
             },
             ExtraButton_Cache: undefined,
-            ExtraButton_Dependent: function () {
+            ExtraButton_Dependent() {
                 if (!this.ExtraButton_Cache) {
                     this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
                         GM_xmlhttpRequest({
@@ -1657,7 +1656,7 @@
             }
         };
         return {
-            LinkBeautify: async function (Config) {
+            async LinkBeautify(Config) {
                 Syn.AddStyle(`
                     .View {
                         top: -10px;
@@ -1693,7 +1692,7 @@
                     }
                 });
             },
-            VideoBeautify: async function (Config) {
+            async VideoBeautify(Config) {
                 if (DLL.IsNeko) {
                     Syn.WaitElem(".scrape__files video", null, {
                         raf: true,
@@ -1751,7 +1750,7 @@
                     });
                 }
             },
-            OriginalImage: async function (Config) {
+            async OriginalImage(Config) {
                 Syn.WaitElem(".post__thumbnail, .scrape__thumbnail", null, {
                     raf: true,
                     all: true,
@@ -1945,7 +1944,7 @@
                     }
                 });
             },
-            ExtraButton: async function (Config) {
+            async ExtraButton(Config) {
                 DLL.Style.PostExtra();
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
                 Syn.WaitElem("h2.site-section__subheading", null, {
@@ -1991,7 +1990,7 @@
                     }
                 });
             },
-            CommentFormat: async function (Config) {
+            async CommentFormat(Config) {
                 Syn.AddStyle(`
                     .post__comments,
                     .scrape__comments {
@@ -2148,11 +2147,11 @@
         });
         DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
         const Menu_Requ = {
-            Menu_Close: () => {
+            Menu_Close() {
                 $background?.off();
                 shadow.remove();
             },
-            Menu_Save: () => {
+            Menu_Save() {
                 const top = $interface.css("top");
                 const left = $interface.css("left");
                 Syn.sV(DLL.SaveKey.Menu, {
@@ -2160,7 +2159,7 @@
                     Left: left
                 });
             },
-            Img_Save: () => {
+            Img_Save() {
                 img_set = $imageSet.find("p");
                 img_data.forEach((read, index) => {
                     img_input = img_set.eq(index).find("input");
@@ -2176,7 +2175,7 @@
                 });
                 Syn.sV(DLL.SaveKey.Img, save_cache);
             },
-            ImageSettings: async () => {
+            async ImageSettings() {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
                     event.stopPropagation();
                     const target = $(this), value = target.val(), id = target.attr("id");
