@@ -90,14 +90,22 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.21-Beta5**
+**Release Version: 0.0.21-Beta7** 
 
-### **Update Contents**
-1. Fixed the issue with downloading data
-2. Modified default configuration (file name)
-3. Added download thread count and delay (replacing the experimental delay)
+### **What's New**
+Haven't had much time to work on this project recently. The current release version's "fetch post data" function doesn't support nekohouse yet.
+
+1. Temporary domain update (some incomplete test features)
+
+### **New Fetch Features (FetchSet)**
+
+`AdvancedFetch`
+If you don't need to fetch internal cloud or external links, you can set this to false. Reducing the Delay can make fetching basic data much faster.
+
+`ToLinkTxt`
+When enabled, it won't output complete data as JSON, but as a txt file. The data format is compatible with IDM import, so you can directly import into IDM to download all content. However, you need to confirm the text encoding to ensure IDM can parse it correctly, otherwise there will be garbled characters (default UTF-8).
 
 ### **Known Issues**
-1. In newer versions of Tampermonkey, the GM_download API is behaving abnormally, causing issues with single image download. It is recommended to use the compressed download option only.
+1. Newer versions of Tampermonkey have some issues with the GM_download API, causing the single image download function to error. It's recommended to only use compressed download.
 
 ---
