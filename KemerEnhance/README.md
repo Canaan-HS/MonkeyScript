@@ -128,12 +128,10 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.50-Beta**
+**Release Version：0.0.50-Beta1**
 
 ### **What's New**
-1. Optimized QuickPostToggle navigation
-2. Added QuickPostToggle multi-Post support
-3. Added CacheFetch functionality to accelerate loading of same pages (cleared when closing tabs)
+1. Temporary domain update (some incomplete test features)
 
 ### **Known Issues**
 1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
