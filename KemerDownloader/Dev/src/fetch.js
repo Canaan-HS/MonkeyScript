@@ -22,6 +22,9 @@ export default function Fetch(
             this.ToLinkTxt = ToLinkTxt; // 判斷是否輸出為連結文本
             this.AdvancedFetch = AdvancedFetch; // 判斷是否往內抓數據
 
+            // 帖子內部連結
+            this.PostURL = ID => `${this.FirstURL}/post/${ID}`;
+
             // 內部連結的 API 模板
             this.PostAPI = `${this.FirstURL}/post`.replace(this.Host, `${this.Host}/api/v1`);
 
@@ -74,8 +77,14 @@ export default function Fetch(
             const ImageExts = new Set(Process.ImageExts);
             const VideoExts = new Set(Process.VideoExts);
 
-            this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
-            this.IsImage = (str) => ImageExts.has(str.replace(/^\./, "").toLowerCase());
+            this.IsVideo = (Str) => VideoExts.has(Str.replace(/^\./, "").toLowerCase());
+            this.IsImage = (Str) => ImageExts.has(Str.replace(/^\./, "").toLowerCase());
+
+            // 正規化帖子標題名稱 (傳入 Post 標題 (string), 與列表 Index (number))
+            this.NormalizeName = (Title, Index) => Title.trim().replace(/\n/g, " ") || `Untitled_${String(Index + 1).padStart(2, "0")}`;
+
+            // 正規化帖子時間戳 (傳入 Post 的物件)
+            this.NormalizeTimestamp = (Post) => new Date(Post.published || Post.added)?.toLocaleString();
 
             // 抓取檔案的副檔名
             this.Suffix = (Str) => {
@@ -413,10 +422,9 @@ export default function Fetch(
 
                                         if (Json) {
                                             const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
-                                            const Title = Post.title.trim().replace(/\n/g, " ") || `Untitled_${String(index + 1).padStart(2, "0")}`;
 
-                                            // 對下載連結進行分類
-                                            const File = this.AdvancedCategorize(Json.attachments);
+                                            const Title = this.NormalizeName(Post.title, index);
+                                            const File = this.AdvancedCategorize(Json.attachments); // 對下載連結進行分類
 
                                             // 獲取圖片連結
                                             const ImgLink = () => { // ! 還需要測試
@@ -429,7 +437,7 @@ export default function Fetch(
                                                     ...Post.attachments
                                                 ];
                                                 const Fill = Syn.GetFill(ServerList.length);
-                                                
+
                                                 // 依據篩選出有預覽圖伺服器的, 生成圖片連結
                                                 return ServerList.reduce((acc, Server, Index) => {
                                                     const extension = [List[Index].name, List[Index].path]
@@ -446,8 +454,8 @@ export default function Fetch(
 
                                             // 生成請求數據 (處理要抓什麼數據)
                                             const Gen = this.FetchGenerate({
-                                                PostLink: `${this.FirstURL}/post/${Post.id}`,
-                                                Timestamp: new Date(Post.published || Post.added)?.toLocaleString(),
+                                                PostLink: this.PostURL(Post.id),
+                                                Timestamp: this.NormalizeTimestamp(Post),
                                                 TypeTag: Post.tags,
                                                 ImgLink: ImgLink(),
                                                 VideoLink: File.video,
@@ -490,15 +498,15 @@ export default function Fetch(
 
                     } else {
                         for (const [Index, Post] of Results.entries()) {
-                            const Title = Post.title.trim();
+                            const Title = this.NormalizeName(Post.title, Index);
 
                             try {
                                 // 分類所有文件
                                 const File = this.Categorize(Title, [...(Post.file ? (Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : []) : []), ...Post.attachments]);
 
                                 const Gen = this.FetchGenerate({
-                                    PostLink: `${this.FirstURL}/post/${Post.id}`,
-                                    Timestamp: new Date(Post.published)?.toLocaleString(),
+                                    PostLink: this.PostURL(Post.id),
+                                    Timestamp: this.NormalizeTimestamp(Post),
                                     ImgLink: File.img,
                                     VideoLink: File.video,
                                     DownloadLink: File.other
