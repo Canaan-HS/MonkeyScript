@@ -100,6 +100,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                                 Instantiate = new this.Download(CompressMode, ModeDisplay, target);
                                 Instantiate.DownloadTrigger();
                             } else if (target.closest("svg")) {
+                                // alert("Currently Invalid");
                                 this.Menu.open(); // 打開設置菜單
                             }
                         },
