@@ -2,10 +2,11 @@ export default function Fetch(
     General, FetchSet, Process, Transl, Syn, md5
 ) {
     return class FetchData {
+        static TryAgain_Promise = null;
+
         constructor() {
             this.MetaDict = new Map(); // 保存元數據
             this.DataDict = new Map(); // 保存最終數據
-            this.RecordKey = `${decodeURIComponent(Syn.url)}-Complete`; // 緩存最終數據 (根據 Url 設置)
 
             this.SourceURL = Syn.url; // 原始連結
             this.TitleCache = Syn.title();
@@ -150,49 +151,47 @@ export default function Fetch(
                 }, { img: {}, video: {}, other: {} });
             };
 
-            this.TryAgain_Promise = null; // 緩存等待的 Promise
-            this.TooMany_TryAgain = (Uri) => {
-                // 如果已經有一個等待中的 Promise，直接返回
-                if (this.TryAgain_Promise) {
-                    return this.TryAgain_Promise;
+            // ! 目前有 Bug, 只能使用一次, 第二次後只回傳 null, 後續研究
+            this.TooMany_TryAgain = function (Uri) {
+                // 如果已經有一個等待中的 Promise，直接返回並等待它完成
+                if (FetchData.TryAgain_Promise) {
+                    return FetchData.TryAgain_Promise;
                 }
 
-                const sleepTime = 5e3; // 每次等待 5 秒
-                const timeout = 20e4; // 最多等待 20 秒
-                const Url = Uri;
+                // 創建一個新的 Promise 作為唯一的鎖
+                FetchData.TryAgain_Promise = new Promise(async (resolve) => {
+                    const sleepTime = 5e3; // 每次等待 5 秒
+                    const timeout = 20e4; // 最多等待 20 秒
 
-                this.TryAgain_Promise = new Promise(async (resolve) => {
                     const checkRequest = async () => {
-                        const controller = new AbortController(); // 創建 AbortController
+                        const controller = new AbortController();
                         const signal = controller.signal;
-                        const timeoutId = setTimeout(() => {
-                            controller.abort(); // 超時後中止請求
-                        }, timeout);
+                        const timeoutId = setTimeout(() => controller.abort(), timeout);
 
                         try {
-                            const response = await fetch(Url, { // 發起請求
-                                method: "HEAD", signal
-                            });
-
+                            const response = await fetch(Uri, { method: "HEAD", signal });
                             clearTimeout(timeoutId);
+
                             if (response.status === 429 || response.status === 503) {
                                 await Syn.Sleep(sleepTime);
-                                await checkRequest(); // 繼續檢查
+                                await checkRequest(); // 繼續遞迴檢查
                             } else {
-                                resolve(); // 等待完成
-                                this.TryAgain_Promise = null;
+                                // 狀態正常，重置鎖，然後喚醒所有等待者
+                                FetchData.TryAgain_Promise = null;
+                                resolve();
                             }
                         } catch (err) {
+                            // 發生網路錯誤也重試
                             clearTimeout(timeoutId);
                             await Syn.Sleep(sleepTime);
                             await checkRequest();
                         }
                     };
 
-                    await checkRequest();
+                    await checkRequest(); // 開始檢查
                 });
 
-                return this.TryAgain_Promise;
+                return FetchData.TryAgain_Promise;
             };
 
             // 請求工作
@@ -314,8 +313,6 @@ export default function Fetch(
 
                 // ! 實驗性獲取總頁數
                 this.FinalPage = Small ? Math.ceil(+Small.$text().split(" of ")[1] / 50) : 1;
-
-                Syn.Session(this.RecordKey) && (this.FetchDelay = 0); // 當存在完成紀錄時, 降低延遲
                 this._FetchPage(Items, this.SourceURL); // 開始抓取
             } else {
                 alert(Transl("未取得數據"));
@@ -388,10 +385,7 @@ export default function Fetch(
                 this.CurrentPage++;
                 this.CurrentPage <= this.FinalPage
                     ? this._FetchPage(null, this.NextPageURL(Url))
-                    : (
-                        Syn.Session(this.RecordKey, { value: true }),
-                        this.ToLinkTxt ? this._ToTxt() : this._ToJson()
-                    );
+                    : this.ToLinkTxt ? this._ToTxt() : this._ToJson();
             }
         };
 
@@ -420,7 +414,6 @@ export default function Fetch(
                         this.MetaDict.set(Transl("作者網站"), props.display_data.href);
                     }
 
-
                     const Results = Json.results;
                     if (this.AdvancedFetch) {
                         const Tasks = [];
@@ -434,11 +427,10 @@ export default function Fetch(
 
                                 try {
                                     if (!error) {
+                                        this.FetchDelay = Process.dynamicParam(time, delay);
                                         const Json = JSON.parse(content);
 
                                         if (Json) {
-                                            this.FetchDelay = Process.dynamicParam(time, delay);
-
                                             const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
 
                                             const Title = this.NormalizeName(Post.title, index);
