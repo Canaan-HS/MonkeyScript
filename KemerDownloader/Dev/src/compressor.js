@@ -31,7 +31,7 @@ export default function Compressor(Syn) {
         }
 
         // 估計壓縮耗時
-        estimateCompression() {
+        _estimateCompression() {
 
             const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
             const UNCOMPRESSIBLE_EXTENSIONS = new Set([
@@ -101,7 +101,7 @@ export default function Compressor(Syn) {
             const startTime = performance.now();
 
             const updateInterval = 30; // 更新頻率
-            const estimationData = this.estimateCompression();
+            const estimationData = this._estimateCompression();
             const totalTime = estimationData.estimatedInMs;
 
             // 假進度模擬, 檔案越大誤差越大
