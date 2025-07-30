@@ -24,7 +24,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/495339/1615053/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1616381/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -81,15 +81,22 @@
     // 鎖定狀態
     SortReverse: false,
     // 排序反轉
-    // 新增的網絡和響應時間監控參數
     responseHistory: [],
     // 儲存最近的響應時間
     networkCondition: "normal",
     // 網絡狀態: 'good', 'normal', 'poor'
     lastNetworkCheck: 0,
     // 上次網絡檢查時間
-    networkCheckInterval: 3e4,
+    networkCheckInterval: 1e4,
     // 網絡檢查間隔(10秒)
+    networkQualityThresholds: {
+      good: 500,
+      // 平均響應時間 < 500ms 為 'good'
+      poor: 1500
+      // 平均響應時間 > 1500ms 為 'poor'
+    },
+    EMA_ALPHA: 0.3,
+    ADJUSTMENT_FACTOR: 0.25,
     adaptiveFactors: {
       // 不同網絡條件下的調整因子
       good: { delayFactor: 0.8, threadFactor: 1.2 },
@@ -108,7 +115,10 @@
       if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
       return this.KeyCache;
     },
-    // 檢測網絡狀態
+    /**
+     * @description 檢測當前網絡狀況
+     * @returns {'good'|'normal'|'poor'}
+     */
     checkNetworkCondition: function () {
       const now = Date.now();
       if (now - this.lastNetworkCheck < this.networkCheckInterval) {
@@ -116,64 +126,56 @@
       }
       this.lastNetworkCheck = now;
       if (navigator.connection) {
-        const connection = navigator.connection;
-        if (connection.effectiveType === "4g" && !connection.saveData) {
-          this.networkCondition = "good";
-        } else if (connection.effectiveType === "3g" || connection.effectiveType === "4g" && connection.saveData) {
-          this.networkCondition = "normal";
-        } else {
-          this.networkCondition = "poor";
-        }
-      } else {
-        if (this.responseHistory.length >= 5) {
-          const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-          if (avgResponseTime < this.TIME_THRESHOLD * 0.7) {
-            this.networkCondition = "good";
-          } else if (avgResponseTime > this.TIME_THRESHOLD * 1.3) {
-            this.networkCondition = "poor";
-          } else {
-            this.networkCondition = "normal";
-          }
-        }
+        const { effectiveType, saveData } = navigator.connection;
+        if (effectiveType === "4g" && !saveData) this.networkCondition = "good";
+        else if (effectiveType === "3g" || effectiveType === "4g" && saveData) this.networkCondition = "normal";
+        else this.networkCondition = "poor";
+      } else if (this.responseHistory.length >= 5) {
+        const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
+        if (avgResponseTime < this.networkQualityThresholds.good) this.networkCondition = "good";
+        else if (avgResponseTime > this.networkQualityThresholds.poor) this.networkCondition = "poor";
+        else this.networkCondition = "normal";
       }
       return this.networkCondition;
     },
-    // 更新響應時間閾值
+    /**
+     * @description 更新響應時間歷史記錄並計算新的時間閾值
+     * @param {number} newResponseTime - 最新的響應時間(ms)
+     */
     updateThreshold: function (newResponseTime) {
       this.responseHistory.push(newResponseTime);
-      if (this.responseHistory.length > 10) {
-        this.responseHistory.shift();
+      if (this.responseHistory.length > 10) this.responseHistory.shift();
+      if (!this.TIME_THRESHOLD || this.responseHistory.length <= 1) {
+        this.TIME_THRESHOLD = newResponseTime;
+      } else {
+        this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
       }
-      if (this.responseHistory.length >= 5) {
-        const avg = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-        this.TIME_THRESHOLD = Math.max(500, Math.min(2e3, avg * 1.2));
-      }
+      this.TIME_THRESHOLD = Math.max(500, Math.min(2e3, this.TIME_THRESHOLD));
     },
-    // 動態調整函數
-    Dynamic: function (Time, Delay, Thread = null, MIN_Delay) {
-      const ResponseTime = Date.now() - Time;
-      this.updateThreshold(ResponseTime);
+    /**
+     * @description 根據網絡狀況動態調整延遲和線程數
+     * @param {number} time - 請求完成的時間
+     * @param {number} currentDelay - 當前的延遲(ms)
+     * @param {number|null} currentThread - 當前的線程數 (可選)
+     * @param {number} minDelay - 最小延遲(ms)
+     * @returns {number|[number, number]} - 返回新的延遲或 [新的延遲, 新的線程數]
+     */
+    Dynamic: function (time, currentDelay, currentThread = null, minDelay = 0) {
+      const responseTime = Date.now() - time;
+      this.updateThreshold(responseTime);
       const networkState = this.checkNetworkCondition();
       const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
-      const ratio = ResponseTime / this.TIME_THRESHOLD;
-      let delay, thread;
-      if (ResponseTime > this.TIME_THRESHOLD) {
-        delay = Math.min(Delay * (1 + Math.log10(ratio) * 0.3 * delayFactor), this.MAX_Delay);
-        if (Thread != null) {
-          thread = Math.max(Thread * Math.pow(0.9, ratio) * threadFactor, this.MIN_CONCURRENCY);
-          return [Math.floor(delay), Math.floor(thread)];
-        } else {
-          return Math.floor(delay);
-        }
-      } else {
-        delay = Math.max(Delay * (1 - (1 - ratio) * 0.2 * (1 / delayFactor)), MIN_Delay);
-        if (Thread != null) {
-          thread = Math.min(Thread * (1 + (1 - ratio) * 0.3 * threadFactor), this.MAX_CONCURRENCY);
-          return [Math.ceil(delay), Math.ceil(thread)];
-        } else {
-          return Math.ceil(delay);
-        }
+      const ratio = responseTime / this.TIME_THRESHOLD;
+      const delayChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * delayFactor;
+      let newDelay = currentDelay * (1 + delayChange);
+      newDelay = Math.max(minDelay, Math.min(newDelay, this.MAX_Delay));
+      if (currentThread !== null) {
+        const threadChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * threadFactor;
+        let newThread = currentThread * (1 - threadChange);
+        newThread = Math.max(this.MIN_CONCURRENCY, Math.min(newThread, this.MAX_CONCURRENCY));
+        return [Math.round(newDelay), Math.round(newThread)];
       }
+      return Math.round(newDelay);
     },
     // 獲取當前網絡狀態的診斷信息
     getNetworkDiagnostics: function () {
@@ -190,20 +192,20 @@
       };
     }
   };
-  function Compressor(WorkerCreation) {
-    const worker = WorkerCreation(`
-        importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
-        onmessage = function(e) {
-            const { files, level } = e.data;
-            try {
-                const zipped = fflate.zipSync(files, { level });
-                postMessage({ data: zipped }, [zipped.buffer]);
-            } catch (err) {
-                postMessage({ error: err.message });
+  function Compressor(Syn2) {
+    const worker = Syn2.WorkerCreation(`
+            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+            onmessage = function(e) {
+                const { files, level } = e.data;
+                try {
+                    const zipped = fflate.zipSync(files, { level });
+                    postMessage({ data: zipped }, [zipped.buffer]);
+                } catch (err) {
+                    postMessage({ error: err.message });
+                }
             }
-        }
-    `);
-    class Compression {
+        `);
+    return class Compression {
       constructor() {
         this.files = {};
         this.tasks = [];
@@ -218,31 +220,76 @@
         this.tasks.push(task);
         return task;
       }
-      // 估算壓縮耗時
-      estimateCompressionTime() {
+      // 估計壓縮耗時
+      estimateCompression() {
+        const IO_THRESHOLD = 50 * 1024 * 1024;
+        const UNCOMPRESSIBLE_EXTENSIONS = /* @__PURE__ */ new Set([
+          ".mp4",
+          ".mov",
+          ".avi",
+          ".mkv",
+          ".zip",
+          ".rar",
+          ".jpg",
+          ".jpeg",
+          ".png",
+          ".gif",
+          ".webp"
+        ]);
+        const IO_BYTES_PER_SECOND = 100 * 1024 * 1024;
+        const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024;
+        let totalEstimatedTime = 0;
         let totalSize = 0;
-        Object.values(this.files).forEach((file) => {
-          totalSize += file.length;
+        Object.entries(this.files).forEach(([name, file]) => {
+          const fileSize = file.length;
+          totalSize += fileSize;
+          const extension = ("." + name.split(".").pop()).toLowerCase();
+          if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+            totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+          } else {
+            let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+            const fileSizeMB = fileSize / (1024 * 1024);
+            if (fileSizeMB > 10) {
+              cpuTime *= 1 + Math.log10(fileSizeMB / 10) * 0.1;
+            }
+            totalEstimatedTime += cpuTime;
+          }
         });
-        const bytesPerSecond = 60 * 1024 ** 2;
-        const estimatedTime = totalSize / bytesPerSecond;
-        return estimatedTime;
+        const fileCount = Object.keys(this.files).length;
+        if (fileCount > 1) {
+          totalEstimatedTime += fileCount * 0.01;
+        }
+        const totalSizeMB = totalSize / (1024 * 1024);
+        if (totalSizeMB > 100) {
+          totalEstimatedTime *= 1 + Math.log10(totalSizeMB / 100) * 0.05;
+        }
+        const calculateCurveParameter = (totalSizeMB2) => {
+          if (totalSizeMB2 < 50) return 5;
+          if (totalSizeMB2 < 500) return 4;
+          return 3;
+        };
+        const curveParameter = calculateCurveParameter(totalSizeMB);
+        return {
+          estimatedInMs: totalEstimatedTime * 1e3,
+          progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
+        };
       }
       // 生成壓縮
       async generateZip(options = {}, progressCallback) {
+        await Promise.all(this.tasks);
+        const startTime = performance.now();
         const updateInterval = 30;
-        const totalTime = this.estimateCompressionTime();
-        const progressUpdate = 100 / (totalTime * 1e3 / updateInterval);
-        let fakeProgress = 0;
+        const estimationData = this.estimateCompression();
+        const totalTime = estimationData.estimatedInMs;
         const progressInterval = setInterval(() => {
-          if (fakeProgress < 99) {
-            fakeProgress = Math.min(fakeProgress + progressUpdate, 99);
-            if (progressCallback) progressCallback(fakeProgress);
-          } else {
+          const elapsedTime = performance.now() - startTime;
+          const ratio = Math.min(elapsedTime / totalTime, 0.99);
+          const fakeProgress = estimationData.progressCurve(ratio);
+          if (progressCallback) progressCallback(fakeProgress);
+          if (ratio >= 0.99) {
             clearInterval(progressInterval);
           }
         }, updateInterval);
-        await Promise.all(this.tasks);
         return new Promise((resolve, reject) => {
           if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
           worker.postMessage({
@@ -251,13 +298,13 @@
           }, Object.values(this.files).map((buf) => buf.buffer));
           worker.onmessage = (e) => {
             clearInterval(progressInterval);
+            if (progressCallback) progressCallback(100);
             const { error, data } = e.data;
             error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
           };
         });
       }
-    }
-    return Compression;
+    };
   }
   const Dict = {
     Traditional: {
@@ -431,7 +478,7 @@
   };
   (async () => {
     const Url = Syn.url.split("?p=")[0];
-    const Compression = Compressor(Syn.WorkerCreation);
+    const Compression = Compressor(Syn);
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
     function Language() {
       const Matcher = Syn.TranslMatcher(Dict);
@@ -556,10 +603,9 @@ ${JSON.stringify(Processed, null, 4)}`,
         const self = this;
         const ImageData = [];
         function GetLink(index, url, page) {
-          var _a;
           try {
-            const Resample = page.querySelector("#img");
-            const Original = ((_a = page.querySelector("#i6 div:last-of-type a")) == null ? void 0 : _a.href) || "#";
+            const Resample = Syn.Q(page, "#img");
+            const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
             if (!Resample) {
               Syn.Log(null, {
                 page,
@@ -594,9 +640,8 @@ ${JSON.stringify(Processed, null, 4)}`,
       /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
       ReGetImageData(Index, Url2) {
         function GetLink(index, url, page) {
-          var _a;
-          const Resample = page.querySelector("#img");
-          ((_a = page.querySelector("#i6 div:last-of-type a")) == null ? void 0 : _a.href) || "#";
+          const Resample = Syn.Q(page, "#img");
+          Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
           if (!Resample) return false;
           const Link = Resample.src || Resample.href;
           return [index, url, Link];
@@ -690,7 +735,7 @@ ${JSON.stringify([...DataMap], null, 4)}`,
         function StatusUpdate(time, index, iurl, blob, error = false) {
           if (Enforce) return;
           [Delay, Thread] = DConfig.Dynamic(time, Delay, Thread, DConfig.Download_ND);
-          DConfig.DisplayCache = `[${++Progress}/${Total}]`;
+          DConfig.DisplayCache = `[${Math.min(++Progress, Total)}/${Total}]`;
           self.Button && self.Button.$text(`${Lang.Transl("下載進度")}: ${DConfig.DisplayCache}`);
           Syn.title(DConfig.DisplayCache);
           if (!error && blob) {
@@ -707,7 +752,7 @@ ${JSON.stringify([...DataMap], null, 4)}`,
                 Start(Data, true);
               }, 2e3);
             } else Force();
-          } else if (Progress > Total) Init();
+          }
           --Task;
         }
         function Request(Index, Iurl) {
@@ -749,9 +794,9 @@ ${JSON.stringify([...DataMap], null, 4)}`,
           for (const [Index, Uri] of DataMap.entries()) {
             if (Enforce) break;
             if (ReGet) {
-              Syn.Log(Lang.Transl("重新取得數據"), { Uri: Uri.PageUrl }, { dev: Config.Dev });
+              Syn.Log(`${Lang.Transl("重新取得數據")} (${ReTry})`, { Uri: Uri.PageUrl }, { dev: Config.Dev });
               const Result = await self.ReGetImageData(Index, Uri.PageUrl);
-              Syn.Log(Lang.Transl("取得結果"), { Result }, { dev: Config.Dev });
+              Syn.Log(`${Lang.Transl("取得結果")} (${ReTry})`, { Result }, { dev: Config.Dev });
               if (Result) {
                 const [Index2, Purl, Iurl] = Result;
                 Request(Index2, Iurl);
