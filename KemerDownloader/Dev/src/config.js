@@ -70,10 +70,85 @@ export default function Config(Syn) {
 
     // 不要修改
     const Process = {
-        Lock: false,
         IsNeko: Syn.$domain.startsWith("nekohouse"),
         ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "psd"],
         VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"],
+        Lock: false,
+        MAX_Delay: 1500,
+        MIN_CONCURRENCY: 2,
+        MAX_CONCURRENCY: 6,
+        TIME_THRESHOLD: 1000,
+
+        responseHistory: [],
+        networkCondition: 'normal',
+        lastNetworkCheck: 0,
+        networkCheckInterval: 1e4,
+        networkQualityThresholds: {
+            good: 500,
+            poor: 1500,
+        },
+        EMA_ALPHA: 0.3,
+        ADJUSTMENT_FACTOR: 0.25,
+        adaptiveFactors: {
+            good: { delayFactor: 0.8, threadFactor: 1.2 },
+            normal: { delayFactor: 1.0, threadFactor: 1.0 },
+            poor: { delayFactor: 1.5, threadFactor: 0.7 }
+        },
+
+        _checkNetworkCondition() {
+            const now = Date.now();
+            if (now - this.lastNetworkCheck < this.networkCheckInterval) {
+                return this.networkCondition;
+            }
+            this.lastNetworkCheck = now;
+
+            if (navigator.connection) {
+                const { effectiveType, saveData } = navigator.connection;
+                if (effectiveType === '4g' && !saveData) this.networkCondition = 'good';
+                else if (effectiveType === '3g' || (effectiveType === '4g' && saveData)) this.networkCondition = 'normal';
+                else this.networkCondition = 'poor';
+            } else if (this.responseHistory.length >= 5) {
+                const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
+                if (avgResponseTime < this.networkQualityThresholds.good) this.networkCondition = 'good';
+                else if (avgResponseTime > this.networkQualityThresholds.poor) this.networkCondition = 'poor';
+                else this.networkCondition = 'normal';
+            }
+            return this.networkCondition;
+        },
+
+        _updateThreshold(newResponseTime) {
+            this.responseHistory.push(newResponseTime);
+            if (this.responseHistory.length > 10) this.responseHistory.shift();
+
+            if (!this.TIME_THRESHOLD || this.responseHistory.length <= 1) {
+                this.TIME_THRESHOLD = newResponseTime;
+            } else {
+                this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
+            }
+            this.TIME_THRESHOLD = Math.max(500, Math.min(2000, this.TIME_THRESHOLD));
+        },
+
+        dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
+            const responseTime = Date.now() - time;
+            this._updateThreshold(responseTime);
+
+            const networkState = this._checkNetworkCondition();
+            const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
+            const ratio = responseTime / this.TIME_THRESHOLD;
+
+            const delayChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * delayFactor;
+            let newDelay = currentDelay * (1 + delayChange);
+            newDelay = Math.max(minDelay, Math.min(newDelay, this.MAX_Delay));
+
+            if (currentThread !== null) {
+                const threadChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * threadFactor;
+                let newThread = currentThread * (1 - threadChange);
+                newThread = Math.max(this.MIN_CONCURRENCY, Math.min(newThread, this.MAX_CONCURRENCY));
+                return [Math.round(newDelay), Math.round(newThread)];
+            }
+
+            return Math.round(newDelay);
+        }
     };
 
     return { General, FileName, FetchSet, Process };
