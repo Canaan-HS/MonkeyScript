@@ -4,27 +4,27 @@ export default function Downloader(
     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
     General, FileName, Process, Transl, Syn, saveAs
 ) {
-    let Compression;
+    let ZipEngine;
 
     return class Download {
-        constructor(CompressMode, ModeDisplay, Button) {
-            this.Button = Button;
-            this.ModeDisplay = ModeDisplay;
-            this.CompressMode = CompressMode;
-            this.ForceDownload = false;
+        constructor(compressMode, modeDisplay, button) {
+            this.button = button;
+            this.modeDisplay = modeDisplay;
+            this.compressMode = compressMode;
 
-            this.Named_Data = null;
+            this.namedData = null;
+            this.forceCompressSignal = false;
 
             /* 獲取原始標題 */
-            this.OriginalTitle = () => {
+            this.originalTitle = () => {
                 const cache = Syn.title();
                 return cache.startsWith("✓ ") ? cache.slice(2) : cache;
             };
 
-            const VideoExts = new Set(Process.VideoExts);
-            this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
+            const videoExts = new Set(Process.VideoExts);
+            this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
 
-            this.Worker = this.CompressMode ? Syn.WorkerCreation(`
+            this.worker = this.compressMode ? Syn.WorkerCreation(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -72,12 +72,12 @@ export default function Downloader(
         }
 
         /* 解析名稱格式 */
-        NameAnalysis(format) {
+        _nameAnalysis(format) {
             if (typeof format == "string") {
                 return format.split(/{([^}]+)}/g).filter(Boolean).map(data => {
-                    const LowerData = data.toLowerCase().trim();
-                    const isWord = /^[a-zA-Z]+$/.test(LowerData);
-                    return isWord ? this.Named_Data[LowerData]?.() ?? "None" : data;
+                    const lowerData = data.toLowerCase().trim();
+                    const isWord = /^[a-zA-Z]+$/.test(lowerData);
+                    return isWord ? this.namedData[lowerData]?.() ?? "None" : data;
                 }).join("");
 
             } else if (typeof format == "object") {
@@ -89,7 +89,7 @@ export default function Downloader(
         }
 
         /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-        DownloadTrigger() { // 下載數據, 文章標題, 作者名稱
+        downloadTrigger() { // 下載數據, 文章標題, 作者名稱
             Syn.WaitElem([
                 ".post__title, .scrape__title",
                 ".post__files, .scrape__files",
@@ -98,10 +98,10 @@ export default function Downloader(
                 const [title, files, artist] = found;
 
                 Process.Lock = true;
-                this.Button.disabled = true;
-                const DownloadData = new Map();
+                this.button.disabled = true;
+                const downloadData = new Map();
 
-                this.Named_Data = { // 建立數據
+                this.namedData = { // 建立數據
                     fill: () => "fill",
                     title: () => title.$q("span").$text().replaceAll("/", "／"),
                     artist: () => artist.$text(),
@@ -119,107 +119,108 @@ export default function Downloader(
                 }
 
                 const [ // 獲取名稱
-                    compress_name,
-                    folder_name,
-                    fill_name
-                ] = Object.keys(FileName).slice(1).map(key => this.NameAnalysis(FileName[key]));
+                    compressName,
+                    folderName,
+                    fillName
+                ] = Object.keys(FileName).slice(1).map(key => this._nameAnalysis(FileName[key]));
 
                 const // 這種寫法適應於還未完全載入原圖時
-                    img_data = [...files.children]
+                    imgData = [...files.children]
                         .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                         .filter(Boolean),
-                    final_data = General.IncludeExtras
-                        ? [...img_data, ...Syn.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] // 包含下載附加內容
-                        : img_data;
+                    finalData = General.IncludeExtras
+                        ? [...imgData, ...Syn.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] // 包含下載附加內容
+                        : imgData;
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
-                for (const [index, file] of final_data.entries()) {
+                for (const [index, file] of finalData.entries()) {
                     const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
                     if (Uri) {
-                        DownloadData.set(index, (
+                        downloadData.set(index, (
                             Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}` // 方便打印觀看
                         ));
                     }
                 }
 
-                if (DownloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
+                if (downloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
                 Syn.Log("Get Data", {
-                    FolderName: folder_name,
-                    DownloadData: DownloadData
+                    FolderName: folderName,
+                    DownloadData: downloadData
                 }, { dev: General.Dev, collapsed: false });
 
-                this.CompressMode
-                    ? this.PackDownload(compress_name, folder_name, fill_name, DownloadData)
-                    : this.SeparDownload(fill_name, DownloadData);
+                this.compressMode
+                    ? this._packDownload(compressName, folderName, fillName, downloadData)
+                    : this._separDownload(fillName, downloadData);
 
             }, { raf: true });
         }
 
         /* 打包壓縮下載 */
-        async PackDownload(CompressName, FolderName, FillName, Data) {
-            Compression ??= Compressor(Syn);
+        async _packDownload(compressName, folderName, fillName, data) {
+            ZipEngine ??= Compressor(Syn);
 
             let
                 show,
                 extension,
                 progress = 0,
-                Total = Data.size;
+                total = data.size;
             const
-                Self = this,
-                Zip = new Compression(),
-                TitleCache = this.OriginalTitle();
+                self = this,
+                zipper = new ZipEngine(),
+                titleCache = this.originalTitle();
             const
-                FillValue = this.NameAnalysis(FileName.FillValue),
-                Filler = FillValue[1],
-                Amount = FillValue[0] == "auto" ? Syn.GetFill(Total) : FillValue[0];
+                fillValue = this._nameAnalysis(FileName.FillValue),
+                filler = fillValue[1],
+                amount = fillValue[0] == "auto" ? Syn.GetFill(total) : fillValue[0];
 
             // 強制下載
-            async function ForceDownload() {
-                Self.Compression(CompressName, Zip, TitleCache);
+            async function forceDownload() {
+                self._compressFile(compressName, zipper, titleCache);
             }
 
             Syn.Menu({
-                [Transl("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
+                [Transl("📥 強制壓縮下載")]: { func: () => forceDownload(), hotkey: "d" }
             }, { name: "Enforce" });
 
             // 更新請求狀態
-            FolderName = FolderName != "" ? `${FolderName}/` : ""; // 處理資料夾名稱格式
-            function Request_update(index, url, blob, error = false) {
-                if (Self.ForceDownload) return;
+            folderName = folderName != "" ? `${folderName}/` : ""; // 處理資料夾名稱格式
+            function requestUpdate(index, url, blob, error = false) {
+                if (self.forceCompressSignal) return;
                 requestAnimationFrame(() => {
 
                     if (!error && blob instanceof Blob && blob.size > 0) {
-                        extension = Syn.ExtensionName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 IsVideo 的資訊, 所以分別操作
+                        extension = Syn.SuffixName(url); // 雖然 Mantissa 函數可直接傳遞 url 為第四個參數, 但因為需要 isVideo 的資訊, 所以分別操作
 
-                        const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
-                        Self.IsVideo(extension)
-                            ? Zip.file(`${FolderName}${(
+                        const fileName = `${fillName.replace("fill", Syn.Mantissa(index, amount, filler))}.${extension}`;
+
+                        self.isVideo(extension)
+                            ? zipper.file(`${folderName}${(
                                 decodeURIComponent(url).split("?f=")[1] ||
                                 Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
-                                FileName
+                                fileName
                             )}`, blob)
-                            : Zip.file(`${FolderName}${FileName}`, blob);
+                            : zipper.file(`${folderName}${fileName}`, blob);
 
-                        Data.delete(index); // 成功時清除
+                        data.delete(index); // 成功時清除
                     }
 
-                    show = `[${++progress}/${Total}]`;
+                    show = `[${++progress}/${total}]`;
                     Syn.title(show);
-                    Self.Button.$text(`${Transl("下載進度")} ${show}`);
+                    self.button.$text(`${Transl("下載進度")} ${show}`);
 
-                    if (progress == Total) {
-                        Total = Data.size;
-                        if (Total == 0) {
-                            Self.Compression(CompressName, Zip, TitleCache);
+                    if (progress == total) {
+                        total = data.size;
+                        if (total == 0) {
+                            self._compressFile(compressName, zipper, titleCache);
                         } else {
                             show = "Wait for failed re download";
                             progress = 0;
                             Syn.title(show);
-                            Self.Button.$text(show);
+                            self.button.$text(show);
                             setTimeout(() => {
-                                for (const [index, url] of Data.entries()) {
-                                    Self.Worker.postMessage({ index: index, url: url });
+                                for (const [index, url] of data.entries()) {
+                                    self.worker.postMessage({ index: index, url: url });
                                 }
                             }, 1500);
                         }
@@ -227,90 +228,91 @@ export default function Downloader(
                 });
             }
 
-            // 不使用 Worker 的請求, 切換窗口時, 這裡的請求就會變慢
-            async function Request(index, url) {
-                if (Self.ForceDownload) return;
+            // 不使用 worker 的請求, 切換窗口時, 這裡的請求就會變慢
+            async function request(index, url) {
+                if (self.forceCompressSignal) return;
                 GM_xmlhttpRequest({
                     url: url,
                     method: "GET",
                     responseType: "blob",
                     onload: response => {
                         if (response.status == 429) {
-                            Request_update(index, url, "", true);
+                            requestUpdate(index, url, "", true);
                             return;
                         }
 
-                        Request_update(index, url, response.response);
+                        requestUpdate(index, url, response.response);
                     },
                     onerror: () => {
-                        Request_update(index, url, "", true);
+                        requestUpdate(index, url, "", true);
                     }
                 })
             }
 
             // 只是顯示給使用者讓其知道 有運作 (無實際作用)
-            Self.Button.$text(`${Transl("請求進度")} [${Total}/${Total}]`);
+            self.button.$text(`${Transl("請求進度")} [${total}/${total}]`);
 
             // 傳遞消息發起請求
-            const Batch = General.ConcurrentQuantity;
-            const Delay = General.ConcurrentDelay;
+            const batch = General.ConcurrentQuantity;
+            const delay = General.ConcurrentDelay;
 
-            for (let i = 0; i < Total; i += Batch) {
+            for (let i = 0; i < total; i += batch) {
                 setTimeout(() => {
-                    for (let j = i; j < i + Batch && j < Total; j++) {
-                        this.Worker.postMessage({ index: j, url: Data.get(j) });
+                    for (let j = i; j < i + batch && j < total; j++) {
+                        this.worker.postMessage({ index: j, url: data.get(j) });
                     }
-                }, (i / Batch) * Delay);
+                }, (i / batch) * delay);
             }
 
             // 接收消息處理
-            this.Worker.onmessage = (e) => {
+            this.worker.onmessage = (e) => {
                 const { index, url, blob, error } = e.data;
                 error
-                    ? (Request(index, url), Syn.Log("Download Failed", url, { dev: General.Dev, type: "error", collapsed: false }))
-                    : (Request_update(index, url, blob), Syn.Log("Download Successful", url, { dev: General.Dev, collapsed: false }));
+                    ? (request(index, url), Syn.Log("Download Failed", url, { dev: General.Dev, type: "error", collapsed: false }))
+                    : (requestUpdate(index, url, blob), Syn.Log("Download Successful", url, { dev: General.Dev, collapsed: false }));
             }
         }
 
         /* 單圖下載 */
-        async SeparDownload(FillName, Data) {
+        async _separDownload(fillName, data) {
             let
                 show,
                 url,
-                filename,
+                fileName,
                 extension,
+                token = 5,
                 stop = false,
                 progress = 0;
             const
-                Self = this,
-                Process = [],
-                Promises = [],
-                Total = Data.size,
-                ShowTracking = {},
-                DownloadTracking = {},
-                TitleCache = this.OriginalTitle();
+                self = this,
+                process = [],
+                promises = [],
+                total = data.size,
+                showTracking = {},
+                downloadTracking = {},
+                titleCache = this.originalTitle();
             const
-                FillValue = this.NameAnalysis(FileName.FillValue),
-                Filler = FillValue[1],
-                Amount = FillValue[0] == "auto" ? Syn.GetFill(Total) : FillValue[0];
+                fillValue = this._nameAnalysis(FileName.FillValue),
+                filler = fillValue[1],
+                amount = fillValue[0] == "auto" ? Syn.GetFill(total) : fillValue[0];
 
             // 停止下載的線程
-            async function Stop() {
+            async function _stop() {
                 stop = true;
-                Process.forEach(process => process.abort())
+                process.forEach(pc => pc.abort())
             }
 
             Syn.Menu({
-                [Transl("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
+                [Transl("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" }
             }, { name: "Abort" });
 
-            async function Request(index) {
+            async function request(index) {
                 if (stop) return;
-                url = Data.get(index);
-                extension = Syn.ExtensionName(url);
+                url = data.get(index);
+                extension = Syn.SuffixName(url);
 
-                const FileName = `${FillName.replace("fill", Syn.Mantissa(index, Amount, Filler))}.${extension}`;
-                filename = Self.IsVideo(extension)
+                const FileName = `${fillName.replace("fill", Syn.Mantissa(index, amount, filler))}.${extension}`;
+                fileName = self.isVideo(extension)
                     ? (
                         decodeURIComponent(url).split("?f=")[1] ||
                         Syn.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
@@ -321,22 +323,22 @@ export default function Downloader(
                 return new Promise((resolve, reject) => {
 
                     const completed = () => {
-                        if (!ShowTracking[index]) { // 多一個判斷是因為, 他有可能同樣的重複呼叫多次
-                            ShowTracking[index] = true;
+                        if (!showTracking[index]) { // 多一個判斷是因為, 他有可能同樣的重複呼叫多次
+                            showTracking[index] = true;
 
                             Syn.Log("Download Successful", url, { dev: General.Dev, collapsed: false });
 
-                            show = `[${++progress}/${Total}]`;
+                            show = `[${++progress}/${total}]`;
                             Syn.title(show);
 
-                            Self.Button.$text(`${Transl("下載進度")} ${show}`);
+                            self.button.$text(`${Transl("下載進度")} ${show}`);
                             resolve();
                         }
                     };
 
                     const download = GM_download({
                         url,
-                        name: filename,
+                        name: fileName,
                         conflictAction: "overwrite",
                         onload: () => {
                             completed();
@@ -349,78 +351,82 @@ export default function Downloader(
                                 Progress: `${progress.loaded}/${progress.total}`
                             }, {dev: General.Dev, collapsed: false});
 
-                            DownloadTracking[index] = (progress.loaded == progress.total);
-                            DownloadTracking[index] && completed();
+                            downloadTracking[index] = (progress.loaded == progress.total);
+                            downloadTracking[index] && completed();
                             */
                         },
                         onerror: () => {
                             Syn.Log("Download Error", url, { dev: General.Dev, type: "error", collapsed: false });
                             setTimeout(() => {
                                 reject();
-                                Request(index);
+
+                                token--;
+                                if (token <= 0) return;
+
+                                request(index);
                             }, 1500);
                         }
                     });
 
-                    Process.push(download);
+                    process.push(download);
                 });
             }
 
-            for (let i = 0; i < Total; i++) {
-                Promises.push(Request(i));
-                await Syn.Sleep(1e3);
+            for (let i = 0; i < total; i++) {
+                promises.push(request(i));
+                await Syn.Sleep(General.ConcurrentDelay);
             }
 
-            await Promise.allSettled(Promises);
+            await Promise.allSettled(promises);
             GM_unregisterMenuCommand("Abort-1");
 
-            Syn.title(`✓ ${TitleCache}`);
-            this.Button.$text(Transl("下載完成"));
+            Syn.title(`✓ ${titleCache}`);
+            this.button.$text(Transl("下載完成"));
             setTimeout(() => {
-                this.ResetButton();
+                this._resetButton();
             }, 3000);
         }
 
         /* 壓縮檔案 */
-        async Compression(Name, Data, Title) {
-            this.Worker.terminate();
-            this.ForceDownload = true;
+        async _compressFile(name, data, title) {
+            this.worker.terminate();
+            this.forceCompressSignal = true;
             GM_unregisterMenuCommand("Enforce-1");
-            Data.generateZip({
+            data.generateZip({
                 level: 9
             }, (progress) => {
                 const display = `${progress.toFixed(1)} %`;
                 Syn.title(display);
-                this.Button.$text(`${Transl("封裝進度")}: ${display}`);
+                this.button.$text(`${Transl("封裝進度")}: ${display}`);
             }).then(zip => {
-                saveAs(zip, `${Name}.zip`);
-                Syn.title(`✓ ${Title}`);
-                this.Button.$text(Transl("下載完成"));
+                saveAs(zip, `${name}.zip`);
+                Syn.title(`✓ ${title}`);
+                this.button.$text(Transl("下載完成"));
 
                 setTimeout(() => {
-                    this.ResetButton();
+                    this._resetButton();
                 }, 3000);
             }).catch(result => {
-                Syn.title(Title);
+                Syn.title(title);
 
-                const ErrorShow = Transl("壓縮封裝失敗");
-                this.Button.$text(ErrorShow);
-                Syn.Log(ErrorShow, result, { dev: General.Dev, type: "error", collapsed: false });
+                const errorShow = Transl("壓縮封裝失敗");
+                this.button.$text(errorShow);
+                Syn.Log(errorShow, result, { dev: General.Dev, type: "error", collapsed: false });
 
                 setTimeout(() => {
-                    this.Button.disabled = false;
-                    this.Button.$text(this.ModeDisplay);
+                    this.button.disabled = false;
+                    this.button.$text(this.modeDisplay);
                 }, 6000);
             })
         }
 
         /* 按鈕重置 */
-        async ResetButton() {
+        async _resetButton() {
             General.CompleteClose && window.close();
             Process.Lock = false;
-            const Button = Syn.$q("#Button-Container button");
-            Button.disabled = false;
-            Button.$text(`✓ ${this.ModeDisplay}`);
+            const button = Syn.$q("#Button-Container button");
+            button.disabled = false;
+            button.$text(`✓ ${this.modeDisplay}`);
         }
     }
 }
