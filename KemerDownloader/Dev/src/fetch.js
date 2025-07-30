@@ -142,17 +142,15 @@ export default function Fetch(
                 }, { img: {}, video: {}, other: {} });
             };
 
-            // ! 目前有 Bug, 只能使用一次, 第二次後只回傳 null, 後續研究
+            // ! 目前有 Bug, 只能使用一次, 第二次後 response 的狀態直接都變成 200, 但實際上是 429
             this.TooMany_TryAgain = function (Uri) {
-                // 如果已經有一個等待中的 Promise，直接返回並等待它完成
                 if (FetchData.TryAgain_Promise) {
                     return FetchData.TryAgain_Promise;
                 }
 
-                // 創建一個新的 Promise 作為唯一的鎖
-                FetchData.TryAgain_Promise = new Promise(async (resolve) => {
-                    const sleepTime = 5e3; // 每次等待 5 秒
-                    const timeout = 20e4; // 最多等待 20 秒
+                const promiseLock = new Promise(async (resolve, reject) => {
+                    const sleepTime = 5e3;
+                    const timeout = 20e4;
 
                     const checkRequest = async () => {
                         const controller = new AbortController();
@@ -160,16 +158,18 @@ export default function Fetch(
                         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
                         try {
-                            const response = await fetch(Uri, { method: "HEAD", signal });
-                            clearTimeout(timeoutId);
+                            const response = await fetch(Uri, {
+                                method: "HEAD",
+                                signal: signal,
+                                cache: 'no-store'
+                            });
 
+                            clearTimeout(timeoutId);
                             if (response.status === 429 || response.status === 503) {
                                 await Syn.Sleep(sleepTime);
-                                await checkRequest(); // 繼續遞迴檢查
-                            } else {
-                                // 狀態正常，重置鎖，然後喚醒所有等待者
-                                FetchData.TryAgain_Promise = null;
-                                resolve();
+                                await checkRequest();
+                            } else if (response.status === 200) {
+                                resolve(response);
                             }
                         } catch (err) {
                             // 發生網路錯誤也重試
@@ -179,10 +179,18 @@ export default function Fetch(
                         }
                     };
 
-                    await checkRequest(); // 開始檢查
+                    await checkRequest();
                 });
 
-                return FetchData.TryAgain_Promise;
+                FetchData.TryAgain_Promise = promiseLock;
+
+                promiseLock.finally(() => {
+                    if (FetchData.TryAgain_Promise === promiseLock) {
+                        FetchData.TryAgain_Promise = null;
+                    }
+                });
+
+                return promiseLock;
             };
 
             // 請求工作
