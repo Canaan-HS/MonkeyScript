@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/06/30
+// @version      2025/07/31
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -1182,7 +1182,7 @@ const Syn = (() => {
              * @param {string} code - 運行代碼
              * @returns {Worker}    - 創建的 Worker 連結
              */
-            WorkerCreation: (code) => {
+            WorkerCreation(code) {
                 const blob = new Blob([code], { type: "application/javascript" });
                 return new Worker(URL.createObjectURL(blob));
             },
@@ -1221,14 +1221,21 @@ const Syn = (() => {
 
             /**
              * * { 解析網址字串的副檔名 }
-             * @param {string} link - 含有副檔名的連結
+             * @param {string} url - 含有副檔名的連結
+             * @param {string} defaultType - 預設副檔名
              * @returns {string}    - 回傳副檔名字串
              */
-            ExtensionName: (link) => {
+            SuffixName(url, defaultType = "webp") {
                 try {
-                    return link.match(/\.([^.]+)$/)[1].toLowerCase() || "webp";
+                    if (!url) return defaultType;
+
+                    const uri = new URL(url, location.href);
+                    const regex = /\.([^.]+)$/;
+                    const suffix = uri.pathname.match(regex)?.[1] || uri.search.match(regex)?.[1];
+
+                    return suffix?.toLowerCase().trim() || defaultType;
                 } catch {
-                    return "webp";
+                    return defaultType;
                 }
             },
 
@@ -1238,12 +1245,12 @@ const Syn = (() => {
              * @param {number} index   - 圖片的頁數
              * @param {number} padding - 填充量 [由 GetFill() 取得填充量]
              * @param {string} filler  - 用於填充的字串
-             * @param {string} type    - 圖片的副檔名, 輸入圖片的連結
+             * @param {string} url    - 圖片的副檔名, 輸入圖片的連結
              * @returns {string}       - 經填充後的尾數
              */
-            Mantissa: function (index, padding, filler = "0", type = null) {
-                return type
-                    ? `${++index}`.padStart(padding, filler) + `.${this.ExtensionName(type)}`
+            Mantissa(index, padding, filler = "0", url = null) {
+                return url
+                    ? `${++index}`.padStart(padding, filler) + `.${this.SuffixName(url)}`
                     : `${++index}`.padStart(padding, filler);
             }
         });
