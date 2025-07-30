@@ -17,8 +17,7 @@ import Dict from './language.js';
     // ! 早期寫的耦合性太高, 難以模組化, 後續很閒時再重構
 
     const Url = Syn.url.split("?p=")[0];
-    const Compression = Compressor(Syn);
-    let Lang, OriginalTitle, CompressMode, ModeDisplay;
+    let Lang, OriginalTitle, CompressMode, ModeDisplay, ZipEngine;
 
     function Language() {
         const Matcher = Syn.TranslMatcher(Dict);
@@ -302,8 +301,10 @@ import Dict from './language.js';
 
         /* 打包壓縮 下載 */
         async PackDownload(Data) {
+            ZipEngine ??= Compressor(Syn);
+            const Zipper = new ZipEngine();
+
             const self = this;
-            const Zip = new Compression();
 
             let Total = Data.size;
             const Fill = Syn.GetFill(Total); // 取得填充量
@@ -331,7 +332,7 @@ import Dict from './language.js';
 
                 Enforce = true; // 強制下載 (實驗性)
                 Init(); // 數據初始化
-                self.Compression(Zip); // 觸發壓縮
+                self.CompressFile(Zipper); // 觸發壓縮
             };
 
             // 清除緩存
@@ -356,7 +357,7 @@ import Dict from './language.js';
 
                 // Todo: 等待調整更完善判斷, 是否下載成功的條件
                 if (!error && blob) {
-                    Zip.file(`${self.ComicName}/${Syn.Mantissa(index, Fill, "0", iurl)}`, blob); // 保存正確的數據 (有資料夾)
+                    Zipper.file(`${self.ComicName}/${Syn.Mantissa(index, Fill, "0", iurl)}`, blob); // 保存正確的數據 (有資料夾)
                     Data.delete(index); // 清除完成的任務
                 };
 
@@ -545,7 +546,7 @@ import Dict from './language.js';
         };
 
         /* 壓縮輸出 */
-        async Compression(Zip) {
+        async CompressFile(Zipper) {
             const self = this;
             GM_unregisterMenuCommand("Enforce"); // 刪除強制下載按鈕
 
@@ -563,12 +564,12 @@ import Dict from './language.js';
                 }, 4500);
             };
 
-            if (Object.keys(Zip.files).length == 0) {
+            if (Object.keys(Zipper.files).length == 0) {
                 ErrorProcess("無數據可壓縮");
                 return;
             };
 
-            Zip.generateZip({
+            Zipper.generateZip({
                 level: DConfig.Compr_Level
             }, (progress) => {
                 DConfig.DisplayCache = `${progress.toFixed(1)} %`;
