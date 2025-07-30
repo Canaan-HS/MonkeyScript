@@ -10,14 +10,14 @@ import {
 const { Syn, saveAs } = monkeyWindow;
 
 import { Config, DConfig } from './config.js';
-import { Compressor } from './compressor.js';
+import Compressor from './compressor.js';
 import Dict from './language.js';
 
 (async () => {
     // ! 早期寫的耦合性太高, 難以模組化, 後續很閒時再重構
 
     const Url = Syn.url.split("?p=")[0];
-    const Compression = Compressor(Syn.WorkerCreation);
+    const Compression = Compressor(Syn);
     let Lang, OriginalTitle, CompressMode, ModeDisplay;
 
     function Language() {
@@ -183,8 +183,8 @@ import Dict from './language.js';
             const ImageData = []; // 保存圖片數據
             function GetLink(index, url, page) {
                 try {
-                    const Resample = page.querySelector("#img");
-                    const Original = page.querySelector("#i6 div:last-of-type a")?.href || "#";
+                    const Resample = Syn.Q(page, "#img");
+                    const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
 
                     if (!Resample) { // 處理找不到圖片的錯誤
                         Syn.Log(null, {
@@ -224,8 +224,8 @@ import Dict from './language.js';
         /* 重新獲取圖片數據 (試錯) -> [索引, 頁面連結, 圖片連結] */
         ReGetImageData(Index, Url) {
             function GetLink(index, url, page) {
-                const Resample = page.querySelector("#img");
-                const Original = page.querySelector("#i6 div:last-of-type a")?.href || "#";
+                const Resample = Syn.Q(page, "#img");
+                const Original = Syn.Q(page, "#i6 div:last-of-type a")?.href || "#";
 
                 if (!Resample) return false;
 
@@ -348,7 +348,7 @@ import Dict from './language.js';
                 if (Enforce) return;
                 [Delay, Thread] = DConfig.Dynamic(time, Delay, Thread, DConfig.Download_ND); // 動態變更延遲與線程
 
-                DConfig.DisplayCache = `[${++Progress}/${Total}]`;
+                DConfig.DisplayCache = `[${Math.min(++Progress, Total)}/${Total}]`;
 
                 // 為了避免移除指向導致的錯誤
                 self.Button && (self.Button.$text(`${Lang.Transl("下載進度")}: ${DConfig.DisplayCache}`));
@@ -371,7 +371,7 @@ import Dict from './language.js';
 
                         setTimeout(() => { Start(Data, true) }, 2e3); // 等待 2 秒後重新下載
                     } else Force(); // 直接強制壓縮
-                } else if (Progress > Total) Init(); // 避免進度超過總數, 當超過時初始化
+                }
 
                 --Task; // 完成任務後扣除計數
             };
@@ -424,9 +424,9 @@ import Dict from './language.js';
                     if (Enforce) break;
 
                     if (ReGet) {
-                        Syn.Log(Lang.Transl("重新取得數據"), { Uri: Uri.PageUrl }, { dev: Config.Dev });
+                        Syn.Log(`${Lang.Transl("重新取得數據")} (${ReTry})`, { Uri: Uri.PageUrl }, { dev: Config.Dev });
                         const Result = await self.ReGetImageData(Index, Uri.PageUrl);
-                        Syn.Log(Lang.Transl("取得結果"), { Result: Result }, { dev: Config.Dev });
+                        Syn.Log(`${Lang.Transl("取得結果")} (${ReTry})`, { Result: Result }, { dev: Config.Dev });
 
                         if (Result) {
                             const [Index, Purl, Iurl] = Result;
