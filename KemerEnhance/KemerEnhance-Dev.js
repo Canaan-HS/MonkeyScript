@@ -1059,38 +1059,63 @@
                     const cache = new Map();
                     const originalFetch = window.fetch;
 
-                    window.fetch = function (...args) {
-                        const url = args[0].url;
+                    window.fetch = async function (...args) {
+                        const input = args[0];
+                        const options = args[1] || {};
 
-                        // 檢查緩存
-                        if (cache.has(url)) {
-                            const cached = cache.get(url);
-                            return Promise.resolve(new Response(cached.body, {
-                                status: cached.status,
-                                headers: cached.headers
-                            }));
+                        const url = (typeof input === 'string') ? input : input.url;
+                        const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
+
+                        // 如果不是 GET 請求，則完全不使用快取，立即返回原始請求
+                        if (method.toUpperCase() !== 'GET') {
+                            return originalFetch.apply(this, args);
                         }
 
-                        // 請求並緩存
-                        return originalFetch.apply(this, args)
-                            .then(async response => {
+                        // 如果快取命中，立即返回快取中的 Response
+                        if (cache.has(url)) {
+                            const cached = cache.get(url);
+                            return new Response(cached.body, {
+                                status: cached.status,
+                                headers: cached.reders
+                            });
+                        }
 
-                                // 只處理JSON，直接獲取文本避免解析開銷
-                                if (response.headers.get('content-type')?.includes('json')) {
-                                    const text = await response.clone().text();
+                        // 執行請求與非阻塞式快取
+                        try {
+                            // 等待原始請求完成
+                            const response = await originalFetch.apply(this, args);
 
-                                    // 緩存結構
-                                    cache.set(url, {
-                                        body: text,
-                                        status: response.status,
-                                        headers: response.headers
-                                    });
-                                }
+                            // 檢查是否滿足所有快取條件
+                            const contentType = response.headers.get('content-type') || '';
+                            if (response.status === 200 && contentType.includes('json')) {
 
-                                return response;
-                            }).catch(error => {
-                                return originalFetch.apply(this, args);
-                            })
+                                // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
+                                (async () => {
+                                    try {
+                                        const responseClone = response.clone();
+                                        const bodyText = await responseClone.text();
+
+                                        // 檢查是否有實際內容
+                                        if (bodyText) {
+                                            const headersObject = {};
+                                            responseClone.headers.forEach((value, key) => {
+                                                headersObject[key] = value;
+                                            });
+
+                                            cache.set(url, {
+                                                body: bodyText,
+                                                status: responseClone.status,
+                                                headers: headersObject
+                                            });
+                                        }
+                                    } catch { }
+                                })();
+                            }
+
+                            return response;
+                        } catch (error) {
+                            throw error;
+                        }
                     };
                 `, "Cache-Fetch", false);
             },
