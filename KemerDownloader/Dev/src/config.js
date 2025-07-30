@@ -59,7 +59,7 @@ export default function Config(Syn) {
      * 外部連結: "ExternalLink" (Only AdvancedFetch)
      */
     const FetchSet = {
-        Delay: 200, // 獲取延遲 (ms) [太快會被 BAN]
+        Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
         AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
         ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
         UseFormat: false, // 這裡為 false 下面兩項就不生效
@@ -125,7 +125,7 @@ export default function Config(Syn) {
             } else {
                 this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
             }
-            this.TIME_THRESHOLD = Math.max(500, Math.min(2000, this.TIME_THRESHOLD));
+            this.TIME_THRESHOLD = Math.max(20, Math.min(2000, this.TIME_THRESHOLD));
         },
 
         dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
