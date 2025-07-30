@@ -107,15 +107,6 @@ export default function Fetch(
             // 正規化帖子時間戳 (傳入 Post 的物件)
             this.NormalizeTimestamp = (Post) => new Date(Post.published || Post.added)?.toLocaleString();
 
-            // 抓取檔案的副檔名
-            this.Suffix = (Str) => {
-                try {
-                    return `${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
-                } catch { // 無法判斷副檔名
-                    return "";
-                }
-            }
-
             // 進階抓取檔案分類 (影片與圖片文件 Array) => { video: {}, other: {} }
             this.AdvancedCategorize = (Data) => {
                 return Data.reduce((acc, file) => {
@@ -133,7 +124,7 @@ export default function Fetch(
                 return Data.reduce((acc, file) => {
                     const name = file.name;
                     const path = file.path;
-                    const extension = this.Suffix(name);
+                    const extension = Syn.SuffixName(name, "");
 
                     serverNumber = (serverNumber % 4) + 1;
                     const server = `https://n${serverNumber}.${this.Host}/data`;
@@ -451,7 +442,7 @@ export default function Fetch(
                                                 // 依據篩選出有預覽圖伺服器的, 生成圖片連結
                                                 return ServerList.reduce((acc, Server, Index) => {
                                                     const extension = [List[Index].name, List[Index].path]
-                                                        .map(name => this.Suffix(name))
+                                                        .map(name => Syn.SuffixName(name, ""))
                                                         .find(ext => this.IsImage(ext));
 
                                                     if (!extension) return acc;
