@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1616381/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1632816/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -53,9 +53,9 @@
       // 下載時包含 影片 與 其他附加檔案
       CompleteClose: false,
       // 下載完成後關閉
-      ConcurrentDelay: 500,
+      ConcurrentDelay: 600,
       // 下載線程延遲 (ms) [壓縮下載]
-      ConcurrentQuantity: 5,
+      ConcurrentQuantity: 3,
       // 下載線程數量 [壓縮下載]
       BatchOpenDelay: 500,
       // 一鍵開啟帖子的延遲 (ms)
@@ -77,7 +77,7 @@
       ...Syn2.gJV("FileName", {})
     };
     const FetchSet2 = {
-      Delay: 200,
+      Delay: 100,
       // 獲取延遲 (ms) [太快會被 BAN]
       AdvancedFetch: true,
       // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
@@ -90,10 +90,75 @@
       ...Syn2.gJV("FetchSet", {})
     };
     const Process2 = {
-      Lock: false,
       IsNeko: Syn2.$domain.startsWith("nekohouse"),
-      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "psd"],
-      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"]
+      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico"],
+      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"],
+      Lock: false,
+      MAX_Delay: 1500,
+      MIN_CONCURRENCY: 2,
+      MAX_CONCURRENCY: 6,
+      TIME_THRESHOLD: 1e3,
+      responseHistory: [],
+      networkCondition: "normal",
+      lastNetworkCheck: 0,
+      networkCheckInterval: 1e4,
+      networkQualityThresholds: {
+        good: 500,
+        poor: 1500
+      },
+      EMA_ALPHA: 0.3,
+      ADJUSTMENT_FACTOR: 0.25,
+      adaptiveFactors: {
+        good: { delayFactor: 0.8, threadFactor: 1.2 },
+        normal: { delayFactor: 1, threadFactor: 1 },
+        poor: { delayFactor: 1.5, threadFactor: 0.7 }
+      },
+      _checkNetworkCondition() {
+        const now = Date.now();
+        if (now - this.lastNetworkCheck < this.networkCheckInterval) {
+          return this.networkCondition;
+        }
+        this.lastNetworkCheck = now;
+        if (navigator.connection) {
+          const { effectiveType, saveData } = navigator.connection;
+          if (effectiveType === "4g" && !saveData) this.networkCondition = "good";
+          else if (effectiveType === "3g" || effectiveType === "4g" && saveData) this.networkCondition = "normal";
+          else this.networkCondition = "poor";
+        } else if (this.responseHistory.length >= 5) {
+          const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
+          if (avgResponseTime < this.networkQualityThresholds.good) this.networkCondition = "good";
+          else if (avgResponseTime > this.networkQualityThresholds.poor) this.networkCondition = "poor";
+          else this.networkCondition = "normal";
+        }
+        return this.networkCondition;
+      },
+      _updateThreshold(newResponseTime) {
+        this.responseHistory.push(newResponseTime);
+        if (this.responseHistory.length > 10) this.responseHistory.shift();
+        if (!this.TIME_THRESHOLD || this.responseHistory.length <= 1) {
+          this.TIME_THRESHOLD = newResponseTime;
+        } else {
+          this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
+        }
+        this.TIME_THRESHOLD = Math.max(20, Math.min(2e3, this.TIME_THRESHOLD));
+      },
+      dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
+        const responseTime = Date.now() - time;
+        this._updateThreshold(responseTime);
+        const networkState = this._checkNetworkCondition();
+        const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
+        const ratio = responseTime / this.TIME_THRESHOLD;
+        const delayChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * delayFactor;
+        let newDelay = currentDelay * (1 + delayChange);
+        newDelay = Math.max(minDelay, Math.min(newDelay, this.MAX_Delay));
+        if (currentThread !== null) {
+          const threadChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * threadFactor;
+          let newThread = currentThread * (1 - threadChange);
+          newThread = Math.max(this.MIN_CONCURRENCY, Math.min(newThread, this.MAX_CONCURRENCY));
+          return [Math.round(newDelay), Math.round(newThread)];
+        }
+        return Math.round(newDelay);
+      }
     };
     return { General: General2, FileName: FileName2, FetchSet: FetchSet2, Process: Process2 };
   }
@@ -346,83 +411,90 @@
       "開帖說明": "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10"
     }
   };
-  function Fetch(General2, Process2, Transl2, Syn2, md52) {
+  function Fetch(General2, FetchSet2, Process2, Transl2, Syn2, md52) {
     return class FetchData {
-      constructor(Delay, AdvancedFetch, ToLinkTxt) {
-        this.MetaDict = {};
-        this.DataDict = {};
-        this.RecordKey = `${decodeURIComponent(Syn2.url)}-Complete`;
-        this.TaskDict = /* @__PURE__ */ new Map();
-        this.Host = Syn2.$domain;
-        this.SourceURL = Syn2.url;
-        this.TitleCache = Syn2.title();
-        this.FirstURL = this.SourceURL.split("?o=")[0];
-        this.Pages = 1;
-        this.FinalPages = 10;
-        this.Progress = 0;
-        this.OnlyMode = false;
-        this.FetchDelay = Delay;
-        this.ToLinkTxt = ToLinkTxt;
-        this.AdvancedFetch = AdvancedFetch;
-        this.PostURL = (ID) => `${this.FirstURL}/post/${ID}`;
-        this.PostAPI = `${this.FirstURL}/post`.replace(this.Host, `${this.Host}/api/v1`);
-        this.PreviewAPI = (Url) => (
-          // 將預覽頁面轉成 API 連結
-          /[?&]o=/.test(Url) ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy"
-        );
-        this.Default = (Value) => {
-          if (!Value) return null;
-          const type = Syn2.Type(Value);
-          if (type === "Array") return Value.length > 0 && Value.some((item) => item !== "") ? Value : null;
-          if (type === "Object") {
-            const values = Object.values(Value);
-            return values.length > 0 && values.some((item) => item !== "") ? Value : null;
-          }
-          return Value;
+      static Try_Again_Promise = null;
+      constructor() {
+        this.metaDict = /* @__PURE__ */ new Map();
+        this.dataDict = /* @__PURE__ */ new Map();
+        this.sourceURL = Syn2.url;
+        this.titleCache = Syn2.title();
+        this.URL = new URL(this.sourceURL);
+        this.host = this.URL.host;
+        this.firstURL = this.URL.origin + this.URL.pathname;
+        this.queryValue = this.URL.searchParams.get("q");
+        if (this.queryValue) {
+          this.queryValue = encodeURIComponent(this.queryValue);
+        } else if (this.queryValue === "") {
+          this.URL.searchParams.delete("q");
+          this.sourceURL = this.URL.href;
+        }
+        this.currentPage = 1;
+        this.finalPage = 1;
+        this.totalPages = 0;
+        this.progress = 0;
+        this.onlyMode = false;
+        this.fetchDelay = FetchSet2.Delay;
+        this.toLinkTxt = FetchSet2.ToLinkTxt;
+        this.advancedFetch = FetchSet2.AdvancedFetch;
+        this.getPostURL = (id) => `${this.firstURL}/post/${id}`;
+        this.getNextPageURL = (urlStr) => {
+          const url = new URL(urlStr);
+          const search = url.searchParams;
+          const q = search.get("q");
+          let o = search.get("o");
+          o = o ? +o + 50 : 50;
+          const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
+          return `${url.origin}${url.pathname}${params}`;
         };
-        this.InfoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
-        this.FetchGenerate = (Data) => {
+        this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
+        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(`?q=${this.queryValue}`, `/posts-legacy?q=${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
+        this.getValidValue = (value) => {
+          if (!value) return null;
+          const type = Syn2.Type(value);
+          if (type === "Array") return value.length > 0 && value.some((item) => item !== "") ? value : null;
+          if (type === "Object") {
+            const values = Object.values(value);
+            return values.length > 0 && values.some((item) => item !== "") ? value : null;
+          }
+          return value;
+        };
+        this.infoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
+        this.fetchGenerate = (Data) => {
           return Object.keys(Data).reduce((acc, key) => {
-            if (this.InfoRules.has(key)) {
-              const value = this.Default(Data[key]);
+            if (this.infoRules.has(key)) {
+              const value = this.getValidValue(Data[key]);
               value && (acc[Transl2(key)] = value);
             }
             return acc;
           }, {});
         };
-        const ImageExts = new Set(Process2.ImageExts);
-        const VideoExts = new Set(Process2.VideoExts);
-        this.IsVideo = (Str) => VideoExts.has(Str.replace(/^\./, "").toLowerCase());
-        this.IsImage = (Str) => ImageExts.has(Str.replace(/^\./, "").toLowerCase());
-        this.NormalizeName = (Title, Index) => Title.trim().replace(/\n/g, " ") || `Untitled_${String(Index + 1).padStart(2, "0")}`;
-        this.NormalizeTimestamp = (Post) => new Date(Post.published || Post.added)?.toLocaleString();
-        this.Suffix = (Str) => {
-          try {
-            return `${Str?.match(/\.([^.]+)$/)[1]?.trim()}`;
-          } catch {
-            return "";
-          }
-        };
-        this.AdvancedCategorize = (Data) => {
-          return Data.reduce((acc, file) => {
+        const videoExts = new Set(Process2.VideoExts);
+        const imageExts = new Set(Process2.ImageExts);
+        this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
+        this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
+        this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
+        this.advancedCategorize = (data) => {
+          return data.reduce((acc, file) => {
             const url = `${file.server}/data${file.path}?f=${file.name}`;
-            this.IsVideo(file.extension) ? acc.video[file.name] = url : acc.other[file.name] = url;
+            this.isVideo(file.extension) ? acc.video[file.name] = url : acc.other[file.name] = url;
             return acc;
           }, { video: {}, other: {} });
         };
-        this.Categorize = (Title, Data) => {
+        this.normalCategorize = (title, data) => {
           let imgNumber = 0;
           let serverNumber = 0;
-          return Data.reduce((acc, file) => {
+          return data.reduce((acc, file) => {
             const name = file.name;
             const path = file.path;
-            const extension = this.Suffix(name);
+            const extension = Syn2.SuffixName(path, "");
             serverNumber = serverNumber % 4 + 1;
-            const server = `https://n${serverNumber}.${this.Host}/data`;
-            if (this.IsVideo(extension)) {
+            const server = `https://n${serverNumber}.${this.host}/data`;
+            if (this.isVideo(extension)) {
               acc.video[name] = `${server}${path}?f=${name}`;
-            } else if (this.IsImage(extension)) {
-              const name2 = `${Title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+            } else if (this.isImage(extension)) {
+              const name2 = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
               acc.img[name2] = `${server}${path}?f=${name2}`;
             } else {
               acc.other[name] = `${server}${path}?f=${name}`;
@@ -430,78 +502,41 @@
             return acc;
           }, { img: {}, video: {}, other: {} });
         };
-        this.TryAgain_Promise = null;
-        this.TooMany_TryAgain = (Uri) => {
-          if (this.TryAgain_Promise) {
-            return this.TryAgain_Promise;
+        this.deepDecodeURIComponent = (str) => {
+          let prev = str;
+          let curr = decodeURIComponent(prev);
+          while (curr !== prev) {
+            prev = curr;
+            curr = decodeURIComponent(prev);
           }
-          const sleepTime = 5e3;
-          const timeout = 2e5;
-          const Url = Uri;
-          this.TryAgain_Promise = new Promise(async (resolve) => {
-            const checkRequest = async () => {
-              const controller = new AbortController();
-              const signal = controller.signal;
-              const timeoutId = setTimeout(() => {
-                controller.abort();
-              }, timeout);
-              try {
-                const response = await fetch(Url, {
-                  // 發起請求
-                  method: "HEAD",
-                  signal
-                });
-                clearTimeout(timeoutId);
-                if (response.status === 429) {
-                  await Syn2.Sleep(sleepTime);
-                  await checkRequest();
-                } else {
-                  resolve();
-                  this.TryAgain_Promise = null;
-                }
-              } catch (err) {
-                clearTimeout(timeoutId);
-                await Syn2.Sleep(sleepTime);
-                await checkRequest();
-              }
-            };
-            await checkRequest();
-          });
-          return this.TryAgain_Promise;
+          return curr;
         };
-        this.Worker = Syn2.WorkerCreation(`
-                let queue = [], processing=false;
-                onmessage = function(e) {
-                    queue.push(e.data);
-                    !processing && (processing=true, processQueue());
-                }
-                async function processQueue() {
-                    if (queue.length > 0) {
-                        const {index, title, url} = queue.shift();
-                        FetchRequest(index, title, url);
-                        processQueue();
-                    } else {processing = false}
-                }
-                async function FetchRequest(index, title, url) {
-                    fetch(url).then(response => {
-                        if (response.ok) {
-                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
-                            response.text().then(content => {
-                                postMessage({ index, title, url, content, error: false });
-                            });
-                        } else {
-                            postMessage({ index, title, url, content: "", error: true });
-                        }
-                    })
-                    .catch(error => {
-                        postMessage({ index, title, url, content: "", error: true });
-                    });
-                }
-            `);
-        this.specialLinkParse = (Data) => {
+        this.nekoCategorize = (title, data) => {
+          let imgNumber = 0;
+          return data.reduce((acc, file) => {
+            const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
+            if (uri) {
+              const extension = Syn2.SuffixName(uri, "");
+              const url = uri.startsWith("http") ? uri : `${Syn2.$origin}${uri}`;
+              const getDownloadName = (link) => link.download?.trim() || link.$text();
+              if (this.isVideo(extension)) {
+                const name = getDownloadName(file);
+                acc.video[name] = `${url}?f=${name}`;
+              } else if (this.isImage(extension)) {
+                const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+                acc.img[name] = `${url}?f=${name}`;
+              } else {
+                const name = this.deepDecodeURIComponent(getDownloadName(file));
+                acc.other[name] = `${url}?f=${name}`;
+              }
+            }
+            return acc;
+          }, { video: {}, img: {}, other: {} });
+        };
+        this.specialLinkParse = (data) => {
           const Cache = {};
           try {
-            for (const a of Syn2.DomParse(Data).$qa("body a")) {
+            for (const a of Syn2.DomParse(data).$qa("body a")) {
               const href = a.href;
               const hash = md52(href).slice(0, 16);
               if (href.startsWith("https://mega.nz")) {
@@ -532,259 +567,606 @@
           }
           return Cache;
         };
+        this.TooMany_TryAgain = function (url) {
+          if (FetchData.Try_Again_Promise) {
+            return FetchData.Try_Again_Promise;
+          }
+          const promiseLock = new Promise(async (resolve, reject) => {
+            const sleepTime = 5e3;
+            const timeout = 2e5;
+            const checkRequest = async () => {
+              const controller = new AbortController();
+              const signal = controller.signal;
+              const timeoutId = setTimeout(() => controller.abort(), timeout);
+              try {
+                const response = await fetch(url, {
+                  method: "HEAD",
+                  signal,
+                  cache: "no-store"
+                });
+                clearTimeout(timeoutId);
+                if (response.status === 429 || response.status === 503) {
+                  await Syn2.Sleep(sleepTime);
+                  await checkRequest();
+                } else if (response.status === 200) {
+                  resolve(response);
+                }
+              } catch (err) {
+                clearTimeout(timeoutId);
+                await Syn2.Sleep(sleepTime);
+                await checkRequest();
+              }
+            };
+            await checkRequest();
+          });
+          FetchData.Try_Again_Promise = promiseLock;
+          promiseLock.finally(() => {
+            if (FetchData.Try_Again_Promise === promiseLock) {
+              FetchData.Try_Again_Promise = null;
+            }
+          });
+          return promiseLock;
+        };
+        this.worker = Syn2.WorkerCreation(`
+                let queue = [], processing=false;
+                onmessage = function(e) {
+                    queue.push(e.data);
+                    !processing && (processing=true, processQueue());
+                }
+                async function processQueue() {
+                    if (queue.length > 0) {
+                        const {index, title, url, time, delay} = queue.shift();
+                        FetchRequest(index, title, url, time, delay);
+                        processQueue();
+                    } else {processing = false}
+                }
+                async function FetchRequest(index, title, url, time, delay) {
+                    fetch(url).then(response => {
+                        if (response.ok) {
+                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
+                            response.text().then(content => {
+                                postMessage({ index, title, url, content, time, delay, error: false });
+                            });
+                        } else {
+                            postMessage({ index, title, url, content: "", time, delay, error: true });
+                        }
+                    })
+                    .catch(error => {
+                        postMessage({ index, title, url, content: "", time, delay, error: true });
+                    });
+                }
+            `);
+        FetchSet2.UseFormat && this._fetchConfig(FetchSet2.Mode, FetchSet2.Format);
       }
       /**
        * 設置抓取規則
-       * @param {string} Mode - "FilterMode" | "OnlyMode"
-       * @param {Array} UserSet - 要進行的設置
+       * @param {string} mode - "FilterMode" | "OnlyMode"
+       * @param {Array} userSet - 要進行的設置
        *
        * @example
        * 可配置項目: ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]
        *
        * 這會將這些項目移除在顯示
-       * FetchConfig("FilterMode", ["PostLink", "ImgLink", "DownloadLink"]);
+       * _fetchConfig("FilterMode", ["PostLink", "ImgLink", "DownloadLink"]);
        *
        * 這會只顯示這些項目
-       * FetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
+       * _fetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
        */
-      async FetchConfig(Mode = "FilterMode", UserSet = []) {
-        switch (Mode) {
-          case "FilterMode":
-            this.OnlyMode = false;
-            UserSet.forEach((key) => this.InfoRules.delete(key));
-            break;
-          case "OnlyMode":
-            this.OnlyMode = true;
-            this.InfoRules = new Set(
-              [...this.InfoRules].filter((key) => UserSet.has(key))
-            );
-            break;
+      async _fetchConfig(mode = "FilterMode", userSet = []) {
+        if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
+        if (mode.toLowerCase() === "filtermode") {
+          this.onlyMode = false;
+          userSet.forEach((key) => this.infoRules.delete(key));
+        } else if (mode.toLowerCase() === "onlymode") {
+          this.onlyMode = true;
+          const userFilter = new Set(userSet);
+          this.infoRules = new Set(
+            [...this.infoRules].filter((key) => userFilter.has(key))
+          );
         }
       }
       /* 入口調用函數 */
-      async FetchInit() {
-        const Section = Syn2.$q("section");
-        if (Section) {
+      async fetchRun() {
+        const small = Syn2.$q("small");
+        const items = Syn2.$q(".card-list__items");
+        if (items) {
           Process2.Lock = true;
-          for (const page of Syn2.$qa(".pagination-button-disabled b")) {
-            const number = Number(page.$text());
-            if (number) {
-              this.Pages = number;
-              break;
-            }
+          const currentPage = +Syn2.$q(".pagination-button-current b")?.$text();
+          currentPage && (this.currentPage = currentPage);
+          if (small) {
+            this.totalPages = +small.$text().split(" of ")[1] || 0;
+            this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
           }
-          Syn2.Session(this.RecordKey) && (this.FetchDelay = 0);
-          this.FetchRun(Section, this.SourceURL);
+          this._fetchPage(items, this.sourceURL);
         } else {
           alert(Transl2("未取得數據"));
         }
       }
-      /* ===== 主要抓取函數 ===== */
-      /* 運行抓取數據 */
-      async FetchRun(Section, Url) {
-        if (Process2.IsNeko) {
-          Section.$qa(".card-list__items article");
-          Section.$q("a.pagination-button-after-current");
-        } else {
-          this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url) });
-          const HomeData = await new Promise((resolve, reject) => {
-            this.Worker.onmessage = async (e) => {
-              const { index, title, url, content, error } = e.data;
-              if (!error) resolve({ index, title, url, content });
-              else {
-                Syn2.Log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
-                await this.TooMany_TryAgain(url);
-                this.Worker.postMessage({ index, title, url });
-              }
-            };
-          });
-          await this.FetchContent(HomeData);
-          this.Pages++;
-          this.Pages <= this.FinalPages ? this.FetchRun(
-            null,
-            /\?o=\d+$/.test(Url) ? Url.replace(/\?o=(\d+)$/, (match, number) => `?o=${+number + 50}`) : `${Url}?o=50`
-          ) : (Syn2.Session(this.RecordKey, { value: true }), this.ToLinkTxt ? this.ToTxt() : this.ToJson());
-        }
-      }
       /* 測試進階抓取數據 */
-      async FetchTest(Id) {
+      async fetchTest(id) {
         Process2.Lock = true;
-        this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(this.FirstURL) });
-        const HomeData = await new Promise((resolve, reject) => {
-          this.Worker.onmessage = async (e) => {
+        this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(this.firstURL) });
+        const homeData = await new Promise((resolve, reject) => {
+          this.worker.onmessage = async (e) => {
             const { index, title, url, content: content2, error } = e.data;
-            if (!error) resolve({ index, title, url, content: content2 });
+            if (!error) resolve({ url, content: content2 });
             else {
               Syn2.Log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
               await this.TooMany_TryAgain(url);
-              this.Worker.postMessage({ index, title, url });
+              this.worker.postMessage({ index, title, url });
             }
           };
         });
-        const { content } = HomeData;
-        Object.assign(HomeData, { content: JSON.parse(content) });
-        Syn2.Log("HomeData", HomeData, { collapsed: false });
-        const Cloned_HomeData = structuredClone(HomeData);
-        Cloned_HomeData.content.results = [{ id: Id }];
-        Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content);
-        await this.FetchContent(Cloned_HomeData);
-        Syn2.Log("PostDate", this.DataDict, { collapsed: false });
-        this.Reset();
+        const { content } = homeData;
+        Object.assign(homeData, { content: JSON.parse(content) });
+        Syn2.Log("HomeData", homeData, { collapsed: false });
+        const homeDataClone = structuredClone(homeData);
+        homeDataClone.content.results = [{ id }];
+        homeDataClone.content = JSON.stringify(homeDataClone.content);
+        await this._fetchContent(homeDataClone);
+        Syn2.Log("PostDate", this.dataDict, { collapsed: false });
+        this._reset();
       }
-      /* 獲取帖子內部數據 */
-      async FetchContent(Data) {
-        this.Progress = 0;
-        const { index, title, url, content } = Data;
-        if (Process2.IsNeko);
-        else {
-          const Json = JSON.parse(content);
-          if (Json) {
-            if (Object.keys(this.MetaDict).length === 0) {
-              const props = Json.props;
-              this.FinalPages = Math.ceil(+props.count / 50);
-              this.MetaDict = {
-                [Transl2("作者")]: props.name,
-                [Transl2("帖子數量")]: props.count,
-                [Transl2("建立時間")]: Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"),
-                [Transl2("獲取頁面")]: this.SourceURL,
-                [Transl2("作者網站")]: props.display_data.href
-              };
-            }
-            const Results = Json.results;
-            if (this.AdvancedFetch) {
-              const Tasks = [];
-              const resolvers = /* @__PURE__ */ new Map();
-              this.Worker.onmessage = async (e) => {
-                const { index: index2, title: title2, url: url2, content: content2, error } = e.data;
-                if (resolvers.has(index2)) {
-                  const { resolve, reject } = resolvers.get(index2);
-                  try {
-                    if (!error) {
-                      const Json2 = JSON.parse(content2);
-                      if (Json2) {
-                        const Post = Json2.post;
-                        const Title = this.NormalizeName(Post.title, index2);
-                        const File = this.AdvancedCategorize(Json2.attachments);
-                        const ImgLink = () => {
-                          const ServerList = Json2.previews.filter((item) => item.server);
-                          if ((ServerList?.length ?? 0) === 0) return;
-                          const List = [
-                            ...Post.file ? Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : [] : [],
-                            ...Post.attachments
-                          ];
-                          const Fill = Syn2.GetFill(ServerList.length);
-                          return ServerList.reduce((acc, Server, Index) => {
-                            const extension = [List[Index].name, List[Index].path].map((name2) => this.Suffix(name2)).find((ext) => this.IsImage(ext));
-                            if (!extension) return acc;
-                            const name = `${Title}_${Syn2.Mantissa(Index, Fill, "0")}.${extension}`;
-                            acc[name] = `${Server.server}/data${List[Index].path}?f=${name}`;
-                            return acc;
-                          }, {});
-                        };
-                        const Gen = this.FetchGenerate({
-                          PostLink: this.PostURL(Post.id),
-                          Timestamp: this.NormalizeTimestamp(Post),
-                          TypeTag: Post.tags,
-                          ImgLink: ImgLink(),
-                          VideoLink: File.video,
-                          DownloadLink: File.other,
-                          ExternalLink: this.specialLinkParse(Post.content)
-                        });
-                        if (Object.keys(Gen).length !== 0) {
-                          this.TaskDict.set(index2, { title: Title, content: Gen });
-                        }
-                        ;
-                        resolve();
-                        Syn2.title(`（${this.Pages} - ${++this.Progress}）`);
-                        Syn2.Log("Request Successful", this.TaskDict, { dev: General2.Dev, collapsed: false });
-                      } else throw new Error("Json Parse Failed");
-                    } else {
-                      throw new Error("Request Failed");
-                    }
-                  } catch (error2) {
-                    Syn2.Log(error2, { index: index2, title: title2, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
-                    await this.TooMany_TryAgain(url2);
-                    this.Worker.postMessage({ index: index2, title: title2, url: url2 });
-                  }
+      /* ===== 主要抓取函數 ===== */
+      /* 獲取預覽頁數據 */
+      async _fetchPage(items, url) {
+        if (Process2.IsNeko) {
+          if (!items) {
+            this.worker.postMessage({ index: 0, title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
+            const homeData = await new Promise((resolve, reject) => {
+              this.worker.onmessage = async (e) => {
+                const { index, title, url: url2, content, time, delay, error } = e.data;
+                if (!error) {
+                  this.fetchDelay = Process2.dynamicParam(time, delay);
+                  resolve(content);
+                } else {
+                  Syn2.Log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  await this.TooMany_TryAgain(url2);
+                  this.worker.postMessage({ index, title, url: url2, time, delay });
                 }
               };
-              for (const [Index, Post] of Results.entries()) {
-                Tasks.push(new Promise((resolve, reject) => {
-                  resolvers.set(Index, { resolve, reject });
-                  this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}` });
-                }));
-                await Syn2.Sleep(this.FetchDelay);
+            });
+            items = Syn2.DomParse(homeData)?.$q(".card-list__items");
+          }
+          if (items) {
+            const article = items.$qa("article");
+            const content = article.map((item, index) => ({
+              // 獲取帖子內部連結
+              index,
+              title: item.$q("header").$text(),
+              url: item.$q("a").href
+            }));
+            await this._fetchContent({ content });
+          }
+        } else {
+          this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
+          const homeData = await new Promise((resolve, reject) => {
+            this.worker.onmessage = async (e) => {
+              const { index, title, url: url2, content, time, delay, error } = e.data;
+              if (!error) {
+                this.fetchDelay = Process2.dynamicParam(time, delay);
+                resolve({ url: url2, content });
+              } else {
+                Syn2.Log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                await this.TooMany_TryAgain(url2);
+                this.worker.postMessage({ index, title, url: url2, time, delay });
               }
-              await Promise.allSettled(Tasks);
+            };
+          });
+          await this._fetchContent(homeData);
+        }
+        this.currentPage++;
+        this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
+      }
+      /* 獲取帖子內部數據 */
+      async _fetchContent(homeData) {
+        this.progress = 0;
+        const { url, content } = homeData;
+        if (Process2.IsNeko) {
+          let taskCount = 0;
+          const tasks = [];
+          const resolvers = /* @__PURE__ */ new Map();
+          const postCount = content.length;
+          if (this.metaDict.size === 0) {
+            this.metaDict.set(Transl2("作者"), Syn2.$q("span[itemprop='name'], fix_name").$text());
+            this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
+            this.metaDict.set(Transl2("建立時間"), Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+            this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
+          }
+          this.worker.onmessage = async (e) => {
+            const { index, title, url: url2, content: content2, time, delay, error } = e.data;
+            if (!error) {
+              const { resolve, reject } = resolvers.get(index);
+              this.fetchDelay = Process2.dynamicParam(time, delay);
+              const standardTitle = this.normalizeName(title, index);
+              const postDom = Syn2.DomParse(content2);
+              const classifiedFiles = this.nekoCategorize(standardTitle, [
+                ...postDom.$qa(".fileThumb"),
+                // 圖片連結
+                ...postDom.$qa(".scrape__attachments a")
+                // 下載連結
+              ]);
+              const generatedData = this.fetchGenerate({
+                PostLink: url2,
+                Timestamp: postDom.$q(".timestamp").$text(),
+                ImgLink: classifiedFiles.img,
+                VideoLink: classifiedFiles.video,
+                DownloadLink: classifiedFiles.other
+                // ExternalLink: this.specialLinkParse(post.content)
+              });
+              if (Object.keys(generatedData).length !== 0) {
+                this.dataDict.set(standardTitle, generatedData);
+              }
+              resolve();
+              Syn2.title(`（${this.currentPage} - ${++taskCount}）`);
+              Syn2.Log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
             } else {
-              for (const [Index, Post] of Results.entries()) {
-                const Title = this.NormalizeName(Post.title, Index);
+              await this.TooMany_TryAgain(url2);
+              this.worker.postMessage({ index, title, url: url2, time, delay });
+            }
+          };
+          for (const { index, title, url: url2 } of content) {
+            tasks.push(new Promise((resolve, reject) => {
+              resolvers.set(index, { resolve, reject });
+              this.worker.postMessage({ index, title, url: url2, time: Date.now(), delay: this.fetchDelay });
+            }));
+            await Syn2.Sleep(this.fetchDelay);
+          }
+          await Promise.allSettled(tasks);
+        } else {
+          const contentJson = JSON.parse(content);
+          if (contentJson) {
+            if (this.metaDict.size === 0) {
+              const props = contentJson.props;
+              this.metaDict.set(Transl2("作者"), props.name);
+              this.metaDict.set(Transl2("帖子數量"), props.count);
+              this.metaDict.set(Transl2("建立時間"), Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+              this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
+              this.metaDict.set(Transl2("作者網站"), props.display_data.href);
+            }
+            const results = contentJson.results;
+            if (this.advancedFetch) {
+              const tasks = [];
+              const resolvers = /* @__PURE__ */ new Map();
+              this.worker.onmessage = async (e) => {
+                const { index, title, url: url2, content: content2, time, delay, error } = e.data;
                 try {
-                  const File = this.Categorize(Title, [...Post.file ? Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : [] : [], ...Post.attachments]);
-                  const Gen = this.FetchGenerate({
-                    PostLink: this.PostURL(Post.id),
-                    Timestamp: this.NormalizeTimestamp(Post),
-                    ImgLink: File.img,
-                    VideoLink: File.video,
-                    DownloadLink: File.other
+                  if (!error) {
+                    const { resolve, reject } = resolvers.get(index);
+                    this.fetchDelay = Process2.dynamicParam(time, delay);
+                    const contentJson2 = JSON.parse(content2);
+                    if (contentJson2) {
+                      const post = contentJson2.post;
+                      const standardTitle = this.normalizeName(post.title, index);
+                      const classifiedFiles = this.advancedCategorize(contentJson2.attachments);
+                      const getImgLink = () => {
+                        const serverList = contentJson2.previews.filter((item) => item.server);
+                        if ((serverList?.length ?? 0) === 0) return;
+                        const postList = [
+                          ...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [],
+                          ...post.attachments
+                        ];
+                        const fillValue = Syn2.GetFill(serverList.length);
+                        return serverList.reduce((acc, server, index2) => {
+                          const extension = [postList[index2].name, postList[index2].path].map((name2) => Syn2.SuffixName(name2, "")).find((ext) => this.isImage(ext));
+                          if (!extension) return acc;
+                          const name = `${standardTitle}_${Syn2.Mantissa(index2, fillValue, "0")}.${extension}`;
+                          acc[name] = `${server.server}/data${postList[index2].path}?f=${name}`;
+                          return acc;
+                        }, {});
+                      };
+                      const generatedData = this.fetchGenerate({
+                        PostLink: this.getPostURL(post.id),
+                        Timestamp: this.normalizeTimestamp(post),
+                        TypeTag: post.tags,
+                        ImgLink: getImgLink(),
+                        VideoLink: classifiedFiles.video,
+                        DownloadLink: classifiedFiles.other,
+                        ExternalLink: this.specialLinkParse(post.content)
+                      });
+                      if (Object.keys(generatedData).length !== 0) {
+                        this.dataDict.set(standardTitle, generatedData);
+                      }
+                      ;
+                      resolve();
+                      Syn2.title(`（${this.currentPage} - ${++this.progress}）`);
+                      Syn2.Log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
+                    } else throw new Error("Json Parse Failed");
+                  } else {
+                    throw new Error("Request Failed");
+                  }
+                } catch (error2) {
+                  Syn2.Log(error2, { index, title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  await this.TooMany_TryAgain(url2);
+                  this.worker.postMessage({ index, title, url: url2, time, delay });
+                }
+              };
+              for (const [index, post] of results.entries()) {
+                tasks.push(new Promise((resolve, reject) => {
+                  resolvers.set(index, { resolve, reject });
+                  this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
+                }));
+                await Syn2.Sleep(this.fetchDelay);
+              }
+              await Promise.allSettled(tasks);
+            } else {
+              for (const [index, post] of results.entries()) {
+                const standardTitle = this.normalizeName(post.title, index);
+                try {
+                  const classifiedFiles = this.normalCategorize(standardTitle, [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments]);
+                  const generatedData = this.fetchGenerate({
+                    PostLink: this.getPostURL(post.id),
+                    Timestamp: this.normalizeTimestamp(post),
+                    ImgLink: classifiedFiles.img,
+                    VideoLink: classifiedFiles.video,
+                    DownloadLink: classifiedFiles.other
                   });
-                  if (Object.keys(Gen).length !== 0) {
-                    this.TaskDict.set(Index, { title: Title, content: Gen });
+                  if (Object.keys(generatedData).length !== 0) {
+                    this.dataDict.set(standardTitle, generatedData);
                   }
                   ;
-                  Syn2.title(`（${this.Pages}）`);
-                  Syn2.Log("Parsed Successful", this.TaskDict, { dev: General2.Dev, collapsed: false });
+                  Syn2.title(`（${this.currentPage}）`);
+                  Syn2.Log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General2.Dev, collapsed: false });
                 } catch (error) {
-                  Syn2.Log(error, { title: Title, url }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Syn2.Log(error, { index, title: standardTitle, url }, { dev: General2.Dev, type: "error", collapsed: false });
                   continue;
                 }
               }
             }
-            for (const data of this.TaskDict.values()) {
-              this.DataDict[data.title] = data.content;
-            }
-            this.TaskDict.clear();
-            await Syn2.Sleep(this.FetchDelay);
-            return true;
+            await Syn2.Sleep(this.fetchDelay);
           }
         }
+        return true;
       }
       /* ===== 輸出生成 ===== */
-      async Reset() {
+      async _reset() {
+        this.metaDict = null;
+        this.dataDict = null;
+        this.worker.terminate();
         Process2.Lock = false;
-        this.MetaDict = {};
-        this.DataDict = {};
-        this.Worker.terminate();
-        Syn2.title(this.TitleCache);
+        Syn2.title(this.titleCache);
       }
-      async ToTxt() {
-        let Content = "";
-        for (const value of Object.values(this.DataDict)) {
-          for (const link of Object.values(Object.assign(
+      async _toTxt() {
+        let content = "";
+        for (const value of this.dataDict.values()) {
+          const getLinks = Object.assign(
             {},
             value[Transl2("ImgLink")],
             value[Transl2("VideoLink")],
             value[Transl2("DownloadLink")]
-          ))) {
-            Content += `${link}
+          );
+          for (const link of Object.values(getLinks)) {
+            content += `${encodeURI(link)}
 `;
           }
         }
-        if (Content.endsWith("\n")) Content = Content.slice(0, -1);
-        Syn2.OutputTXT(Content, this.MetaDict[Transl2("作者")], () => {
-          Content = "";
-          this.Reset();
+        if (content.endsWith("\n")) content = content.slice(0, -1);
+        Syn2.OutputTXT(content, this.metaDict.get(Transl2("作者")), () => {
+          content = null;
+          this._reset();
         });
       }
-      async ToJson() {
-        const Json_data = Object.assign(
+      async _toJson() {
+        let jsonData = Object.assign(
           {},
-          { [Transl2("元數據")]: this.MetaDict },
-          { [`${Transl2("帖子內容")} (${Object.keys(this.DataDict).length})`]: this.DataDict }
+          { [Transl2("元數據")]: Object.fromEntries(this.metaDict) },
+          { [`${Transl2("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) }
         );
-        Syn2.OutputJson(Json_data, this.MetaDict[Transl2("作者")], () => {
-          this.Reset();
+        Syn2.OutputJson(jsonData, this.metaDict.get(Transl2("作者")), () => {
+          jsonData = null;
+          this._reset();
         });
+      }
+    };
+  }
+  function Menu(Syn2, Transl2, General2, FileName2, FetchSet2) {
+    return class UI {
+      constructor() {
+        this.overlay = null;
+        this.shadow = Syn2.createElement(document.body, "div", { id: "kemer-settings" });
+        this.shadowRoot = this.shadow.attachShadow({ mode: "open" });
+        this._loadUi();
+      }
+      open() {
+        this.overlay.style.display = "flex";
+        setTimeout(() => this.overlay.classList.add("visible"), 10);
+      }
+      close() {
+        this.overlay.classList.remove("visible");
+        setTimeout(() => {
+          this.overlay.style.display = "none";
+        }, 200);
+      }
+      _getStyles() {
+        const color = {
+          Primary: {
+            "kemono": "#e8a17d",
+            "coomer": "#99ddff",
+            "nekohouse": "#bb91ff"
+          }[Syn2.$domain.split(".")[0]],
+          Background: "#2c2c2e",
+          BackgroundLight: "#3a3a3c",
+          Border: "#545458",
+          Text: "#f5f5f7",
+          TextSecondary: "#8e8e93"
+        };
+        return `
+                :host { --primary-color: ${color.Primary}; font-size: 16px; }
+                #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); }
+                #modal { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: ${color.Background}; color: ${color.Text}; border-radius: 14px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); transform: scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
+                #overlay.visible #modal { transform: scale(1); opacity: 1; }
+                .header h2 { margin: 0 0 16px 0; font-size: 1.5em; font-weight: 600; text-align: center; }
+                .tabs { display: flex; border-bottom: 1px solid ${color.Border}; margin-bottom: 16px; }
+                .tab-link { padding: 10px 16px; cursor: pointer; background: none; border: none; color: ${color.TextSecondary}; font-size: 1em; font-weight: 500; transition: color 0.2s, border-bottom 0.2s; border-bottom: 3px solid transparent; }
+                .tab-link.active { color: #fff; border-bottom: 3px solid var(--primary-color); }
+                .tab-content { display: none; } .tab-content.active { display: block; }
+                .form-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px 4px; border-bottom: 1px solid ${color.BackgroundLight}; }
+                .form-row:last-child { border-bottom: none; }
+                .form-row-full { grid-template-columns: 1fr; }
+                .form-row label { display: flex; align-items: center; gap: 8px; font-size: 0.95em; }
+                .tooltip-icon { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; border-radius: 50%; background-color: #555; color: #fff; font-weight: bold; cursor: help; position: relative; font-size: 14px; }
+                .tooltip-icon.separate { margin-left: 8px; }
+                .tooltip-icon:hover::after { content: attr(data-tooltip); z-index: 9999; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background-color: #1c1c1e; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.8em; width: max-content; max-width: 250px; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid ${color.Border}; }
+                .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+                .switch input { opacity: 0; width: 0; height: 0; }
+                .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; }
+                .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+                input:checked + .slider { background-color: var(--primary-color); }
+                input:checked + .slider:before { transform: translateX(22px); }
+                .slider.round { border-radius: 28px; } .slider.round:before { border-radius: 50%; }
+                input[type="text"], select { background-color: ${color.BackgroundLight}; border: 1px solid ${color.Border}; color: ${color.Text}; border-radius: 8px; padding: 10px; width: 120px; text-align: center; font-size: 0.9em; }
+                .accordion { border: 1px solid ${color.Border}; border-radius: 8px; margin-bottom: 16px; background-color: ${color.BackgroundLight}; overflow: hidden; }
+                .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 14px; background-color: ${color.BackgroundLight}; }
+                .accordion-icon { transition: transform 0.3s ease; font-size: 12px; }
+                .accordion-content { max-height: 0; overflow: hidden; position: relative; transition: max-height 0.3s ease-out, padding 0.3s ease-out; padding: 0 14px; }
+                .accordion-toggle:checked + .accordion-header .accordion-icon { transform: rotate(90deg); }
+                .accordion-toggle:checked ~ .accordion-content { max-height: 200px; padding: 14px; }
+                #fetch-conditional-settings { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+                .conditional-trigger:checked + .form-row + #fetch-conditional-settings { max-height: 500px; }
+                .conditional-trigger:checked + .form-row .switch .slider { background-color: var(--primary-color); }
+                .conditional-trigger:checked + .form-row .switch .slider:before { transform: translateX(22px); }
+                .multi-select { align-items: start; }
+                .multi-select-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+                .multi-select-btn input { display: none; }
+                .multi-select-btn span { display: block; text-align: center; padding: 8px 12px; border: 1px solid ${color.Border}; border-radius: 16px; cursor: pointer; transition: all 0.2s; font-size: 0.85em; }
+                .multi-select-btn input:checked + span { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+                pre { background-color: #1c1c1e; border: 1px solid #545458; border-radius: 8px; padding: 15px; overflow-x: auto; font-size: 0.85em; line-height: 1.4; color: #e0e0e0; }
+                code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; }
+            `;
+      }
+      _createHTML() {
+        const createFormItems = (settings, category) => {
+          return Object.entries(settings).map(([key, value]) => {
+            if (key === "Dev" || category === "FetchSet" && (key === "Mode" || key === "Format")) return "";
+            const type = typeof value;
+            const label = Transl2(key);
+            const id = `${category}-${key}`;
+            const tooltip = `<span class="tooltip-icon" data-tooltip="${Transl2("說明")}">!</span>`;
+            if (category === "FetchSet" && key === "UseFormat") {
+              return `
+                        <input type="checkbox" id="${id}" class="conditional-trigger" style="display: none;" ${value ? "checked" : ""}>
+                        <div class="form-row">
+                            <label for="${id}">${label}${tooltip}</label>
+                            <label class="switch" for="${id}">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        ${this._createFetchConditionalItems()}
+                    `;
+            } else if (type === "boolean") {
+              return `
+                        <div class="form-row">
+                            <label for="${id}">${label}${tooltip}</label>
+                            <label class="switch">
+                                <input type="checkbox" id="${id}" ${value ? "checked" : ""}>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    `;
+            } else if (key === "FillValue") {
+              return `
+                        <div class="accordion form-row-full">
+                            <input type="checkbox" id="accordion-${id}" class="accordion-toggle" style="display: none;">
+                            <label class="accordion-header" for="accordion-${id}">
+                                <span>${label}</span>
+                                <span class="accordion-icon">▶</span>
+                            </label>
+                            <div class="accordion-content">
+                                <div class="form-row">
+                                    <label for="${id}-Filler">${Transl2("Filler")}<span class="tooltip-icon" data-tooltip="${Transl2("FillerHelp")}">!</span></label>
+                                    <input type="text" id="${id}-Filler" value="${value.Filler}">
+                                </div>
+                                <div class="form-row">
+                                    <label for="${id}-Amount">${Transl2("Amount")}<span class="tooltip-icon" data-tooltip="${Transl2("AmountHelp")}">!</span></label>
+                                    <input type="text" id="${id}-Amount" value="${value.Amount}">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            } else if (type === "string" || type === "number") {
+              return `
+                        <div class="form-row">
+                            <label for="${id}">${label}${tooltip}</label>
+                            <input type="text" id="${id}" value="${value}">
+                        </div>
+                    `;
+            }
+            return "";
+          }).join("");
+        };
+        const fileNameConfigContent = `
+                \r{Time} | ${Transl2("發佈時間")}
+                \r{Title} | ${Transl2("標題")}
+                \r{Artist} | ${Transl2("作者|繪師")}
+                \r{Source} | ${Transl2("(Pixiv Fanbox) 之類的標籤")}
+                \r{Fill} | ${Transl2("只適用於檔名的填充值, 必須存在該值")}
+            `;
+        return `
+                <div id="overlay">
+                    <div id="modal">
+                        <div class="header"><h2>${Transl2("Settings")}</h2></div>
+                        <div class="tabs">
+                            <button class="tab-link active" data-tab="tab-config">${Transl2("General")}</button>
+                            <button class="tab-link" data-tab="tab-filename">${Transl2("FileName")}</button>
+                            <button class="tab-link" data-tab="tab-fetch">${Transl2("FetchSet")}</button>
+                        </div>
+                        <div class="tab-content active" id="tab-config">${createFormItems(General2, "General")}</div>
+                        <div class="tab-content" id="tab-filename">
+                            ${createFormItems(FileName2, "FileName")}
+                            <pre class="filename-config-display">${fileNameConfigContent}</pre>
+                        </div>
+                        <div class="tab-content" id="tab-fetch">${createFormItems(FetchSet2, "FetchSet")}</div>
+                    </div>
+                </div>
+            `;
+      }
+      _createFetchConditionalItems() {
+        const modeHtml = `
+                <div class="form-row">
+                    <label for="fetch-Mode">${Transl2("Mode")}<span class="tooltip-icon" data-tooltip="${Transl2("模式說明")}">!</span></label>
+                    <select id="fetch-Mode">
+                        <option value="FilterMode" ${FetchSet2.Mode === "FilterMode" ? "selected" : ""}>${Transl2("FilterMode")}</option>
+                        <option value="OnlyMode" ${FetchSet2.Mode === "OnlyMode" ? "selected" : ""}>${Transl2("OnlyMode")}</option>
+                    </select>
+                </div>
+            `;
+        const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
+        const formatButtons = formatOptions.map((opt) => `
+                <label class="multi-select-btn">
+                    <input type="checkbox" name="fetch-Format" value="${opt}" ${FetchSet2.Format.includes(opt) ? "checked" : ""}>
+                    <span>${Transl2(opt)}</span>
+                </label>
+            `).join("");
+        const formatHtml = `
+                <div class="form-row multi-select form-row-full">
+                    <label>${Transl2("Format")}<span class="tooltip-icon" data-tooltip="${Transl2("格式說明")}">!</span></label>
+                    <div class="multi-select-group">${formatButtons}</div>
+                </div>
+            `;
+        return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
+      }
+      _UiSwitchEvent() {
+        this.overlay = Syn2.Q(this.shadowRoot, "#overlay");
+        Syn2.one(this.overlay, "click", (event) => {
+          const target = event.target;
+          const tagName = target.tagName;
+          if (tagName === "BUTTON") {
+            if (target.classList.contains("active")) return;
+            Syn2.Q(this.shadowRoot, "button.active").classList.remove("active");
+            Syn2.Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
+            target.classList.add("active");
+            Syn2.Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
+          } else if (target === this.overlay) {
+            this.close();
+          }
+        });
+      }
+      _loadUi() {
+        this.shadowRoot.innerHTML = `
+                <style>${this._getStyles()}</style>
+                ${this._createHTML()}
+            `;
+        this._UiSwitchEvent();
       }
     };
   }
@@ -817,7 +1199,7 @@
         return task;
       }
       // 估計壓縮耗時
-      estimateCompression() {
+      _estimateCompression() {
         const IO_THRESHOLD = 50 * 1024 * 1024;
         const UNCOMPRESSIBLE_EXTENSIONS = /* @__PURE__ */ new Set([
           ".mp4",
@@ -875,7 +1257,7 @@
         await Promise.all(this.tasks);
         const startTime = performance.now();
         const updateInterval = 30;
-        const estimationData = this.estimateCompression();
+        const estimationData = this._estimateCompression();
         const totalTime = estimationData.estimatedInMs;
         const progressInterval = setInterval(() => {
           const elapsedTime = performance.now() - startTime;
@@ -903,21 +1285,21 @@
     };
   }
   function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Syn2, saveAs2) {
-    let Compression;
+    let ZipEngine;
     return class Download {
-      constructor(CompressMode, ModeDisplay, Button) {
-        this.Button = Button;
-        this.ModeDisplay = ModeDisplay;
-        this.CompressMode = CompressMode;
-        this.ForceDownload = false;
-        this.Named_Data = null;
-        this.OriginalTitle = () => {
+      constructor(compressMode, modeDisplay, button) {
+        this.button = button;
+        this.modeDisplay = modeDisplay;
+        this.compressMode = compressMode;
+        this.namedData = null;
+        this.forceCompressSignal = false;
+        this.originalTitle = () => {
           const cache = Syn2.title();
           return cache.startsWith("✓ ") ? cache.slice(2) : cache;
         };
-        const VideoExts = new Set(Process2.VideoExts);
-        this.IsVideo = (str) => VideoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.Worker = this.CompressMode ? Syn2.WorkerCreation(`
+        const videoExts = new Set(Process2.VideoExts);
+        this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.worker = this.compressMode ? Syn2.WorkerCreation(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -964,12 +1346,12 @@
             `) : null;
       }
       /* 解析名稱格式 */
-      NameAnalysis(format) {
+      _nameAnalysis(format) {
         if (typeof format == "string") {
           return format.split(/{([^}]+)}/g).filter(Boolean).map((data) => {
-            const LowerData = data.toLowerCase().trim();
-            const isWord = /^[a-zA-Z]+$/.test(LowerData);
-            return isWord ? this.Named_Data[LowerData]?.() ?? "None" : data;
+            const lowerData = data.toLowerCase().trim();
+            const isWord = /^[a-zA-Z]+$/.test(lowerData);
+            return isWord ? this.namedData[lowerData]?.() ?? "None" : data;
           }).join("");
         } else if (typeof format == "object") {
           const filler = String(format.Filler) || "0";
@@ -978,7 +1360,7 @@
         } else;
       }
       /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-      DownloadTrigger() {
+      downloadTrigger() {
         Syn2.WaitElem([
           ".post__title, .scrape__title",
           ".post__files, .scrape__files",
@@ -986,9 +1368,9 @@
         ], (found) => {
           const [title, files, artist] = found;
           Process2.Lock = true;
-          this.Button.disabled = true;
-          const DownloadData = /* @__PURE__ */ new Map();
-          this.Named_Data = {
+          this.button.disabled = true;
+          const downloadData = /* @__PURE__ */ new Map();
+          this.namedData = {
             // 建立數據
             fill: () => "fill",
             title: () => title.$q("span").$text().replaceAll("/", "／"),
@@ -1006,133 +1388,133 @@
           };
           const [
             // 獲取名稱
-            compress_name,
-            folder_name,
-            fill_name
-          ] = Object.keys(FileName2).slice(1).map((key) => this.NameAnalysis(FileName2[key]));
-          const img_data = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), final_data = General2.IncludeExtras ? [...img_data, ...Syn2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] : img_data;
-          for (const [index, file] of final_data.entries()) {
-            const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
-            if (Uri) {
-              DownloadData.set(index, Uri.startsWith("http") ? Uri : `${Syn2.$origin}${Uri}`);
+            compressName,
+            folderName,
+            fillName
+          ] = Object.keys(FileName2).slice(1).map((key) => this._nameAnalysis(FileName2[key]));
+          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), finalData = General2.IncludeExtras ? [...imgData, ...Syn2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] : imgData;
+          for (const [index, file] of finalData.entries()) {
+            const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
+            if (uri) {
+              downloadData.set(index, uri.startsWith("http") ? uri : `${Syn2.$origin}${uri}`);
             }
           }
-          if (DownloadData.size == 0) General2.Dev = true;
+          if (downloadData.size == 0) General2.Dev = true;
           Syn2.Log("Get Data", {
-            FolderName: folder_name,
-            DownloadData
+            FolderName: folderName,
+            DownloadData: downloadData
           }, { dev: General2.Dev, collapsed: false });
-          this.CompressMode ? this.PackDownload(compress_name, folder_name, fill_name, DownloadData) : this.SeparDownload(fill_name, DownloadData);
+          this.compressMode ? this._packDownload(compressName, folderName, fillName, downloadData) : this._separDownload(fillName, downloadData);
         }, { raf: true });
       }
       /* 打包壓縮下載 */
-      async PackDownload(CompressName, FolderName, FillName, Data) {
-        Compression ??= Compressor(Syn2);
-        let show, extension, progress = 0, Total = Data.size;
-        const Self = this, Zip = new Compression(), TitleCache = this.OriginalTitle();
-        const FillValue = this.NameAnalysis(FileName2.FillValue), Filler = FillValue[1], Amount = FillValue[0] == "auto" ? Syn2.GetFill(Total) : FillValue[0];
-        async function ForceDownload() {
-          Self.Compression(CompressName, Zip, TitleCache);
+      async _packDownload(compressName, folderName, fillName, data) {
+        ZipEngine ??= Compressor(Syn2);
+        let show, extension, progress = 0, total = data.size;
+        const self = this, zipper = new ZipEngine(), titleCache = this.originalTitle();
+        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Syn2.GetFill(total) : fillValue[0];
+        async function forceDownload() {
+          self._compressFile(compressName, zipper, titleCache);
         }
         Syn2.Menu({
-          [Transl2("📥 強制壓縮下載")]: { func: () => ForceDownload(), hotkey: "d" }
+          [Transl2("📥 強制壓縮下載")]: { func: () => forceDownload(), hotkey: "d" }
         }, { name: "Enforce" });
-        FolderName = FolderName != "" ? `${FolderName}/` : "";
-        function Request_update(index, url, blob, error = false) {
-          if (Self.ForceDownload) return;
+        folderName = folderName != "" ? `${folderName}/` : "";
+        function requestUpdate(index, url, blob, error = false) {
+          if (self.forceCompressSignal) return;
           requestAnimationFrame(() => {
             if (!error && blob instanceof Blob && blob.size > 0) {
-              extension = Syn2.ExtensionName(url);
-              const FileName3 = `${FillName.replace("fill", Syn2.Mantissa(index, Amount, Filler))}.${extension}`;
-              Self.IsVideo(extension) ? Zip.file(`${FolderName}${decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3}`, blob) : Zip.file(`${FolderName}${FileName3}`, blob);
-              Data.delete(index);
+              extension = Syn2.SuffixName(url);
+              const fileName = `${fillName.replace("fill", Syn2.Mantissa(index, amount, filler))}.${extension}`;
+              self.isVideo(extension) ? zipper.file(`${folderName}${decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`, blob) : zipper.file(`${folderName}${fileName}`, blob);
+              data.delete(index);
             }
-            show = `[${++progress}/${Total}]`;
+            show = `[${++progress}/${total}]`;
             Syn2.title(show);
-            Self.Button.$text(`${Transl2("下載進度")} ${show}`);
-            if (progress == Total) {
-              Total = Data.size;
-              if (Total == 0) {
-                Self.Compression(CompressName, Zip, TitleCache);
+            self.button.$text(`${Transl2("下載進度")} ${show}`);
+            if (progress == total) {
+              total = data.size;
+              if (total == 0) {
+                self._compressFile(compressName, zipper, titleCache);
               } else {
                 show = "Wait for failed re download";
                 progress = 0;
                 Syn2.title(show);
-                Self.Button.$text(show);
+                self.button.$text(show);
                 setTimeout(() => {
-                  for (const [index2, url2] of Data.entries()) {
-                    Self.Worker.postMessage({ index: index2, url: url2 });
+                  for (const [index2, url2] of data.entries()) {
+                    self.worker.postMessage({ index: index2, url: url2 });
                   }
                 }, 1500);
               }
             }
           });
         }
-        async function Request(index, url) {
-          if (Self.ForceDownload) return;
+        async function request(index, url) {
+          if (self.forceCompressSignal) return;
           GM_xmlhttpRequest2({
             url,
             method: "GET",
             responseType: "blob",
             onload: (response) => {
               if (response.status == 429) {
-                Request_update(index, url, "", true);
+                requestUpdate(index, url, "", true);
                 return;
               }
-              Request_update(index, url, response.response);
+              requestUpdate(index, url, response.response);
             },
             onerror: () => {
-              Request_update(index, url, "", true);
+              requestUpdate(index, url, "", true);
             }
           });
         }
-        Self.Button.$text(`${Transl2("請求進度")} [${Total}/${Total}]`);
-        const Batch = General2.ConcurrentQuantity;
-        const Delay = General2.ConcurrentDelay;
-        for (let i = 0; i < Total; i += Batch) {
+        self.button.$text(`${Transl2("請求進度")} [${total}/${total}]`);
+        const batch = General2.ConcurrentQuantity;
+        const delay = General2.ConcurrentDelay;
+        for (let i = 0; i < total; i += batch) {
           setTimeout(() => {
-            for (let j = i; j < i + Batch && j < Total; j++) {
-              this.Worker.postMessage({ index: j, url: Data.get(j) });
+            for (let j = i; j < i + batch && j < total; j++) {
+              this.worker.postMessage({ index: j, url: data.get(j) });
             }
-          }, i / Batch * Delay);
+          }, i / batch * delay);
         }
-        this.Worker.onmessage = (e) => {
+        this.worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
-          error ? (Request(index, url), Syn2.Log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (Request_update(index, url, blob), Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
+          error ? (request(index, url), Syn2.Log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (requestUpdate(index, url, blob), Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
         };
       }
       /* 單圖下載 */
-      async SeparDownload(FillName, Data) {
-        let show, url, filename, extension, stop = false, progress = 0;
-        const Self = this, Process3 = [], Promises = [], Total = Data.size, ShowTracking = {}, TitleCache = this.OriginalTitle();
-        const FillValue = this.NameAnalysis(FileName2.FillValue), Filler = FillValue[1], Amount = FillValue[0] == "auto" ? Syn2.GetFill(Total) : FillValue[0];
-        async function Stop() {
+      async _separDownload(fillName, data) {
+        let show, url, fileName, extension, token = 5, stop = false, progress = 0;
+        const self = this, process = [], promises = [], total = data.size, showTracking = {}, titleCache = this.originalTitle();
+        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Syn2.GetFill(total) : fillValue[0];
+        async function _stop() {
           stop = true;
-          Process3.forEach((process) => process.abort());
+          process.forEach((pc) => pc.abort());
         }
         Syn2.Menu({
-          [Transl2("⛔️ 取消下載")]: { func: () => Stop(), hotkey: "s" }
+          [Transl2("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" }
         }, { name: "Abort" });
-        async function Request(index) {
+        async function request(index) {
           if (stop) return;
-          url = Data.get(index);
-          extension = Syn2.ExtensionName(url);
-          const FileName3 = `${FillName.replace("fill", Syn2.Mantissa(index, Amount, Filler))}.${extension}`;
-          filename = Self.IsVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
+          url = data.get(index);
+          extension = Syn2.SuffixName(url);
+          const FileName3 = `${fillName.replace("fill", Syn2.Mantissa(index, amount, filler))}.${extension}`;
+          fileName = self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
           return new Promise((resolve, reject) => {
             const completed = () => {
-              if (!ShowTracking[index]) {
-                ShowTracking[index] = true;
+              if (!showTracking[index]) {
+                showTracking[index] = true;
                 Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false });
-                show = `[${++progress}/${Total}]`;
+                show = `[${++progress}/${total}]`;
                 Syn2.title(show);
-                Self.Button.$text(`${Transl2("下載進度")} ${show}`);
+                self.button.$text(`${Transl2("下載進度")} ${show}`);
                 resolve();
               }
             };
             const download = GM_download2({
               url,
-              name: filename,
+              name: fileName,
               conflictAction: "overwrite",
               onload: () => {
                 completed();
@@ -1143,61 +1525,63 @@
                 Syn2.Log("Download Error", url, { dev: General2.Dev, type: "error", collapsed: false });
                 setTimeout(() => {
                   reject();
-                  Request(index);
+                  token--;
+                  if (token <= 0) return;
+                  request(index);
                 }, 1500);
               }
             });
-            Process3.push(download);
+            process.push(download);
           });
         }
-        for (let i = 0; i < Total; i++) {
-          Promises.push(Request(i));
-          await Syn2.Sleep(1e3);
+        for (let i = 0; i < total; i++) {
+          promises.push(request(i));
+          await Syn2.Sleep(General2.ConcurrentDelay);
         }
-        await Promise.allSettled(Promises);
+        await Promise.allSettled(promises);
         GM_unregisterMenuCommand2("Abort-1");
-        Syn2.title(`✓ ${TitleCache}`);
-        this.Button.$text(Transl2("下載完成"));
+        Syn2.title(`✓ ${titleCache}`);
+        this.button.$text(Transl2("下載完成"));
         setTimeout(() => {
-          this.ResetButton();
+          this._resetButton();
         }, 3e3);
       }
       /* 壓縮檔案 */
-      async Compression(Name, Data, Title) {
-        this.Worker.terminate();
-        this.ForceDownload = true;
+      async _compressFile(name, data, title) {
+        this.worker.terminate();
+        this.forceCompressSignal = true;
         GM_unregisterMenuCommand2("Enforce-1");
-        Data.generateZip({
+        data.generateZip({
           level: 9
         }, (progress) => {
           const display = `${progress.toFixed(1)} %`;
           Syn2.title(display);
-          this.Button.$text(`${Transl2("封裝進度")}: ${display}`);
+          this.button.$text(`${Transl2("封裝進度")}: ${display}`);
         }).then((zip) => {
-          saveAs2(zip, `${Name}.zip`);
-          Syn2.title(`✓ ${Title}`);
-          this.Button.$text(Transl2("下載完成"));
+          saveAs2(zip, `${name}.zip`);
+          Syn2.title(`✓ ${title}`);
+          this.button.$text(Transl2("下載完成"));
           setTimeout(() => {
-            this.ResetButton();
+            this._resetButton();
           }, 3e3);
         }).catch((result) => {
-          Syn2.title(Title);
-          const ErrorShow = Transl2("壓縮封裝失敗");
-          this.Button.$text(ErrorShow);
-          Syn2.Log(ErrorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
+          Syn2.title(title);
+          const errorShow = Transl2("壓縮封裝失敗");
+          this.button.$text(errorShow);
+          Syn2.Log(errorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
           setTimeout(() => {
-            this.Button.disabled = false;
-            this.Button.$text(this.ModeDisplay);
+            this.button.disabled = false;
+            this.button.$text(this.modeDisplay);
           }, 6e3);
         });
       }
       /* 按鈕重置 */
-      async ResetButton() {
+      async _resetButton() {
         General2.CompleteClose && window.close();
         Process2.Lock = false;
-        const Button = Syn2.$q("#Button-Container button");
-        Button.disabled = false;
-        Button.$text(`✓ ${this.ModeDisplay}`);
+        const button = Syn2.$q("#Button-Container button");
+        button.disabled = false;
+        button.$text(`✓ ${this.modeDisplay}`);
       }
     };
   }
@@ -1212,7 +1596,8 @@
     constructor() {
       this.Menu = null;
       this.Download = null;
-      this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2), this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
+      this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
+      this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
     }
     /* 按鈕創建 */
     async ButtonCreation() {
@@ -1276,9 +1661,9 @@
                 if (target.tagName === "BUTTON") {
                   let Instantiate = null;
                   Instantiate = new this.Download(CompressMode, ModeDisplay, target);
-                  Instantiate.DownloadTrigger();
+                  Instantiate.downloadTrigger();
                 } else if (target.closest("svg")) {
-                  alert("Currently Invalid");
+                  this.Menu.open();
                 }
               },
               add: { capture: true, passive: true }
@@ -1328,6 +1713,8 @@
       GM_info.isIncognito = true;
       registerMenu(Syn.$url);
       self.Content(Syn.$url) && self.ButtonCreation();
+      const UI = Menu(Syn, Transl, General, FileName, FetchSet);
+      this.Menu = new UI();
       async function registerMenu(Page) {
         if (self.Content(Page)) {
           Syn.Menu({
@@ -1337,6 +1724,7 @@
           FetchData ??= Fetch(
             // 懶加載 FetchData 類
             General,
+            FetchSet,
             Process,
             Transl,
             Syn,
@@ -1344,15 +1732,10 @@
           );
           Syn.Menu({
             [Transl("📑 獲取帖子數據")]: () => {
-              if (Process.IsNeko) {
-                alert("Temporarily Not Supported");
-                return;
-              }
               if (!Process.Lock) {
                 let Instantiate = null;
-                Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
-                Instantiate.FetchInit();
+                Instantiate = new FetchData();
+                Instantiate.fetchRun();
               }
             },
             [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
@@ -1364,9 +1747,8 @@
                 const ID = prompt("輸入請求的 ID");
                 if (ID == null || ID === "") return;
                 let Instantiate = null;
-                Instantiate = new FetchData(FetchSet.Delay, FetchSet.AdvancedFetch, FetchSet.ToLinkTxt);
-                FetchSet.UseFormat && Instantiate.FetchConfig(FetchSet.Mode, FetchSet.Format);
-                Instantiate.FetchTest(ID);
+                Instantiate = new FetchData();
+                Instantiate.fetchTest(ID);
               }
             }, { index: 3 });
           }
