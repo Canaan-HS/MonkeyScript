@@ -189,7 +189,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                         if (!Process.Lock) {
                             let Instantiate = null;
                             Instantiate = new FetchData();
-                            Instantiate.FetchRun();
+                            Instantiate.fetchRun();
                         }
                     },
                     [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
@@ -203,7 +203,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
                             let Instantiate = null;
                             Instantiate = new FetchData();
-                            Instantiate.FetchTest(ID); // 只專注於測試 進階抓取, 如果用一般模式會報錯
+                            Instantiate.fetchTest(ID); // 只專注於測試 進階抓取, 如果用一般模式會報錯
                         },
                     }, { index: 3 });
                 }
