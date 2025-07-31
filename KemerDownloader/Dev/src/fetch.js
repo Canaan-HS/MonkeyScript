@@ -2,34 +2,41 @@ export default function Fetch(
     General, FetchSet, Process, Transl, Syn, md5
 ) {
     return class FetchData {
-        static TryAgain_Promise = null;
+        static Try_Again_Promise = null;
 
         constructor() {
-            this.MetaDict = new Map(); // 保存元數據
-            this.DataDict = new Map(); // 保存最終數據
+            this.metaDict = new Map(); // 保存元數據
+            this.dataDict = new Map(); // 保存最終數據
 
-            this.SourceURL = Syn.url; // 原始連結
-            this.TitleCache = Syn.title();
+            this.sourceURL = Syn.url; // 原始連結
+            this.titleCache = Syn.title();
 
-            this.URL = new URL(this.SourceURL); // 解析連結
+            this.URL = new URL(this.sourceURL); // 解析連結
 
-            this.Host = this.URL.host;
-            this.FirstURL = this.URL.origin + this.URL.pathname; // 第一頁連結
-            this.QueryValue = encodeURIComponent(this.URL.searchParams.get("q") || ""); // 搜尋關鍵字 (如果有的話)
+            this.host = this.URL.host;
+            this.firstURL = this.URL.origin + this.URL.pathname; // 第一頁連結
+            this.queryValue = this.URL.searchParams.get("q");
 
-            this.CurrentPage = 1; // 預設開始抓取的頁數
-            this.FinalPage = 10; // 預設最終抓取的頁數
-            this.Progress = 0; // 用於顯示當前抓取進度
-            this.OnlyMode = false; // 判斷獲取數據的模式
-            this.FetchDelay = FetchSet.Delay; // 獲取延遲
-            this.ToLinkTxt = FetchSet.ToLinkTxt; // 判斷是否輸出為連結文本
-            this.AdvancedFetch = FetchSet.AdvancedFetch; // 判斷是否往內抓數據
+            if (this.queryValue) { // 確保有搜尋關鍵字
+                this.queryValue = encodeURIComponent(this.queryValue);
+            } else if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
+                this.URL.searchParams.delete("q");
+                this.sourceURL = this.URL.href;
+            }
+
+            this.currentPage = 1; // 預設開始抓取的頁數
+            this.finalPage = 10; // 預設最終抓取的頁數
+            this.progress = 0; // 用於顯示當前抓取進度
+            this.onlyMode = false; // 判斷獲取數據的模式
+            this.fetchDelay = FetchSet.Delay; // 獲取延遲
+            this.toLinkTxt = FetchSet.ToLinkTxt; // 判斷是否輸出為連結文本
+            this.advancedFetch = FetchSet.AdvancedFetch; // 判斷是否往內抓數據
 
             // 帖子內部連結
-            this.PostURL = ID => `${this.FirstURL}/post/${ID}`;
+            this.getPostURL = id => `${this.firstURL}/post/${id}`;
 
             // 下一頁連結
-            this.NextPageURL = urlStr => {
+            this.getNextPageURL = urlStr => {
                 const url = new URL(urlStr);
                 const search = url.searchParams;
 
@@ -44,32 +51,32 @@ export default function Fetch(
 
 
             // 內部連結的 API 模板
-            this.PostAPI = `${this.FirstURL}/post`.replace(this.Host, `${this.Host}/api/v1`);
+            this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
 
             // 將預覽頁面轉成 API 連結
-            this.PreviewAPI = Url =>
-                /[?&]o=/.test(Url)
-                    ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1")
-                    : this.QueryValue // 如果有搜尋關鍵字
-                        ? Url.replace(this.Host, `${this.Host}/api/v1`).replace(`?q=${this.QueryValue}`, `/posts-legacy?q=${this.QueryValue}`)
-                        : Url.replace(this.Host, `${this.Host}/api/v1`) + "/posts-legacy";
+            this.getPreviewAPI = url =>
+                /[?&]o=/.test(url)
+                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1")
+                    : this.queryValue // 如果有搜尋關鍵字
+                        ? url.replace(this.host, `${this.host}/api/v1`).replace(`?q=${this.queryValue}`, `/posts-legacy?q=${this.queryValue}`)
+                        : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
 
-            // 根據類型判斷預設值
-            this.Default = (Value) => {
-                if (!Value) return null;
+            // 根據類型判斷有效值
+            this.getValidValue = (value) => {
+                if (!value) return null;
 
-                const type = Syn.Type(Value);
-                if (type === "Array") return Value.length > 0 && Value.some(item => item !== "") ? Value : null;
+                const type = Syn.Type(value);
+                if (type === "Array") return value.length > 0 && value.some(item => item !== "") ? value : null;
                 if (type === "Object") {
-                    const values = Object.values(Value);
-                    return values.length > 0 && values.some(item => item !== "") ? Value : null;
+                    const values = Object.values(value);
+                    return values.length > 0 && values.some(item => item !== "") ? value : null;
                 }
 
-                return Value;
+                return value;
             };
 
             // 預設添加的數據
-            this.InfoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
+            this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
 
             /**
              * 生成數據
@@ -84,10 +91,10 @@ export default function Fetch(
              * }} Data
              * @returns {object}
              */
-            this.FetchGenerate = (Data) => {
+            this.fetchGenerate = (Data) => {
                 return Object.keys(Data).reduce((acc, key) => {
-                    if (this.InfoRules.has(key)) {
-                        const value = this.Default(Data[key]);
+                    if (this.infoRules.has(key)) {
+                        const value = this.getValidValue(Data[key]);
                         value && (acc[Transl(key)] = value); // 有數據的才被添加
                     }
                     return acc;
@@ -95,44 +102,44 @@ export default function Fetch(
             };
 
             // 將數據類型表轉為 Set
-            const ImageExts = new Set(Process.ImageExts);
-            const VideoExts = new Set(Process.VideoExts);
+            const videoExts = new Set(Process.VideoExts);
+            const imageExts = new Set(Process.ImageExts);
 
-            this.IsVideo = (Str) => VideoExts.has(Str.replace(/^\./, "").toLowerCase());
-            this.IsImage = (Str) => ImageExts.has(Str.replace(/^\./, "").toLowerCase());
+            this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
+            this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
 
             // 正規化帖子標題名稱 (傳入 Post 標題 (string), 與列表 Index (number))
-            this.NormalizeName = (Title, Index) => Title.trim().replace(/\n/g, " ") || `Untitled_${String(Index + 1).padStart(2, "0")}`;
+            this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(index + 1).padStart(2, "0")}`;
 
             // 正規化帖子時間戳 (傳入 Post 的物件)
-            this.NormalizeTimestamp = (Post) => new Date(Post.published || Post.added)?.toLocaleString();
+            this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
 
             // 進階抓取檔案分類 (影片與圖片文件 Array) => { video: {}, other: {} }
-            this.AdvancedCategorize = (Data) => {
-                return Data.reduce((acc, file) => {
+            this.advancedCategorize = (data) => {
+                return data.reduce((acc, file) => {
                     const url = `${file.server}/data${file.path}?f=${file.name}`;
-                    this.IsVideo(file.extension) ? (acc.video[file.name] = url) : (acc.other[file.name] = url);
+                    this.isVideo(file.extension) ? (acc.video[file.name] = url) : (acc.other[file.name] = url);
                     return acc;
                 }, { video: {}, other: {} });
             };
 
             // 一般抓取的檔案分類 (標題字串, 所有類型文件 Array) => { img: [], video: {}, other: {} }
-            this.Categorize = (Title, Data) => {
+            this.normalCategorize = (title, data) => {
                 let imgNumber = 0;
                 let serverNumber = 0;
 
-                return Data.reduce((acc, file) => {
+                return data.reduce((acc, file) => {
                     const name = file.name;
                     const path = file.path;
-                    const extension = Syn.SuffixName(name, "");
+                    const extension = Syn.SuffixName(path, "");
 
                     serverNumber = (serverNumber % 4) + 1;
-                    const server = `https://n${serverNumber}.${this.Host}/data`;
+                    const server = `https://n${serverNumber}.${this.host}/data`;
 
-                    if (this.IsVideo(extension)) {
+                    if (this.isVideo(extension)) {
                         acc.video[name] = `${server}${path}?f=${name}`;
-                    } else if (this.IsImage(extension)) {
-                        const name = `${Title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+                    } else if (this.isImage(extension)) {
+                        const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
                         acc.img[name] = `${server}${path}?f=${name}`;
                     } else {
                         acc.other[name] = `${server}${path}?f=${name}`;
@@ -144,8 +151,8 @@ export default function Fetch(
 
             // ! 目前有 Bug, 只能使用一次, 第二次後 response 的狀態直接都變成 200, 但實際上是 429
             this.TooMany_TryAgain = function (Uri) {
-                if (FetchData.TryAgain_Promise) {
-                    return FetchData.TryAgain_Promise;
+                if (FetchData.Try_Again_Promise) {
+                    return FetchData.Try_Again_Promise;
                 }
 
                 const promiseLock = new Promise(async (resolve, reject) => {
@@ -182,11 +189,11 @@ export default function Fetch(
                     await checkRequest();
                 });
 
-                FetchData.TryAgain_Promise = promiseLock;
+                FetchData.Try_Again_Promise = promiseLock;
 
                 promiseLock.finally(() => {
-                    if (FetchData.TryAgain_Promise === promiseLock) {
-                        FetchData.TryAgain_Promise = null;
+                    if (FetchData.Try_Again_Promise === promiseLock) {
+                        FetchData.Try_Again_Promise = null;
                     }
                 });
 
@@ -194,7 +201,7 @@ export default function Fetch(
             };
 
             // 請求工作
-            this.Worker = Syn.WorkerCreation(`
+            this.worker = Syn.WorkerCreation(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -225,11 +232,11 @@ export default function Fetch(
             `);
 
             // 解析特別連結
-            this.specialLinkParse = (Data) => {
+            this.specialLinkParse = (data) => {
                 const Cache = {};
 
                 try {
-                    for (const a of Syn.DomParse(Data).$qa("body a")) {
+                    for (const a of Syn.DomParse(data).$qa("body a")) {
                         const href = a.href;
                         const hash = md5(href).slice(0, 16);
 
@@ -266,159 +273,159 @@ export default function Fetch(
             };
 
             // 設置抓取規則
-            FetchSet.UseFormat && this._FetchConfig(FetchSet.Mode, FetchSet.Format);
+            FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
         }
 
         /**
          * 設置抓取規則
-         * @param {string} Mode - "FilterMode" | "OnlyMode"
-         * @param {Array} UserSet - 要進行的設置
+         * @param {string} mode - "FilterMode" | "OnlyMode"
+         * @param {Array} userSet - 要進行的設置
          *
          * @example
          * 可配置項目: ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]
          *
          * 這會將這些項目移除在顯示
-         * _FetchConfig("FilterMode", ["PostLink", "ImgLink", "DownloadLink"]);
+         * _fetchConfig("FilterMode", ["PostLink", "ImgLink", "DownloadLink"]);
          *
          * 這會只顯示這些項目
-         * _FetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
+         * _fetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
          */
-        async _FetchConfig(Mode = "FilterMode", UserSet = []) {
-            switch (Mode) {
-                case "FilterMode":
-                    this.OnlyMode = false;
-                    UserSet.forEach(key => this.InfoRules.delete(key));
-                    break;
-                case "OnlyMode":
-                    this.OnlyMode = true;
-                    this.InfoRules = new Set(
-                        [...this.InfoRules].filter(key => UserSet.has(key))
-                    );
-                    break;
+        async _fetchConfig(mode = "FilterMode", userSet = []) {
+            if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
+
+            if (mode.toLowerCase() === "filtermode") {
+                this.onlyMode = false;
+                userSet.forEach(key => this.infoRules.delete(key));
+            } else if (mode.toLowerCase() === "onlymode") {
+                this.onlyMode = true;
+                const userFilter = new Set(userSet);
+                this.infoRules = new Set(
+                    [...this.infoRules].filter(key => userFilter.has(key))
+                );
             }
         };
 
         /* 入口調用函數 */
-        async FetchRun() {
-            const Small = Syn.$q("small");
-            const Items = Syn.$q(".card-list__items");
+        async fetchRun() {
+            const small = Syn.$q("small");
+            const items = Syn.$q(".card-list__items");
 
-            if (Items) {
+            if (items) {
                 Process.Lock = true; // 鎖定菜單的操作, 避免重複抓取
 
                 // 取得當前頁數
-                const CurrentPage = +Syn.$q(".pagination-button-current b")?.$text();
-                CurrentPage && (this.CurrentPage = CurrentPage);
+                const currentPage = +Syn.$q(".pagination-button-current b")?.$text();
+                currentPage && (this.currentPage = currentPage);
 
                 // ! 實驗性獲取總頁數
-                this.FinalPage = Small ? Math.ceil(+Small.$text().split(" of ")[1] / 50) : 1;
-                this._FetchPage(Items, this.SourceURL); // 開始抓取
+                this.finalPage = small ? Math.ceil(+small.$text().split(" of ")[1] / 50) : 1;
+                this._fetchPage(items, this.sourceURL); // 開始抓取
             } else {
                 alert(Transl("未取得數據"));
             }
         };
 
         /* 測試進階抓取數據 */
-        async FetchTest(Id) {
+        async fetchTest(id) {
             Process.Lock = true;
 
-            this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(this.FirstURL) });
-            const HomeData = await new Promise((resolve, reject) => {
-                this.Worker.onmessage = async (e) => {
+            this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(this.firstURL) });
+            const homeData = await new Promise((resolve, reject) => {
+                this.worker.onmessage = async (e) => {
                     const { index, title, url, content, error } = e.data;
                     if (!error) resolve({ index, title, url, content });
                     else {
-                        Syn.Log(error, { title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
+                        Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                         await this.TooMany_TryAgain(url);
-                        this.Worker.postMessage({ index: index, title: title, url: url });
+                        this.worker.postMessage({ index, title, url });
                     };
                 }
             });
 
-            const { content } = HomeData;
+            const { content } = homeData;
 
-            Object.assign(HomeData, { content: JSON.parse(content) });
-            Syn.Log("HomeData", HomeData, { collapsed: false });
+            Object.assign(homeData, { content: JSON.parse(content) });
+            Syn.Log("HomeData", homeData, { collapsed: false });
 
-            // 恢復 _FetchContent 處理數據格式
-            const Cloned_HomeData = structuredClone(HomeData);
-            Cloned_HomeData.content.results = [{ id: Id }]; // 修改數據
-            Cloned_HomeData.content = JSON.stringify(Cloned_HomeData.content); // 轉換為字符串
+            // 恢復 _fetchContent 處理數據格式
+            const homeDataClone = structuredClone(homeData);
+            homeDataClone.content.results = [{ id }]; // 修改數據
+            homeDataClone.content = JSON.stringify(homeDataClone.content); // 轉換為字符串
 
-            await this._FetchContent(Cloned_HomeData);
-            Syn.Log("PostDate", this.DataDict, { collapsed: false });
-            this._Reset();
+            await this._fetchContent(homeDataClone);
+            Syn.Log("PostDate", this.dataDict, { collapsed: false });
+            this._reset();
         };
 
         /* ===== 主要抓取函數 ===== */
 
         /* 獲取預覽頁數據 */
-        async _FetchPage(Items, Url) {
+        async _fetchPage(items, url) {
 
             if (Process.IsNeko) {
-                // 這邊由 Article 遍歷每一個帖子, 將 index 與 title 傳遞給 _FetchContent
-                const Article = Items.$qa("article");
+                // 這邊由 Article 遍歷每一個帖子, 將 index 與 title 傳遞給 _fetchContent
+                const article = items.$qa("article");
                 // 下一頁連結由 Url 解析 ?o= + 50 取得
             } else {
-                this.Worker.postMessage({ index: 0, title: this.TitleCache, url: this.PreviewAPI(Url), time: Date.now(), delay: this.FetchDelay });
+                this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
 
                 // 等待主頁數據
-                const HomeData = await new Promise((resolve, reject) => {
-                    this.Worker.onmessage = async (e) => {
+                const homeData = await new Promise((resolve, reject) => {
+                    this.worker.onmessage = async (e) => {
                         const { index, title, url, content, time, delay, error } = e.data;
                         if (!error) {
-                            this.FetchDelay = Process.dynamicParam(time, delay);
+                            this.fetchDelay = Process.dynamicParam(time, delay);
                             resolve({ index, title, url, content });
                         }
                         else {
-                            Syn.Log(error, { title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
+                            Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
-                            this.Worker.postMessage({ index: index, title: title, url: url, time: time, delay: delay });
+                            this.worker.postMessage({ index, title, url, time, delay });
                         };
                     }
                 });
 
                 // 等待內容數據
-                await this._FetchContent(HomeData);
+                await this._fetchContent(homeData);
 
-                this.CurrentPage++;
-                this.CurrentPage <= this.FinalPage
-                    ? this._FetchPage(null, this.NextPageURL(Url))
-                    : this.ToLinkTxt ? this._ToTxt() : this._ToJson();
+                this.currentPage++;
+                this.currentPage <= this.finalPage
+                    ? this._fetchPage(null, this.getNextPageURL(url))
+                    : this.toLinkTxt ? this._toTxt() : this._toJson();
             }
         };
 
         /* 獲取帖子內部數據 */
-        async _FetchContent(Data) {
-            this.Progress = 0; // 重置進度
-            const { index, title, url, content } = Data; // 解構數據
+        async _fetchContent(homeData) {
+            this.progress = 0; // 重置進度
+            const { index, title, url, content } = homeData; // 解構數據
 
             // 解析處理的數據
             if (Process.IsNeko) {
 
             } else {
                 /* ----- 這邊是主頁的數據 ----- */
-                const Json = JSON.parse(content);
+                const contentJson = JSON.parse(content);
 
-                if (Json) {
+                if (contentJson) {
 
                     // 首次生成元數據
-                    if (this.MetaDict.size === 0) {
-                        const props = Json.props;
+                    if (this.metaDict.size === 0) {
+                        const props = contentJson.props;
 
-                        this.MetaDict.set(Transl("作者"), props.name);
-                        this.MetaDict.set(Transl("帖子數量"), props.count);
-                        this.MetaDict.set(Transl("建立時間"), Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"));
-                        this.MetaDict.set(Transl("獲取頁面"), this.SourceURL);
-                        this.MetaDict.set(Transl("作者網站"), props.display_data.href);
+                        this.metaDict.set(Transl("作者"), props.name);
+                        this.metaDict.set(Transl("帖子數量"), props.count);
+                        this.metaDict.set(Transl("建立時間"), Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+                        this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+                        this.metaDict.set(Transl("作者網站"), props.display_data.href);
                     }
 
-                    const Results = Json.results;
-                    if (this.AdvancedFetch) {
+                    const results = contentJson.results;
+                    if (this.advancedFetch) {
                         const Tasks = [];
                         const resolvers = new Map(); // 用於存儲每個 Promise
 
-                        this.Worker.onmessage = async (e) => {
+                        this.worker.onmessage = async (e) => {
                             const { index, title, url, content, time, delay, error } = e.data;
 
                             if (resolvers.has(index)) {
@@ -426,114 +433,114 @@ export default function Fetch(
 
                                 try {
                                     if (!error) {
-                                        this.FetchDelay = Process.dynamicParam(time, delay);
-                                        const Json = JSON.parse(content);
+                                        this.fetchDelay = Process.dynamicParam(time, delay);
+                                        const contentJson = JSON.parse(content);
 
-                                        if (Json) {
-                                            const Post = Json.post; // ? 避免相容性問題 不用 replaceAll
+                                        if (contentJson) {
+                                            const post = contentJson.post; // ? 避免相容性問題 不用 replaceAll
 
-                                            const Title = this.NormalizeName(Post.title, index);
-                                            const File = this.AdvancedCategorize(Json.attachments); // 對下載連結進行分類
+                                            const standardTitle = this.normalizeName(post.title, index);
+                                            const classifiedFiles = this.advancedCategorize(contentJson.attachments); // 對下載連結進行分類
 
                                             // 獲取圖片連結
-                                            const ImgLink = () => { // ! 還需要測試
-                                                const ServerList = Json.previews.filter(item => item.server); // 取得圖片伺服器
-                                                if ((ServerList?.length ?? 0) === 0) return;
+                                            const getImgLink = () => { // ! 還需要測試
+                                                const serverList = contentJson.previews.filter(item => item.server); // 取得圖片伺服器
+                                                if ((serverList?.length ?? 0) === 0) return;
 
                                                 // 為了穩定性這樣寫
-                                                const List = [
-                                                    ...(Post.file ? (Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : []) : []),
-                                                    ...Post.attachments
+                                                const postList = [
+                                                    ...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []),
+                                                    ...post.attachments
                                                 ];
-                                                const Fill = Syn.GetFill(ServerList.length);
+                                                const fillValue = Syn.GetFill(serverList.length);
 
                                                 // 依據篩選出有預覽圖伺服器的, 生成圖片連結
-                                                return ServerList.reduce((acc, Server, Index) => {
-                                                    const extension = [List[Index].name, List[Index].path]
+                                                return serverList.reduce((acc, server, index) => {
+                                                    const extension = [postList[index].name, postList[index].path]
                                                         .map(name => Syn.SuffixName(name, ""))
-                                                        .find(ext => this.IsImage(ext));
+                                                        .find(ext => this.isImage(ext));
 
                                                     if (!extension) return acc;
 
-                                                    const name = `${Title}_${Syn.Mantissa(Index, Fill, '0')}.${extension}`;
-                                                    acc[name] = `${Server.server}/data${List[Index].path}?f=${name}`;
+                                                    const name = `${standardTitle}_${Syn.Mantissa(index, fillValue, '0')}.${extension}`;
+                                                    acc[name] = `${server.server}/data${postList[index].path}?f=${name}`;
                                                     return acc;
                                                 }, {});
                                             };
 
                                             // 生成請求數據 (處理要抓什麼數據)
-                                            const Gen = this.FetchGenerate({
-                                                PostLink: this.PostURL(Post.id),
-                                                Timestamp: this.NormalizeTimestamp(Post),
-                                                TypeTag: Post.tags,
-                                                ImgLink: ImgLink(),
-                                                VideoLink: File.video,
-                                                DownloadLink: File.other,
-                                                ExternalLink: this.specialLinkParse(Post.content)
+                                            const generatedData = this.fetchGenerate({
+                                                PostLink: this.getPostURL(post.id),
+                                                Timestamp: this.normalizeTimestamp(post),
+                                                TypeTag: post.tags,
+                                                ImgLink: getImgLink(),
+                                                VideoLink: classifiedFiles.video,
+                                                DownloadLink: classifiedFiles.other,
+                                                ExternalLink: this.specialLinkParse(post.content)
                                             });
 
                                             // 儲存數據
-                                            if (Object.keys(Gen).length !== 0) {
-                                                this.DataDict.set(Title, Gen);
+                                            if (Object.keys(generatedData).length !== 0) {
+                                                this.dataDict.set(standardTitle, generatedData);
                                             };
 
                                             resolve();
-                                            Syn.title(`（${this.CurrentPage} - ${++this.Progress}）`);
-                                            Syn.Log("Request Successful", { index: index, title: Title, url: url, data: Gen }, { dev: General.Dev, collapsed: false });
+                                            Syn.title(`（${this.currentPage} - ${++this.progress}）`);
+                                            Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                                         } else throw new Error("Json Parse Failed");
                                     } else {
                                         throw new Error("Request Failed");
                                     }
                                 } catch (error) {
-                                    Syn.Log(error, { index: index, title: title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
+                                    Syn.Log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
                                     await this.TooMany_TryAgain(url); // 錯誤等待
-                                    this.Worker.postMessage({ index: index, title: title, url: url, time: time, delay: delay });
+                                    this.worker.postMessage({ index, title, url, time, delay });
                                 }
                             }
                         };
 
                         // 生成任務
-                        for (const [Index, Post] of Results.entries()) {
+                        for (const [index, post] of results.entries()) {
                             Tasks.push(new Promise((resolve, reject) => {
-                                resolvers.set(Index, { resolve, reject }); // 存儲解析器
-                                this.Worker.postMessage({ index: Index, title: Post.title, url: `${this.PostAPI}/${Post.id}`, time: Date.now(), delay: this.FetchDelay });
+                                resolvers.set(index, { resolve, reject }); // 存儲解析器
+                                this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
                             }));
-                            await Syn.Sleep(this.FetchDelay);
+                            await Syn.Sleep(this.fetchDelay);
                         }
 
                         // 等待所有任務
                         await Promise.allSettled(Tasks);
 
                     } else {
-                        for (const [Index, Post] of Results.entries()) {
-                            const Title = this.NormalizeName(Post.title, Index);
+                        for (const [index, post] of results.entries()) {
+                            const standardTitle = this.normalizeName(post.title, index);
 
                             try {
                                 // 分類所有文件
-                                const File = this.Categorize(Title, [...(Post.file ? (Array.isArray(Post.file) ? Post.file : Object.keys(Post.file).length ? [Post.file] : []) : []), ...Post.attachments]);
+                                const classifiedFiles = this.normalCategorize(standardTitle, [...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []), ...post.attachments]);
 
-                                const Gen = this.FetchGenerate({
-                                    PostLink: this.PostURL(Post.id),
-                                    Timestamp: this.NormalizeTimestamp(Post),
-                                    ImgLink: File.img,
-                                    VideoLink: File.video,
-                                    DownloadLink: File.other
+                                const generatedData = this.fetchGenerate({
+                                    PostLink: this.getPostURL(post.id),
+                                    Timestamp: this.normalizeTimestamp(post),
+                                    ImgLink: classifiedFiles.img,
+                                    VideoLink: classifiedFiles.video,
+                                    DownloadLink: classifiedFiles.other
                                 });
 
-                                if (Object.keys(Gen).length !== 0) {
-                                    this.DataDict.set(Title, Gen);
+                                if (Object.keys(generatedData).length !== 0) {
+                                    this.dataDict.set(standardTitle, generatedData);
                                 };
 
-                                Syn.title(`（${this.CurrentPage}）`);
-                                Syn.Log("Parsed Successful", { index: Index, title: Title, url: url, data: Gen }, { dev: General.Dev, collapsed: false });
+                                Syn.title(`（${this.currentPage}）`);
+                                Syn.Log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                             } catch (error) {
-                                Syn.Log(error, { index: Index, title: Title, url: url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Syn.Log(error, { index, title: standardTitle, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 continue;
                             }
                         }
                     }
 
-                    await Syn.Sleep(this.FetchDelay);
+                    await Syn.Sleep(this.fetchDelay);
                     return true; // 回傳完成
                 } else { /* 之後在想 */ }
             }
@@ -541,18 +548,18 @@ export default function Fetch(
 
         /* ===== 輸出生成 ===== */
 
-        async _Reset() {
-            this.MetaDict = null;
-            this.DataDict = null;
-            this.Worker.terminate();
+        async _reset() {
+            this.metaDict = null;
+            this.dataDict = null;
+            this.worker.terminate();
             // 上方操作是主動釋放 GC, 並不是必要的, 因為調用下載 Class 每次都是新的實例, 下方是必要的
             Process.Lock = false;
-            Syn.title(this.TitleCache);
+            Syn.title(this.titleCache);
         };
 
-        async _ToTxt() {
-            let Content = "";
-            for (const value of this.DataDict.values()) {
+        async _toTxt() {
+            let content = "";
+            for (const value of this.dataDict.values()) {
                 const getLinks = Object.assign(
                     {},
                     value[Transl("ImgLink")],
@@ -561,27 +568,27 @@ export default function Fetch(
                 );
 
                 for (const link of Object.values(getLinks)) {
-                    Content += `${encodeURI(link)}\n`;
+                    content += `${encodeURI(link)}\n`;
                 }
             }
-            if (Content.endsWith('\n')) Content = Content.slice(0, -1); // 去除末行空白
+            if (content.endsWith('\n')) content = content.slice(0, -1); // 去除末行空白
 
-            Syn.OutputTXT(Content, this.MetaDict.get(Transl("作者")), () => {
-                Content = null;
-                this._Reset();
+            Syn.OutputTXT(content, this.metaDict.get(Transl("作者")), () => {
+                content = null;
+                this._reset();
             })
         };
 
-        async _ToJson() {
-            let Json_data = Object.assign(
+        async _toJson() {
+            let jsonData = Object.assign(
                 {},
-                { [Transl("元數據")]: Object.fromEntries(this.MetaDict) },
-                { [`${Transl("帖子內容")} (${this.DataDict.size})`]: Object.fromEntries(this.DataDict) }
+                { [Transl("元數據")]: Object.fromEntries(this.metaDict) },
+                { [`${Transl("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) }
             );
 
-            Syn.OutputJson(Json_data, this.MetaDict.get(Transl("作者")), () => {
-                Json_data = null;
-                this._Reset();
+            Syn.OutputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
+                jsonData = null;
+                this._reset();
             });
         };
 
