@@ -15,11 +15,9 @@ export default function Fetch(
 
             this.host = this.URL.host;
             this.firstURL = this.URL.origin + this.URL.pathname; // 第一頁連結
-            this.queryValue = this.URL.searchParams.get("q");
+            this.queryValue = this.URL.search;
 
-            if (this.queryValue) { // 確保有搜尋關鍵字
-                this.queryValue = encodeURIComponent(this.queryValue);
-            } else if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
+            if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
                 this.URL.searchParams.delete("q");
                 this.sourceURL = this.URL.href;
             }
@@ -59,7 +57,7 @@ export default function Fetch(
                 /[?&]o=/.test(url)
                     ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1")
                     : this.queryValue // 如果有搜尋關鍵字
-                        ? url.replace(this.host, `${this.host}/api/v1`).replace(`?q=${this.queryValue}`, `/posts-legacy?q=${this.queryValue}`)
+                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`)
                         : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
 
             // 根據類型判斷有效值
@@ -124,18 +122,17 @@ export default function Fetch(
                 }, { video: {}, other: {} });
             };
 
-            // 一般抓取的檔案分類 (標題字串, 所有類型文件 Array) => { img: [], video: {}, other: {} }
-            this.normalCategorize = (title, data) => {
+            // 一般抓取的檔案分類 (標題字串, 所有文件 Array, 伺服器字典) => { img: [], video: {}, other: {} }
+            this.normalCategorize = (title, data, serverDict) => {
                 let imgNumber = 0;
-                let serverNumber = 0;
 
                 return data.reduce((acc, file) => {
                     const name = file.name;
                     const path = file.path;
                     const extension = Syn.SuffixName(path, "");
 
-                    serverNumber = (serverNumber % 4) + 1;
-                    const server = `https://n${serverNumber}.${this.host}/data`;
+                    // ! 實驗性
+                    const server = `${serverDict[path]}/data`;
 
                     if (this.isVideo(extension)) {
                         acc.video[name] = `${server}${path}?f=${name}`;
@@ -643,12 +640,33 @@ export default function Fetch(
                         await Promise.allSettled(tasks);
 
                     } else {
+                        const previews = contentJson.result_previews || []; // 圖片所需的數據
+                        const attachments = contentJson.result_attachments || []; // 下載所需的數據
+
                         for (const [index, post] of results.entries()) {
                             const standardTitle = this.normalizeName(post.title, index);
 
                             try {
+                                // 獲取對應的伺服器
+                                const serverDict = [...previews[index], ...attachments[index]].reduce((acc, item) => {
+                                    acc[item.path] = item.server;
+                                    return acc;
+                                }, {});
+
                                 // 分類所有文件
-                                const classifiedFiles = this.normalCategorize(standardTitle, [...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []), ...post.attachments]);
+                                const classifiedFiles = this.normalCategorize(
+                                    standardTitle,
+                                    [...(post.file // 確保 post.file 是 array
+                                        ? (Array.isArray(post.file)
+                                            ? post.file
+                                            : Object.keys(post.file).length
+                                                ? [post.file]
+                                                : []
+                                        ) : []
+                                    ), ...post.attachments
+                                    ],
+                                    serverDict
+                                );
 
                                 const generatedData = this.fetchGenerate({
                                     PostLink: this.getPostURL(post.id),
