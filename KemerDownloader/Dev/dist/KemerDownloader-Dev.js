@@ -422,10 +422,8 @@
         this.URL = new URL(this.sourceURL);
         this.host = this.URL.host;
         this.firstURL = this.URL.origin + this.URL.pathname;
-        this.queryValue = this.URL.searchParams.get("q");
-        if (this.queryValue) {
-          this.queryValue = encodeURIComponent(this.queryValue);
-        } else if (this.queryValue === "") {
+        this.queryValue = this.URL.search;
+        if (this.queryValue === "") {
           this.URL.searchParams.delete("q");
           this.sourceURL = this.URL.href;
         }
@@ -448,7 +446,7 @@
           return `${url.origin}${url.pathname}${params}`;
         };
         this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
-        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(`?q=${this.queryValue}`, `/posts-legacy?q=${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
+        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
         this.getValidValue = (value) => {
           if (!value) return null;
           const type = Syn2.Type(value);
@@ -475,29 +473,21 @@
         this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
         this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
         this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
-        this.advancedCategorize = (data) => {
-          return data.reduce((acc, file) => {
-            const url = `${file.server}/data${file.path}?f=${file.name}`;
-            this.isVideo(file.extension) ? acc.video[file.name] = url : acc.other[file.name] = url;
-            return acc;
-          }, { video: {}, other: {} });
-        };
-        this.normalCategorize = (title, data) => {
+        this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
           let imgNumber = 0;
-          let serverNumber = 0;
           return data.reduce((acc, file) => {
             const name = file.name;
             const path = file.path;
             const extension = Syn2.SuffixName(path, "");
-            serverNumber = serverNumber % 4 + 1;
-            const server = `https://n${serverNumber}.${this.host}/data`;
+            const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
+            const url = `${server}${path}`;
             if (this.isVideo(extension)) {
-              acc.video[name] = `${server}${path}?f=${name}`;
+              acc.video[name] = `${url}?f=${name}`;
             } else if (this.isImage(extension)) {
-              const name2 = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-              acc.img[name2] = `${server}${path}?f=${name2}`;
+              const name2 = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
+              acc.img[name2] = `${url}?f=${name2}`;
             } else {
-              acc.other[name] = `${server}${path}?f=${name}`;
+              acc.other[name] = `${url}?f=${name}`;
             }
             return acc;
           }, { img: {}, video: {}, other: {} });
@@ -837,29 +827,19 @@
                     const contentJson2 = JSON.parse(content2);
                     if (contentJson2) {
                       const post = contentJson2.post;
+                      const previews = contentJson2.previews || [];
+                      const attachments = contentJson2.attachments || [];
                       const standardTitle = this.normalizeName(post.title, index);
-                      const classifiedFiles = this.advancedCategorize(contentJson2.attachments);
-                      const getImgLink = () => {
-                        const serverList = contentJson2.previews.filter((item) => item.server);
-                        if ((serverList?.length ?? 0) === 0) return;
-                        const postList = [
-                          ...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [],
-                          ...post.attachments
-                        ];
-                        const fillValue = Syn2.GetFill(serverList.length);
-                        return serverList.reduce((acc, server, index2) => {
-                          const extension = [postList[index2].name, postList[index2].path].map((name2) => Syn2.SuffixName(name2, "")).find((ext) => this.isImage(ext));
-                          if (!extension) return acc;
-                          const name = `${standardTitle}_${Syn2.Mantissa(index2, fillValue, "0")}.${extension}`;
-                          acc[name] = `${server.server}/data${postList[index2].path}?f=${name}`;
-                          return acc;
-                        }, {});
-                      };
+                      const classifiedFiles = this.kemerCategorize({
+                        title: standardTitle,
+                        data: [...previews, ...attachments],
+                        fillValue: Syn2.GetFill(previews?.length || 1)
+                      });
                       const generatedData = this.fetchGenerate({
                         PostLink: this.getPostURL(post.id),
                         Timestamp: this.normalizeTimestamp(post),
                         TypeTag: post.tags,
-                        ImgLink: getImgLink(),
+                        ImgLink: classifiedFiles.img,
                         VideoLink: classifiedFiles.video,
                         DownloadLink: classifiedFiles.other,
                         ExternalLink: this.specialLinkParse(post.content)
@@ -890,10 +870,21 @@
               }
               await Promise.allSettled(tasks);
             } else {
+              const previews = contentJson.result_previews || [];
+              const attachments = contentJson.result_attachments || [];
               for (const [index, post] of results.entries()) {
                 const standardTitle = this.normalizeName(post.title, index);
                 try {
-                  const classifiedFiles = this.normalCategorize(standardTitle, [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments]);
+                  const serverDict = [...previews[index], ...attachments[index]].reduce((acc, item) => {
+                    acc[item.path] = item.server;
+                    return acc;
+                  }, {});
+                  const classifiedFiles = this.kemerCategorize({
+                    title: standardTitle,
+                    data: [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments],
+                    serverDict,
+                    fillValue: Syn2.GetFill(previews?.length || 1)
+                  });
                   const generatedData = this.fetchGenerate({
                     PostLink: this.getPostURL(post.id),
                     Timestamp: this.normalizeTimestamp(post),
