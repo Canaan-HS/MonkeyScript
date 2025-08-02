@@ -999,7 +999,7 @@
                 `, "Collapse_Effects", false);
             },
             async DeleteNotice(Config) { /* 刪除公告通知 */
-                Syn.WaitElem("aside", null, { raf: true, timeout: 5 }).then(aside => aside.remove());
+                Syn.WaitElem("aside", null, { throttle: 50, timeout: 5 }).then(aside => aside.remove());
             },
             async BlockAds(Config) { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
@@ -1026,7 +1026,7 @@
                 // 舊版白名單正則轉換
                 // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
 
-                if (Syn.$q("#Ad-blocking-style")) return; // ! 存在時跳過 (待測試)
+                if (Syn.$q("#Ad-blocking-style")) return;
 
                 Syn.AddStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
