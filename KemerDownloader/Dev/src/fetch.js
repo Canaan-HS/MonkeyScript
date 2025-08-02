@@ -113,17 +113,8 @@ export default function Fetch(
             // 正規化帖子時間戳 (傳入 Post 的物件)
             this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
 
-            // 進階抓取檔案分類 (影片與圖片文件 Array) => { video: {}, other: {} }
-            this.advancedCategorize = (data) => {
-                return data.reduce((acc, file) => {
-                    const url = `${file.server}/data${file.path}?f=${file.name}`;
-                    this.isVideo(file.extension) ? (acc.video[file.name] = url) : (acc.other[file.name] = url);
-                    return acc;
-                }, { video: {}, other: {} });
-            };
-
-            // 一般抓取的檔案分類 (標題字串, 所有文件 Array, 伺服器字典) => { img: [], video: {}, other: {} }
-            this.normalCategorize = (title, data, serverDict) => {
+            // 適用 kemono 和 coomer 的分類 (data = api 文件數據, serverDict = api 伺服器字典, fillValue = 填充數字的位數)
+            this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
                 let imgNumber = 0;
 
                 return data.reduce((acc, file) => {
@@ -131,16 +122,17 @@ export default function Fetch(
                     const path = file.path;
                     const extension = Syn.SuffixName(path, "");
 
-                    // ! 實驗性
-                    const server = `${serverDict[path]}/data`;
+                    // 如果有伺服器字典, 是非進階抓取模式
+                    const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
+                    const url = `${server}${path}`;
 
                     if (this.isVideo(extension)) {
-                        acc.video[name] = `${server}${path}?f=${name}`;
+                        acc.video[name] = `${url}?f=${name}`;
                     } else if (this.isImage(extension)) {
-                        const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                        acc.img[name] = `${server}${path}?f=${name}`;
+                        const name = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
+                        acc.img[name] = `${url}?f=${name}`;
                     } else {
-                        acc.other[name] = `${server}${path}?f=${name}`;
+                        acc.other[name] = `${url}?f=${name}`;
                     }
 
                     return acc;
@@ -160,7 +152,7 @@ export default function Fetch(
                 return curr;
             };
 
-            // nekohouse 專用分類
+            // 適用 nekohouse 的分類 (data = 連結元素 Array)
             this.nekoCategorize = (title, data) => {
                 let imgNumber = 0;
 
@@ -566,42 +558,22 @@ export default function Fetch(
 
                                     if (contentJson) {
                                         const post = contentJson.post;
+                                        const previews = contentJson.previews || []; // 取得圖片數據
+                                        const attachments = contentJson.attachments || []; // 取得下載數據
 
                                         const standardTitle = this.normalizeName(post.title, index);
-                                        const classifiedFiles = this.advancedCategorize(contentJson.attachments); // 對下載連結進行分類
-
-                                        // 獲取圖片連結
-                                        const getImgLink = () => { // ! 還需要測試
-                                            const serverList = contentJson.previews.filter(item => item.server); // 取得圖片伺服器
-                                            if ((serverList?.length ?? 0) === 0) return;
-
-                                            // 為了穩定性這樣寫
-                                            const postList = [
-                                                ...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []),
-                                                ...post.attachments
-                                            ];
-                                            const fillValue = Syn.GetFill(serverList.length);
-
-                                            // 依據篩選出有預覽圖伺服器的, 生成圖片連結
-                                            return serverList.reduce((acc, server, index) => {
-                                                const extension = [postList[index].name, postList[index].path]
-                                                    .map(name => Syn.SuffixName(name, ""))
-                                                    .find(ext => this.isImage(ext));
-
-                                                if (!extension) return acc;
-
-                                                const name = `${standardTitle}_${Syn.Mantissa(index, fillValue, '0')}.${extension}`;
-                                                acc[name] = `${server.server}/data${postList[index].path}?f=${name}`;
-                                                return acc;
-                                            }, {});
-                                        };
+                                        const classifiedFiles = this.kemerCategorize({
+                                            title: standardTitle,
+                                            data: [...previews, ...attachments],
+                                            fillValue: Syn.GetFill(previews?.length || 1)
+                                        });
 
                                         // 生成請求數據 (處理要抓什麼數據)
                                         const generatedData = this.fetchGenerate({
                                             PostLink: this.getPostURL(post.id),
                                             Timestamp: this.normalizeTimestamp(post),
                                             TypeTag: post.tags,
-                                            ImgLink: getImgLink(),
+                                            ImgLink: classifiedFiles.img,
                                             VideoLink: classifiedFiles.video,
                                             DownloadLink: classifiedFiles.other,
                                             ExternalLink: this.specialLinkParse(post.content)
@@ -654,19 +626,19 @@ export default function Fetch(
                                 }, {});
 
                                 // 分類所有文件
-                                const classifiedFiles = this.normalCategorize(
-                                    standardTitle,
-                                    [...(post.file // 確保 post.file 是 array
+                                const classifiedFiles = this.kemerCategorize({
+                                    title: standardTitle,
+                                    data: [...(post.file // 確保 post.file 是 array
                                         ? (Array.isArray(post.file)
                                             ? post.file
                                             : Object.keys(post.file).length
                                                 ? [post.file]
                                                 : []
                                         ) : []
-                                    ), ...post.attachments
-                                    ],
-                                    serverDict
-                                );
+                                    ), ...post.attachments],
+                                    serverDict,
+                                    fillValue: Syn.GetFill(previews?.length || 1)
+                                });
 
                                 const generatedData = this.fetchGenerate({
                                     PostLink: this.getPostURL(post.id),
