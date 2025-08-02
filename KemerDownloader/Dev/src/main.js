@@ -181,11 +181,6 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
                 Syn.Menu({
                     [Transl("📑 獲取帖子數據")]: () => {
-                        if (Process.IsNeko) { // 暫時還沒修復 (懶得修)
-                            alert("Temporarily Not Supported");
-                            return;
-                        }
-
                         if (!Process.Lock) {
                             let Instantiate = null;
                             Instantiate = new FetchData();
