@@ -110,7 +110,7 @@ export default function Fetch(
             this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
 
             // 正規化帖子標題名稱 (傳入 Post 標題 (string), 與列表 Index (number))
-            this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(index + 1).padStart(2, "0")}`;
+            this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(((this.currentPage - 1) * 50) + (index + 1)).padStart(2, "0")}`;
 
             // 正規化帖子時間戳 (傳入 Post 的物件)
             this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
