@@ -129,15 +129,15 @@ export default function Downloader(
                         .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                         .filter(Boolean),
                     finalData = General.IncludeExtras
-                        ? [...imgData, ...Syn.$qa(".post__attachment a:not(.fancy-link), .scrape__attachment a")] // 包含下載附加內容
+                        ? [...imgData, ...Syn.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] // 包含下載附加內容
                         : imgData;
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of finalData.entries()) {
-                    const Uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
-                    if (Uri) {
+                    const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
+                    if (uri) {
                         downloadData.set(index, (
-                            Uri.startsWith("http") ? Uri : `${Syn.$origin}${Uri}` // 方便打印觀看
+                            uri.startsWith("http") ? uri : `${Syn.$origin}${uri}` // 方便打印觀看
                         ));
                     }
                 }
