@@ -831,7 +831,8 @@
                             Pixiv: "https://www.pixiv.net/users/{id}/artworks",
                             Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
 
-                            NAME: /Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
+                            NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
+                            Twitter: "https://x.com/{name}",
                             Boosty: "https://boosty.to/{name}",
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts",
