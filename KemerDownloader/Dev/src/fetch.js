@@ -25,7 +25,8 @@ export default function Fetch(
             }
 
             this.currentPage = 1; // 預設開始抓取的頁數
-            this.finalPage = 10; // 預設最終抓取的頁數
+            this.finalPage = 1; // 預設最終抓取的頁數
+            this.totalPages = 0; // 總頁數
             this.progress = 0; // 用於顯示當前抓取進度
             this.onlyMode = false; // 判斷獲取數據的模式
             this.fetchDelay = FetchSet.Delay; // 獲取延遲
@@ -149,8 +150,90 @@ export default function Fetch(
                 }, { img: {}, video: {}, other: {} });
             };
 
+            // 用於被多層編碼的字串
+            this.deepDecodeURIComponent = (str) => {
+                let prev = str;
+                let curr = decodeURIComponent(prev);
+
+                while (curr !== prev) {
+                    prev = curr;
+                    curr = decodeURIComponent(prev);
+                }
+
+                return curr;
+            };
+
+            // nekohouse 專用分類
+            this.nekoCategorize = (title, data) => {
+                let imgNumber = 0;
+
+                return data.reduce((acc, file) => {
+                    const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
+
+                    if (uri) {
+                        const extension = Syn.SuffixName(uri, "");
+                        const url = uri.startsWith("http") ? uri : `${Syn.$origin}${uri}`;
+                        const getDownloadName = (link) => link.download?.trim() || link.$text();
+
+                        if (this.isVideo(extension)) {
+                            const name = getDownloadName(file);
+                            acc.video[name] = `${url}?f=${name}`;
+                        } else if (this.isImage(extension)) {
+                            const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+                            acc.img[name] = `${url}?f=${name}`;
+                        } else {
+                            const name = this.deepDecodeURIComponent(getDownloadName(file));
+                            acc.other[name] = `${url}?f=${name}`;
+                        }
+                    }
+
+                    return acc;
+                }, { video: {}, img: {}, other: {} });
+            };
+
+            // 解析特別連結
+            this.specialLinkParse = (data) => {
+                const Cache = {};
+
+                try {
+                    for (const a of Syn.DomParse(data).$qa("body a")) {
+                        const href = a.href;
+                        const hash = md5(href).slice(0, 16);
+
+                        if (href.startsWith("https://mega.nz")) {
+
+                            let name = (a.previousElementSibling?.$text().replace(":", "") || hash);
+                            if (name === "") continue;
+
+                            let pass = "";
+                            const nextNode = a.nextElementSibling;
+
+                            if (nextNode) {
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                                if (nodeText.startsWith("Pass")) {
+                                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
+                                }
+                            };
+
+                            Cache[name] = pass ? {
+                                [Transl("密碼")]: pass,
+                                [Transl("連結")]: href
+                            } : href;
+                        } else if (href) {
+                            const description = a.previousSibling?.$text() ?? "";
+                            const name = `${description} ${a?.$text()}`.trim();
+                            Cache[name ? name : hash] = href;
+                        }
+                    };
+                } catch (error) {
+                    Syn.Log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
+                }
+
+                return Cache;
+            };
+
             // ! 目前有 Bug, 只能使用一次, 第二次後 response 的狀態直接都變成 200, 但實際上是 429
-            this.TooMany_TryAgain = function (Uri) {
+            this.TooMany_TryAgain = function (url) {
                 if (FetchData.Try_Again_Promise) {
                     return FetchData.Try_Again_Promise;
                 }
@@ -165,7 +248,7 @@ export default function Fetch(
                         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
                         try {
-                            const response = await fetch(Uri, {
+                            const response = await fetch(url, {
                                 method: "HEAD",
                                 signal: signal,
                                 cache: 'no-store'
@@ -231,47 +314,6 @@ export default function Fetch(
                 }
             `);
 
-            // 解析特別連結
-            this.specialLinkParse = (data) => {
-                const Cache = {};
-
-                try {
-                    for (const a of Syn.DomParse(data).$qa("body a")) {
-                        const href = a.href;
-                        const hash = md5(href).slice(0, 16);
-
-                        if (href.startsWith("https://mega.nz")) {
-
-                            let name = (a.previousElementSibling?.$text().replace(":", "") || hash);
-                            if (name === "") continue;
-
-                            let pass = "";
-                            const nextNode = a.nextElementSibling;
-
-                            if (nextNode) {
-                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                                if (nodeText.startsWith("Pass")) {
-                                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
-                                }
-                            };
-
-                            Cache[name] = pass ? {
-                                [Transl("密碼")]: pass,
-                                [Transl("連結")]: href
-                            } : href;
-                        } else if (href) {
-                            const description = a.previousSibling?.$text() ?? "";
-                            const name = `${description} ${a?.$text()}`.trim();
-                            Cache[name ? name : hash] = href;
-                        }
-                    };
-                } catch (error) {
-                    Syn.Log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
-                }
-
-                return Cache;
-            };
-
             // 設置抓取規則
             FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
         }
@@ -318,7 +360,11 @@ export default function Fetch(
                 currentPage && (this.currentPage = currentPage);
 
                 // ! 實驗性獲取總頁數
-                this.finalPage = small ? Math.ceil(+small.$text().split(" of ")[1] / 50) : 1;
+                if (small) {
+                    this.totalPages = +small.$text().split(" of ")[1] || 0;
+                    this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
+                }
+
                 this._fetchPage(items, this.sourceURL); // 開始抓取
             } else {
                 alert(Transl("未取得數據"));
@@ -333,7 +379,7 @@ export default function Fetch(
             const homeData = await new Promise((resolve, reject) => {
                 this.worker.onmessage = async (e) => {
                     const { index, title, url, content, error } = e.data;
-                    if (!error) resolve({ index, title, url, content });
+                    if (!error) resolve({ url, content });
                     else {
                         Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                         await this.TooMany_TryAgain(url);
@@ -363,9 +409,39 @@ export default function Fetch(
         async _fetchPage(items, url) {
 
             if (Process.IsNeko) {
-                // 這邊由 Article 遍歷每一個帖子, 將 index 與 title 傳遞給 _fetchContent
-                const article = items.$qa("article");
-                // 下一頁連結由 Url 解析 ?o= + 50 取得
+
+                if (!items) { // 第二輪開始 只會得到 url
+                    this.worker.postMessage({ index: 0, title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
+
+                    const homeData = await new Promise((resolve, reject) => {
+                        this.worker.onmessage = async (e) => {
+                            const { index, title, url, content, time, delay, error } = e.data;
+                            if (!error) {
+                                this.fetchDelay = Process.dynamicParam(time, delay);
+                                resolve(content);
+                            }
+                            else {
+                                Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                await this.TooMany_TryAgain(url);
+                                this.worker.postMessage({ index, title, url, time, delay });
+                            };
+                        }
+                    });
+
+                    items = Syn.DomParse(homeData)?.$q(".card-list__items");
+                };
+
+                if (items) { // ? 避免可能的意外
+                    const article = items.$qa("article");
+
+                    const content = article.map((item, index) => ({ // 獲取帖子內部連結
+                        index,
+                        title: item.$q("header").$text(),
+                        url: item.$q("a").href
+                    }));
+
+                    await this._fetchContent({ content });
+                };
             } else {
                 this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
 
@@ -375,7 +451,7 @@ export default function Fetch(
                         const { index, title, url, content, time, delay, error } = e.data;
                         if (!error) {
                             this.fetchDelay = Process.dynamicParam(time, delay);
-                            resolve({ index, title, url, content });
+                            resolve({ url, content });
                         }
                         else {
                             Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
@@ -385,23 +461,81 @@ export default function Fetch(
                     }
                 });
 
-                // 等待內容數據
                 await this._fetchContent(homeData);
-
-                this.currentPage++;
-                this.currentPage <= this.finalPage
-                    ? this._fetchPage(null, this.getNextPageURL(url))
-                    : this.toLinkTxt ? this._toTxt() : this._toJson();
             }
+
+            this.currentPage++;
+            this.currentPage <= this.finalPage
+                ? this._fetchPage(null, this.getNextPageURL(url))
+                : this.toLinkTxt ? this._toTxt() : this._toJson();
         };
 
         /* 獲取帖子內部數據 */
         async _fetchContent(homeData) {
             this.progress = 0; // 重置進度
-            const { index, title, url, content } = homeData; // 解構數據
+            const { url, content } = homeData; // 解構數據
 
             // 解析處理的數據
             if (Process.IsNeko) {
+                let taskCount = 0;
+                const tasks = [];
+                const resolvers = new Map();
+                const postCount = content.length;
+
+                if (this.metaDict.size === 0) {
+                    this.metaDict.set(Transl("作者"), Syn.$q("span[itemprop='name'], fix_name").$text());
+                    this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
+                    this.metaDict.set(Transl("建立時間"), Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+                    this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+                };
+
+                this.worker.onmessage = async (e) => {
+                    const { index, title, url, content, time, delay, error } = e.data;
+
+                    if (!error) {
+                        const { resolve, reject } = resolvers.get(index);
+                        this.fetchDelay = Process.dynamicParam(time, delay);
+
+                        const standardTitle = this.normalizeName(title, index);
+                        const postDom = Syn.DomParse(content);
+
+                        const classifiedFiles = this.nekoCategorize(standardTitle, [
+                            ...postDom.$qa(".fileThumb"), // 圖片連結
+                            ...postDom.$qa(".scrape__attachments a") // 下載連結
+                        ]);
+
+                        const generatedData = this.fetchGenerate({
+                            PostLink: url,
+                            Timestamp: postDom.$q(".timestamp").$text(),
+                            ImgLink: classifiedFiles.img,
+                            VideoLink: classifiedFiles.video,
+                            DownloadLink: classifiedFiles.other,
+                            // ExternalLink: this.specialLinkParse(post.content)
+                        });
+
+                        if (Object.keys(generatedData).length !== 0) {
+                            this.dataDict.set(standardTitle, generatedData);
+                        };
+
+                        resolve();
+                        Syn.title(`（${this.currentPage} - ${++taskCount}）`); // ? 如果直接使用 index, 順序會亂跳, 因為是異步執行
+                        Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                    } else {
+                        await this.TooMany_TryAgain(url);
+                        this.worker.postMessage({ index, title, url, time, delay });
+                    }
+                };
+
+                for (const { index, title, url } of content) {
+                    tasks.push(new Promise((resolve, reject) => {
+                        resolvers.set(index, { resolve, reject });
+                        this.worker.postMessage({ index, title, url, time: Date.now(), delay: this.fetchDelay });
+                    }));
+
+                    await Syn.Sleep(this.fetchDelay);
+                };
+
+                await Promise.allSettled(tasks);
 
             } else {
                 /* ----- 這邊是主頁的數據 ----- */
@@ -409,7 +543,6 @@ export default function Fetch(
 
                 if (contentJson) {
 
-                    // 首次生成元數據
                     if (this.metaDict.size === 0) {
                         const props = contentJson.props;
 
@@ -422,94 +555,92 @@ export default function Fetch(
 
                     const results = contentJson.results;
                     if (this.advancedFetch) {
-                        const Tasks = [];
-                        const resolvers = new Map(); // 用於存儲每個 Promise
+                        const tasks = [];
+                        const resolvers = new Map();
 
                         this.worker.onmessage = async (e) => {
                             const { index, title, url, content, time, delay, error } = e.data;
+                            try {
+                                if (!error) {
+                                    const { resolve, reject } = resolvers.get(index);
 
-                            if (resolvers.has(index)) {
-                                const { resolve, reject } = resolvers.get(index);
+                                    this.fetchDelay = Process.dynamicParam(time, delay);
+                                    const contentJson = JSON.parse(content);
 
-                                try {
-                                    if (!error) {
-                                        this.fetchDelay = Process.dynamicParam(time, delay);
-                                        const contentJson = JSON.parse(content);
+                                    if (contentJson) {
+                                        const post = contentJson.post;
 
-                                        if (contentJson) {
-                                            const post = contentJson.post; // ? 避免相容性問題 不用 replaceAll
+                                        const standardTitle = this.normalizeName(post.title, index);
+                                        const classifiedFiles = this.advancedCategorize(contentJson.attachments); // 對下載連結進行分類
 
-                                            const standardTitle = this.normalizeName(post.title, index);
-                                            const classifiedFiles = this.advancedCategorize(contentJson.attachments); // 對下載連結進行分類
+                                        // 獲取圖片連結
+                                        const getImgLink = () => { // ! 還需要測試
+                                            const serverList = contentJson.previews.filter(item => item.server); // 取得圖片伺服器
+                                            if ((serverList?.length ?? 0) === 0) return;
 
-                                            // 獲取圖片連結
-                                            const getImgLink = () => { // ! 還需要測試
-                                                const serverList = contentJson.previews.filter(item => item.server); // 取得圖片伺服器
-                                                if ((serverList?.length ?? 0) === 0) return;
+                                            // 為了穩定性這樣寫
+                                            const postList = [
+                                                ...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []),
+                                                ...post.attachments
+                                            ];
+                                            const fillValue = Syn.GetFill(serverList.length);
 
-                                                // 為了穩定性這樣寫
-                                                const postList = [
-                                                    ...(post.file ? (Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : []) : []),
-                                                    ...post.attachments
-                                                ];
-                                                const fillValue = Syn.GetFill(serverList.length);
+                                            // 依據篩選出有預覽圖伺服器的, 生成圖片連結
+                                            return serverList.reduce((acc, server, index) => {
+                                                const extension = [postList[index].name, postList[index].path]
+                                                    .map(name => Syn.SuffixName(name, ""))
+                                                    .find(ext => this.isImage(ext));
 
-                                                // 依據篩選出有預覽圖伺服器的, 生成圖片連結
-                                                return serverList.reduce((acc, server, index) => {
-                                                    const extension = [postList[index].name, postList[index].path]
-                                                        .map(name => Syn.SuffixName(name, ""))
-                                                        .find(ext => this.isImage(ext));
+                                                if (!extension) return acc;
 
-                                                    if (!extension) return acc;
+                                                const name = `${standardTitle}_${Syn.Mantissa(index, fillValue, '0')}.${extension}`;
+                                                acc[name] = `${server.server}/data${postList[index].path}?f=${name}`;
+                                                return acc;
+                                            }, {});
+                                        };
 
-                                                    const name = `${standardTitle}_${Syn.Mantissa(index, fillValue, '0')}.${extension}`;
-                                                    acc[name] = `${server.server}/data${postList[index].path}?f=${name}`;
-                                                    return acc;
-                                                }, {});
-                                            };
+                                        // 生成請求數據 (處理要抓什麼數據)
+                                        const generatedData = this.fetchGenerate({
+                                            PostLink: this.getPostURL(post.id),
+                                            Timestamp: this.normalizeTimestamp(post),
+                                            TypeTag: post.tags,
+                                            ImgLink: getImgLink(),
+                                            VideoLink: classifiedFiles.video,
+                                            DownloadLink: classifiedFiles.other,
+                                            ExternalLink: this.specialLinkParse(post.content)
+                                        });
 
-                                            // 生成請求數據 (處理要抓什麼數據)
-                                            const generatedData = this.fetchGenerate({
-                                                PostLink: this.getPostURL(post.id),
-                                                Timestamp: this.normalizeTimestamp(post),
-                                                TypeTag: post.tags,
-                                                ImgLink: getImgLink(),
-                                                VideoLink: classifiedFiles.video,
-                                                DownloadLink: classifiedFiles.other,
-                                                ExternalLink: this.specialLinkParse(post.content)
-                                            });
+                                        // 儲存數據
+                                        if (Object.keys(generatedData).length !== 0) {
+                                            this.dataDict.set(standardTitle, generatedData);
+                                        };
 
-                                            // 儲存數據
-                                            if (Object.keys(generatedData).length !== 0) {
-                                                this.dataDict.set(standardTitle, generatedData);
-                                            };
-
-                                            resolve();
-                                            Syn.title(`（${this.currentPage} - ${++this.progress}）`);
-                                            Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
-                                        } else throw new Error("Json Parse Failed");
-                                    } else {
-                                        throw new Error("Request Failed");
-                                    }
-                                } catch (error) {
-                                    Syn.Log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
-                                    await this.TooMany_TryAgain(url); // 錯誤等待
-                                    this.worker.postMessage({ index, title, url, time, delay });
+                                        resolve();
+                                        Syn.title(`（${this.currentPage} - ${++this.progress}）`);
+                                        Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                                    } else throw new Error("Json Parse Failed");
+                                } else {
+                                    throw new Error("Request Failed");
                                 }
+                            } catch (error) {
+                                Syn.Log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                await this.TooMany_TryAgain(url); // 錯誤等待
+                                this.worker.postMessage({ index, title, url, time, delay });
                             }
                         };
 
                         // 生成任務
                         for (const [index, post] of results.entries()) {
-                            Tasks.push(new Promise((resolve, reject) => {
+                            tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(index, { resolve, reject }); // 存儲解析器
                                 this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
                             }));
+
                             await Syn.Sleep(this.fetchDelay);
-                        }
+                        };
 
                         // 等待所有任務
-                        await Promise.allSettled(Tasks);
+                        await Promise.allSettled(tasks);
 
                     } else {
                         for (const [index, post] of results.entries()) {
@@ -537,13 +668,14 @@ export default function Fetch(
                                 Syn.Log(error, { index, title: standardTitle, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 continue;
                             }
-                        }
+                        };
                     }
 
                     await Syn.Sleep(this.fetchDelay);
-                    return true; // 回傳完成
                 } else { /* 之後在想 */ }
             }
+
+            return true; // 回傳完成
         };
 
         /* ===== 輸出生成 ===== */
