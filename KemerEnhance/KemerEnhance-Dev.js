@@ -823,16 +823,20 @@
                         },
                         Save_Work: (() => Syn.Debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1000))(),
                         Fix_Name_Support: new Set(["pixiv", "fanbox"]),
-                        Fix_Tag_Support: {
-                            ID: /Patreon|Fantia|Pixiv|Fanbox/gi,
+                        Fix_Tag_Support: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
+                            ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox/gi,
+                            Gumroad: "https://gumroad.com/{id}",
                             Patreon: "https://www.patreon.com/user?u={id}",
                             Fantia: "https://fantia.jp/fanclubs/{id}/posts",
                             Pixiv: "https://www.pixiv.net/users/{id}/artworks",
                             Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
 
-                            NAME: /Fansly|OnlyFans/gi,
+                            NAME: /Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
+                            Boosty: "https://boosty.to/{name}",
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts",
+                            SubscribeStar: "https://subscribestar.adult/{name}",
+                            DLsite: "https://www.dlsite.com/maniax/circle/profile/=/maker_id/{name}.html",
                         },
                         async Fix_Request(url, headers = {}) { // 請求修復數據
                             return new Promise(resolve => {
@@ -840,6 +844,7 @@
                                     method: "GET",
                                     url: url,
                                     headers: headers,
+                                    responseType: "json",
                                     onload: response => resolve(response),
                                     onerror: () => resolve(),
                                     ontimeout: () => resolve()
@@ -851,7 +856,7 @@
                                 `https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, { referer: "https://www.pixiv.net/" }
                             );
                             if (response.status === 200) {
-                                const user = JSON.parse(response.responseText);
+                                const user = response.response;
                                 let user_name = user.body.name;
                                 user_name = user_name.replace(/(c\d+)?([日月火水木金土]曜日?|[123１２３一二三]日目?)[東南西北]..?\d+\w?/i, '');
                                 user_name = user_name.replace(/[@＠]?(fanbox|fantia|skeb|ファンボ|リクエスト|お?仕事|新刊|単行本|同人誌)+(.*(更新|募集|公開|開設|開始|発売|販売|委託|休止|停止)+中?[!！]?$|$)/gi, '');
@@ -864,9 +869,9 @@
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        async Fix_Update_Ui(href, id, name_obj, tag_obj, text) { // 修復後更新 UI
+                        async Fix_Update_Ui(href, info, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
-                            const edit = Syn.createElement("fix_edit", { id, class: "edit_artist", text: "Edit" });
+                            const edit = Syn.createElement("fix_edit", { id: info, class: "edit_artist", text: "Edit" });
 
                             name_obj.parentNode.insertBefore(edit, name_obj);
                             name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
@@ -877,14 +882,16 @@
                                 this.Fix_Tag_Support.ID,
                                 this.Fix_Tag_Support.NAME
                             ];
+                            
+                            if (!tag_text) return;
 
                             if (support_id.test(tag_text)) {
                                 tag_obj.$iHtml(tag_text.replace(support_id, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", id)}">${tag}</fix_tag>`;
+                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", info)}">${tag}</fix_tag>`;
                                 }));
                             } else if (support_name.test(tag_text)) {
                                 tag_obj.$iHtml(tag_text.replace(support_name, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", id)}">${tag}</fix_tag>`;
+                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", info)}">${tag}</fix_tag>`;
                                 }));
                             }
                         },
