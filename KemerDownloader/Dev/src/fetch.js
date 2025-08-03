@@ -167,13 +167,15 @@ export default function Fetch(
                             link.download?.trim() || link.$text()
                         );
 
+                        // ? 影片不支援 filename= IDM 解碼, 該網站本身沒有 Content-Disposition
                         if (this.isVideo(extension)) {
-                            acc.video[getDownloadName(file)] = `${url}`;
+                            acc.video[getDownloadName(file)] = url;
                         } else if (this.isImage(extension)) {
                             const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                            acc.img[name] = `${url}`;
+                            acc.img[name] = `${url}?filename=${name}`;
                         } else {
-                            acc.other[getDownloadName(file)] = `${url}`;
+                            const name = getDownloadName(file);
+                            acc.other[name] = `${url}?filename=${name}`;
                         }
                     }
 
