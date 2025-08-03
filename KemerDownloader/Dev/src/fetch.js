@@ -170,11 +170,13 @@ export default function Fetch(
                         if (this.isVideo(extension)) {
                             acc.video[getDownloadName(file)] = url;
                         } else if (this.isImage(extension)) {
-                            // ? 僅有圖片支援 ?filename= IDM 解碼, 該網站本身沒有 Content-Disposition
+                            // ? 圖片基本支援 ?filename= IDM 解碼, 網站本身沒有 Content-Disposition
                             const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
                             acc.img[name] = `${url}?filename=${name}`;
                         } else {
-                            acc.other[getDownloadName(file)] = url;
+                            // 某些可能支援 ?filename=
+                            const name = getDownloadName(file);
+                            acc.other[name] = `${url}?filename=${name}`;
                         }
                     }
 
