@@ -1314,6 +1314,7 @@
                                 url,
                                 onload: response => {
                                     if (abortSignal?.aborted) return reject(new Error('Aborted'));
+                                    if (response.status !== 200) return reject(new Error('Server error'));
 
                                     const newContent = response.responseXML.$q(".card-list--legacy");
 
@@ -1693,6 +1694,8 @@
                             method: "GET",
                             url: URL,
                             onload: response => {
+                                if (response.status !== 200) return;
+
                                 if (DLL.IsNeko) {
                                     const Main = response.responseXML.$q("main");
                                     const View = Lib.createElement("View", { class: "View" });
@@ -1746,6 +1749,11 @@
                             url: url,
                             nocache: false,
                             onload: response => {
+                                if (response.status !== 200) {
+                                    GetNextPage(url, old_main);
+                                    return;
+                                };
+
                                 const XML = response.responseXML;
                                 const Main = XML.$q("main");
                                 old_main.replaceChildren(...Main.childNodes);
