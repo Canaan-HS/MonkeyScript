@@ -168,14 +168,12 @@ export default function Fetch(
                         );
 
                         if (this.isVideo(extension)) {
-                            const name = getDownloadName(file);
-                            acc.video[name] = `${url}?f=${name}`;
+                            acc.video[getDownloadName(file)] = `${url}`;
                         } else if (this.isImage(extension)) {
                             const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                            acc.img[name] = `${url}?f=${name}`;
+                            acc.img[name] = `${url}`;
                         } else {
-                            const name = getDownloadName(file);
-                            acc.other[name] = `${url}?f=${name}`;
+                            acc.other[getDownloadName(file)] = `${url}`;
                         }
                     }
 
