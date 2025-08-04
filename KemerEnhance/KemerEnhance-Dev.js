@@ -637,7 +637,10 @@
                         Record_Cache: undefined, // 讀取修復紀錄 用於緩存
                         Fix_Cache: new Map(), // 修復後 用於緩存
                         Register_Eement: new Map(), // 用於存放以被註冊的元素
-                        Get_Record: () => Lib.local("fix_record_v2", { error: new Map() }),
+                        Get_Record() {
+                            const record = Lib.local("fix_record_v2", { error: new Map() });
+                            return record instanceof Map ? record : new Map(); // 有時會出現錯誤
+                        },
                         async Save_Record(save) {
                             await Lib.local("fix_record_v2",
                                 {
@@ -646,24 +649,18 @@
                             );
                             this.Fix_Cache.clear();
                         },
-                        Save_Work: (() => Lib.$debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1000))(),
-                        Fix_Name_Support: new Set(["pixiv", "fanbox"]),
-                        Fix_Tag_Support: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
-                            ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox/gi,
-                            Gumroad: "https://gumroad.com/{id}",
-                            Patreon: "https://www.patreon.com/user?u={id}",
-                            Fantia: "https://fantia.jp/fanclubs/{id}/posts",
-                            Pixiv: "https://www.pixiv.net/users/{id}/artworks",
-                            Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
-
-                            NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
-                            Twitter: "https://x.com/{name}",
-                            Boosty: "https://boosty.to/{name}",
-                            OnlyFans: "https://onlyfans.com/{name}",
-                            Fansly: "https://fansly.com/{name}/posts",
-                            SubscribeStar: "https://subscribestar.adult/{name}",
-                            DLsite: "https://www.dlsite.com/maniax/circle/profile/=/maker_id/{name}.html",
+                        Replace_Url_Tail(url, tail) {
+                            const uri = new URL(url);
+                            uri.pathname = tail;
+                            url = uri.href;
+                            return url;
                         },
+                        Parse_Url(url) { // 解析網址連結
+                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/); // 匹配出三段類型, 或兩段類型的格式
+                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
+                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        },
+                        Save_Work: (() => Lib.$debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1000))(),
                         async Fix_Request(url, headers = {}) { // 請求修復數據
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
@@ -690,53 +687,131 @@
                                 return user_name;
                             } else return;
                         },
-                        Fix_Url(url) { // 連結網址修復
-                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/); // 匹配出三段類型, 或兩段類型的格式
-                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
-                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        async Get_Candfans_Name(id) { // 取得 Candfans 名稱
+                            const response = await this.Fix_Request(
+                                `https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`
+                            );
+                            if (response.status === 200) {
+                                const user = response.response.data[0];
+                                const user_code = user?.user_code || "";
+                                const username = user?.username || "";
+                                return [user_code, username]; // user_code 是搜尋用, username 是顯示用
+                            } else return;
                         },
-                        async Fix_Update_Ui(href, info, name_obj, tag_obj, text) { // 修復後更新 UI
-                            /* 創建編輯按鈕 */
-                            const edit = Lib.createElement("fix_edit", { id: info, class: "edit_artist", text: "Edit" });
+                        Candfans_Page_Adapt(oldId, newId, oldUrl, oldName, newName) { // Candfans 很麻煩, 不同頁面的格式不一樣
+                            if (DLL.IsSearch()) {
+                                oldId = newId ? newId : oldId;
+                            } else {
+                                oldUrl = newId ? this.Replace_Url_Tail(oldUrl, newId) : oldUrl;
+                            }
 
-                            name_obj.parentNode.insertBefore(edit, name_obj);
-                            name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
+                            oldName = newName ? newName : oldName;
+
+                            return [oldId, oldUrl, oldName];
+                        },
+                        Fix_Name_Support: new Set(["pixiv", "fanbox", "candfans"]),
+                        Fix_Tag_Support: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
+                            ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
+                            NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
+
+                            Fantia: "https://fantia.jp/fanclubs/{id}/posts",
+                            FantiaPost: "https://fantia.jp/posts/{id}",
+
+                            Patreon: "https://www.patreon.com/user?u={id}",
+                            PatreonPost: "https://www.patreon.com/posts/{id}",
+
+                            DLsite: "https://www.dlsite.com/maniax/circle/profile/=/maker_id/{name}.html",
+                            DLsitePost: "https://www.dlsite.com/maniax/work/=/product_id/{name}.html",
+
+                            CandFans: "https://candfans.jp/{id}",
+                            CandFansPost: "https://candfans.jp/posts/comment/show/{id}",
+
+                            Gumroad: "https://gumroad.com/{id}",
+                            Pixiv: "https://www.pixiv.net/users/{id}/artworks",
+                            Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
+                            Boosty: "https://boosty.to/{name}",
+                            SubscribeStar: "https://subscribestar.adult/{name}",
+                            Twitter: "https://x.com/{name}",
+                            OnlyFans: "https://onlyfans.com/{name}",
+                            Fansly: "https://fansly.com/{name}/posts",
+                        },
+                        async Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
+                            /* 創建編輯按鈕 */
+                            const edit = Lib.createElement("fix_edit", { id: infoID, class: "edit_artist", text: "Edit" });
+
+                            nameEl.parentNode.insertBefore(edit, nameEl);
+                            nameEl.$oHtml(`<fix_name jump="${mainUrl}">${showText.trim()}</fix_name>`);
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
-                                tag_obj.$text(),
+                                tagEl.$text(),
                                 this.Fix_Tag_Support.ID,
                                 this.Fix_Tag_Support.NAME
                             ];
-                            
+
                             if (!tag_text) return;
 
-                            if (support_id.test(tag_text)) {
-                                tag_obj.$iHtml(tag_text.replace(support_id, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", info)}">${tag}</fix_tag>`;
-                                }));
-                            } else if (support_name.test(tag_text)) {
-                                tag_obj.$iHtml(tag_text.replace(support_name, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", info)}">${tag}</fix_tag>`;
-                                }));
-                            }
+                            const [mark, matchId] = support_id.test(tag_text)
+                                ? ["{id}", support_id]
+                                : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
+
+                            if (!mark) return;
+
+                            tagEl.$iHtml(tag_text.replace(matchId, tag => {
+                                let supported = false;
+                                const supportFormat = appendTag
+                                    ? ( // 存在 appendTag 時 且擁有對應的 API 格式, 才使用新的 infoID 與支援格式, 否則回退到舊格式
+                                        supported = this.Fix_Tag_Support[`${tag}${appendTag}`],
+                                        supported ? (infoID = this.Parse_Url(otherUrl)[1], supported) : this.Fix_Tag_Support[tag]
+                                    )
+                                    : this.Fix_Tag_Support[tag];
+
+                                return `<fix_tag jump="${supportFormat.replace(mark, infoID)}">${tag}</fix_tag>`;
+                            }));
                         },
-                        async Fix_Trigger(object) { // 觸發修復
-                            const { Url, TailId, Website, NameObject, TagObject } = object;
+                        async Fix_Trigger(data) { // 觸發修復
+                            let { mainUrl, otherUrl, webSite, infoID, nameEl, tagEl, appendTag } = data;
 
-                            let Record = this.Record_Cache.get(TailId); // 從緩存 使用尾部 ID 取出對應紀錄
+                            let recordName = this.Record_Cache.get(infoID); // 從緩存 使用尾部 ID 取出對應紀錄
 
-                            if (Record) {
-                                this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
+                            if (recordName) {
+                                if (webSite === "candfans") {
+                                    [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(
+                                        infoID,
+                                        recordName[0],
+                                        mainUrl,
+                                        nameEl.$text(),
+                                        recordName[1]
+                                    )
+                                };
+
+                                this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
                             } else {
-                                if (this.Fix_Name_Support.has(Website)) {
-                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.$text();
-                                    this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
-                                    this.Fix_Cache.set(TailId, Record); // 添加數據
+                                if (this.Fix_Name_Support.has(webSite)) {
+
+                                    if (webSite === "candfans") {
+                                        const [user_code, username] = await this.Get_Candfans_Name(infoID) ?? nameEl.$text();
+
+                                        if (user_code && username) this.Fix_Cache.set(infoID, [user_code, username]); // 都存在才添加數據
+
+                                        [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(
+                                            infoID,
+                                            user_code,
+                                            mainUrl,
+                                            nameEl.$text(),
+                                            username
+                                        )
+
+                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                    } else {
+                                        const username = await this.Get_Pixiv_Name(infoID) ?? nameEl.$text();
+                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                        this.Fix_Cache.set(infoID, username); // 添加數據
+                                    }
+
                                     this.Save_Work(); // 呼叫保存工作
                                 } else {
-                                    Record = NameObject.$text();
-                                    this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
+                                    this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
                                 }
                             }
                         },
@@ -746,31 +821,35 @@
 
                             const url = items.href;
                             const img = items.$q("img");
-                            const parse = this.Fix_Url(url);
+                            const [webSite, infoID] = this.Parse_Url(url);
 
                             img.$sAttr("jump", url); // 圖片設置跳轉連結
                             items.$dAttr("href"); // 刪除原始跳轉連結
 
                             this.Fix_Trigger({
-                                Url: url, // 跳轉連結
-                                TailId: parse[1], // 尾部 id 標號
-                                Website: parse[0], // 網站
-                                NameObject: items.$q(".user-card__name"), // 名稱物件
-                                TagObject: items.$q(".user-card__service") // 標籤物件
+                                mainUrl: url, // 主要跳轉連結
+                                otherUrl: "", // 其他替代連結
+                                webSite, // 網站 字串
+                                infoID, // 尾部 id 資訊
+                                nameEl: items.$q(".user-card__name"), // 名稱物件
+                                tagEl: items.$q(".user-card__service"), // 標籤物件
+                                appendTag: "", // 附加 tag 文本
                             });
                         },
-                        async Other_Fix(artist, tag = "", href = null, reTag = "<fix_view>") { // 針對其餘頁面的修復
+                        async Other_Fix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") { // 針對其餘頁面的修復
                             try {
                                 const parent = artist.parentNode;
-                                const url = href ?? parent.href;
-                                const parse = this.Fix_Url(url);
+                                const url = mainUrl ?? parent.href;
+                                const [webSite, infoID] = this.Parse_Url(url);
 
                                 await this.Fix_Trigger({
-                                    Url: url,
-                                    TailId: parse[1],
-                                    Website: parse[0],
-                                    NameObject: artist,
-                                    TagObject: tag
+                                    mainUrl: url,
+                                    otherUrl,
+                                    webSite,
+                                    infoID,
+                                    nameEl: artist,
+                                    tagEl: tag,
+                                    appendTag: otherUrl ? "Post" : "" // 用於調用 Post API, 的附加標籤
                                 });
 
                                 $(parent).replaceWith(function () {
@@ -1069,7 +1148,7 @@
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
                     ], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
-                        Func.Other_Fix(artist, title, artist.href, "<fix_cont>");
+                        Func.Other_Fix(artist, title, artist.href, Lib.url, "<fix_cont>");
                     });
 
                 } else { // 預覽頁面
