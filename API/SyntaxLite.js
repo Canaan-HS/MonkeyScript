@@ -554,7 +554,7 @@ const Lib = (() => {
 
     /**
      * @description 等待元素出現在DOM中並執行回調
-     * @param {string|string[]} selector - 要查找的選擇器 或 選擇器數組
+     * @param {string|string[]} select - 要查找的選擇器 或 選擇器數組
      * @param {Function} [found=null] - 找到元素後執行的回調函數
      * @param {Object} [options] - 配置選項
      * @param {boolean} [options.raf=false] - 使用 requestAnimationFrame 進行查找 (極致快的查找, 沒有 debounce 限制, 用於盡可能最快找到元素)
@@ -591,19 +591,19 @@ const Lib = (() => {
      * });
      */
     const waitCore = {
-        queryMap: (selector, all) => {
-            const result = selector.map(select => selector(document, select, all));
+        queryMap: (select, all) => {
+            const result = select.map(select => selector(document, select, all));
             return all
                 ? result.every(res => res.length > 0) && result
                 : result.every(Boolean) && result;
         },
-        queryElement: (selector, all) => {
-            const result = selector(document, selector, all);
+        queryElement: (select, all) => {
+            const result = selector(document, select, all);
             return (all ? result.length > 0 : result) && result;
         }
     };
-    async function waitEl(selector, found = null, options = {}) {
-        const query = Array.isArray(selector) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
+    async function waitEl(select, found = null, options = {}) {
+        const query = Array.isArray(select) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
         const {
             raf = false,
             all = false,
@@ -627,8 +627,8 @@ const Lib = (() => {
                 if (raf) {
                     let AnimationFrame;
 
-                    const query = () => {
-                        result = query(selector, all);
+                    const queryRun = () => {
+                        result = query(select, all);
 
                         if (result) {
                             cancelAnimationFrame(AnimationFrame);
@@ -637,11 +637,11 @@ const Lib = (() => {
                             found && found(result);
                             resolve(result);
                         } else {
-                            AnimationFrame = requestAnimationFrame(query);
+                            AnimationFrame = requestAnimationFrame(queryRun);
                         }
                     };
 
-                    AnimationFrame = requestAnimationFrame(query);
+                    AnimationFrame = requestAnimationFrame(queryRun);
 
                     timer = setTimeout(() => {
                         cancelAnimationFrame(AnimationFrame);
@@ -655,7 +655,7 @@ const Lib = (() => {
                 } else {
                     const [rateFunc, delayMs] = throttle > 0 ? [$throttle, throttle] : [$debounce, debounce];
                     const observer = new MutationObserver(rateFunc(() => {
-                        result = query(selector, all);
+                        result = query(select, all);
 
                         if (result) {
                             observer.disconnect();
