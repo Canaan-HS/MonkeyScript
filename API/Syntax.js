@@ -555,7 +555,7 @@ const Lib = (() => {
 
     /**
      * @description 等待元素出現在 DOM 中並執行回調
-     * @param {string|string[]} selector - 要查找的選擇器 或 選擇器數組
+     * @param {string|string[]} select - 要查找的選擇器 或 選擇器數組
      * @param {Function} [found=null] - 找到元素後執行的回調函數
      * @param {Object} [options] - 配置選項
      * @param {boolean} [options.raf=false] - 使用 requestAnimationFrame 進行查找 (極致快的查找, 沒有 debounce 限制, 用於盡可能最快找到元素)
@@ -592,19 +592,19 @@ const Lib = (() => {
      * });
      */
     const waitCore = {
-        queryMap: (selector, all) => {
-            const result = selector.map(select => selector(document, select, all));
+        queryMap: (select, all) => {
+            const result = select.map(select => selector(document, select, all));
             return all
                 ? result.every(res => res.length > 0) && result
                 : result.every(Boolean) && result;
         },
-        queryElement: (selector, all) => {
-            const result = selector(document, selector, all);
+        queryElement: (select, all) => {
+            const result = selector(document, select, all);
             return (all ? result.length > 0 : result) && result;
         }
     };
-    async function waitEl(selector, found = null, options = {}) {
-        const query = Array.isArray(selector) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
+    async function waitEl(select, found = null, options = {}) {
+        const query = Array.isArray(select) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
         const {
             raf = false,
             all = false,
@@ -628,8 +628,8 @@ const Lib = (() => {
                 if (raf) {
                     let AnimationFrame;
 
-                    const query = () => {
-                        result = query(selector, all);
+                    const queryRun = () => {
+                        result = query(select, all);
 
                         if (result) {
                             cancelAnimationFrame(AnimationFrame);
@@ -638,11 +638,11 @@ const Lib = (() => {
                             found && found(result);
                             resolve(result);
                         } else {
-                            AnimationFrame = requestAnimationFrame(query);
+                            AnimationFrame = requestAnimationFrame(queryRun);
                         }
                     };
 
-                    AnimationFrame = requestAnimationFrame(query);
+                    AnimationFrame = requestAnimationFrame(queryRun);
 
                     timer = setTimeout(() => {
                         cancelAnimationFrame(AnimationFrame);
@@ -656,7 +656,7 @@ const Lib = (() => {
                 } else {
                     const [rateFunc, delayMs] = throttle > 0 ? [$throttle, throttle] : [$debounce, debounce];
                     const observer = new MutationObserver(rateFunc(() => {
-                        result = query(selector, all);
+                        result = query(select, all);
 
                         if (result) {
                             observer.disconnect();
@@ -915,9 +915,9 @@ const Lib = (() => {
      *
      * ---
      *
-     *  const zipEngine = createCompressor();
-     *  zipEngine.file('test.txt', 'Hello, World!');
-     *  zipEngine.generateZip().then(zip => {})
+     * const zipEngine = createCompressor();
+     * zipEngine.file('test.txt', 'Hello, World!');
+     * zipEngine.generateZip().then(zip => {})
      */
     function createCompressor() {
         const worker = workerCreate(`
@@ -933,73 +933,89 @@ const Lib = (() => {
             }
         `);
 
-        return {
-            files: {},
-            tasks: [],
+        let files = {};
+        let tasks = [];
 
-            // 預估壓縮時間
-            _estimateCompression() {
-                const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
-                const UNCOMPRESSIBLE_EXTENSIONS = new Set([
-                    '.mp4', '.mov', '.avi', '.mkv', '.zip', '.rar',
-                    '.jpg', '.jpeg', '.png', '.gif', '.webp'
-                ]);
+        // 預估壓縮時間
+        function estimateCompression() {
+            const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
+            const UNCOMPRESSIBLE_EXTENSIONS = new Set([
+                // 影片 (大多數視頻編碼已經是高度壓縮)
+                '.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.webm',
+                '.mpg', '.mpeg', '.m4v', '.ogv', '.3gp', '.asf', '.ts',
+                '.vob', '.rm', '.rmvb', '.m2ts', '.f4v', '.mts',
 
-                // 為不同任務類型設定不同的基礎速度
-                const IO_BYTES_PER_SECOND = 100 * 1024 * 1024; // 假設為 100MB/s 的內存吞吐率
-                const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024; // 假設為 25MB/s 的基礎壓縮速度
+                // 壓縮包（不會再壓縮）
+                '.zip', '.rar', '.7z', '.gz', '.bz2',
 
-                let totalEstimatedTime = 0;
-                let totalSize = 0;
+                // 影像（JPEG、PNG 已壓縮格式）
+                '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg',
+                '.heic', '.heif', '.raw', '.ico', '.psd',
 
-                Object.entries(this.files).forEach(([name, file]) => {
-                    const fileSize = file.length;
-                    totalSize += fileSize;
-                    const extension = ('.' + name.split('.').pop()).toLowerCase();
+                // 音訊（幾乎不會再壓縮）
+                '.mp3', '.aac', '.flac', '.wav', '.ogg',
 
-                    // 判斷任務類型
-                    if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
-                        // I/O 密集型任務
-                        totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
-                    } else {
-                        // CPU 密集型任務
-                        let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+                // 文件（PDF 有內建壓縮，有時無效）
+                '.pdf',
+            ]);
 
-                        // 對於 CPU 任務，可以保留一些基於大小的微調
-                        const fileSizeMB = fileSize / (1024 * 1024);
-                        if (fileSizeMB > 10) {
-                            cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
-                        }
-                        totalEstimatedTime += cpuTime;
+
+            // 為不同任務類型設定不同的基礎速度
+            const IO_BYTES_PER_SECOND = 100 * 1024 * 1024; // 假設為 100MB/s 的內存吞吐率
+            const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024; // 假設為 25MB/s 的基礎壓縮速度
+
+            let totalEstimatedTime = 0;
+            let totalSize = 0;
+
+            Object.entries(files).forEach(([name, file]) => {
+                const fileSize = file.length;
+                totalSize += fileSize;
+                const extension = ('.' + name.split('.').pop()).toLowerCase();
+
+                // 判斷任務類型
+                if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+                    // I/O 密集型任務
+                    totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+                } else {
+                    // CPU 密集型任務
+                    let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+
+                    // 對於 CPU 任務，可以保留一些基於大小的微調
+                    const fileSizeMB = fileSize / (1024 * 1024);
+                    if (fileSizeMB > 10) {
+                        cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
                     }
-                });
-
-                // 檔案數量的影響 (少量檔案的固定開銷)
-                const fileCount = Object.keys(this.files).length;
-                if (fileCount > 1) {
-                    totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
+                    totalEstimatedTime += cpuTime;
                 }
+            });
 
-                // 總大小的影響 (輕微)
-                const totalSizeMB = totalSize / (1024 * 1024);
-                if (totalSizeMB > 100) {
-                    totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
-                }
+            // 檔案數量的影響 (少量檔案的固定開銷)
+            const fileCount = Object.keys(files).length;
+            if (fileCount > 1) {
+                totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
+            }
 
-                // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
-                const calculateCurveParameter = (totalSizeMB) => {
-                    if (totalSizeMB < 50) return 5;
-                    if (totalSizeMB < 500) return 4;
-                    return 3;
-                };
-                const curveParameter = calculateCurveParameter(totalSizeMB);
+            // 總大小的影響 (輕微)
+            const totalSizeMB = totalSize / (1024 * 1024);
+            if (totalSizeMB > 100) {
+                totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
+            }
 
-                return {
-                    estimatedInMs: totalEstimatedTime * 1000,
-                    progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
-                };
-            },
+            // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
+            const calculateCurveParameter = (totalSizeMB) => {
+                if (totalSizeMB < 50) return 5;
+                if (totalSizeMB < 500) return 4;
+                return 3;
+            };
+            const curveParameter = calculateCurveParameter(totalSizeMB);
 
+            return {
+                estimatedInMs: totalEstimatedTime * 1000,
+                progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
+            };
+        };
+
+        return {
             // 清除 worker
             async destroyWorker() {
                 if (worker) {
@@ -1012,22 +1028,22 @@ const Lib = (() => {
             async file(name, blob) {
                 const task = new Promise(async resolve => {
                     const buffer = await blob.arrayBuffer();
-                    this.files[name] = new Uint8Array(buffer);
+                    files[name] = new Uint8Array(buffer);
                     resolve();
                 });
 
-                this.tasks.push(task);
+                tasks.push(task);
                 return task;
             },
 
             // 生成壓縮文件
             async generateZip(options = {}, progressCallback) {
-                await Promise.all(this.tasks); // 等待所有檔案加入
+                await Promise.all(tasks); // 等待所有檔案加入
 
                 const startTime = performance.now();
 
                 const updateInterval = 30; // 更新頻率
-                const estimationData = this._estimateCompression();
+                const estimationData = estimateCompression();
                 const totalTime = estimationData.estimatedInMs;
 
                 // 假進度模擬, 檔案越大誤差越大
@@ -1044,20 +1060,20 @@ const Lib = (() => {
                 }, updateInterval);
 
                 return new Promise((resolve, reject) => {
-                    if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
+                    if (Object.keys(files).length === 0) return reject("Empty Data Error");
 
                     worker.postMessage({
-                        files: this.files,
+                        files,
                         level: options.level || 5
-                    }, Object.values(this.files).map(buf => buf.buffer));
+                    }, Object.values(files).map(buf => buf.buffer));
 
                     worker.onmessage = (e) => {
                         clearInterval(progressInterval);
 
                         if (progressCallback) progressCallback(100);
 
-                        this.files = {};
-                        this.tasks = [];
+                        files = {};
+                        tasks = [];
 
                         const { error, data } = e.data;
                         error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
@@ -1092,29 +1108,33 @@ const Lib = (() => {
      * 預設延遲 = dynamicParam(new Date(), 預設延遲)
      */
     function createNnetworkObserver(config = {}) {
-        const {
+        let {
+            /* 建議自訂參數 */
             MAX_Delay = 2e3, // 最大延遲
             MIN_CONCURRENCY = 1, // 最小並發
             MAX_CONCURRENCY = 16, // 最大並發
-            TIME_THRESHOLD = 1000, // 響應時間閾值
 
-            Network_Check_Interval = 1e4, // 網路檢測間隔 (10秒)
             Good_Network_THRESHOLD = 500, // 好網路閾值
             Poor_Network_THRESHOLD = 1500, // 糟網路閾值
 
-            EMA_ALPHA = 0.3, // 指數移動平均
-            ADJUSTMENT_FACTOR = 0.25, // 調整因子
-        } = config || {};
-
-        const {
-            responseHistory = [], // 儲存最近的響應時
-            lastNetworkCheck = 0, // 上次檢測的時間
-            networkCondition = 'normal', // 網路狀態 'good', 'normal', 'poor'
-            adaptiveFactors = { // 不同網路狀態下的調整因子
+            adaptiveFactors = { // 不同網路狀態下的調整因子 (大於 1 為增加, 小於 1 為減少)
                 good: { delayFactor: 0.8, threadFactor: 1.2 },
                 normal: { delayFactor: 1.0, threadFactor: 1.0 },
                 poor: { delayFactor: 1.5, threadFactor: 0.7 }
-            }
+            },
+
+            /* 通常不需要修改 */
+            TIME_THRESHOLD = 1000, // 初始響應時間閾值
+            Network_Check_Interval = 1e4, // 網路檢測間隔 (10秒)
+            EMA_ALPHA = 0.3, // 指數移動平均的平滑因子
+            ADJUSTMENT_FACTOR = 0.25, // 每次調整的幅度因子
+            History_Size = 10, // 響應時間歷史記錄的大小
+        } = config || {};
+
+        let {
+            responseHistory = [], // 儲存最近的響應時
+            lastNetworkCheck = 0, // 上次檢測的時間
+            networkCondition = 'normal', // 網路狀態 'good', 'normal', 'poor'
         } = {};
 
         function checkNetworkCondition() {
@@ -1148,7 +1168,7 @@ const Lib = (() => {
         function updateThreshold(newResponseTime) {
             responseHistory.push(newResponseTime);
 
-            if (responseHistory.length > 10) responseHistory.shift();
+            if (responseHistory.length > History_Size) responseHistory.shift();
 
             if (!TIME_THRESHOLD || responseHistory.length <= 1) {
                 TIME_THRESHOLD = newResponseTime;
