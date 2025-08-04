@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/06/30
+// @version      2025/08/04
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -8,37 +8,36 @@
 // @license      MPL-2.0
 // ==/UserScript==
 
-const Syn = (() => {
-    const Mark = {};
-    const Type = (object) => Object.prototype.toString.call(object).slice(8, -1);
-    const DeviceCall = {
+const lib = (() => {
+    const $mark = {};
+    const $type = (object) => Object.prototype.toString.call(object).slice(8, -1);
+    const deviceCall = {
         get sX() { return window.scrollX },
         get sY() { return window.scrollY },
         get iW() { return window.innerWidth },
         get iH() { return window.innerHeight },
-        _Cache: undefined,
-        get Platform() {
-            if (!this._Cache) {
+        _cache: undefined,
+        get platform() {
+            if (!this._cache) {
                 if (navigator.userAgentData?.mobile !== undefined) {
-                    this._Cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+                    this._cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
                 } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
-                    this._Cache = "Mobile";
+                    this._cache = "Mobile";
                 } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                    this._Cache = "Mobile";
+                    this._cache = "Mobile";
                 } else {
-                    this._Cache = "Desktop";
+                    this._cache = "Desktop";
                 }
             }
 
-            return this._Cache;
+            return this._cache;
         }
     };
 
     /* ========== 通用常用 ========== */
 
     /**
-     * * { 語法簡化 }
-     *
+     * @description 查詢語法簡化
      * @example
      * 基本上和原生的調用方式類似
      *
@@ -50,38 +49,38 @@ const Syn = (() => {
      * 不支援鏈式
      * $qa("div").$qa("span")
      */
-    function Selector(root = document, selector, all) {
-        const head = selector[0];
-        const headless = selector.slice(1);
+    function selector(root = document, select, all) {
+        const head = select[0];
+        const headless = select.slice(1);
         const complicated = /[ #.\[:]/.test(headless);
 
         if (complicated) {
-            return all ? root.querySelectorAll(selector) : root.querySelector(selector);
+            return all ? root.querySelectorAll(select) : root.querySelector(select);
         }
 
         if (!all && head === '#') { // ID選擇器 (#id)
             return root.getElementById(headless);
         }
 
-        if (selector[0] === '.') { // 類選擇器 (.class)
+        if (select[0] === '.') { // 類選擇器 (.class)
             const collection = root.getElementsByClassName(headless);
             return all ? [...collection] : collection[0];
         }
 
         // 標籤選擇器 (tag)
-        const collection = root.getElementsByTagName(selector);
+        const collection = root.getElementsByTagName(select);
         return all ? [...collection] : collection[0];
     };
     [Document.prototype, Element.prototype].forEach(proto => { // 註冊 document & element 原型
-        proto.$q = function (selector) {
-            return Selector(this, selector, false);
+        proto.$q = function (select) {
+            return selector(this, select, false);
         };
-        proto.$qa = function (selector) {
-            return Selector(this, selector, true);
+        proto.$qa = function (select) {
+            return selector(this, select, true);
         };
     });
 
-    const $Node = {
+    const $node = {
         $text(value = null) {
             return value !== null ? (this.textContent = value?.trim()) : this.textContent?.trim();
         },
@@ -123,25 +122,25 @@ const Syn = (() => {
         },
     };
 
-    Object.assign(Node.prototype, $Node); // 原型註冊
-    const $text = Object.keys($Node)[0]; // 處理可能的空值
+    Object.assign(Node.prototype, $node); // 原型註冊
+    const $text = Object.keys($node)[0]; // 處理可能的空值
     Object.defineProperty(Object.prototype, $text, {
         value: function (value = null) {
-            return $Node[$text].call(this, value);
+            return $node[$text].call(this, value);
         },
         writable: true,
         configurable: true
     });
 
     // 簡化語法糖
-    const Sugar = {
+    const sugar = {
         $q: document.$q.bind(document),
-        Q: (root, selector) => Selector(root, selector, false),
+        $Q: (root, select) => selector(root, select, false),
         $qa: document.$qa.bind(document),
-        Qa: (root, selector) => Selector(root, selector, true),
+        $Qa: (root, select) => selector(root, select, true),
         html: document.documentElement,
-        head: document.head ?? Selector(document, "head", false),
-        body: document.body ?? Selector(document, "body", false),
+        head: document.head ?? selector(document, "head", false),
+        body: document.body ?? selector(document, "body", false),
         img: document.images,
         link: document.links,
         script: document.scripts,
@@ -168,7 +167,7 @@ const Syn = (() => {
             return {};
         },
         /**
-         * * { 創建元素 }
+         * @description 創建元素
          * ! 並無對所有參數類型做嚴格檢查, 傳錯會直接報錯
          * @param {element|string} arg1 - 添加的根元素 或 創建元素標籤
          * @param {string|object} arg2 - 創建元素標籤 或 元素屬性, arg2 = arg1 == element ? string : object
@@ -261,9 +260,9 @@ const Syn = (() => {
         },
     };
 
-    const EventRecord = new Map();
+    const eventRecord = new Map();
     /**
-     * * { 簡化版監聽器 (不檢測是否重複添加, 不回傳註冊監聽器, 只能透過 once 移除) }
+     * @description 簡化版監聽器 (不檢測是否重複添加, 不回傳註冊監聽器, 只能透過 once 移除)
      * @param {element|string} element - 監聽元素, 或查找字串
      * @param {string} type    - 監聽器類型 (支持批量添加同類型監聽器)
      * @param {*} listener     - 監聽後操作
@@ -271,17 +270,17 @@ const Syn = (() => {
      * @returns {boolean}      - 回傳添加狀態
      *
      * @example
-     * one(元素, "監聽類型", 觸發 => {
+     * onE(元素, "監聽類型", 觸發 => {
      *      觸發... 其他操作
      * }, {once: true, capture: true, passive: true}, 接收註冊狀態 => {
      *      console.log(註冊狀態)
      * })
      *
-     * one(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
+     * onE(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
      */
-    async function one(element, type, listener, add = {}, resolve = null) {
+    async function onE(element, type, listener, add = {}, resolve = null) {
         try {
-            typeof element === "string" && (element = Selector(document, element));
+            typeof element === "string" && (element = selector(document, element));
 
             let events = type.split(/\s*[\,|/]\s*/).filter(Boolean);
 
@@ -307,7 +306,7 @@ const Syn = (() => {
 
     /**
      * ! 匹配全域的腳本建議使用 mark 定義鍵值
-     * * { 添加監聽器 (可透過 offEvent 移除, element 和 type 不能有完全重複的, 否則會被排除) }
+     * @description 添加監聽器 (可透過 offEvent 移除, element 和 type 不能有完全重複的, 否則會被排除)
      * @param {element|string} element - 監聽元素, 或查找字串
      * @param {string} type    - 監聽器類型
      * @param {Function} listener - 監聽後執行的函數
@@ -328,19 +327,19 @@ const Syn = (() => {
      */
     async function onEvent(element, type, listener, options = {}) {
         const { mark, ...opts } = options;
-        typeof element === "string" && (element = Selector(document, element));
+        typeof element === "string" && (element = selector(document, element));
         const key = mark ?? element;
-        const record = EventRecord.get(key);
+        const record = eventRecord.get(key);
 
         if (record?.has(type)) return;
         element.addEventListener(type, listener, opts);
 
-        if (!record) EventRecord.set(key, new Map());
-        EventRecord.get(key).set(type, listener);
+        if (!record) eventRecord.set(key, new Map());
+        eventRecord.get(key).set(type, listener);
     };
 
     /**
-     * * { 移除監聽器 }
+     * @description 移除監聽器
      * @param {element|string} element - 監聽元素, 或查找字串
      * @param {string} type - 監聽類型
      * @param {string} [mark] - 自定義鍵值 (預設使用 this)
@@ -349,17 +348,17 @@ const Syn = (() => {
      * offEvent(元素, "監聽類型")
      */
     async function offEvent(element, type, mark) {
-        typeof element === "string" && (element = Selector(document, element));
+        typeof element === "string" && (element = selector(document, element));
         const key = mark ?? element;
-        const listen = EventRecord.get(key)?.get(type);
+        const listen = eventRecord.get(key)?.get(type);
         if (listen) {
             element.removeEventListener(type, listen);
-            EventRecord.get(key).delete(type);
+            eventRecord.get(key).delete(type);
         }
     };
 
     /**
-     * * { 監聽網址變化 }
+     * @description 監聽網址變化
      * @param {function} callback - 回調 {type, url, domain} 
      * @param {number} timeout - 防抖 (毫秒) [設置延遲多少 ms 之後才回條]
      *
@@ -438,7 +437,7 @@ const Syn = (() => {
     };
 
     /**
-     * * { 打印元素 }
+     * @description 打印元素
      * @param {*} group - 打印元素標籤盒
      * @param {*} label - 打印的元素
      * @param {string} type - 要打印的類型 ("log", "warn", "error", "count")
@@ -449,17 +448,17 @@ const Syn = (() => {
      * collapsed=true - 打印後是否收起
      * }
      */
-    const Print = {
+    const print = {
         log: label => console.log(label),
         warn: label => console.warn(label),
         trace: label => console.trace(label),
         error: label => console.error(label),
         count: label => console.count(label),
     };
-    async function Log(group = null, label = "print", { dev = true, type = "log", collapsed = true } = {}) {
+    async function log(group = null, label = "print", { dev = true, type = "log", collapsed = true } = {}) {
         if (!dev) return;
 
-        const Call = Print[type] || Print.log;
+        const Call = print[type] || print.log;
 
         if (group == null) Call(label);
         else {
@@ -470,30 +469,30 @@ const Syn = (() => {
     };
 
     /**
-     * * { 添加元素到 head }
+     * @description 添加元素到 head
      * @param {string} Rule - 元素內容
      * @param {string} ID - 元素ID
      * @param {boolean} RepeatAdd - 是否重複添加
      *
      * @example
-     * AddStyle(Rule, ID, RepeatAdd)
-     * AddScript(Rule, ID, RepeatAdd)
+     * addStyle(Rule, ID, RepeatAdd)
+     * addScript(Rule, ID, RepeatAdd)
      */
-    const AddCall = {
-        AddStyle: (rule, id, repeatAdd = true) => AddHead("style", rule, id, repeatAdd),
-        AddScript: (rule, id, repeatAdd = true) => AddHead("script", rule, id, repeatAdd),
+    const addCall = {
+        addStyle: (rule, id, repeatAdd = true) => addHead("style", rule, id, repeatAdd),
+        addScript: (rule, id, repeatAdd = true) => addHead("script", rule, id, repeatAdd),
     };
-    async function AddHead(type, rule, id, repeatAdd) {
+    async function addHead(type, rule, id, repeatAdd) {
         let element = document.getElementById(id);
         if (!element) {
             element = document.createElement(type);
             element.id = id;
 
             // ? 應對新版瀏覽器, 奇怪的 Bug (暫時處理方式)
-            const head = Sugar.head;
+            const head = sugar.head;
             if (head) head.appendChild(element);
-            else WaitElem("head").then(head => {
-                Sugar.head = head;
+            else waitEl("head").then(head => {
+                sugar.head = head;
                 head.appendChild(element);
             });
         } else if (!repeatAdd) return;
@@ -501,8 +500,7 @@ const Syn = (() => {
     };
 
     /**
-     * * { 持續監聽DOM變化並執行回調函數 }
-     *
+     * @description 持續監聽 DOM 變化並執行回調函數
      * @param {Element} target - 要觀察的DOM元素
      * @param {Function} onFunc - 當觀察到變化時執行的回調函數
      * @param {Object} [options] - 配置選項
@@ -517,7 +515,7 @@ const Syn = (() => {
      * @returns {MutationObserver} 創建的觀察器實例
      *
      * @example
-     * Observer(document.body, () => {
+     * $observer(document.body, () => {
      *     console.log("DOM發生變化");
      * }, {
      *     mark: "bodyObserver",
@@ -527,7 +525,7 @@ const Syn = (() => {
      *    ob.observe(document.body, op); // 重建觀察器
      * });
      */
-    async function Observer(target, onFunc, options = {}, callback = null) {
+    async function $observer(target, onFunc, options = {}, callback = null) {
         const {
             mark = "",
             debounce = 0,
@@ -536,27 +534,26 @@ const Syn = (() => {
             childList = true,
             attributes = true,
             characterData = false,
-        } = options ?? {};
+        } = options || {};
 
         if (mark) {
-            if (Mark[mark]) { return } else { Mark[mark] = true }
+            if ($mark[mark]) { return } else { $mark[mark] = true }
         };
 
-        const [RateFunc, DelayMs] = debounce > 0 ? [Debounce, debounce] : [Throttle, throttle];
+        const [rateFunc, delayMs] = debounce > 0 ? [$debounce, debounce] : [$throttle, throttle];
         const op = {
             subtree: subtree,
             childList: childList,
             attributes: attributes,
             characterData: characterData
-        }, ob = new MutationObserver(RateFunc(() => { onFunc() }, DelayMs));
+        }, ob = new MutationObserver(rateFunc(() => { onFunc() }, delayMs));
 
         ob.observe(target, op);
         callback && callback({ ob, op });
     };
 
     /**
-     * * { 等待元素出現在DOM中並執行回調 }
-     *
+     * @description 等待元素出現在DOM中並執行回調
      * @param {string|string[]} selector - 要查找的選擇器 或 選擇器數組
      * @param {Function} [found=null] - 找到元素後執行的回調函數
      * @param {Object} [options] - 配置選項
@@ -575,38 +572,38 @@ const Syn = (() => {
      * @returns {Promise<Element|Element[]|null>} 返回找到的元素或元素數組的Promise
      *
      * @example
-     * WaitElem(".example-element", element => {
+     * waitEl(".example-element", element => {
      *     console.log("找到元素:", element);
      * });
      *
-     * WaitElem(".example-element")
+     * waitEl(".example-element")
      *   .then(element => {
      *     console.log("找到元素:", element);
      *   });
      *
-     * WaitElem([".header", ".main", ".footer"])
+     * waitEl([".header", ".main", ".footer"])
      *   .then(([header, main, footer]) => {
      *     console.log("找到所有元素:", header, main, footer);
      *   });
      *
-     * WaitElem(".example-element", null, {raf: true, root: document.getElementById("app")}).then(element => {
+     * waitEl(".example-element", null, {raf: true, root: document.getElementById("app")}).then(element => {
      *     console.log("找到動態內容:", element);
      * });
      */
-    const WaitCore = {
+    const waitCore = {
         queryMap: (selector, all) => {
-            const result = selector.map(select => Selector(document, select, all));
+            const result = selector.map(select => selector(document, select, all));
             return all
                 ? result.every(res => res.length > 0) && result
                 : result.every(Boolean) && result;
         },
         queryElement: (selector, all) => {
-            const result = Selector(document, selector, all);
+            const result = selector(document, selector, all);
             return (all ? result.length > 0 : result) && result;
         }
     };
-    async function WaitElem(selector, found = null, options = {}) {
-        const Query = Array.isArray(selector) ? WaitCore.queryMap : WaitCore.queryElement; //! 批量查找只能傳 Array
+    async function waitEl(selector, found = null, options = {}) {
+        const query = Array.isArray(selector) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
         const {
             raf = false,
             all = false,
@@ -620,18 +617,18 @@ const Syn = (() => {
             characterData = false,
             timeoutResult = false,
             root = document
-        } = options ?? {};
+        } = options || {};
 
         return new Promise((resolve, reject) => {
 
-            const Core = async function () {
+            const core = async function () {
                 let timer, result;
 
                 if (raf) {
                     let AnimationFrame;
 
                     const query = () => {
-                        result = Query(selector, all);
+                        result = query(selector, all);
 
                         if (result) {
                             cancelAnimationFrame(AnimationFrame);
@@ -656,9 +653,9 @@ const Syn = (() => {
                     }, (1000 * timeout));
 
                 } else {
-                    const [RateFunc, DelayMs] = throttle > 0 ? [Throttle, throttle] : [Debounce, debounce];
-                    const observer = new MutationObserver(RateFunc(() => {
-                        result = Query(selector, all);
+                    const [rateFunc, delayMs] = throttle > 0 ? [$throttle, throttle] : [$debounce, debounce];
+                    const observer = new MutationObserver(rateFunc(() => {
+                        result = query(selector, all);
 
                         if (result) {
                             observer.disconnect();
@@ -667,7 +664,7 @@ const Syn = (() => {
                             found && found(result);
                             resolve(result);
                         }
-                    }, DelayMs));
+                    }, delayMs));
 
                     observer.observe(root, {
                         subtree: subtree,
@@ -687,13 +684,13 @@ const Syn = (() => {
             };
 
             if (visibility && document.visibilityState === "hidden") {
-                document.addEventListener("visibilitychange", () => Core(), { once: true });
-            } else Core();
+                document.addEventListener("visibilitychange", () => core(), { once: true });
+            } else core();
         })
     };
 
     /**
-     * * { 瀏覽器 Storage 操作 }
+     * @description 瀏覽器 storage 操作
      * @param {string} key - 要操作的鍵
      * @param {object} options - 配置選項
      * @param {any} [options.value] - 要儲存的值
@@ -703,16 +700,16 @@ const Syn = (() => {
      * @example
      * 支援的類型 (String, Number, Array, Object, Boolean, Date, Map)
      *
-     * Session("數據", {value: 123, error: false})
-     * Session("數據")
+     * session("數據", {value: 123, error: false})
+     * session("數據")
      *
-     * Local("數據", {value: 123, error: null})
+     * local("數據", {value: 123, error: null})
      */
-    const StorageCall = {
-        Session: (key, { value = null, error = undefined } = {}) => Storage(key, sessionStorage, value, error),
-        Local: (key, { value = null, error = undefined } = {}) => Storage(key, localStorage, value, error)
+    const storageCall = {
+        session: (key, { value = null, error = undefined } = {}) => storage(key, sessionStorage, value, error),
+        local: (key, { value = null, error = undefined } = {}) => storage(key, localStorage, value, error)
     };
-    const StorageHandlers = {
+    const storageHandlers = {
         String: (storage, key, value) =>
             value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
         Number: (storage, key, value) =>
@@ -729,31 +726,31 @@ const Syn = (() => {
         Map: (storage, key, value) =>
             (storage.setItem(key, JSON.stringify([...value])), true)
     };
-    function Storage(key, type, value, error) {
+    function storage(key, type, value, error) {
         let data;
         return value != null
-            ? StorageHandlers[Type(value)](type, key, value)
-            : (data = type.getItem(key), data != undefined ? StorageHandlers[Type(JSON.parse(data))](type, data) : error);
+            ? storageHandlers[$type(value)](type, key, value)
+            : (data = type.getItem(key), data != undefined ? storageHandlers[$type(JSON.parse(data))](type, data) : error);
     };
 
     /**
-     * * { 節流函數, 立即觸發, 後續按照指定的速率運行, 期間多餘的觸發將會被忽略 }
+     * @description 節流函數, 立即觸發, 後續按照指定的速率運行
      * @param {function} func - 要觸發的函數
      * @param {number} delay - 延遲的時間ms
      * @returns {function}
      *
      * @example
-     * a = Throttle(()=> {}, 100);
+     * a = $throttle(()=> {}, 100);
      * a();
      *
      * function b(n) {
-     *      Throttle(b(n), 100);
+     *      $throttle(b(n), 100);
      * }
      *
-     * document.addEventListener("pointermove", Throttle(()=> {
+     * document.addEventListener("pointermove", $throttle(()=> {
      * }), 100)
      */
-    function Throttle(func, delay) {
+    function $throttle(func, delay) {
         let lastTime = 0;
         return (...args) => {
             const now = Date.now();
@@ -765,15 +762,15 @@ const Syn = (() => {
     };
 
     /**
-     * * { 防抖函數 Debounce, 只會在停止呼叫後觸發, 持續呼叫就會一直重置 }
+     * @description 防抖函數 debounce, 只會在停止呼叫後觸發, 持續呼叫就會一直重置
      * @param {function} func - 要觸發的函數
      * @param {number} delay - 延遲的時間ms
      * @returns {function}
      *
      * @example
-     * 使用方法同上, 改成 Debounce() 即可
+     * 使用方法同上, 改成 $debounce() 即可
      */
-    function Debounce(func, delay) {
+    function $debounce(func, delay) {
         let timer = null;
         return (...args) => {
             clearTimeout(timer);
@@ -786,18 +783,17 @@ const Syn = (() => {
     /* ========== 請求數據處理 ========== */
 
     /**
-     * * { 輸出 Json 檔案 }
-     *
+     * @description 輸出 Json 檔案
      * @param {*} Data      - 可轉成 Json 格式的數據
      * @param {string} Name - 輸出的檔名 (不用打副檔名)
      * @param {function} Success   - 選擇是否回傳輸出狀態
      *
      * @example
-     * OutputJson(JsonData, "MyJson", Success=> {
+     * outputJson(JsonData, "MyJson", Success=> {
      *      console.log(Success);
      * })
      */
-    async function OutputJson(Data, Name, Success = null) {
+    async function outputJson(Data, Name, Success = null) {
         try {
             Data = typeof Data !== "string" ? JSON.stringify(Data, null, 4) : Data;
             Name = typeof Name !== "string" ? "Anonymous.json" : Name.endsWith(".json") ? Name : `${Name}.json`;
@@ -818,7 +814,7 @@ const Syn = (() => {
     /* ========== 特別用途 ========== */
 
     /**
-     * * { 獲取運行經過時間 }
+     * @description 獲取運行經過時間
      * @param {performance.now() | null} time - 傳入 performance.now() 或 空值
      * @param {string} {lable} - 打印的說明文字
      * @param {boolean} {log} - 是否直接打印
@@ -828,14 +824,14 @@ const Syn = (() => {
      * @returns {performance.now()}
      *
      * @example
-     * let start = Runtime();
-     * let end = Runtime(start, {log: false});
+     * let start = runTime();
+     * let end = runTime(start, {log: false});
      * console.log(end);
      *
-     * let start = Runtime();
-     * Runtime(start);
+     * let start = runTime();
+     * runTime(start);
      */
-    function Runtime(time = null, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
+    function runTime(time = null, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
         if (!time) return performance.now();
 
         const result = format
@@ -846,14 +842,14 @@ const Syn = (() => {
     };
 
     /**
-     * * { 獲取當前時間格式 }
+     * @description 獲取當前時間格式
      * @param {string} format - 選擇輸出的格式 : {year}{month}{date}{hour}{minute}{second}
      * @returns {string} - 設置的時間格式, 或是預設值
      *
      * @example
-     * GetDate("{year}/{month}/{date} {hour}:{minute}")
+     * getDate("{year}/{month}/{date} {hour}:{minute}")
      */
-    function GetDate(format = null) {
+    function getDate(format = null) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
 
@@ -871,7 +867,7 @@ const Syn = (() => {
     };
 
     /**
-     * * { 匹配翻譯對照 }
+     * @description 匹配翻譯對照
      * @param {object} word - 翻譯的字詞
      * @param {string} lang - 翻譯的語言
      * @param {string} defaultLang - 預設翻譯語言
@@ -886,7 +882,7 @@ const Syn = (() => {
      *      English: {}
      * }
      */
-    const TranslUtils = {
+    const translUtils = {
         'ko': 'Korea',
         'ko-KR': 'Korea',
         'ja': 'Japan',
@@ -910,17 +906,16 @@ const Syn = (() => {
         'zh-HK': 'Traditional',
         'zh-MO': 'Traditional'
     };
-    function TranslMatcher(word, lang = navigator.language, defaultLang = "en-US") {
-        return word[TranslUtils[lang]]
-            ?? word[TranslUtils[defaultLang]]
-            ?? word[TranslUtils["en-US"]];
+    function translMatcher(word, lang = navigator.language, defaultLang = "en-US") {
+        return word[translUtils[lang]]
+            ?? word[translUtils[defaultLang]]
+            ?? word[translUtils["en-US"]];
     };
 
     /* ========== 油猴 API ========== */
 
     /**
-     * * { 菜單註冊 API }
-     *
+     * @description 菜單註冊
      * @grant GM_registerMenuCommand
      * @grant GM_unregisterMenuCommand
      *
@@ -930,7 +925,7 @@ const Syn = (() => {
      * @param {boolean} [options.reset] - 是否重置菜單
      * @example
      *
-     * Menu({
+     * regMenu({
      *      "菜單1": {
      *          desc: "菜單描述",
      *          func: ()=> { 方法1() },
@@ -941,12 +936,12 @@ const Syn = (() => {
      * }, "ID");
      */
     const Register = new Set();
-    async function Menu(items, options = {}) {
+    async function regMenu(items, options = {}) {
         let {
             name = "Menu",
             index = 1,
             reset = false
-        } = options ?? {};
+        } = options || {};
 
         if (reset) {
             [...Register].map(id => GM_unregisterMenuCommand(id));
@@ -954,7 +949,9 @@ const Syn = (() => {
         };
 
         for (let [show, item] of Object.entries(items)) {
-            let id = `${name}-${index++}`;
+            const id = `${name}-${index++}`;
+
+            // 允許 "菜單": ()=> 函數() 這種格式
             typeof item === "function" && (item = { func: item });
 
             GM_registerMenuCommand(show, () => { item.func() }, {
@@ -969,37 +966,55 @@ const Syn = (() => {
     };
 
     /**
-     ** { 操作存儲空間 (精簡版) }
+     * @description 移除菜單
+     * @grant GM_unregisterMenuCommand
+     * @example
      *
+     * unMenu("ID");
+     * unMenu("All");
+     */
+    async function unMenu(id) {
+        if (id.toLowerCase() === "all") {
+            [...Register].map(id => GM_unregisterMenuCommand(id));
+            Register.clear();
+        } else {
+            if (Register.has(id)) {
+                GM_unregisterMenuCommand(id);
+                Register.delete(id);
+            }
+        }
+    };
+
+    /**
+     * @description 操作存儲空間
      * @grant GM_setValue
      * @grant GM_getValue
      * @grant GM_listValues
      * @grant GM_deleteValue
      * @example
      *
-     * dV("數據A") // 刪除數據
-     * aV() // 列出所有數據
-     * sV("存儲鍵", "數據") // 儲存數據
-     * gV("存儲鍵", "錯誤回傳") // 取得數據
-     * sJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
-     * gJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
+     * delV("數據A") // 刪除數據
+     * allV() // 列出所有數據
+     * setV("存儲鍵", "數據") // 儲存數據
+     * getV("存儲鍵", "錯誤回傳") // 取得數據
+     * setJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
+     * getJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
      */
-    const StoreVerify = (val) => val === void 0 || val === null ? null : val;
-    const StoreCall = {
-        dV: key => GM_deleteValue(key),
-        aV: () => StoreVerify(GM_listValues()),
-        sV: (key, value) => GM_setValue(key, value),
-        gV: (key, error) => StoreVerify(GM_getValue(key, error)),
-        sJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
-        gJV: (key, error) => {
-            try { return JSON.parse(StoreVerify(GM_getValue(key, error))) }
+    const storeVerify = (val) => val === void 0 || val === null ? null : val;
+    const storeCall = {
+        delV: key => GM_deleteValue(key),
+        allV: () => storeVerify(GM_listValues()),
+        setV: (key, value) => GM_setValue(key, value),
+        getV: (key, error) => storeVerify(GM_getValue(key, error)),
+        setJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
+        getJV(key, error) {
+            try { return JSON.parse(storeVerify(GM_getValue(key, error))) }
             catch { return error }
         }
     };
 
     /**
-     ** { 監聽保存值的變化 }
-     *
+     * @description 監聽保存值的變化
      * @grant GM_addValueChangeListener
      *
      * @param {array} object    - 一個可遍歷的, 標籤對象物件
@@ -1016,10 +1031,10 @@ const Syn = (() => {
      *      console.log(call.key, call.nv);
      * })
      */
-    async function StoreListen(object, callback) {
+    async function storeListen(object, callback) {
         object.forEach(label => {
-            if (!Mark[label]) {
-                Mark[label] = true;
+            if (!$mark[label]) {
+                $mark[label] = true;
                 GM_addValueChangeListener(label, function (key, old_value, new_value, remote) {
                     callback({ key, ov: old_value, nv: new_value, far: remote });
                 })
@@ -1029,7 +1044,7 @@ const Syn = (() => {
 
     /* ========== [ 其他 ] ========== */
 
-    function _KeepGetterMerge(...sources) {
+    function _keepGetterMerge(...sources) {
         const target = {};
         for (const source of sources) {
             if (!source) continue;
@@ -1038,13 +1053,13 @@ const Syn = (() => {
         return target;
     };
 
-    return _KeepGetterMerge(
-        DeviceCall, Sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
+    return _keepGetterMerge(
+        deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
-            ...AddCall, ...StorageCall, ...StoreCall,
-            Type, EventRecord, one, onEvent, offEvent, onUrlChange,
-            Log, Observer, WaitElem, Throttle, Debounce, OutputJson,
-            Runtime, GetDate, TranslMatcher, Menu, StoreListen
+            ...addCall, ...storageCall, ...storeCall,
+            $type, eventRecord, onE, onEvent, offEvent, onUrlChange,
+            log, $observer, waitEl, $throttle, $debounce, outputJson,
+            runTime, getDate, translMatcher, regMenu, unMenu, storeListen
         }
     );
 })();
