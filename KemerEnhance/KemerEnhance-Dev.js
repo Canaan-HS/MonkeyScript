@@ -91,7 +91,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Syn.$url;
+    let Url = Lib.$url;
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -108,16 +108,16 @@
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
-        }[Syn.$domain.split(".")[0]];
+        }[Lib.$domain.split(".")[0]];
 
         const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
         const UserSet = {
-            MenuSet: () => Syn.gV(SaveKey.Menu, {
+            MenuSet: () => Lib.getV(SaveKey.Menu, {
                 Top: "10vh",
                 Left: "10vw"
             }),
-            ImgSet: () => Syn.gV(SaveKey.Img, {
+            ImgSet: () => Lib.getV(SaveKey.Img, {
                 Width: "auto",
                 Height: "auto",
                 Spacing: "0px",
@@ -149,7 +149,7 @@
         // 功能依賴樣式
         const Style = {
             async Global() { // 全域 修復所需
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
                     .fancy-image__image, fix_name, fix_tag, fix_edit {
@@ -254,8 +254,8 @@
             async Postview() { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
-                const width = Syn.iW / 2;
-                Syn.AddStyle(`
+                const width = Lib.iW / 2;
+                Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
                         position: relative;
@@ -292,12 +292,12 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
+                ImgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
 
                 // 全局修改功能
-                Syn.StoreListen(Object.values(SaveKey), call => {
+                Lib.storeListen(Object.values(SaveKey), call => {
                     if (call.far) {
-                        if (Syn.Type(call.nv) === "String") {
+                        if (Lib.$type(call.nv) === "String") {
                             MenuTrigger();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
@@ -308,7 +308,7 @@
                 });
             },
             async PostExtra() { // 觀看帖子頁圖示
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     #main section {
                         width: 100%;
                     }
@@ -319,181 +319,6 @@
                         background-color: ${Color};
                     }
                 `, "Post-Extra", false);
-            },
-            Menu() { // 回傳創建菜單所需資訊
-                const set = UserSet.MenuSet();
-
-                return {
-                    ImgScript: `
-                        function check(value) {
-                            return value.toString().length > 4 || value > 1000
-                                ? 1000 : value < 0 ? "" : value;
-                        }
-                    `,
-                    MenuStyle: `
-                        .modal-background {
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            display: flex;
-                            z-index: 9999;
-                            overflow: auto;
-                            position: fixed;
-                            pointer-events: none;
-                        }
-                        /* 模態介面 */
-                        .modal-interface {
-                            top: ${set.Top};
-                            left: ${set.Left};
-                            margin: 0;
-                            display: flex;
-                            overflow: auto;
-                            position: fixed;
-                            border-radius: 5px;
-                            pointer-events: auto;
-                            background-color: #2C2E3E;
-                            border: 3px solid #EE2B47;
-                        }
-                        /* 模態內容盒 */
-                        .modal-box {
-                            padding: 0.5rem;
-                            height: 50vh;
-                            width: 32vw;
-                        }
-                        /* 菜單框架 */
-                        .menu {
-                            width: 5.5vw;
-                            overflow: auto;
-                            text-align: center;
-                            vertical-align: top;
-                            border-radius: 2px;
-                            border: 2px solid #F6F6F6;
-                        }
-                        /* 菜單文字標題 */
-                        .menu-text {
-                            color: #EE2B47;
-                            cursor: default;
-                            padding: 0.2rem;
-                            margin: 0.3rem;
-                            margin-bottom: 1.5rem;
-                            white-space: nowrap;
-                            border-radius: 10px;
-                            border: 4px solid #f05d73;
-                            background-color: #1f202c;
-                        }
-                        /* 菜單選項按鈕 */
-                        .menu-options {
-                            cursor: pointer;
-                            font-size: 1.4rem;
-                            color: #F6F6F6;
-                            font-weight: bold;
-                            border-radius: 5px;
-                            margin-bottom: 1.2rem;
-                            border: 5px inset #EE2B47;
-                            background-color: #6e7292;
-                            transition: color 0.8s, background-color 0.8s;
-                        }
-                        .menu-options:hover {
-                            color: #EE2B47;
-                            background-color: #F6F6F6;
-                        }
-                        .menu-options:disabled {
-                            color: #6e7292;
-                            cursor: default;
-                            background-color: #c5c5c5;
-                            border: 5px inset #faa5b2;
-                        }
-                        /* 設置內容框架 */
-                        .content {
-                            height: 48vh;
-                            width: 28vw;
-                            overflow: auto;
-                            padding: 0px 1rem;
-                            border-radius: 2px;
-                            vertical-align: top;
-                            border-top: 2px solid #F6F6F6;
-                            border-right: 2px solid #F6F6F6;
-                        }
-                        .narrative { color: #EE2B47; }
-                        .Image-input-settings {
-                            width: 8rem;
-                            color: #F6F6F6;
-                            text-align: center;
-                            font-size: 1.5rem;
-                            border-radius: 15px;
-                            border: 3px inset #EE2B47;
-                            background-color: #202127;
-                        }
-                        .Image-input-settings:disabled {
-                            border: 3px inset #faa5b2;
-                            background-color: #5a5a5a;
-                        }
-                        /* 底部按鈕框架 */
-                        .button-area {
-                            display: flex;
-                            padding: 0.3rem;
-                            border-left: none;
-                            border-radius: 2px;
-                            border: 2px solid #F6F6F6;
-                            justify-content: space-between;
-                        }
-                        .button-area select {
-                            color: #F6F6F6;
-                            margin-right: 1.5rem;
-                            border: 3px inset #EE2B47;
-                            background-color: #6e7292;
-                        }
-                        /* 底部選項 */
-                        .button-options {
-                            color: #F6F6F6;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                            font-weight: bold;
-                            border-radius: 10px;
-                            white-space: nowrap;
-                            background-color: #6e7292;
-                            border: 3px inset #EE2B47;
-                            transition: color 0.5s, background-color 0.5s;
-                        }
-                        .button-options:hover {
-                            color: #EE2B47;
-                            background-color: #F6F6F6;
-                        }
-                        .button-space { margin: 0 0.6rem; }
-                        .form-hidden {
-                            width: 0;
-                            height: 0;
-                            opacity: 0;
-                            padding: 10px;
-                            overflow: hidden;
-                            transition: opacity 0.8s, height 0.8s, width 0.8s;
-                        }
-                        .toggle-menu {
-                            width: 0;
-                            height: 0;
-                            padding: 0;
-                            margin: 0;
-                        }
-                        /* 整體框線 */
-                        table, td {
-                            margin: 0px;
-                            padding: 0px;
-                            overflow: auto;
-                            border-spacing: 0px;
-                        }
-                        .modal-background p {
-                            display: flex;
-                            flex-wrap: nowrap;
-                        }
-                        option { color: #F6F6F6; }
-                        ul {
-                            list-style: none;
-                            padding: 0px;
-                            margin: 0px;
-                        }
-                    `
-                }
             }
         };
 
@@ -602,11 +427,11 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
+            IsNeko: Lib.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
 
             Language() {
-                const Log = Syn.gV(SaveKey.Lang);
-                const ML = Syn.TranslMatcher(Word, Log);
+                const Log = Lib.getV(SaveKey.Lang);
+                const ML = Lib.translMatcher(Word, Log);
 
                 return {
                     Log: Log,
@@ -707,7 +532,7 @@
     });
 
     // 監聽網址變化
-    Syn.onUrlChange(change => {
+    Lib.onUrlChange(change => {
         Url = change.url;
         WaitDom.observe(document, {
             attributes: true,
@@ -716,7 +541,7 @@
             characterData: true
         })
 
-        Syn.body.$sAttr("Enhance", true); // 避免沒監聽到變化
+        Lib.body.$sAttr("Enhance", true); // 避免沒監聽到變化
     });
 
     /* ==================== 全域功能 ==================== */
@@ -791,7 +616,7 @@
                                 Config.newtab_insert ?? false,
                             ];
 
-                            Syn.onEvent(root, "click", event => {
+                            Lib.onEvent(root, "click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
                                 if (!target || target.$hAttr("download")) return;
                                 event.preventDefault();
@@ -812,16 +637,16 @@
                         Record_Cache: undefined, // 讀取修復紀錄 用於緩存
                         Fix_Cache: new Map(), // 修復後 用於緩存
                         Register_Eement: new Map(), // 用於存放以被註冊的元素
-                        Get_Record: () => Syn.Local("fix_record_v2", { error: new Map() }),
+                        Get_Record: () => Lib.local("fix_record_v2", { error: new Map() }),
                         async Save_Record(save) {
-                            await Syn.Local("fix_record_v2",
+                            await Lib.local("fix_record_v2",
                                 {
                                     value: new Map([...this.Get_Record(), ...save]) // 取得完整數據並合併
                                 }
                             );
                             this.Fix_Cache.clear();
                         },
-                        Save_Work: (() => Syn.Debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1000))(),
+                        Save_Work: (() => Lib.$debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1000))(),
                         Fix_Name_Support: new Set(["pixiv", "fanbox"]),
                         Fix_Tag_Support: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
                             ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox/gi,
@@ -872,7 +697,7 @@
                         },
                         async Fix_Update_Ui(href, info, name_obj, tag_obj, text) { // 修復後更新 UI
                             /* 創建編輯按鈕 */
-                            const edit = Syn.createElement("fix_edit", { id: info, class: "edit_artist", text: "Edit" });
+                            const edit = Lib.createElement("fix_edit", { id: info, class: "edit_artist", text: "Edit" });
 
                             name_obj.parentNode.insertBefore(edit, name_obj);
                             name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
@@ -957,9 +782,9 @@
                             if (this.Register_Eement.has(Listen)) return;
                             this.Register_Eement.set(Listen, true);
 
-                            Syn.Observer(Listen, () => {
+                            Lib.$observer(Listen, () => {
                                 this.Record_Cache = this.Get_Record(); // 觸發時重新抓取
-                                const element = typeof Element === "string" ? Syn.$q(Element) : Element;
+                                const element = typeof Element === "string" ? Lib.$q(Element) : Element;
                                 if (element) {
                                     // 針對搜尋頁的動態監聽
                                     for (const items of element.$qa("a")) {
@@ -978,9 +803,9 @@
 
         return {
             async SidebarCollapse(Config) { /* 收縮側邊攔 */
-                if (Syn.Platform === "Mobile") return;
+                if (Lib.platform === "Mobile") return;
 
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .global-sidebar {
                         opacity: 0;
                         height: 100%;
@@ -999,12 +824,12 @@
                 `, "Collapse_Effects", false);
             },
             async DeleteNotice(Config) { /* 刪除公告通知 */
-                Syn.WaitElem("aside", null, { throttle: 50, timeout: 5 }).then(aside => aside.remove());
+                Lib.waitEl("aside", null, { throttle: 50, timeout: 5 }).then(aside => aside.remove());
             },
             async BlockAds(Config) { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
-                const cookieString = Syn.cookie();
+                const cookieString = Lib.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
 
@@ -1019,16 +844,16 @@
                     };
 
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
+                        Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
                     }
                 };
 
                 // 舊版白名單正則轉換
                 // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
 
-                if (Syn.$q("#Ad-blocking-style")) return;
+                if (Lib.$q("#Ad-blocking-style")) return;
 
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style");
 
@@ -1063,7 +888,7 @@
             async CacheFetch(Config) { /* 緩存請求 */
                 if (DLL.IsNeko) return;
 
-                Syn.AddScript(`
+                Lib.addScript(`
                     const cache = new Map();
                     const originalFetch = window.fetch;
 
@@ -1133,7 +958,7 @@
                 const Func = LoadFunc.TextToLink_Dependent(Config);
 
                 if (DLL.IsContent()) {
-                    Syn.WaitElem(".post__body, .scrape__body", null).then(body => {
+                    Lib.waitEl(".post__body, .scrape__body", null).then(body => {
                         Func.JumpTrigger(body);
 
                         let [article, content] = [
@@ -1155,8 +980,8 @@
                     });
 
                 } else if (DLL.IsAnnouncement()) {
-                    Syn.WaitElem(".card-list__items pre", null, { raf: true }).then(() => {
-                        const items = Syn.$q(".card-list__items");
+                    Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
+                        const items = Lib.$q(".card-list__items");
 
                         Func.JumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
@@ -1171,20 +996,20 @@
 
                 // 監聽點擊事件
                 const [Device, Newtab, Active, Insert] = [
-                    Syn.Platform,
+                    Lib.platform,
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.onEvent(Syn.body, "click", event => {
+                Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
 
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
 
                         const display = target.nextElementSibling; // 取得下方的 name 元素
-                        const text = Syn.createElement("textarea", {
+                        const text = Lib.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`,
                         });
@@ -1223,9 +1048,9 @@
 
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.IsSearch()) {
-                    Syn.WaitElem(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
+                    Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
                         if (DLL.Link.test(Url)) {
-                            const artist = Syn.$q("span[itemprop='name']");
+                            const artist = Lib.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist); // 預覽頁的 名稱修復
 
                             for (const items of card_items.$qa("a")) { // 針對 links 頁面的 card
@@ -1235,12 +1060,12 @@
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
                             // 這是用於避免沒觸發變更, 手動創建一個元素
-                            Syn.createElement(card_items, "fix-trigger", { style: "display: none;" });
+                            Lib.createElement(card_items, "fix-trigger", { style: "display: none;" });
                         }
                     });
 
                 } else if (DLL.IsContent()) { // 是內容頁面
-                    Syn.WaitElem([
+                    Lib.waitEl([
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
                     ], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
@@ -1248,18 +1073,18 @@
                     });
 
                 } else { // 預覽頁面
-                    Syn.WaitElem("span[itemprop='name']", null, { raf: true, timeout: 5 }).then(artist => {
+                    Lib.waitEl("span[itemprop='name']", null, { raf: true, timeout: 5 }).then(artist => {
                         Func.Other_Fix(artist);
                     });
                 }
             },
             async BackToTop(Config) { /* 翻頁後回到頂部 */
-                Syn.onEvent(Syn.body, "pointerup", event => {
-                    event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
+                Lib.onEvent(Lib.body, "pointerup", event => {
+                    event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
             async KeyScroll(Config) { /* 快捷自動滾動 */
-                if (Syn.Platform === "Mobile") return;
+                if (Lib.platform === "Mobile") return;
 
                 // 滾動配置
                 const Scroll_Requ = {
@@ -1271,12 +1096,12 @@
                 let Scroll, Up_scroll = false, Down_scroll = false;
 
                 const [TopDetected, BottomDetected] = [ // 到頂 和 到底 的檢測
-                    Syn.Throttle(() => {
-                        Up_scroll = Syn.sY == 0
+                    Lib.$throttle(() => {
+                        Up_scroll = Lib.sY == 0
                             ? false : true
                     }, 600),
-                    Syn.Throttle(() => {
-                        Down_scroll = Syn.sY + Syn.iH >= Syn.html.scrollHeight
+                    Lib.$throttle(() => {
+                        Down_scroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight
                             ? false : true
                     }, 600)
                 ];
@@ -1312,7 +1137,7 @@
                         }
                 }
 
-                Syn.onEvent(window, "keydown", Syn.Throttle(event => {
+                Lib.onEvent(window, "keydown", Lib.$throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1350,7 +1175,7 @@
                     Config.newtab_insert ?? false,
                 ];
 
-                Syn.onEvent(Syn.body, "click", event => {
+                Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
 
                     target && (
@@ -1365,7 +1190,7 @@
 
                 if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
 
-                Syn.WaitElem("menu", null, { all: true, timeout: 5 }).then(menu => {
+                Lib.waitEl("menu", null, { all: true, timeout: 5 }).then(menu => {
                     DLL.IsNeko = false; // 防止重複執行
 
                     // 渲染
@@ -1400,7 +1225,7 @@
 
                             // 複製緩存的節點
                             const clonedContent = cachedContent.cloneNode(true);
-                            Syn.$q(".card-list--legacy").replaceChildren(...clonedContent.childNodes);
+                            Lib.$q(".card-list--legacy").replaceChildren(...clonedContent.childNodes);
                             return Promise.resolve();
                         }
 
@@ -1421,7 +1246,7 @@
                                     pageContentCache.set(url, contentToCache);
 
                                     // 應用到頁面
-                                    Syn.$q(".card-list--legacy").replaceChildren(...newContent.childNodes);
+                                    Lib.$q(".card-list--legacy").replaceChildren(...newContent.childNodes);
                                     resolve();
                                 },
                                 onerror: () => reject(new Error('Network error'))
@@ -1639,7 +1464,7 @@
 
                     // 初始化渲染
                     const elements = createPaginationElements(1);
-                    const [fragment1, fragment2] = [Syn.createFragment, Syn.createFragment];
+                    const [fragment1, fragment2] = [Lib.createFragment, Lib.createFragment];
 
                     preact.render([...elements], fragment1);
                     preact.render([...elements], fragment2);
@@ -1659,7 +1484,7 @@
                     let isLoading = false;
                     let abortController = null;
 
-                    Syn.onEvent("section", "click", async event => {
+                    Lib.onEvent("section", "click", async event => {
                         const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                         if (!target || isLoading) return;
 
@@ -1706,7 +1531,7 @@
             async CardZoom(Config) { /* 帖子預覽卡縮放效果 */
                 switch (Config.mode) {
                     case 2:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card a:hover {
                                 overflow: auto;
                                 z-index: 99999;
@@ -1723,7 +1548,7 @@
                             }
                         `, "CardZoom_Effects_2", false);
                     default:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card { margin: .3vw; }
                             .post-card a img { border-radius: 8px; }
                             .post-card a {
@@ -1736,11 +1561,11 @@
                 }
             },
             async CardText(Config) { /* 帖子說明文字效果 */
-                if (Syn.Platform === "Mobile") return;
+                if (Lib.platform === "Mobile") return;
 
                 switch (Config.mode) {
                     case 2:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card__header, .post-card__footer {
                                 opacity: 0.4 !important;
                                 transition: opacity 0.3s;
@@ -1751,7 +1576,7 @@
                             }
                         `, "CardText_Effects_2", false); break;
                     default:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card__header, .post-card__footer {
                                 opacity: 0 !important;
                                 z-index: 1;
@@ -1791,8 +1616,8 @@
                             onload: response => {
                                 if (DLL.IsNeko) {
                                     const Main = response.responseXML.$q("main");
-                                    const View = Syn.createElement("View", { class: "View" });
-                                    const Buffer = Syn.createFragment;
+                                    const View = Lib.createElement("View", { class: "View" });
+                                    const Buffer = Lib.createFragment;
                                     for (const br of Main.$qa("br")) { // 取得 br 數據
                                         Buffer.append( // 將以下元素都添加到 Buffer
                                             document.createTextNode(br.previousSibling.$text()),
@@ -1803,22 +1628,22 @@
                                     Browse.appendChild(View);
                                 } else {
                                     const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Syn.createElement("View", { class: "View" });
-                                    const Buffer = Syn.createFragment;
+                                    const View = Lib.createElement("View", { class: "View" });
+                                    const Buffer = Lib.createFragment;
 
                                     // 添加密碼數據
                                     const password = ResponseJson['password'];
                                     if (password) {
                                         Buffer.append(
                                             document.createTextNode(`password: ${password}`),
-                                            Syn.createElement("br")
+                                            Lib.createElement("br")
                                         )
                                     };
 
                                     // 添加檔案數據
                                     for (const text of ResponseJson['file_list']) {
                                         Buffer.append(
-                                            document.createTextNode(text), Syn.createElement("br")
+                                            document.createTextNode(text), Lib.createElement("br")
                                         )
                                     };
 
@@ -1848,10 +1673,10 @@
 
                                 history.pushState(null, null, url); // 修改連結與紀錄
                                 const Title = XML.$q("title")?.$text();
-                                Title && (Syn.title(Title)); // 修改標題
+                                Title && (Lib.title(Title)); // 修改標題
 
                                 setTimeout(() => {
-                                    Syn.WaitElem(".post__content, .scrape__content", null, { raf: true, timeout: 10 }).then(post => {
+                                    Lib.waitEl(".post__content, .scrape__content", null, { raf: true, timeout: 10 }).then(post => {
                                         // 刪除所有只有 br 標籤的元素
                                         post.$qa("p").forEach(p => {
                                             p.childNodes.forEach(node => { node.nodeName == "BR" && node.parentNode.remove() });
@@ -1863,7 +1688,7 @@
                                         });
                                     });
 
-                                    Syn.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
+                                    Lib.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
                                 }, 300);
                             },
                             onerror: error => { GetNextPage(url, old_main) }
@@ -1876,7 +1701,7 @@
 
         return {
             async LinkBeautify(Config) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .View {
                         top: -10px;
                         z-index: 1;
@@ -1896,7 +1721,7 @@
                     a:hover .View { display: block }
                 `, "Link_Effects", false);
 
-                Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
+                Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                     const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
 
                     for (const link of post) {
@@ -1914,14 +1739,14 @@
             },
             async VideoBeautify(Config) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
                 if (DLL.IsNeko) {
-                    Syn.WaitElem(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
+                    Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
                         video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
                 } else {
-                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then(parents => {
-                        Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
+                    Lib.waitEl("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then(parents => {
+                        Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
 
-                            Syn.AddStyle(`
+                            Lib.addStyle(`
                                 .fluid_video_wrapper {
                                     height: 50% !important;
                                     width: 65% !important;
@@ -1938,7 +1763,7 @@
 
                             for (const li of parents) {
 
-                                const WaitLoad = new MutationObserver(Syn.Debounce(() => {
+                                const WaitLoad = new MutationObserver(Lib.$debounce(() => {
                                     WaitLoad.disconnect();
 
                                     let [video, summary] = [
@@ -1971,7 +1796,7 @@
                 }
             },
             async OriginalImage(Config) { /* 自動載入原圖 */
-                Syn.WaitElem(".post__thumbnail, .scrape__thumbnail", null, { raf: true, all: true, timeout: 5 }).then(thumbnail => {
+                Lib.waitEl(".post__thumbnail, .scrape__thumbnail", null, { raf: true, all: true, timeout: 5 }).then(thumbnail => {
                     /**
                      * 針對 Neko 網站的支援
                      */
@@ -2005,7 +1830,7 @@
                         },
                         FailedClick: async () => {
                             //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (目前也壞了, 感覺觸發不了)
-                            Syn.one(".post__files, .scrape__files", "click", event => {
+                            Lib.onE(".post__files, .scrape__files", "click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -2033,10 +1858,10 @@
                                     src: Nurl,
                                     className: "Image-loading-indicator Image-style",
                                     onLoad: function () {
-                                        Syn.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
+                                        Lib.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
                                     },
                                     onError: function () {
-                                        Origina_Requ.Reload(Syn.$q(`#${ID} img`), 10);
+                                        Origina_Requ.Reload(Lib.$q(`#${ID} img`), 10);
                                     }
                                 })
                             )
@@ -2050,7 +1875,7 @@
                          * Result 回傳圖片連結
                          */
                         Request: async function (Container, Url, Result) {
-                            const indicator = Syn.createElement(Container, "div", { class: "progress-indicator", text: "0%" });
+                            const indicator = Lib.createElement(Container, "div", { class: "progress-indicator", text: "0%" });
 
                             GM_xmlhttpRequest({
                                 url: Url,
@@ -2183,14 +2008,14 @@
             async ExtraButton(Config) { /* 下方額外擴充按鈕 */
                 DLL.Style.PostExtra(); // 導入需求樣式
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
-                Syn.WaitElem("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
+                Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
 
                     const [Prev, Next, Svg, Span, Buffer] = [
-                        Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"),
-                        Syn.$q(".post__nav-link.next, .scrape__nav-link.next"),
+                        Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev"),
+                        Lib.$q(".post__nav-link.next, .scrape__nav-link.next"),
                         document.createElement("svg"),
                         document.createElement("span"),
-                        Syn.createFragment
+                        Lib.createFragment
                     ];
 
                     Svg.id = "To_top";
@@ -2211,16 +2036,16 @@
                     Span.appendChild(Next_btn);
 
                     // 點擊回到上方的按鈕
-                    Syn.one(Svg, "click", () => {
-                        Syn.$q("header").scrollIntoView();
+                    Lib.onE(Svg, "click", () => {
+                        Lib.$q("header").scrollIntoView();
                     }, { capture: true, passive: true });
 
                     // 點擊切換下一頁按鈕
-                    Syn.one(Next_btn, "click", () => {
+                    Lib.onE(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
                             GetNextPage(
                                 Next_btn.$gAttr("jump"),
-                                Syn.$q("main")
+                                Lib.$q("main")
                             );
                         } else {
                             Svg.remove();
@@ -2230,7 +2055,7 @@
                     }, { capture: true, once: true });
 
                     // 避免多次創建 Bug
-                    if (!Syn.$q("#To_top") && !Syn.$q("#Next_box")) {
+                    if (!Lib.$q("#To_top") && !Lib.$q("#Next_box")) {
                         Buffer.append(Svg, Span);
                         comments.appendChild(Buffer);
                     }
@@ -2238,7 +2063,7 @@
                 });
             },
             async CommentFormat(Config) { /* 評論區 重新排版 */
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .post__comments,
                     .scrape__comments {
                         display: flex;
@@ -2267,27 +2092,23 @@
         const { Log, Transl } = DLL.Language(); // 菜單觸發器, 每次創建都會獲取新數據
 
         callback && callback({ Log, Transl }); // 使用 callback 會額外回傳數據
-        Syn.Menu({ [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl) });
+        Lib.regMenu({ [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl) });
     }
     function Create_Menu(Log, Transl) {
         const shadowID = "shadow";
-        if (Syn.$q(`#${shadowID}`)) return;
+        if (Lib.$q(`#${shadowID}`)) return;
 
-        // 取得設置
-        const set = DLL.ImgSet();
-        const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing]; // 這樣寫是為了讓讀取保存設置可以按照順序 (菜單有索引問題)
+        // 取得圖片設置
+        const imgSet = DLL.ImgSet();
+        const img_data = [ // ? 這樣寫是為了讓讀取保存設置可以按照順序 (菜單有索引問題)
+            imgSet.Height, imgSet.Width, imgSet.MaxWidth, imgSet.Spacing
+        ];
 
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
 
-        // 取得樣式依賴
-        const { ImgScript, MenuStyle } = DLL.Style.Menu();
-
         // 創建陰影環境
-        const fragment = Syn.createFragment;
-        const shadow = Syn.createElement("div", { id: shadowID });
+        const shadow = Lib.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
-        const script = Syn.createElement("script", { id: "Img-Script", text: ImgScript });
-        const style = Syn.createElement("style", { id: "Menu-Style", text: MenuStyle });
 
         // 調整選項
         const UnitOptions = `
@@ -2301,8 +2122,188 @@
             </select>
         `;
 
-        // 添加菜單樣式
+        // 調整數值腳本
+        const menuScript = `
+            <script>
+                function check(value) {
+                   return value.toString().length > 4 || value > 1000
+                       ? 1000 : value < 0 ? "" : value;
+                }
+            </script>
+        `;
+
+        const menuSet = DLL.MenuSet(); // 取得菜單設置
+        // 菜單樣式
+        const menuStyle = `
+            <style>
+                .modal-background {
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    z-index: 9999;
+                    overflow: auto;
+                    position: fixed;
+                    pointer-events: none;
+                }
+                /* 模態介面 */
+                .modal-interface {
+                    top: ${menuSet.Top};
+                    left: ${menuSet.Left};
+                    margin: 0;
+                    display: flex;
+                    overflow: auto;
+                    position: fixed;
+                    border-radius: 5px;
+                    pointer-events: auto;
+                    background-color: #2C2E3E;
+                    border: 3px solid #EE2B47;
+                }
+                /* 模態內容盒 */
+                .modal-box {
+                    padding: 0.5rem;
+                    height: 50vh;
+                    width: 32vw;
+                }
+                /* 菜單框架 */
+                .menu {
+                    width: 5.5vw;
+                    overflow: auto;
+                    text-align: center;
+                    vertical-align: top;
+                    border-radius: 2px;
+                    border: 2px solid #F6F6F6;
+                }
+                /* 菜單文字標題 */
+                .menu-text {
+                    color: #EE2B47;
+                    cursor: default;
+                    padding: 0.2rem;
+                    margin: 0.3rem;
+                    margin-bottom: 1.5rem;
+                    white-space: nowrap;
+                    border-radius: 10px;
+                    border: 4px solid #f05d73;
+                    background-color: #1f202c;
+                }
+                /* 菜單選項按鈕 */
+                .menu-options {
+                    cursor: pointer;
+                    font-size: 1.4rem;
+                    color: #F6F6F6;
+                    font-weight: bold;
+                    border-radius: 5px;
+                    margin-bottom: 1.2rem;
+                    border: 5px inset #EE2B47;
+                    background-color: #6e7292;
+                    transition: color 0.8s, background-color 0.8s;
+                }
+                .menu-options:hover {
+                    color: #EE2B47;
+                    background-color: #F6F6F6;
+                }
+                .menu-options:disabled {
+                    color: #6e7292;
+                    cursor: default;
+                    background-color: #c5c5c5;
+                    border: 5px inset #faa5b2;
+                }
+                /* 設置內容框架 */
+                .content {
+                    height: 48vh;
+                    width: 28vw;
+                    overflow: auto;
+                    padding: 0px 1rem;
+                    border-radius: 2px;
+                    vertical-align: top;
+                    border-top: 2px solid #F6F6F6;
+                    border-right: 2px solid #F6F6F6;
+                }
+                .narrative { color: #EE2B47; }
+                .Image-input-settings {
+                    width: 8rem;
+                    color: #F6F6F6;
+                    text-align: center;
+                    font-size: 1.5rem;
+                    border-radius: 15px;
+                    border: 3px inset #EE2B47;
+                    background-color: #202127;
+                }
+                .Image-input-settings:disabled {
+                    border: 3px inset #faa5b2;
+                    background-color: #5a5a5a;
+                }
+                /* 底部按鈕框架 */
+                .button-area {
+                    display: flex;
+                    padding: 0.3rem;
+                    border-left: none;
+                    border-radius: 2px;
+                    border: 2px solid #F6F6F6;
+                    justify-content: space-between;
+                }
+                .button-area select {
+                    color: #F6F6F6;
+                    margin-right: 1.5rem;
+                    border: 3px inset #EE2B47;
+                    background-color: #6e7292;
+                }
+                /* 底部選項 */
+                .button-options {
+                    color: #F6F6F6;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: bold;
+                    border-radius: 10px;
+                    white-space: nowrap;
+                    background-color: #6e7292;
+                    border: 3px inset #EE2B47;
+                    transition: color 0.5s, background-color 0.5s;
+                }
+                .button-options:hover {
+                    color: #EE2B47;
+                    background-color: #F6F6F6;
+                }
+                .button-space { margin: 0 0.6rem; }
+                .form-hidden {
+                    width: 0;
+                    height: 0;
+                    opacity: 0;
+                    padding: 10px;
+                    overflow: hidden;
+                    transition: opacity 0.8s, height 0.8s, width 0.8s;
+                }
+                .toggle-menu {
+                    width: 0;
+                    height: 0;
+                    padding: 0;
+                    margin: 0;
+                }
+                /* 整體框線 */
+                table, td {
+                    margin: 0px;
+                    padding: 0px;
+                    overflow: auto;
+                    border-spacing: 0px;
+                }
+                .modal-background p {
+                    display: flex;
+                    flex-wrap: nowrap;
+                }
+                option { color: #F6F6F6; }
+                ul {
+                    list-style: none;
+                    padding: 0px;
+                    margin: 0px;
+                }
+            </style>
+        `;
+
+        // 添加菜單主樣式
         shadowRoot.$iHtml(`
+            ${menuScript}
+            ${menuStyle}
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -2372,11 +2373,8 @@
             </div>
         `);
 
-        fragment.append(script, style);
-        shadowRoot.appendChild(fragment);
-
         // 添加到 dom, 並緩存對象
-        $(Syn.body).append(shadow);
+        $(Lib.body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
@@ -2396,7 +2394,7 @@
             Menu_Save() { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                Syn.sV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
+                Lib.setV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
             },
             Img_Save() {
                 img_set = $imageSet.find("p"); // 獲取設定 DOM 參數
@@ -2408,7 +2406,7 @@
                     else { set_value = `${img_input.val()}${img_select.val()}` }
                     save_cache[img_input.attr("id")] = set_value;
                 });
-                Syn.sV(DLL.SaveKey.Img, save_cache); // 保存設置數據
+                Lib.setV(DLL.SaveKey.Img, save_cache); // 保存設置數據
             },
             async ImageSettings() {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
@@ -2441,7 +2439,7 @@
             $language.off("input change");
 
             const value = $(this).val(); // 取得選擇
-            Syn.sV(DLL.SaveKey.Lang, value);
+            Lib.setV(DLL.SaveKey.Lang, value);
 
             Menu_Requ.Menu_Save();
             Menu_Requ.Menu_Close();
