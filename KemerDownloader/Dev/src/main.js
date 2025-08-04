@@ -9,7 +9,7 @@ import {
     GM_registerMenuCommand,
     GM_unregisterMenuCommand,
 } from 'vite-plugin-monkey/dist/client';
-const { Syn, md5, saveAs } = monkeyWindow; // 外部函數
+const { Lib, md5, saveAs } = monkeyWindow; // 外部函數
 
 import Config from './config.js'; // 腳本配置
 import Dict from './language.js'; // 腳本語言
@@ -17,9 +17,9 @@ import Fetch from './fetch.js'; // 抓取數據
 import Menu from './menu.js'; // 導入菜單模塊
 import Downloader from './downloader.js'; // 下載數據
 
-const { General, FileName, FetchSet, Process } = Config(Syn);
+const { General, FileName, FetchSet, Process } = Config(Lib);
 const { Transl } = (() => { // 取得對應語言翻譯
-    const Matcher = Syn.TranslMatcher(Dict);
+    const Matcher = Lib.translMatcher(Dict);
     return {
         Transl: (Str) => Matcher[Str] ?? Str,
     }
@@ -37,8 +37,8 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
     /* 按鈕創建 */
     async ButtonCreation() {
-        Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then(Files => {
-            Syn.AddStyle(`
+        Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then(Files => {
+            Lib.addStyle(`
                 #Button-Container {
                     padding: 1rem;
                     font-size: 40% !important;
@@ -71,7 +71,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }
             `, "Download-button-style", false);
 
-            Syn.$q("#Button-Container")?.remove(); // 重複時刪除舊的容器
+            Lib.$q("#Button-Container")?.remove(); // 重複時刪除舊的容器
 
             try {
 
@@ -80,16 +80,16 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 Files = [...Files].filter(file => file.$text() === "Files");
                 if (Files.length == 0) return;
 
-                const CompressMode = Syn.Local("Compression", { error: true });
+                const CompressMode = Lib.local("Compression", { error: true });
                 const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
 
                 this.Download ??= Downloader( // 懶加載 Download 類
                     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
-                    General, FileName, Process, Transl, Syn, saveAs
+                    General, FileName, Process, Transl, Lib, saveAs
                 );
 
                 // 添加按鈕容器
-                Syn.createElement(Files[0], "span", {
+                Lib.createElement(Files[0], "span", {
                     id: "Button-Container",
                     on: {
                         type: "click",
@@ -114,9 +114,9 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 });
 
             } catch (error) {
-                Syn.Log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
+                Lib.log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
 
-                const Button = Syn.$q('#Button-Container button');
+                const Button = Lib.$q('#Button-Container button');
                 if (Button) {
                     Button.disabled = true;
                     Button.textContent = Transl("無法下載");
@@ -127,27 +127,28 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
     /* 一鍵開啟當前所有帖子 */
     async OpenAllPages() {
-        const card = Syn.$qa("article.post-card a");
+        const card = Lib.$qa("article.post-card a");
         if (card.length == 0) { throw new Error("No links found") }
 
         let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
         if (scope == null) return;
 
         scope = scope === "" ? "1-50" : scope;
-        for (const link of Syn.ScopeParsing(scope, card)) {
+        for (const link of Lib.scopeParse(scope, card)) {
             GM_openInTab(link.href, {
                 insert: false,
                 setParent: false
             });
-            await Syn.Sleep(General.BatchOpenDelay);
+
+            await Lib.sleep(General.BatchOpenDelay);
         }
     }
 
     /* 下載模式切換 */
     async DownloadModeSwitch() {
-        Syn.Local("Compression", { error: true })
-            ? Syn.Local("Compression", { value: false })
-            : Syn.Local("Compression", { value: true });
+        Lib.local("Compression", { error: true })
+            ? Lib.local("Compression", { value: false })
+            : Lib.local("Compression", { value: true });
         this.ButtonCreation();
     }
 
@@ -161,25 +162,25 @@ const { Transl } = (() => { // 取得對應語言翻譯
         GM_info.isIncognito = true;
 
         // 首次載入嘗試註冊
-        registerMenu(Syn.$url);
-        self.Content(Syn.$url) && self.ButtonCreation();
+        registerMenu(Lib.$url);
+        self.Content(Lib.$url) && self.ButtonCreation();
 
         // 加載菜單
-        const UI = Menu(Syn, Transl, General, FileName, FetchSet);
+        const UI = Menu(Lib, Transl, General, FileName, FetchSet);
         this.Menu = new UI();
 
         /* 註冊菜單 */
         async function registerMenu(Page) {
             if (self.Content(Page)) {
-                Syn.Menu({
+                Lib.regMenu({
                     [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
                 }, { reset: true });
             } else if (self.Preview(Page)) {
                 FetchData ??= Fetch( // 懶加載 FetchData 類
-                    General, FetchSet, Process, Transl, Syn, md5
+                    General, FetchSet, Process, Transl, Lib, md5
                 );
 
-                Syn.Menu({
+                Lib.regMenu({
                     [Transl("📑 獲取帖子數據")]: () => {
                         if (!Process.Lock) {
                             let Instantiate = null;
@@ -191,7 +192,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }, { reset: true });
 
                 if (General.Dev && !Process.IsNeko) {
-                    Syn.Menu({ // 不支援 Neko, 抓取邏輯不同
+                    Lib.regMenu({ // 不支援 Neko, 抓取邏輯不同
                         "🛠️ 開發者獲取": () => {
                             const ID = prompt("輸入請求的 ID");
                             if (ID == null || ID === "") return; // 開發用的不做防呆
@@ -205,7 +206,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
             }
         };
 
-        Syn.onUrlChange(change => {
+        Lib.onUrlChange(change => {
             self.Content(change.url) && self.ButtonCreation();
             registerMenu(change.url);
         });
