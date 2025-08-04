@@ -39,11 +39,6 @@ export default function Config(Lib) {
      * 設置 FetchData 輸出格式
      *
      *! 無論設置什麼, 只要沒有的數據, 就不會顯示 (會被排除掉)
-     *
-     * ----------------------
-     * 舊版 nekohouse.su
-     *
-     *
      * ----------------------
      * Mode
      * 排除模式: "FilterMode" -> 預設為全部使用, 設置排除的項目
@@ -60,8 +55,9 @@ export default function Config(Lib) {
      */
     const FetchSet = {
         Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
-        AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
+        AdvancedFetch: true, // 進階獲取 (只需要 一般媒體連結, 關閉該功能獲取會快很多) [ nekohouse 不適用]
         ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
+        FilterExts: [], // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
         UseFormat: false, // 這裡為 false 下面兩項就不生效
         Mode: "FilterMode",
         Format: ["Timestamp", "TypeTag"],
