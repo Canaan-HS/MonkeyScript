@@ -162,7 +162,10 @@ export default function Fetch(
                     if (uri) {
                         const extension = Lib.suffixName(uri, "");
                         const url = uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`;
-                        const getDownloadName = (link) => link.download?.trim() || link.$text();
+
+                        const getDownloadName = (link) => this.deepDecodeURIComponent(
+                            link.download?.trim() || link.$text()
+                        );
 
                         if (this.isVideo(extension)) {
                             const name = getDownloadName(file);
@@ -171,7 +174,7 @@ export default function Fetch(
                             const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
                             acc.img[name] = `${url}?f=${name}`;
                         } else {
-                            const name = this.deepDecodeURIComponent(getDownloadName(file));
+                            const name = getDownloadName(file);
                             acc.other[name] = `${url}?f=${name}`;
                         }
                     }
