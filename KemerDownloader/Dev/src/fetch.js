@@ -1,5 +1,5 @@
 export default function Fetch(
-    General, FetchSet, Process, Transl, Syn, md5
+    General, FetchSet, Process, Transl, Lib, md5
 ) {
     return class FetchData {
         static Try_Again_Promise = null;
@@ -8,8 +8,8 @@ export default function Fetch(
             this.metaDict = new Map(); // 保存元數據
             this.dataDict = new Map(); // 保存最終數據
 
-            this.sourceURL = Syn.url; // 原始連結
-            this.titleCache = Syn.title();
+            this.sourceURL = Lib.url; // 原始連結
+            this.titleCache = Lib.title();
 
             this.URL = new URL(this.sourceURL); // 解析連結
 
@@ -64,7 +64,7 @@ export default function Fetch(
             this.getValidValue = (value) => {
                 if (!value) return null;
 
-                const type = Syn.Type(value);
+                const type = Lib.$type(value);
                 if (type === "Array") return value.length > 0 && value.some(item => item !== "") ? value : null;
                 if (type === "Object") {
                     const values = Object.values(value);
@@ -120,7 +120,7 @@ export default function Fetch(
                 return data.reduce((acc, file) => {
                     const name = file.name;
                     const path = file.path;
-                    const extension = Syn.SuffixName(path, "");
+                    const extension = Lib.suffixName(path, "");
 
                     // 如果有伺服器字典, 是非進階抓取模式
                     const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
@@ -160,8 +160,8 @@ export default function Fetch(
                     const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
 
                     if (uri) {
-                        const extension = Syn.SuffixName(uri, "");
-                        const url = uri.startsWith("http") ? uri : `${Syn.$origin}${uri}`;
+                        const extension = Lib.suffixName(uri, "");
+                        const url = uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`;
                         const getDownloadName = (link) => link.download?.trim() || link.$text();
 
                         if (this.isVideo(extension)) {
@@ -185,7 +185,7 @@ export default function Fetch(
                 const Cache = {};
 
                 try {
-                    for (const a of Syn.DomParse(data).$qa("body a")) {
+                    for (const a of Lib.domParse(data).$qa("body a")) {
                         const href = a.href;
                         const hash = md5(href).slice(0, 16);
 
@@ -215,7 +215,7 @@ export default function Fetch(
                         }
                     };
                 } catch (error) {
-                    Syn.Log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
+                    Lib.log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
                 }
 
                 return Cache;
@@ -245,7 +245,7 @@ export default function Fetch(
 
                             clearTimeout(timeoutId);
                             if (response.status === 429 || response.status === 503) {
-                                await Syn.Sleep(sleepTime);
+                                await Lib.sleep(sleepTime);
                                 await checkRequest();
                             } else if (response.status === 200) {
                                 resolve(response);
@@ -253,7 +253,7 @@ export default function Fetch(
                         } catch (err) {
                             // 發生網路錯誤也重試
                             clearTimeout(timeoutId);
-                            await Syn.Sleep(sleepTime);
+                            await Lib.sleep(sleepTime);
                             await checkRequest();
                         }
                     };
@@ -273,7 +273,7 @@ export default function Fetch(
             };
 
             // 請求工作
-            this.worker = Syn.WorkerCreation(`
+            this.worker = Lib.workerCreate(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -338,14 +338,14 @@ export default function Fetch(
 
         /* 入口調用函數 */
         async fetchRun() {
-            const small = Syn.$q("small");
-            const items = Syn.$q(".card-list__items");
+            const small = Lib.$q("small");
+            const items = Lib.$q(".card-list__items");
 
             if (items) {
                 Process.Lock = true; // 鎖定菜單的操作, 避免重複抓取
 
                 // 取得當前頁數
-                const currentPage = +Syn.$q(".pagination-button-current b")?.$text();
+                const currentPage = +Lib.$q(".pagination-button-current b")?.$text();
                 currentPage && (this.currentPage = currentPage);
 
                 // ! 實驗性獲取總頁數
@@ -370,7 +370,7 @@ export default function Fetch(
                     const { index, title, url, content, error } = e.data;
                     if (!error) resolve({ url, content });
                     else {
-                        Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                        Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                         await this.TooMany_TryAgain(url);
                         this.worker.postMessage({ index, title, url });
                     };
@@ -380,7 +380,7 @@ export default function Fetch(
             const { content } = homeData;
 
             Object.assign(homeData, { content: JSON.parse(content) });
-            Syn.Log("HomeData", homeData, { collapsed: false });
+            Lib.log("HomeData", homeData, { collapsed: false });
 
             // 恢復 _fetchContent 處理數據格式
             const homeDataClone = structuredClone(homeData);
@@ -388,7 +388,7 @@ export default function Fetch(
             homeDataClone.content = JSON.stringify(homeDataClone.content); // 轉換為字符串
 
             await this._fetchContent(homeDataClone);
-            Syn.Log("PostDate", this.dataDict, { collapsed: false });
+            Lib.log("PostDate", this.dataDict, { collapsed: false });
             this._reset();
         };
 
@@ -410,14 +410,14 @@ export default function Fetch(
                                 resolve(content);
                             }
                             else {
-                                Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 await this.TooMany_TryAgain(url);
                                 this.worker.postMessage({ index, title, url, time, delay });
                             };
                         }
                     });
 
-                    items = Syn.DomParse(homeData)?.$q(".card-list__items");
+                    items = Lib.domParse(homeData)?.$q(".card-list__items");
                 };
 
                 if (items) { // ? 避免可能的意外
@@ -443,7 +443,7 @@ export default function Fetch(
                             resolve({ url, content });
                         }
                         else {
-                            Syn.Log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                            Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
                             this.worker.postMessage({ index, title, url, time, delay });
                         };
@@ -472,9 +472,9 @@ export default function Fetch(
                 const postCount = content.length;
 
                 if (this.metaDict.size === 0) {
-                    this.metaDict.set(Transl("作者"), Syn.$q("span[itemprop='name'], fix_name").$text());
+                    this.metaDict.set(Transl("作者"), Lib.$q("span[itemprop='name'], fix_name").$text());
                     this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-                    this.metaDict.set(Transl("建立時間"), Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+                    this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
                     this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
                 };
 
@@ -486,7 +486,7 @@ export default function Fetch(
                         this.fetchDelay = Process.dynamicParam(time, delay);
 
                         const standardTitle = this.normalizeName(title, index);
-                        const postDom = Syn.DomParse(content);
+                        const postDom = Lib.domParse(content);
 
                         const classifiedFiles = this.nekoCategorize(standardTitle, [
                             ...postDom.$qa(".fileThumb"), // 圖片連結
@@ -507,8 +507,8 @@ export default function Fetch(
                         };
 
                         resolve();
-                        Syn.title(`（${this.currentPage} - ${++taskCount}）`); // ? 如果直接使用 index, 順序會亂跳, 因為是異步執行
-                        Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                        Lib.title(`（${this.currentPage} - ${++taskCount}）`); // ? 如果直接使用 index, 順序會亂跳, 因為是異步執行
+                        Lib.log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                     } else {
                         await this.TooMany_TryAgain(url);
                         this.worker.postMessage({ index, title, url, time, delay });
@@ -521,7 +521,7 @@ export default function Fetch(
                         this.worker.postMessage({ index, title, url, time: Date.now(), delay: this.fetchDelay });
                     }));
 
-                    await Syn.Sleep(this.fetchDelay);
+                    await Lib.sleep(this.fetchDelay);
                 };
 
                 await Promise.allSettled(tasks);
@@ -537,7 +537,7 @@ export default function Fetch(
 
                         this.metaDict.set(Transl("作者"), props.name);
                         this.metaDict.set(Transl("帖子數量"), props.count);
-                        this.metaDict.set(Transl("建立時間"), Syn.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+                        this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
                         this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
                         this.metaDict.set(Transl("作者網站"), props.display_data.href);
                     }
@@ -565,7 +565,7 @@ export default function Fetch(
                                         const classifiedFiles = this.kemerCategorize({
                                             title: standardTitle,
                                             data: [...previews, ...attachments],
-                                            fillValue: Syn.GetFill(previews?.length || 1)
+                                            fillValue: Lib.getFill(previews?.length || 1)
                                         });
 
                                         // 生成請求數據 (處理要抓什麼數據)
@@ -585,14 +585,14 @@ export default function Fetch(
                                         };
 
                                         resolve();
-                                        Syn.title(`（${this.currentPage} - ${++this.progress}）`);
-                                        Syn.Log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                                        Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+                                        Lib.log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                                     } else throw new Error("Json Parse Failed");
                                 } else {
                                     throw new Error("Request Failed");
                                 }
                             } catch (error) {
-                                Syn.Log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 await this.TooMany_TryAgain(url); // 錯誤等待
                                 this.worker.postMessage({ index, title, url, time, delay });
                             }
@@ -605,7 +605,7 @@ export default function Fetch(
                                 this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
                             }));
 
-                            await Syn.Sleep(this.fetchDelay);
+                            await Lib.sleep(this.fetchDelay);
                         };
 
                         // 等待所有任務
@@ -637,7 +637,7 @@ export default function Fetch(
                                         ) : []
                                     ), ...post.attachments],
                                     serverDict,
-                                    fillValue: Syn.GetFill(previews?.length || 1)
+                                    fillValue: Lib.getFill(previews?.length || 1)
                                 });
 
                                 const generatedData = this.fetchGenerate({
@@ -652,16 +652,16 @@ export default function Fetch(
                                     this.dataDict.set(standardTitle, generatedData);
                                 };
 
-                                Syn.title(`（${this.currentPage}）`);
-                                Syn.Log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                                Lib.title(`（${this.currentPage}）`);
+                                Lib.log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                             } catch (error) {
-                                Syn.Log(error, { index, title: standardTitle, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log(error, { index, title: standardTitle, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 continue;
                             }
                         };
                     }
 
-                    await Syn.Sleep(this.fetchDelay);
+                    await Lib.sleep(this.fetchDelay);
                 } else { /* 之後在想 */ }
             }
 
@@ -676,7 +676,7 @@ export default function Fetch(
             this.worker.terminate();
             // 上方操作是主動釋放 GC, 並不是必要的, 因為調用下載 Class 每次都是新的實例, 下方是必要的
             Process.Lock = false;
-            Syn.title(this.titleCache);
+            Lib.title(this.titleCache);
         };
 
         async _toTxt() {
@@ -695,7 +695,7 @@ export default function Fetch(
             }
             if (content.endsWith('\n')) content = content.slice(0, -1); // 去除末行空白
 
-            Syn.OutputTXT(content, this.metaDict.get(Transl("作者")), () => {
+            Lib.outputTXT(content, this.metaDict.get(Transl("作者")), () => {
                 content = null;
                 this._reset();
             })
@@ -708,7 +708,7 @@ export default function Fetch(
                 { [`${Transl("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) }
             );
 
-            Syn.OutputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
+            Lib.outputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
                 jsonData = null;
                 this._reset();
             });
