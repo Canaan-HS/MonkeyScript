@@ -101,6 +101,7 @@ export default function Fetch(
             };
 
             // 將數據類型表轉為 Set
+            const filterExts = new Set(FetchSet.FilterExts);
             const videoExts = new Set(Process.VideoExts);
             const imageExts = new Set(Process.ImageExts);
 
@@ -121,6 +122,8 @@ export default function Fetch(
                     const name = file.name;
                     const path = file.path;
                     const extension = Lib.suffixName(path, "");
+
+                    if (filterExts.has(extension)) return acc;
 
                     // 如果有伺服器字典, 是非進階抓取模式
                     const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
@@ -161,8 +164,9 @@ export default function Fetch(
 
                     if (uri) {
                         const extension = Lib.suffixName(uri, "");
-                        const url = uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`;
+                        if (filterExts.has(extension)) return acc;
 
+                        const url = uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`;
                         const getDownloadName = (link) => this.deepDecodeURIComponent(
                             link.download?.trim() || link.$text()
                         );
