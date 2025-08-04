@@ -784,6 +784,16 @@ const lib = (() => {
     /* ========== 請求數據處理 ========== */
 
     /**
+     * @description 創建 Worker 工作
+     * @param {string} code - 運行代碼
+     * @returns {Worker}    - 創建的 Worker 連結
+     */
+    function workerCreate(code) {
+        const blob = new Blob([code], { type: "application/javascript" });
+        return new Worker(URL.createObjectURL(blob));
+    };
+
+    /**
      * @description 解析範圍進行設置 (索引從 1 開始)
      * @param {string} scope  - 設置的索引範圍 [1, 2, 3-5, 6~10, -4, !8]
      * @param {array} object  - 需要設置範圍的物件
@@ -877,10 +887,184 @@ const lib = (() => {
         if ($type(format) === "String") {
             return format.replace(/\{\s*([^}\s]+)\s*\}/g, (_, key) => templateUtils.Process(template, key));
         }
+
         if ($type(format) === "Object") {
             return Object.entries(format).map(([key, value]) => templateUtils.Process(template, key, value));
         }
+
         return { "Unsupported format": format };
+    };
+
+    /**
+     * @description 建立壓縮器
+     * @returns {object} - 壓縮函數
+     *
+     * @example
+     * const zipEngine = createCompressor();
+     * const { destroyWorker, file, generateZip } = zipEngine;
+     *
+     * file('test.txt', 'Hello, World!');
+     * generateZip(
+     *     { level: 5 },
+     *     progress => console.log(progress)
+     * ).then(zip => {
+     *     console.log(zip); // 壓縮後的 zip 檔
+     * }).catch(err => {
+     *     console.error(err);
+     * });
+     *
+     * ---
+     *
+     *  const zipEngine = createCompressor();
+     *  zipEngine.file('test.txt', 'Hello, World!');
+     *  zipEngine.generateZip().then(zip => {})
+     */
+    function createCompressor() {
+        const worker = workerCreate(`
+            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+            onmessage = function(e) {
+                const { files, level } = e.data;
+                try {
+                    const zipped = fflate.zipSync(files, { level });
+                    postMessage({ data: zipped }, [zipped.buffer]);
+                } catch (err) {
+                    postMessage({ error: err.message });
+                }
+            }
+        `);
+
+        return {
+            files: {},
+            tasks: [],
+
+            // 預估壓縮時間
+            _estimateCompression() {
+                const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
+                const UNCOMPRESSIBLE_EXTENSIONS = new Set([
+                    '.mp4', '.mov', '.avi', '.mkv', '.zip', '.rar',
+                    '.jpg', '.jpeg', '.png', '.gif', '.webp'
+                ]);
+
+                // 為不同任務類型設定不同的基礎速度
+                const IO_BYTES_PER_SECOND = 100 * 1024 * 1024; // 假設為 100MB/s 的內存吞吐率
+                const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024; // 假設為 25MB/s 的基礎壓縮速度
+
+                let totalEstimatedTime = 0;
+                let totalSize = 0;
+
+                Object.entries(this.files).forEach(([name, file]) => {
+                    const fileSize = file.length;
+                    totalSize += fileSize;
+                    const extension = ('.' + name.split('.').pop()).toLowerCase();
+
+                    // 判斷任務類型
+                    if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
+                        // I/O 密集型任務
+                        totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
+                    } else {
+                        // CPU 密集型任務
+                        let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
+
+                        // 對於 CPU 任務，可以保留一些基於大小的微調
+                        const fileSizeMB = fileSize / (1024 * 1024);
+                        if (fileSizeMB > 10) {
+                            cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
+                        }
+                        totalEstimatedTime += cpuTime;
+                    }
+                });
+
+                // 檔案數量的影響 (少量檔案的固定開銷)
+                const fileCount = Object.keys(this.files).length;
+                if (fileCount > 1) {
+                    totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
+                }
+
+                // 總大小的影響 (輕微)
+                const totalSizeMB = totalSize / (1024 * 1024);
+                if (totalSizeMB > 100) {
+                    totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
+                }
+
+                // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
+                const calculateCurveParameter = (totalSizeMB) => {
+                    if (totalSizeMB < 50) return 5;
+                    if (totalSizeMB < 500) return 4;
+                    return 3;
+                };
+                const curveParameter = calculateCurveParameter(totalSizeMB);
+
+                return {
+                    estimatedInMs: totalEstimatedTime * 1000,
+                    progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
+                };
+            },
+
+            // 清除 worker
+            async destroyWorker() {
+                if (worker) {
+                    worker.terminate();
+                    worker = null;
+                }
+            },
+
+            // 存入 blob 進行檔案壓縮
+            async file(name, blob) {
+                const task = new Promise(async resolve => {
+                    const buffer = await blob.arrayBuffer();
+                    this.files[name] = new Uint8Array(buffer);
+                    resolve();
+                });
+
+                this.tasks.push(task);
+                return task;
+            },
+
+            // 生成壓縮文件
+            async generateZip(options = {}, progressCallback) {
+                await Promise.all(this.tasks); // 等待所有檔案加入
+
+                const startTime = performance.now();
+
+                const updateInterval = 30; // 更新頻率
+                const estimationData = this._estimateCompression();
+                const totalTime = estimationData.estimatedInMs;
+
+                // 假進度模擬, 檔案越大誤差越大
+                const progressInterval = setInterval(() => {
+                    const elapsedTime = performance.now() - startTime;
+                    const ratio = Math.min(elapsedTime / totalTime, 0.99); // 限制在99%以內
+                    const fakeProgress = estimationData.progressCurve(ratio);
+
+                    if (progressCallback) progressCallback(fakeProgress);
+
+                    if (ratio >= 0.99) {
+                        clearInterval(progressInterval);
+                    }
+                }, updateInterval);
+
+                return new Promise((resolve, reject) => {
+                    if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
+
+                    worker.postMessage({
+                        files: this.files,
+                        level: options.level || 5
+                    }, Object.values(this.files).map(buf => buf.buffer));
+
+                    worker.onmessage = (e) => {
+                        clearInterval(progressInterval);
+
+                        if (progressCallback) progressCallback(100);
+
+                        this.files = {};
+                        this.tasks = [];
+
+                        const { error, data } = e.data;
+                        error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
+                    }
+                });
+            },
+        }
     };
 
     /**
@@ -898,6 +1082,14 @@ const lib = (() => {
      * @returns {Function} - dynamicParam 用於動態設置延遲與並發
      * @example
      * const dynamicParam = createNnetworkObserver();
+     * 
+     * let 預設延遲 = 1000;
+     * let 預設線程數 = 5;
+     * const 預設最小延遲 = 100;
+     *
+     * [ 預設延遲, 預設線程數 ] = dynamicParam(new Date(), 預設延遲, 預設線程數, 預設最小延遲)
+     *
+     * 預設延遲 = dynamicParam(new Date(), 預設延遲)
      */
     function createNnetworkObserver(config = {}) {
         const {
@@ -967,20 +1159,6 @@ const lib = (() => {
             TIME_THRESHOLD = Math.max(20, Math.min(2000, TIME_THRESHOLD));
         };
 
-        /**
-         * @description 根據網絡狀況動態調整延遲和線程數
-         * @param {number} time - 請求完成的時間
-         * @param {number} currentDelay - 當前的延遲時間 (ms)
-         * @param {number|null} currentThread - 當前的線程數 (可選)
-         * @param {number} minDelay - 最小延遲(ms) (可選)
-         * @returns {number|[number, number]} - 返回新的延遲或 [新的延遲, 新的線程數]
-         * @example
-         * let 預設延遲 = 1000;
-         * let 預設線程數 = 5;
-         * const 預設最小延遲 = 100;
-         * [ 預設延遲, 預設線程數 ] = dynamicParam(new Date(), 預設延遲, 預設線程數, 預設最小延遲)
-         * 預設延遲 = dynamicParam(new Date(), 預設延遲)
-         */
         return function dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
             const responseTime = Date.now() - time;
             updateThreshold(responseTime);
@@ -1310,18 +1488,8 @@ const lib = (() => {
         {
             ...addCall, ...storageCall, ...storeCall,
             $type, eventRecord, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
-            formatTemplate, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
+            workerCreate, formatTemplate, createCompressor, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storeListen,
-
-            /**
-             * @description 創建 Worker 工作
-             * @param {string} code - 運行代碼
-             * @returns {Worker}    - 創建的 Worker 連結
-             */
-            workerCreate(code) {
-                const blob = new Blob([code], { type: "application/javascript" });
-                return new Worker(URL.createObjectURL(blob));
-            },
 
             /**
              * @description 暫停異步函數
