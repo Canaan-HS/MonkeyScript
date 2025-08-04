@@ -8,7 +8,7 @@
 // @license      MPL-2.0
 // ==/UserScript==
 
-const lib = (() => {
+const Lib = (() => {
     const $mark = {};
     const $domParser = new DOMParser();
     const $type = (object) => Object.prototype.toString.call(object).slice(8, -1);
