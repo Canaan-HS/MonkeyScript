@@ -61,7 +61,7 @@ export default function Config(Lib) {
     const FetchSet = {
         Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
         AdvancedFetch: true, // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
-        ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
+        ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
         UseFormat: false, // 這裡為 false 下面兩項就不生效
         Mode: "FilterMode",
         Format: ["Timestamp", "TypeTag"],
@@ -71,8 +71,22 @@ export default function Config(Lib) {
     // 不要修改
     const Process = {
         IsNeko: Lib.$domain.startsWith("nekohouse"),
-        ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico"],
-        VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"],
+        ImageExts: [
+            "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic",
+            "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2",
+            "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd",
+            "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff",
+            "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz",
+            "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf",
+            "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges",
+        ],
+        VideoExts: [
+            "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v",
+            "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts",
+            "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt",
+            "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod",
+            "mxf", "ogg",
+        ],
         Lock: false,
         dynamicParam: Lib.createNnetworkObserver({
             MAX_Delay: 1500,
