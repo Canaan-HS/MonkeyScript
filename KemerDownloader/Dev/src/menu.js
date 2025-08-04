@@ -1,9 +1,9 @@
-export default function Menu(Syn, Transl, General, FileName, FetchSet) {
+export default function Menu(Lib, Transl, General, FileName, FetchSet) {
 
     return class UI {
         constructor() {
             this.overlay = null;
-            this.shadow = Syn.createElement(document.body, "div", { id: "kemer-settings" });
+            this.shadow = Lib.createElement(document.body, "div", { id: "kemer-settings" });
             this.shadowRoot = this.shadow.attachShadow({ mode: 'open' });
 
             this._loadUi();
@@ -25,7 +25,7 @@ export default function Menu(Syn, Transl, General, FileName, FetchSet) {
                     "kemono": "#e8a17d",
                     "coomer": "#99ddff",
                     "nekohouse": "#bb91ff"
-                }[Syn.$domain.split(".")[0]],
+                }[Lib.$domain.split(".")[0]],
                 Background: '#2c2c2e',
                 BackgroundLight: '#3a3a3c',
                 Border: '#545458',
@@ -203,9 +203,9 @@ export default function Menu(Syn, Transl, General, FileName, FetchSet) {
         };
 
         _UiSwitchEvent() {
-            this.overlay = Syn.Q(this.shadowRoot, "#overlay");
+            this.overlay = Lib.$Q(this.shadowRoot, "#overlay");
 
-            Syn.one(this.overlay, "click", event => {
+            Lib.onE(this.overlay, "click", event => {
                 const target = event.target;
                 const tagName = target.tagName;
 
@@ -213,11 +213,11 @@ export default function Menu(Syn, Transl, General, FileName, FetchSet) {
                     // 切換選項卡
                     if (target.classList.contains("active")) return;
 
-                    Syn.Q(this.shadowRoot, "button.active").classList.remove("active");
-                    Syn.Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
+                    Lib.$Q(this.shadowRoot, "button.active").classList.remove("active");
+                    Lib.$Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
 
                     target.classList.add("active");
-                    Syn.Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
+                    Lib.$Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
                 } else if (target === this.overlay) {
                     this.close();
                 }
