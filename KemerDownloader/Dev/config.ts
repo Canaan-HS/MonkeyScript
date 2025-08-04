@@ -32,7 +32,7 @@ export default {
             'https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
 
-            util.dataUrl(`window.Syn=Syn`)
+            util.dataUrl(`window.Lib=Lib`)
         ]
     },
 };
