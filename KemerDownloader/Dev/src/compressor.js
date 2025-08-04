@@ -1,5 +1,5 @@
-export default function Compressor(Syn) {
-    const worker = Syn.WorkerCreation(`
+export default function Compressor(Lib) {
+    const worker = Lib.workerCreate(`
             importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
             onmessage = function(e) {
                 const { files, level } = e.data;
