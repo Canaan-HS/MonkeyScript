@@ -128,10 +128,16 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version：0.0.50-Beta1**
+**Release Version：2025.08.06-Beta**
 
 ### **What's New**
-1. Temporary domain update (some incomplete test features)
+1. Optimized CacheFetch mechanism
+  - Reduced unnecessary request caching and switched to asynchronous caching to lower execution delay and improve overall performance.
+
+2. Expanded FixArtist functionality
+  - Added support for fixing more tags
+  - Added support for correcting artist names on candfans pages
+  - Adjusted internal tag jump links to point to the same post itself (experimental); unsupported cases will keep the old behavior
 
 ### **Known Issues**
 1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
