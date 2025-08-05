@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.50-Beta2
+// @version      2025.08.06-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -25,10 +25,11 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+
+// @require      https://update.greasyfork.org/scripts/487608/1636326/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -89,7 +90,7 @@
             }
         }
     };
-    let Url = Syn.$url;
+    let Url = Lib.$url;
     const DLL = (() => {
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
         const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
@@ -103,18 +104,18 @@
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
             nekohouse: "#bb91ff !important"
-        }[Syn.$domain.split(".")[0]];
+        }[Lib.$domain.split(".")[0]];
         const SaveKey = {
             Img: "ImgStyle",
             Lang: "Language",
             Menu: "MenuPoint"
         };
         const UserSet = {
-            MenuSet: () => Syn.gV(SaveKey.Menu, {
+            MenuSet: () => Lib.getV(SaveKey.Menu, {
                 Top: "10vh",
                 Left: "10vw"
             }),
-            ImgSet: () => Syn.gV(SaveKey.Img, {
+            ImgSet: () => Lib.getV(SaveKey.Img, {
                 Width: "auto",
                 Height: "auto",
                 Spacing: "0px",
@@ -142,7 +143,7 @@
         };
         const Style = {
             async Global() {
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
                     .fancy-image__image, fix_name, fix_tag, fix_edit {
@@ -246,8 +247,8 @@
             },
             async Postview() {
                 const set = UserSet.ImgSet();
-                const width = Syn.iW / 2;
-                Syn.AddStyle(`
+                const width = Lib.iW / 2;
+                Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
                         position: relative;
@@ -284,10 +285,10 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Syn.$q("#Image-Custom-Style")?.sheet.cssRules;
-                Syn.StoreListen(Object.values(SaveKey), call => {
+                ImgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+                Lib.storeListen(Object.values(SaveKey), call => {
                     if (call.far) {
-                        if (Syn.Type(call.nv) === "String") {
+                        if (Lib.$type(call.nv) === "String") {
                             MenuTrigger();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
@@ -298,7 +299,7 @@
                 });
             },
             async PostExtra() {
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     #main section {
                         width: 100%;
                     }
@@ -309,180 +310,6 @@
                         background-color: ${Color};
                     }
                 `, "Post-Extra", false);
-            },
-            Menu() {
-                const set = UserSet.MenuSet();
-                return {
-                    ImgScript: `
-                        function check(value) {
-                            return value.toString().length > 4 || value > 1000
-                                ? 1000 : value < 0 ? "" : value;
-                        }
-                    `,
-                    MenuStyle: `
-                        .modal-background {
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            display: flex;
-                            z-index: 9999;
-                            overflow: auto;
-                            position: fixed;
-                            pointer-events: none;
-                        }
-                        /* 模態介面 */
-                        .modal-interface {
-                            top: ${set.Top};
-                            left: ${set.Left};
-                            margin: 0;
-                            display: flex;
-                            overflow: auto;
-                            position: fixed;
-                            border-radius: 5px;
-                            pointer-events: auto;
-                            background-color: #2C2E3E;
-                            border: 3px solid #EE2B47;
-                        }
-                        /* 模態內容盒 */
-                        .modal-box {
-                            padding: 0.5rem;
-                            height: 50vh;
-                            width: 32vw;
-                        }
-                        /* 菜單框架 */
-                        .menu {
-                            width: 5.5vw;
-                            overflow: auto;
-                            text-align: center;
-                            vertical-align: top;
-                            border-radius: 2px;
-                            border: 2px solid #F6F6F6;
-                        }
-                        /* 菜單文字標題 */
-                        .menu-text {
-                            color: #EE2B47;
-                            cursor: default;
-                            padding: 0.2rem;
-                            margin: 0.3rem;
-                            margin-bottom: 1.5rem;
-                            white-space: nowrap;
-                            border-radius: 10px;
-                            border: 4px solid #f05d73;
-                            background-color: #1f202c;
-                        }
-                        /* 菜單選項按鈕 */
-                        .menu-options {
-                            cursor: pointer;
-                            font-size: 1.4rem;
-                            color: #F6F6F6;
-                            font-weight: bold;
-                            border-radius: 5px;
-                            margin-bottom: 1.2rem;
-                            border: 5px inset #EE2B47;
-                            background-color: #6e7292;
-                            transition: color 0.8s, background-color 0.8s;
-                        }
-                        .menu-options:hover {
-                            color: #EE2B47;
-                            background-color: #F6F6F6;
-                        }
-                        .menu-options:disabled {
-                            color: #6e7292;
-                            cursor: default;
-                            background-color: #c5c5c5;
-                            border: 5px inset #faa5b2;
-                        }
-                        /* 設置內容框架 */
-                        .content {
-                            height: 48vh;
-                            width: 28vw;
-                            overflow: auto;
-                            padding: 0px 1rem;
-                            border-radius: 2px;
-                            vertical-align: top;
-                            border-top: 2px solid #F6F6F6;
-                            border-right: 2px solid #F6F6F6;
-                        }
-                        .narrative { color: #EE2B47; }
-                        .Image-input-settings {
-                            width: 8rem;
-                            color: #F6F6F6;
-                            text-align: center;
-                            font-size: 1.5rem;
-                            border-radius: 15px;
-                            border: 3px inset #EE2B47;
-                            background-color: #202127;
-                        }
-                        .Image-input-settings:disabled {
-                            border: 3px inset #faa5b2;
-                            background-color: #5a5a5a;
-                        }
-                        /* 底部按鈕框架 */
-                        .button-area {
-                            display: flex;
-                            padding: 0.3rem;
-                            border-left: none;
-                            border-radius: 2px;
-                            border: 2px solid #F6F6F6;
-                            justify-content: space-between;
-                        }
-                        .button-area select {
-                            color: #F6F6F6;
-                            margin-right: 1.5rem;
-                            border: 3px inset #EE2B47;
-                            background-color: #6e7292;
-                        }
-                        /* 底部選項 */
-                        .button-options {
-                            color: #F6F6F6;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                            font-weight: bold;
-                            border-radius: 10px;
-                            white-space: nowrap;
-                            background-color: #6e7292;
-                            border: 3px inset #EE2B47;
-                            transition: color 0.5s, background-color 0.5s;
-                        }
-                        .button-options:hover {
-                            color: #EE2B47;
-                            background-color: #F6F6F6;
-                        }
-                        .button-space { margin: 0 0.6rem; }
-                        .form-hidden {
-                            width: 0;
-                            height: 0;
-                            opacity: 0;
-                            padding: 10px;
-                            overflow: hidden;
-                            transition: opacity 0.8s, height 0.8s, width 0.8s;
-                        }
-                        .toggle-menu {
-                            width: 0;
-                            height: 0;
-                            padding: 0;
-                            margin: 0;
-                        }
-                        /* 整體框線 */
-                        table, td {
-                            margin: 0px;
-                            padding: 0px;
-                            overflow: auto;
-                            border-spacing: 0px;
-                        }
-                        .modal-background p {
-                            display: flex;
-                            flex-wrap: nowrap;
-                        }
-                        option { color: #F6F6F6; }
-                        ul {
-                            list-style: none;
-                            padding: 0px;
-                            margin: 0px;
-                        }
-                    `
-                };
             }
         };
         const Word = {
@@ -588,10 +415,10 @@
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Syn.$domain.startsWith("nekohouse"),
+            IsNeko: Lib.$domain.startsWith("nekohouse"),
             Language() {
-                const Log = Syn.gV(SaveKey.Lang);
-                const ML = Syn.TranslMatcher(Word, Log);
+                const Log = Lib.getV(SaveKey.Lang);
+                const ML = Lib.translMatcher(Word, Log);
                 return {
                     Log: Log,
                     Transl: Str => ML[Str] ?? Str
@@ -672,7 +499,7 @@
         WaitDom.disconnect();
         Enhance.Run();
     });
-    Syn.onUrlChange(change => {
+    Lib.onUrlChange(change => {
         Url = change.url;
         WaitDom.observe(document, {
             attributes: true,
@@ -680,7 +507,7 @@
             subtree: true,
             characterData: true
         });
-        Syn.body.$sAttr("Enhance", true);
+        Lib.body.$sAttr("Enhance", true);
     });
     function Global_Function() {
         const LoadFunc = {
@@ -725,7 +552,7 @@
                         },
                         async JumpTrigger(root) {
                             const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                            Syn.onEvent(root, "click", event => {
+                            Lib.onEvent(root, "click", event => {
                                 const target = event.target.closest("a:not(.fileThumb)");
                                 if (!target || target.$hAttr("download")) return;
                                 event.preventDefault();
@@ -748,33 +575,37 @@
                         Record_Cache: undefined,
                         Fix_Cache: new Map(),
                         Register_Eement: new Map(),
-                        Get_Record: () => Syn.Local("fix_record_v2", {
-                            error: new Map()
-                        }),
+                        Get_Record() {
+                            const record = Lib.local("fix_record_v2", {
+                                error: new Map()
+                            });
+                            return record instanceof Map ? record : new Map();
+                        },
                         async Save_Record(save) {
-                            await Syn.Local("fix_record_v2", {
+                            await Lib.local("fix_record_v2", {
                                 value: new Map([...this.Get_Record(), ...save])
                             });
                             this.Fix_Cache.clear();
                         },
-                        Save_Work: (() => Syn.Debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1e3))(),
-                        Fix_Name_Support: new Set(["pixiv", "fanbox"]),
-                        Fix_Tag_Support: {
-                            ID: /Patreon|Fantia|Pixiv|Fanbox/gi,
-                            Patreon: "https://www.patreon.com/user?u={id}",
-                            Fantia: "https://fantia.jp/fanclubs/{id}/posts",
-                            Pixiv: "https://www.pixiv.net/users/{id}/artworks",
-                            Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
-                            NAME: /Fansly|OnlyFans/gi,
-                            OnlyFans: "https://onlyfans.com/{name}",
-                            Fansly: "https://fansly.com/{name}/posts"
+                        Replace_Url_Tail(url, tail) {
+                            const uri = new URL(url);
+                            uri.pathname = tail;
+                            url = uri.href;
+                            return url;
                         },
+                        Parse_Url(url) {
+                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
+                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
+                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        },
+                        Save_Work: (() => Lib.$debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1e3))(),
                         async Fix_Request(url, headers = {}) {
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
                                     method: "GET",
                                     url: url,
                                     headers: headers,
+                                    responseType: "json",
                                     onload: response => resolve(response),
                                     onerror: () => resolve(),
                                     ontimeout: () => resolve()
@@ -786,7 +617,7 @@
                                 referer: "https://www.pixiv.net/"
                             });
                             if (response.status === 200) {
-                                const user = JSON.parse(response.responseText);
+                                const user = response.response;
                                 let user_name = user.body.name;
                                 user_name = user_name.replace(/(c\d+)?([日月火水木金土]曜日?|[123１２３一二三]日目?)[東南西北]..?\d+\w?/i, "");
                                 user_name = user_name.replace(/[@＠]?(fanbox|fantia|skeb|ファンボ|リクエスト|お?仕事|新刊|単行本|同人誌)+(.*(更新|募集|公開|開設|開始|発売|販売|委託|休止|停止)+中?[!！]?$|$)/gi, "");
@@ -794,50 +625,96 @@
                                 return user_name;
                             } else return;
                         },
-                        Fix_Url(url) {
-                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
-                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
-                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        async Get_Candfans_Name(id) {
+                            const response = await this.Fix_Request(`https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`);
+                            if (response.status === 200) {
+                                const user = response.response.data[0];
+                                const user_code = user?.user_code || "";
+                                const username = user?.username || "";
+                                return [user_code, username];
+                            } else return;
                         },
-                        async Fix_Update_Ui(href, id, name_obj, tag_obj, text) {
-                            const edit = Syn.createElement("fix_edit", {
-                                id: id,
+                        Candfans_Page_Adapt(oldId, newId, oldUrl, oldName, newName) {
+                            if (DLL.IsSearch()) {
+                                oldId = newId ? newId : oldId;
+                            } else {
+                                oldUrl = newId ? this.Replace_Url_Tail(oldUrl, newId) : oldUrl;
+                            }
+                            oldName = newName ? newName : oldName;
+                            return [oldId, oldUrl, oldName];
+                        },
+                        Fix_Name_Support: new Set(["pixiv", "fanbox", "candfans"]),
+                        Fix_Tag_Support: {
+                            ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
+                            NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
+                            Fantia: "https://fantia.jp/fanclubs/{id}/posts",
+                            FantiaPost: "https://fantia.jp/posts/{id}",
+                            Patreon: "https://www.patreon.com/user?u={id}",
+                            PatreonPost: "https://www.patreon.com/posts/{id}",
+                            DLsite: "https://www.dlsite.com/maniax/circle/profile/=/maker_id/{name}.html",
+                            DLsitePost: "https://www.dlsite.com/maniax/work/=/product_id/{name}.html",
+                            CandFans: "https://candfans.jp/{id}",
+                            CandFansPost: "https://candfans.jp/posts/comment/show/{id}",
+                            Gumroad: "https://gumroad.com/{id}",
+                            Pixiv: "https://www.pixiv.net/users/{id}/artworks",
+                            Fanbox: "https://www.pixiv.net/fanbox/creator/{id}",
+                            Boosty: "https://boosty.to/{name}",
+                            SubscribeStar: "https://subscribestar.adult/{name}",
+                            Twitter: "https://x.com/{name}",
+                            OnlyFans: "https://onlyfans.com/{name}",
+                            Fansly: "https://fansly.com/{name}/posts"
+                        },
+                        async Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) {
+                            const edit = Lib.createElement("fix_edit", {
+                                id: infoID,
                                 class: "edit_artist",
                                 text: "Edit"
                             });
-                            name_obj.parentNode.insertBefore(edit, name_obj);
-                            name_obj.$oHtml(`<fix_name jump="${href}">${text.trim()}</fix_name>`);
-                            const [tag_text, support_id, support_name] = [tag_obj.$text(), this.Fix_Tag_Support.ID, this.Fix_Tag_Support.NAME];
-                            if (support_id.test(tag_text)) {
-                                tag_obj.$iHtml(tag_text.replace(support_id, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{id}", id)}">${tag}</fix_tag>`;
-                                }));
-                            } else if (support_name.test(tag_text)) {
-                                tag_obj.$iHtml(tag_text.replace(support_name, tag => {
-                                    return `<fix_tag jump="${this.Fix_Tag_Support[tag].replace("{name}", id)}">${tag}</fix_tag>`;
-                                }));
-                            }
+                            nameEl.parentNode.insertBefore(edit, nameEl);
+                            nameEl.$oHtml(`<fix_name jump="${mainUrl}">${showText.trim()}</fix_name>`);
+                            const [tag_text, support_id, support_name] = [tagEl.$text(), this.Fix_Tag_Support.ID, this.Fix_Tag_Support.NAME];
+                            if (!tag_text) return;
+                            const [mark, matchId] = support_id.test(tag_text) ? ["{id}", support_id] : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
+                            if (!mark) return;
+                            tagEl.$iHtml(tag_text.replace(matchId, tag => {
+                                let supported = false;
+                                const supportFormat = appendTag ? (supported = this.Fix_Tag_Support[`${tag}${appendTag}`],
+                                    supported ? (infoID = this.Parse_Url(otherUrl)[1],
+                                        supported) : this.Fix_Tag_Support[tag]) : this.Fix_Tag_Support[tag];
+                                return `<fix_tag jump="${supportFormat.replace(mark, infoID)}">${tag}</fix_tag>`;
+                            }));
                         },
-                        async Fix_Trigger(object) {
-                            const {
-                                Url,
-                                TailId,
-                                Website,
-                                NameObject,
-                                TagObject
-                            } = object;
-                            let Record = this.Record_Cache.get(TailId);
-                            if (Record) {
-                                this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
+                        async Fix_Trigger(data) {
+                            let {
+                                mainUrl,
+                                otherUrl,
+                                webSite,
+                                infoID,
+                                nameEl,
+                                tagEl,
+                                appendTag
+                            } = data;
+                            let recordName = this.Record_Cache.get(infoID);
+                            if (recordName) {
+                                if (webSite === "candfans") {
+                                    [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(infoID, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
+                                }
+                                this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
                             } else {
-                                if (this.Fix_Name_Support.has(Website)) {
-                                    Record = await this.Get_Pixiv_Name(TailId) ?? NameObject.$text();
-                                    this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
-                                    this.Fix_Cache.set(TailId, Record);
+                                if (this.Fix_Name_Support.has(webSite)) {
+                                    if (webSite === "candfans") {
+                                        const [user_code, username] = await this.Get_Candfans_Name(infoID) ?? nameEl.$text();
+                                        if (user_code && username) this.Fix_Cache.set(infoID, [user_code, username]);
+                                        [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(infoID, user_code, mainUrl, nameEl.$text(), username);
+                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                    } else {
+                                        const username = await this.Get_Pixiv_Name(infoID) ?? nameEl.$text();
+                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                        this.Fix_Cache.set(infoID, username);
+                                    }
                                     this.Save_Work();
                                 } else {
-                                    Record = NameObject.$text();
-                                    this.Fix_Update_Ui(Url, TailId, NameObject, TagObject, Record);
+                                    this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
                                 }
                             }
                         },
@@ -845,28 +722,32 @@
                             items.$sAttr("fix", true);
                             const url = items.href;
                             const img = items.$q("img");
-                            const parse = this.Fix_Url(url);
+                            const [webSite, infoID] = this.Parse_Url(url);
                             img.$sAttr("jump", url);
                             items.$dAttr("href");
                             this.Fix_Trigger({
-                                Url: url,
-                                TailId: parse[1],
-                                Website: parse[0],
-                                NameObject: items.$q(".user-card__name"),
-                                TagObject: items.$q(".user-card__service")
+                                mainUrl: url,
+                                otherUrl: "",
+                                webSite: webSite,
+                                infoID: infoID,
+                                nameEl: items.$q(".user-card__name"),
+                                tagEl: items.$q(".user-card__service"),
+                                appendTag: ""
                             });
                         },
-                        async Other_Fix(artist, tag = "", href = null, reTag = "<fix_view>") {
+                        async Other_Fix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") {
                             try {
                                 const parent = artist.parentNode;
-                                const url = href ?? parent.href;
-                                const parse = this.Fix_Url(url);
+                                const url = mainUrl ?? parent.href;
+                                const [webSite, infoID] = this.Parse_Url(url);
                                 await this.Fix_Trigger({
-                                    Url: url,
-                                    TailId: parse[1],
-                                    Website: parse[0],
-                                    NameObject: artist,
-                                    TagObject: tag
+                                    mainUrl: url,
+                                    otherUrl: otherUrl,
+                                    webSite: webSite,
+                                    infoID: infoID,
+                                    nameEl: artist,
+                                    tagEl: tag,
+                                    appendTag: otherUrl ? "Post" : ""
                                 });
                                 $(parent).replaceWith(function () {
                                     return $(reTag, {
@@ -878,9 +759,9 @@
                         async Dynamic_Fix(Listen, Element) {
                             if (this.Register_Eement.has(Listen)) return;
                             this.Register_Eement.set(Listen, true);
-                            Syn.Observer(Listen, () => {
+                            Lib.$observer(Listen, () => {
                                 this.Record_Cache = this.Get_Record();
-                                const element = typeof Element === "string" ? Syn.$q(Element) : Element;
+                                const element = typeof Element === "string" ? Lib.$q(Element) : Element;
                                 if (element) {
                                     for (const items of element.$qa("a")) {
                                         !items.$gAttr("fix") && this.Search_Fix(items);
@@ -900,8 +781,8 @@
         };
         return {
             async SidebarCollapse(Config) {
-                if (Syn.Platform === "Mobile") return;
-                Syn.AddStyle(`
+                if (Lib.platform === "Mobile") return;
+                Lib.addStyle(`
                     .global-sidebar {
                         opacity: 0;
                         height: 100%;
@@ -920,14 +801,14 @@
                 `, "Collapse_Effects", false);
             },
             async DeleteNotice(Config) {
-                Syn.WaitElem("aside", null, {
-                    raf: true,
+                Lib.waitEl("aside", null, {
+                    throttle: 50,
                     timeout: 5
                 }).then(aside => aside.remove());
             },
             async BlockAds(Config) {
                 if (DLL.IsNeko) return;
-                const cookieString = Syn.cookie();
+                const cookieString = Lib.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
                 if (!hasCookies) {
@@ -939,11 +820,11 @@
                         [required[1]]: 1
                     };
                     for (const [key, value] of Object.entries(cookies)) {
-                        Syn.cookie(`${key}=${value}; domain=.${Syn.$domain}; path=/; expires=${expires};`);
+                        Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
                     }
                 }
-                if (Syn.$q("#Ad-blocking-style")) return;
-                Syn.AddStyle(`
+                if (Lib.$q("#Ad-blocking-style")) return;
+                Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style");
                 const domains = new Set(["go.mnaspm.com", "go.reebr.com", "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"]);
@@ -970,7 +851,7 @@
             },
             async CacheFetch(Config) {
                 if (DLL.IsNeko) return;
-                Syn.AddScript(`
+                Lib.addScript(`
                     const cache = new Map();
                     const originalFetch = window.fetch;
 
@@ -1038,7 +919,7 @@
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
                 const Func = LoadFunc.TextToLink_Dependent(Config);
                 if (DLL.IsContent()) {
-                    Syn.WaitElem(".post__body, .scrape__body", null).then(body => {
+                    Lib.waitEl(".post__body, .scrape__body", null).then(body => {
                         Func.JumpTrigger(body);
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
@@ -1053,10 +934,10 @@
                         }
                     });
                 } else if (DLL.IsAnnouncement()) {
-                    Syn.WaitElem(".card-list__items pre", null, {
+                    Lib.waitEl(".card-list__items pre", null, {
                         raf: true
                     }).then(() => {
-                        const items = Syn.$q(".card-list__items");
+                        const items = Lib.$q(".card-list__items");
                         Func.JumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
                             Func.ParseModify(node, node.$text());
@@ -1067,13 +948,13 @@
             async FixArtist(Config) {
                 DLL.Style.Global();
                 const Func = LoadFunc.FixArtist_Dependent();
-                const [Device, Newtab, Active, Insert] = [Syn.Platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.onEvent(Syn.body, "click", event => {
+                const [Device, Newtab, Active, Insert] = [Lib.platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
                     if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
                         const display = target.nextElementSibling;
-                        const text = Syn.createElement("textarea", {
+                        const text = Lib.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`
                         });
@@ -1115,32 +996,32 @@
                     mark: "FixArtist"
                 });
                 if (DLL.IsSearch()) {
-                    Syn.WaitElem(".card-list__items", null, {
+                    Lib.waitEl(".card-list__items", null, {
                         raf: true,
                         timeout: 10
                     }).then(card_items => {
                         if (DLL.Link.test(Url)) {
-                            const artist = Syn.$q("span[itemprop='name']");
+                            const artist = Lib.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist);
                             for (const items of card_items.$qa("a")) {
                                 Func.Search_Fix(items);
                             }
                         } else {
                             Func.Dynamic_Fix(card_items, card_items);
-                            Syn.createElement(card_items, "fix-trigger", {
+                            Lib.createElement(card_items, "fix-trigger", {
                                 style: "display: none;"
                             });
                         }
                     });
                 } else if (DLL.IsContent()) {
-                    Syn.WaitElem(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
+                    Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
                         raf: true,
                         timeout: 10
                     }).then(([title, artist]) => {
-                        Func.Other_Fix(artist, title, artist.href, "<fix_cont>");
+                        Func.Other_Fix(artist, title, artist.href, Lib.url, "<fix_cont>");
                     });
                 } else {
-                    Syn.WaitElem("span[itemprop='name']", null, {
+                    Lib.waitEl("span[itemprop='name']", null, {
                         raf: true,
                         timeout: 5
                     }).then(artist => {
@@ -1149,8 +1030,8 @@
                 }
             },
             async BackToTop(Config) {
-                Syn.onEvent(Syn.body, "pointerup", event => {
-                    event.target.closest("#paginator-bottom") && Syn.$q("#paginator-top").scrollIntoView();
+                Lib.onEvent(Lib.body, "pointerup", event => {
+                    event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
                 }, {
                     capture: true,
                     passive: true,
@@ -1158,17 +1039,17 @@
                 });
             },
             async KeyScroll(Config) {
-                if (Syn.Platform === "Mobile") return;
+                if (Lib.platform === "Mobile") return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
                     Scroll_Interval: 800
                 };
                 const UP_ScrollSpeed = Scroll_Requ.Scroll_Pixels * -1;
                 let Scroll, Up_scroll = false, Down_scroll = false;
-                const [TopDetected, BottomDetected] = [Syn.Throttle(() => {
-                    Up_scroll = Syn.sY == 0 ? false : true;
-                }, 600), Syn.Throttle(() => {
-                    Down_scroll = Syn.sY + Syn.iH >= Syn.html.scrollHeight ? false : true;
+                const [TopDetected, BottomDetected] = [Lib.$throttle(() => {
+                    Up_scroll = Lib.sY == 0 ? false : true;
+                }, 600), Lib.$throttle(() => {
+                    Down_scroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
                 }, 600)];
                 switch (Config.mode) {
                     case 2:
@@ -1200,7 +1081,7 @@
                             }
                         };
                 }
-                Syn.onEvent(window, "keydown", Syn.Throttle(event => {
+                Lib.onEvent(window, "keydown", Lib.$throttle(event => {
                     const key = event.key;
                     if (key == "ArrowUp") {
                         event.stopImmediatePropagation();
@@ -1233,7 +1114,7 @@
         return {
             async NewTabOpens(Config) {
                 const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                Syn.onEvent(Syn.body, "click", event => {
+                Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
                     target && (event.preventDefault(), !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
                         active: Active,
@@ -1246,7 +1127,7 @@
             },
             async QuickPostToggle(Config) {
                 if (!DLL.IsNeko) return;
-                Syn.WaitElem("menu", null, {
+                Lib.waitEl("menu", null, {
                     all: true,
                     timeout: 5
                 }).then(menu => {
@@ -1277,7 +1158,7 @@
                             pageContentCache.delete(url);
                             pageContentCache.set(url, cachedContent);
                             const clonedContent = cachedContent.cloneNode(true);
-                            Syn.$q(".card-list--legacy").replaceChildren(...clonedContent.childNodes);
+                            Lib.$q(".card-list--legacy").replaceChildren(...clonedContent.childNodes);
                             return Promise.resolve();
                         }
                         return new Promise((resolve, reject) => {
@@ -1286,11 +1167,12 @@
                                 url: url,
                                 onload: response => {
                                     if (abortSignal?.aborted) return reject(new Error("Aborted"));
+                                    if (response.status !== 200) return reject(new Error("Server error"));
                                     const newContent = response.responseXML.$q(".card-list--legacy");
                                     cleanupCache();
                                     const contentToCache = newContent.cloneNode(true);
                                     pageContentCache.set(url, contentToCache);
-                                    Syn.$q(".card-list--legacy").replaceChildren(...newContent.childNodes);
+                                    Lib.$q(".card-list--legacy").replaceChildren(...newContent.childNodes);
                                     resolve();
                                 },
                                 onerror: () => reject(new Error("Network error"))
@@ -1473,7 +1355,7 @@
                         return action ? action(currentPage) : null;
                     }
                     const elements = createPaginationElements(1);
-                    const [fragment1, fragment2] = [Syn.createFragment, Syn.createFragment];
+                    const [fragment1, fragment2] = [Lib.createFragment, Lib.createFragment];
                     preact.render([...elements], fragment1);
                     preact.render([...elements], fragment2);
                     menu[0].replaceChildren(fragment1);
@@ -1485,7 +1367,7 @@
                     });
                     let isLoading = false;
                     let abortController = null;
-                    Syn.onEvent("section", "click", async event => {
+                    Lib.onEvent("section", "click", async event => {
                         const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                         if (!target || isLoading) return;
                         event.preventDefault();
@@ -1523,7 +1405,7 @@
             async CardZoom(Config) {
                 switch (Config.mode) {
                     case 2:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card a:hover {
                                 overflow: auto;
                                 z-index: 99999;
@@ -1541,7 +1423,7 @@
                         `, "CardZoom_Effects_2", false);
 
                     default:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card { margin: .3vw; }
                             .post-card a img { border-radius: 8px; }
                             .post-card a {
@@ -1554,10 +1436,10 @@
                 }
             },
             async CardText(Config) {
-                if (Syn.Platform === "Mobile") return;
+                if (Lib.platform === "Mobile") return;
                 switch (Config.mode) {
                     case 2:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card__header, .post-card__footer {
                                 opacity: 0.4 !important;
                                 transition: opacity 0.3s;
@@ -1570,7 +1452,7 @@
                         break;
 
                     default:
-                        Syn.AddStyle(`
+                        Lib.addStyle(`
                             .post-card__header, .post-card__footer {
                                 opacity: 0 !important;
                                 z-index: 1;
@@ -1603,12 +1485,13 @@
                             method: "GET",
                             url: URL,
                             onload: response => {
+                                if (response.status !== 200) return;
                                 if (DLL.IsNeko) {
                                     const Main = response.responseXML.$q("main");
-                                    const View = Syn.createElement("View", {
+                                    const View = Lib.createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = Syn.createFragment;
+                                    const Buffer = Lib.createFragment;
                                     for (const br of Main.$qa("br")) {
                                         Buffer.append(document.createTextNode(br.previousSibling.$text()), br);
                                     }
@@ -1616,16 +1499,16 @@
                                     Browse.appendChild(View);
                                 } else {
                                     const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Syn.createElement("View", {
+                                    const View = Lib.createElement("View", {
                                         class: "View"
                                     });
-                                    const Buffer = Syn.createFragment;
+                                    const Buffer = Lib.createFragment;
                                     const password = ResponseJson["password"];
                                     if (password) {
-                                        Buffer.append(document.createTextNode(`password: ${password}`), Syn.createElement("br"));
+                                        Buffer.append(document.createTextNode(`password: ${password}`), Lib.createElement("br"));
                                     }
                                     for (const text of ResponseJson["file_list"]) {
-                                        Buffer.append(document.createTextNode(text), Syn.createElement("br"));
+                                        Buffer.append(document.createTextNode(text), Lib.createElement("br"));
                                     }
                                     View.appendChild(Buffer);
                                     Browse.appendChild(View);
@@ -1648,14 +1531,18 @@
                             url: url,
                             nocache: false,
                             onload: response => {
+                                if (response.status !== 200) {
+                                    GetNextPage(url, old_main);
+                                    return;
+                                }
                                 const XML = response.responseXML;
                                 const Main = XML.$q("main");
                                 old_main.replaceChildren(...Main.childNodes);
                                 history.pushState(null, null, url);
                                 const Title = XML.$q("title")?.$text();
-                                Title && Syn.title(Title);
+                                Title && Lib.title(Title);
                                 setTimeout(() => {
-                                    Syn.WaitElem(".post__content, .scrape__content", null, {
+                                    Lib.waitEl(".post__content, .scrape__content", null, {
                                         raf: true,
                                         timeout: 10
                                     }).then(post => {
@@ -1668,7 +1555,7 @@
                                             /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove();
                                         });
                                     });
-                                    Syn.$q(".post__title, .scrape__title").scrollIntoView();
+                                    Lib.$q(".post__title, .scrape__title").scrollIntoView();
                                 }, 300);
                             },
                             onerror: error => {
@@ -1682,7 +1569,7 @@
         };
         return {
             async LinkBeautify(Config) {
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .View {
                         top: -10px;
                         z-index: 1;
@@ -1701,7 +1588,7 @@
                     }
                     a:hover .View { display: block }
                 `, "Link_Effects", false);
-                Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {
+                Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
                     raf: true,
                     all: true,
                     timeout: 5
@@ -1719,7 +1606,7 @@
             },
             async VideoBeautify(Config) {
                 if (DLL.IsNeko) {
-                    Syn.WaitElem(".scrape__files video", null, {
+                    Lib.waitEl(".scrape__files video", null, {
                         raf: true,
                         all: true,
                         timeout: 5
@@ -1727,17 +1614,17 @@
                         video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
                 } else {
-                    Syn.WaitElem("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
+                    Lib.waitEl("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
                         raf: true,
                         all: true,
                         timeout: 5
                     }).then(parents => {
-                        Syn.WaitElem(".post__attachment-link, .scrape__attachment-link", null, {
+                        Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
                             raf: true,
                             all: true,
                             timeout: 5
                         }).then(post => {
-                            Syn.AddStyle(`
+                            Lib.addStyle(`
                                 .fluid_video_wrapper {
                                     height: 50% !important;
                                     width: 65% !important;
@@ -1750,7 +1637,7 @@
                                 return data;
                             }));
                             for (const li of parents) {
-                                const WaitLoad = new MutationObserver(Syn.Debounce(() => {
+                                const WaitLoad = new MutationObserver(Lib.$debounce(() => {
                                     WaitLoad.disconnect();
                                     let [video, summary] = [li.$q("video"), li.$q("summary")];
                                     if (!video || !summary) return;
@@ -1776,7 +1663,7 @@
                 }
             },
             async OriginalImage(Config) {
-                Syn.WaitElem(".post__thumbnail, .scrape__thumbnail", null, {
+                Lib.waitEl(".post__thumbnail, .scrape__thumbnail", null, {
                     raf: true,
                     all: true,
                     timeout: 5
@@ -1804,7 +1691,7 @@
                             }
                         },
                         FailedClick: async () => {
-                            Syn.one(".post__files, .scrape__files", "click", event => {
+                            Lib.onE(".post__files, .scrape__files", "click", event => {
                                 const target = event.target.matches(".Image-link img");
                                 if (target && target.alt == "Loading Failed") {
                                     const src = img.src;
@@ -1830,15 +1717,15 @@
                                 src: Nurl,
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
-                                    Syn.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
+                                    Lib.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
                                 },
                                 onError: function () {
-                                    Origina_Requ.Reload(Syn.$q(`#${ID} img`), 10);
+                                    Origina_Requ.Reload(Lib.$q(`#${ID} img`), 10);
                                 }
                             }));
                         },
                         Request: async function (Container, Url, Result) {
-                            const indicator = Syn.createElement(Container, "div", {
+                            const indicator = Lib.createElement(Container, "div", {
                                 class: "progress-indicator",
                                 text: "0%"
                             });
@@ -1972,11 +1859,11 @@
             async ExtraButton(Config) {
                 DLL.Style.PostExtra();
                 const GetNextPage = LoadFunc.ExtraButton_Dependent();
-                Syn.WaitElem("h2.site-section__subheading", null, {
+                Lib.waitEl("h2.site-section__subheading", null, {
                     raf: true,
                     timeout: 5
                 }).then(comments => {
-                    const [Prev, Next, Svg, Span, Buffer] = [Syn.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Syn.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Syn.createFragment];
+                    const [Prev, Next, Svg, Span, Buffer] = [Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Lib.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Lib.createFragment];
                     Svg.id = "To_top";
                     Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
@@ -1991,15 +1878,15 @@
                     Span.id = "Next_box";
                     Span.style = "float: right; cursor: pointer;";
                     Span.appendChild(Next_btn);
-                    Syn.one(Svg, "click", () => {
-                        Syn.$q("header").scrollIntoView();
+                    Lib.onE(Svg, "click", () => {
+                        Lib.$q("header").scrollIntoView();
                     }, {
                         capture: true,
                         passive: true
                     });
-                    Syn.one(Next_btn, "click", () => {
+                    Lib.onE(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
-                            GetNextPage(Next_btn.$gAttr("jump"), Syn.$q("main"));
+                            GetNextPage(Next_btn.$gAttr("jump"), Lib.$q("main"));
                         } else {
                             Svg.remove();
                             Span.remove();
@@ -2009,14 +1896,14 @@
                         capture: true,
                         once: true
                     });
-                    if (!Syn.$q("#To_top") && !Syn.$q("#Next_box")) {
+                    if (!Lib.$q("#To_top") && !Lib.$q("#Next_box")) {
                         Buffer.append(Svg, Span);
                         comments.appendChild(Buffer);
                     }
                 });
             },
             async CommentFormat(Config) {
-                Syn.AddStyle(`
+                Lib.addStyle(`
                     .post__comments,
                     .scrape__comments {
                         display: flex;
@@ -2050,34 +1937,21 @@
             Log: Log,
             Transl: Transl
         });
-        Syn.Menu({
+        Lib.regMenu({
             [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl)
         });
     }
     function Create_Menu(Log, Transl) {
         const shadowID = "shadow";
-        if (Syn.$q(`#${shadowID}`)) return;
-        const set = DLL.ImgSet();
-        const img_data = [set.Height, set.Width, set.MaxWidth, set.Spacing];
+        if (Lib.$q(`#${shadowID}`)) return;
+        const imgSet = DLL.ImgSet();
+        const img_data = [imgSet.Height, imgSet.Width, imgSet.MaxWidth, imgSet.Spacing];
         let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
-        const {
-            ImgScript,
-            MenuStyle
-        } = DLL.Style.Menu();
-        const fragment = Syn.createFragment;
-        const shadow = Syn.createElement("div", {
+        const shadow = Lib.createElement("div", {
             id: shadowID
         });
         const shadowRoot = shadow.attachShadow({
             mode: "open"
-        });
-        const script = Syn.createElement("script", {
-            id: "Img-Script",
-            text: ImgScript
-        });
-        const style = Syn.createElement("style", {
-            id: "Menu-Style",
-            text: MenuStyle
         });
         const UnitOptions = `
             <select class="Image-input-settings" style="margin-left: 1rem;">
@@ -2089,7 +1963,183 @@
                 <option value="auto">auto</option>
             </select>
         `;
+        const menuScript = `
+            <script>
+                function check(value) {
+                   return value.toString().length > 4 || value > 1000
+                       ? 1000 : value < 0 ? "" : value;
+                }
+            </script>
+        `;
+        const menuSet = DLL.MenuSet();
+        const menuStyle = `
+            <style>
+                .modal-background {
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    z-index: 9999;
+                    overflow: auto;
+                    position: fixed;
+                    pointer-events: none;
+                }
+                /* 模態介面 */
+                .modal-interface {
+                    top: ${menuSet.Top};
+                    left: ${menuSet.Left};
+                    margin: 0;
+                    display: flex;
+                    overflow: auto;
+                    position: fixed;
+                    border-radius: 5px;
+                    pointer-events: auto;
+                    background-color: #2C2E3E;
+                    border: 3px solid #EE2B47;
+                }
+                /* 模態內容盒 */
+                .modal-box {
+                    padding: 0.5rem;
+                    height: 50vh;
+                    width: 32vw;
+                }
+                /* 菜單框架 */
+                .menu {
+                    width: 5.5vw;
+                    overflow: auto;
+                    text-align: center;
+                    vertical-align: top;
+                    border-radius: 2px;
+                    border: 2px solid #F6F6F6;
+                }
+                /* 菜單文字標題 */
+                .menu-text {
+                    color: #EE2B47;
+                    cursor: default;
+                    padding: 0.2rem;
+                    margin: 0.3rem;
+                    margin-bottom: 1.5rem;
+                    white-space: nowrap;
+                    border-radius: 10px;
+                    border: 4px solid #f05d73;
+                    background-color: #1f202c;
+                }
+                /* 菜單選項按鈕 */
+                .menu-options {
+                    cursor: pointer;
+                    font-size: 1.4rem;
+                    color: #F6F6F6;
+                    font-weight: bold;
+                    border-radius: 5px;
+                    margin-bottom: 1.2rem;
+                    border: 5px inset #EE2B47;
+                    background-color: #6e7292;
+                    transition: color 0.8s, background-color 0.8s;
+                }
+                .menu-options:hover {
+                    color: #EE2B47;
+                    background-color: #F6F6F6;
+                }
+                .menu-options:disabled {
+                    color: #6e7292;
+                    cursor: default;
+                    background-color: #c5c5c5;
+                    border: 5px inset #faa5b2;
+                }
+                /* 設置內容框架 */
+                .content {
+                    height: 48vh;
+                    width: 28vw;
+                    overflow: auto;
+                    padding: 0px 1rem;
+                    border-radius: 2px;
+                    vertical-align: top;
+                    border-top: 2px solid #F6F6F6;
+                    border-right: 2px solid #F6F6F6;
+                }
+                .narrative { color: #EE2B47; }
+                .Image-input-settings {
+                    width: 8rem;
+                    color: #F6F6F6;
+                    text-align: center;
+                    font-size: 1.5rem;
+                    border-radius: 15px;
+                    border: 3px inset #EE2B47;
+                    background-color: #202127;
+                }
+                .Image-input-settings:disabled {
+                    border: 3px inset #faa5b2;
+                    background-color: #5a5a5a;
+                }
+                /* 底部按鈕框架 */
+                .button-area {
+                    display: flex;
+                    padding: 0.3rem;
+                    border-left: none;
+                    border-radius: 2px;
+                    border: 2px solid #F6F6F6;
+                    justify-content: space-between;
+                }
+                .button-area select {
+                    color: #F6F6F6;
+                    margin-right: 1.5rem;
+                    border: 3px inset #EE2B47;
+                    background-color: #6e7292;
+                }
+                /* 底部選項 */
+                .button-options {
+                    color: #F6F6F6;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    font-weight: bold;
+                    border-radius: 10px;
+                    white-space: nowrap;
+                    background-color: #6e7292;
+                    border: 3px inset #EE2B47;
+                    transition: color 0.5s, background-color 0.5s;
+                }
+                .button-options:hover {
+                    color: #EE2B47;
+                    background-color: #F6F6F6;
+                }
+                .button-space { margin: 0 0.6rem; }
+                .form-hidden {
+                    width: 0;
+                    height: 0;
+                    opacity: 0;
+                    padding: 10px;
+                    overflow: hidden;
+                    transition: opacity 0.8s, height 0.8s, width 0.8s;
+                }
+                .toggle-menu {
+                    width: 0;
+                    height: 0;
+                    padding: 0;
+                    margin: 0;
+                }
+                /* 整體框線 */
+                table, td {
+                    margin: 0px;
+                    padding: 0px;
+                    overflow: auto;
+                    border-spacing: 0px;
+                }
+                .modal-background p {
+                    display: flex;
+                    flex-wrap: nowrap;
+                }
+                option { color: #F6F6F6; }
+                ul {
+                    list-style: none;
+                    padding: 0px;
+                    margin: 0px;
+                }
+            </style>
+        `;
         shadowRoot.$iHtml(`
+            ${menuScript}
+            ${menuStyle}
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -2158,9 +2208,7 @@
                 </div>
             </div>
         `);
-        fragment.append(script, style);
-        shadowRoot.appendChild(fragment);
-        $(Syn.body).append(shadow);
+        $(Lib.body).append(shadow);
         const $language = $(shadowRoot).find("#language");
         const $readset = $(shadowRoot).find("#readsettings");
         const $interface = $(shadowRoot).find(".modal-interface");
@@ -2179,7 +2227,7 @@
             Menu_Save() {
                 const top = $interface.css("top");
                 const left = $interface.css("left");
-                Syn.sV(DLL.SaveKey.Menu, {
+                Lib.setV(DLL.SaveKey.Menu, {
                     Top: top,
                     Left: left
                 });
@@ -2198,7 +2246,7 @@
                     }
                     save_cache[img_input.attr("id")] = set_value;
                 });
-                Syn.sV(DLL.SaveKey.Img, save_cache);
+                Lib.setV(DLL.SaveKey.Img, save_cache);
             },
             async ImageSettings() {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
@@ -2225,7 +2273,7 @@
             event.stopPropagation();
             $language.off("input change");
             const value = $(this).val();
-            Syn.sV(DLL.SaveKey.Lang, value);
+            Lib.setV(DLL.SaveKey.Lang, value);
             Menu_Requ.Menu_Save();
             Menu_Requ.Menu_Close();
             MenuTrigger(Updata => {
