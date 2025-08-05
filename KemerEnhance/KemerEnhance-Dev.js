@@ -550,86 +550,83 @@
         const LoadFunc = {
             TextToLink_Cache: undefined,
             TextToLink_Dependent: function (Config) {
-                if (!this.TextToLink_Cache) {
-                    this.TextToLink_Cache = {
-                        Exclusion_Regex: /onfanbokkusuokibalab\.net/,
-                        URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
-                        Exclusion_Tags: new Set([
-                            // 腳本和樣式
-                            "SCRIPT", "STYLE", "NOSCRIPT",
-                            // 多媒體元素
-                            "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK",
-                            // 代碼和預格式化文本
-                            "CODE", "KBD", "SAMP",
-                            // 不可見或特殊功能元素
-                            "TEMPLATE", "SLOT", "PARAM", "META", "LINK",
-                            // 圖片相關
-                            "IMG", "PICTURE", "FIGURE", "FIGCAPTION",
-                            // 特殊交互元素
-                            "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT",
-                            // 表單元素
-                            "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND",
-                            // 其他交互元素
-                            "MAP", "AREA"
-                        ]),
-                        UrlMatch(str) {
-                            // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
-                            this.URL_Regex.lastIndex = 0;
-                            return this.URL_Regex.test(str);
-                        },
-                        getTextNodes(root) {
-                            const nodes = [];
-                            const tree = document.createTreeWalker(
-                                root,
-                                NodeFilter.SHOW_TEXT,
-                                {
-                                    acceptNode: (node) => {
-                                        const parentElement = node.parentElement;
-                                        if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+                return this.TextToLink_Cache ??= {
+                    Exclusion_Regex: /onfanbokkusuokibalab\.net/,
+                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
+                    Exclusion_Tags: new Set([
+                        // 腳本和樣式
+                        "SCRIPT", "STYLE", "NOSCRIPT",
+                        // 多媒體元素
+                        "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK",
+                        // 代碼和預格式化文本
+                        "CODE", "KBD", "SAMP",
+                        // 不可見或特殊功能元素
+                        "TEMPLATE", "SLOT", "PARAM", "META", "LINK",
+                        // 圖片相關
+                        "IMG", "PICTURE", "FIGURE", "FIGCAPTION",
+                        // 特殊交互元素
+                        "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT",
+                        // 表單元素
+                        "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND",
+                        // 其他交互元素
+                        "MAP", "AREA"
+                    ]),
+                    UrlMatch(str) {
+                        // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
+                        this.URL_Regex.lastIndex = 0;
+                        return this.URL_Regex.test(str);
+                    },
+                    getTextNodes(root) {
+                        const nodes = [];
+                        const tree = document.createTreeWalker(
+                            root,
+                            NodeFilter.SHOW_TEXT,
+                            {
+                                acceptNode: (node) => {
+                                    const parentElement = node.parentElement;
+                                    if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
 
-                                        const content = node.$text();
-                                        if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
-                                        return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                                    }
+                                    const content = node.$text();
+                                    if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
+                                    return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
-                            );
-                            while (tree.nextNode()) {
-                                nodes.push(tree.currentNode.parentElement); // 回傳父節點
                             }
-                            return nodes;
-                        },
-                        ProtocolParse(url) {
-                            if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
-                            if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
-                            if (/^\/\//.test(url)) return "https:" + url;
-                            return url;
-                        },
-                        async ParseModify(father, content) { // 解析後轉換網址
-                            father.$iHtml(content.replace(this.URL_Regex, url => {
-                                const decode = decodeURIComponent(url).trim();
-                                return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
-                            }))
-                        },
-                        async JumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
-                            const [Newtab, Active, Insert] = [
-                                Config.newtab ?? true,
-                                Config.newtab_active ?? false,
-                                Config.newtab_insert ?? false,
-                            ];
-
-                            Lib.onEvent(root, "click", event => {
-                                const target = event.target.closest("a:not(.fileThumb)");
-                                if (!target || target.$hAttr("download")) return;
-                                event.preventDefault();
-
-                                !Newtab
-                                    ? location.assign(target.href)
-                                    : GM_openInTab(target.href, { active: Active, insert: Insert });
-                            }, { capture: true });
+                        );
+                        while (tree.nextNode()) {
+                            nodes.push(tree.currentNode.parentElement); // 回傳父節點
                         }
+                        return nodes;
+                    },
+                    ProtocolParse(url) {
+                        if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+                        if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+                        if (/^\/\//.test(url)) return "https:" + url;
+                        return url;
+                    },
+                    async ParseModify(father, content) { // 解析後轉換網址
+                        father.$iHtml(content.replace(this.URL_Regex, url => {
+                            const decode = decodeURIComponent(url).trim();
+                            return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
+                        }))
+                    },
+                    async JumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
+                        const [Newtab, Active, Insert] = [
+                            Config.newtab ?? true,
+                            Config.newtab_active ?? false,
+                            Config.newtab_insert ?? false,
+                        ];
+
+                        Lib.onEvent(root, "click", event => {
+                            const target = event.target.closest("a:not(.fileThumb)");
+                            if (!target || target.$hAttr("download")) return;
+                            event.preventDefault();
+
+                            !Newtab
+                                ? location.assign(target.href)
+                                : GM_openInTab(target.href, { active: Active, insert: Insert });
+                        }, { capture: true });
                     }
                 };
-                return this.TextToLink_Cache;
             },
             FixArtist_Cache: undefined,
             FixArtist_Dependent: function () {
@@ -1683,107 +1680,101 @@
         const LoadFunc = {
             LinkBeautify_Cache: undefined,
             LinkBeautify_Dependent() {
-                if (!this.LinkBeautify_Cache) {
-                    this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
-                        const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
+                return this.LinkBeautify_Cache ??= async function ShowBrowse(Browse) {
+                    const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
 
-                        // 初始化
-                        Browse.style.position = "relative"; // 修改樣式避免跑版
-                        Browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
+                    // 初始化
+                    Browse.style.position = "relative"; // 修改樣式避免跑版
+                    Browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
 
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: URL,
-                            onload: response => {
-                                if (response.status !== 200) return;
+                    GM_xmlhttpRequest({
+                        method: "GET",
+                        url: URL,
+                        onload: response => {
+                            if (response.status !== 200) return;
 
-                                if (DLL.IsNeko) {
-                                    const Main = response.responseXML.$q("main");
-                                    const View = Lib.createElement("View", { class: "View" });
-                                    const Buffer = Lib.createFragment;
-                                    for (const br of Main.$qa("br")) { // 取得 br 數據
-                                        Buffer.append( // 將以下元素都添加到 Buffer
-                                            document.createTextNode(br.previousSibling.$text()),
-                                            br
-                                        );
-                                    }
-                                    View.appendChild(Buffer);
-                                    Browse.appendChild(View);
-                                } else {
-                                    const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Lib.createElement("View", { class: "View" });
-                                    const Buffer = Lib.createFragment;
-
-                                    // 添加密碼數據
-                                    const password = ResponseJson['password'];
-                                    if (password) {
-                                        Buffer.append(
-                                            document.createTextNode(`password: ${password}`),
-                                            Lib.createElement("br")
-                                        )
-                                    };
-
-                                    // 添加檔案數據
-                                    for (const text of ResponseJson['file_list']) {
-                                        Buffer.append(
-                                            document.createTextNode(text), Lib.createElement("br")
-                                        )
-                                    };
-
-                                    View.appendChild(Buffer);
-                                    Browse.appendChild(View);
+                            if (DLL.IsNeko) {
+                                const Main = response.responseXML.$q("main");
+                                const View = Lib.createElement("View", { class: "View" });
+                                const Buffer = Lib.createFragment;
+                                for (const br of Main.$qa("br")) { // 取得 br 數據
+                                    Buffer.append( // 將以下元素都添加到 Buffer
+                                        document.createTextNode(br.previousSibling.$text()),
+                                        br
+                                    );
                                 }
-                            },
-                            onerror: error => { ShowBrowse(Browse) }
-                        });
-                    }
-                };
-                return this.LinkBeautify_Cache;
+                                View.appendChild(Buffer);
+                                Browse.appendChild(View);
+                            } else {
+                                const ResponseJson = JSON.parse(response.responseText);
+                                const View = Lib.createElement("View", { class: "View" });
+                                const Buffer = Lib.createFragment;
+
+                                // 添加密碼數據
+                                const password = ResponseJson['password'];
+                                if (password) {
+                                    Buffer.append(
+                                        document.createTextNode(`password: ${password}`),
+                                        Lib.createElement("br")
+                                    )
+                                };
+
+                                // 添加檔案數據
+                                for (const text of ResponseJson['file_list']) {
+                                    Buffer.append(
+                                        document.createTextNode(text), Lib.createElement("br")
+                                    )
+                                };
+
+                                View.appendChild(Buffer);
+                                Browse.appendChild(View);
+                            }
+                        },
+                        onerror: error => { ShowBrowse(Browse) }
+                    });
+                }
             },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent() {
                 // ! 這個函數目前只有 nekohouse 需要
-                if (!this.ExtraButton_Cache) {
-                    this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: url,
-                            nocache: false,
-                            onload: response => {
-                                if (response.status !== 200) {
-                                    GetNextPage(url, old_main);
-                                    return;
-                                };
+                return this.ExtraButton_Cache ??= async function GetNextPage(url, old_main) {
+                    GM_xmlhttpRequest({
+                        method: "GET",
+                        url: url,
+                        nocache: false,
+                        onload: response => {
+                            if (response.status !== 200) {
+                                GetNextPage(url, old_main);
+                                return;
+                            };
 
-                                const XML = response.responseXML;
-                                const Main = XML.$q("main");
-                                old_main.replaceChildren(...Main.childNodes);
+                            const XML = response.responseXML;
+                            const Main = XML.$q("main");
+                            old_main.replaceChildren(...Main.childNodes);
 
-                                history.pushState(null, null, url); // 修改連結與紀錄
-                                const Title = XML.$q("title")?.$text();
-                                Title && (Lib.title(Title)); // 修改標題
+                            history.pushState(null, null, url); // 修改連結與紀錄
+                            const Title = XML.$q("title")?.$text();
+                            Title && (Lib.title(Title)); // 修改標題
 
-                                setTimeout(() => {
-                                    Lib.waitEl(".post__content, .scrape__content", null, { raf: true, timeout: 10 }).then(post => {
-                                        // 刪除所有只有 br 標籤的元素
-                                        post.$qa("p").forEach(p => {
-                                            p.childNodes.forEach(node => { node.nodeName == "BR" && node.parentNode.remove() });
-                                        });
-
-                                        // 刪除所有是圖片連結的 a
-                                        post.$qa("a").forEach(a => {
-                                            /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove()
-                                        });
+                            setTimeout(() => {
+                                Lib.waitEl(".post__content, .scrape__content", null, { raf: true, timeout: 10 }).then(post => {
+                                    // 刪除所有只有 br 標籤的元素
+                                    post.$qa("p").forEach(p => {
+                                        p.childNodes.forEach(node => { node.nodeName == "BR" && node.parentNode.remove() });
                                     });
 
-                                    Lib.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
-                                }, 300);
-                            },
-                            onerror: error => { GetNextPage(url, old_main) }
-                        });
-                    }
-                };
-                return this.ExtraButton_Cache;
+                                    // 刪除所有是圖片連結的 a
+                                    post.$qa("a").forEach(a => {
+                                        /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove()
+                                    });
+                                });
+
+                                Lib.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
+                            }, 300);
+                        },
+                        onerror: error => { GetNextPage(url, old_main) }
+                    });
+                }
             }
         }
 
