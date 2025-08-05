@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      0.0.50-Beta2
+// @version      2025.08.06-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -25,10 +25,11 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+
+// @require      https://update.greasyfork.org/scripts/487608/1636326/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
