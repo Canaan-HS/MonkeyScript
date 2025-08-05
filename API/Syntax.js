@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/08/04
+// @version      2025/08/06
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -920,7 +920,7 @@ const Lib = (() => {
      * zipEngine.generateZip().then(zip => {})
      */
     function createCompressor() {
-        const worker = workerCreate(`
+        let worker = workerCreate(`
             importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
             onmessage = function(e) {
                 const { files, level } = e.data;
