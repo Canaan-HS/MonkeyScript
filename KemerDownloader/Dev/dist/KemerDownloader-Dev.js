@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1632816/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1636325/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -45,7 +45,7 @@
 // ==/UserScript==
 
 (function () {
-  function Config(Syn2) {
+  function Config(Lib2) {
     const General2 = {
       Dev: false,
       // 顯示請求資訊, 與錯誤資訊
@@ -53,13 +53,13 @@
       // 下載時包含 影片 與 其他附加檔案
       CompleteClose: false,
       // 下載完成後關閉
-      ConcurrentDelay: 600,
+      ConcurrentDelay: 500,
       // 下載線程延遲 (ms) [壓縮下載]
-      ConcurrentQuantity: 3,
+      ConcurrentQuantity: 5,
       // 下載線程數量 [壓縮下載]
       BatchOpenDelay: 500,
       // 一鍵開啟帖子的延遲 (ms)
-      ...Syn2.gJV("General", {})
+      ...Lib2.getJV("General", {})
     };
     const FileName2 = {
       FillValue: {
@@ -74,91 +74,149 @@
       // 資料夾名稱 (用空字串, 就直接沒資料夾)
       FillName: "{Title} {Fill}",
       // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
-      ...Syn2.gJV("FileName", {})
+      ...Lib2.getJV("FileName", {})
     };
     const FetchSet2 = {
       Delay: 100,
       // 獲取延遲 (ms) [太快會被 BAN]
       AdvancedFetch: true,
-      // 進階獲取 (如果只需要 圖片和影片連結, 關閉該功能獲取會快很多)
+      // 進階獲取 (只需要 一般媒體連結, 關閉該功能獲取會快很多) [ nekohouse 不適用]
       ToLinkTxt: false,
-      // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載
+      // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
+      FilterExts: [],
+      // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
       UseFormat: false,
       // 這裡為 false 下面兩項就不生效
       Mode: "FilterMode",
       Format: ["Timestamp", "TypeTag"],
-      ...Syn2.gJV("FetchSet", {})
+      ...Lib2.getJV("FetchSet", {})
     };
     const Process2 = {
-      IsNeko: Syn2.$domain.startsWith("nekohouse"),
-      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico"],
-      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts"],
+      IsNeko: Lib2.$domain.startsWith("nekohouse"),
+      ImageExts: [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "webp",
+        "tiff",
+        "tif",
+        "svg",
+        "heic",
+        "heif",
+        "raw",
+        "ico",
+        "avif",
+        "jxl",
+        "cr2",
+        "nef",
+        "arw",
+        "orf",
+        "rw2",
+        "tga",
+        "pcx",
+        "crw",
+        "cr2",
+        "cr3",
+        "dng",
+        "eps",
+        "xcf",
+        "ai",
+        "psd",
+        "psb",
+        "pef",
+        "nrw",
+        "ptx",
+        "srf",
+        "sr2",
+        "raf",
+        "rwl",
+        "3fr",
+        "fff",
+        "iiq",
+        "x3f",
+        "ari",
+        "bay",
+        "dcr",
+        "kdc",
+        "mef",
+        "mos",
+        "dng",
+        "usdz",
+        "jxr",
+        "cdr",
+        "wmf",
+        "emf",
+        "dxf",
+        "svgz",
+        "obj",
+        "fbx",
+        "stl",
+        "gltf",
+        "glb",
+        "gltf",
+        "glb",
+        "dae",
+        "blend",
+        "max",
+        "c4d",
+        "step",
+        "stp",
+        "iges"
+      ],
+      VideoExts: [
+        "mp4",
+        "avi",
+        "mkv",
+        "mov",
+        "flv",
+        "wmv",
+        "webm",
+        "mpg",
+        "mpeg",
+        "m4v",
+        "ogv",
+        "3gp",
+        "asf",
+        "ts",
+        "vob",
+        "rm",
+        "rmvb",
+        "m2ts",
+        "f4v",
+        "mts",
+        "mpe",
+        "mpv",
+        "m2v",
+        "m4a",
+        "bdmv",
+        "ifo",
+        "r3d",
+        "braw",
+        "cine",
+        "qt",
+        "f4p",
+        "swf",
+        "mng",
+        "gifv",
+        "yuv",
+        "roq",
+        "nsv",
+        "amv",
+        "svi",
+        "mod",
+        "mxf",
+        "ogg"
+      ],
       Lock: false,
-      MAX_Delay: 1500,
-      MIN_CONCURRENCY: 2,
-      MAX_CONCURRENCY: 6,
-      TIME_THRESHOLD: 1e3,
-      responseHistory: [],
-      networkCondition: "normal",
-      lastNetworkCheck: 0,
-      networkCheckInterval: 1e4,
-      networkQualityThresholds: {
-        good: 500,
-        poor: 1500
-      },
-      EMA_ALPHA: 0.3,
-      ADJUSTMENT_FACTOR: 0.25,
-      adaptiveFactors: {
-        good: { delayFactor: 0.8, threadFactor: 1.2 },
-        normal: { delayFactor: 1, threadFactor: 1 },
-        poor: { delayFactor: 1.5, threadFactor: 0.7 }
-      },
-      _checkNetworkCondition() {
-        const now = Date.now();
-        if (now - this.lastNetworkCheck < this.networkCheckInterval) {
-          return this.networkCondition;
-        }
-        this.lastNetworkCheck = now;
-        if (navigator.connection) {
-          const { effectiveType, saveData } = navigator.connection;
-          if (effectiveType === "4g" && !saveData) this.networkCondition = "good";
-          else if (effectiveType === "3g" || effectiveType === "4g" && saveData) this.networkCondition = "normal";
-          else this.networkCondition = "poor";
-        } else if (this.responseHistory.length >= 5) {
-          const avgResponseTime = this.responseHistory.reduce((a, b) => a + b, 0) / this.responseHistory.length;
-          if (avgResponseTime < this.networkQualityThresholds.good) this.networkCondition = "good";
-          else if (avgResponseTime > this.networkQualityThresholds.poor) this.networkCondition = "poor";
-          else this.networkCondition = "normal";
-        }
-        return this.networkCondition;
-      },
-      _updateThreshold(newResponseTime) {
-        this.responseHistory.push(newResponseTime);
-        if (this.responseHistory.length > 10) this.responseHistory.shift();
-        if (!this.TIME_THRESHOLD || this.responseHistory.length <= 1) {
-          this.TIME_THRESHOLD = newResponseTime;
-        } else {
-          this.TIME_THRESHOLD = this.EMA_ALPHA * newResponseTime + (1 - this.EMA_ALPHA) * this.TIME_THRESHOLD;
-        }
-        this.TIME_THRESHOLD = Math.max(20, Math.min(2e3, this.TIME_THRESHOLD));
-      },
-      dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
-        const responseTime = Date.now() - time;
-        this._updateThreshold(responseTime);
-        const networkState = this._checkNetworkCondition();
-        const { delayFactor, threadFactor } = this.adaptiveFactors[networkState];
-        const ratio = responseTime / this.TIME_THRESHOLD;
-        const delayChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * delayFactor;
-        let newDelay = currentDelay * (1 + delayChange);
-        newDelay = Math.max(minDelay, Math.min(newDelay, this.MAX_Delay));
-        if (currentThread !== null) {
-          const threadChange = (ratio - 1) * this.ADJUSTMENT_FACTOR * threadFactor;
-          let newThread = currentThread * (1 - threadChange);
-          newThread = Math.max(this.MIN_CONCURRENCY, Math.min(newThread, this.MAX_CONCURRENCY));
-          return [Math.round(newDelay), Math.round(newThread)];
-        }
-        return Math.round(newDelay);
-      }
+      dynamicParam: Lib2.createNnetworkObserver({
+        MAX_Delay: 1500,
+        MIN_CONCURRENCY: 5,
+        MAX_CONCURRENCY: 10,
+        Good_Network_THRESHOLD: 200,
+        Poor_Network_THRESHOLD: 400
+      })
     };
     return { General: General2, FileName: FileName2, FetchSet: FetchSet2, Process: Process2 };
   }
@@ -411,14 +469,14 @@
       "開帖說明": "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10"
     }
   };
-  function Fetch(General2, FetchSet2, Process2, Transl2, Syn2, md52) {
+  function Fetch(General2, FetchSet2, Process2, Transl2, Lib2, md52) {
     return class FetchData {
       static Try_Again_Promise = null;
       constructor() {
         this.metaDict = /* @__PURE__ */ new Map();
         this.dataDict = /* @__PURE__ */ new Map();
-        this.sourceURL = Syn2.url;
-        this.titleCache = Syn2.title();
+        this.sourceURL = Lib2.url;
+        this.titleCache = Lib2.title();
         this.URL = new URL(this.sourceURL);
         this.host = this.URL.host;
         this.firstURL = this.URL.origin + this.URL.pathname;
@@ -449,7 +507,7 @@
         this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
         this.getValidValue = (value) => {
           if (!value) return null;
-          const type = Syn2.Type(value);
+          const type = Lib2.$type(value);
           if (type === "Array") return value.length > 0 && value.some((item) => item !== "") ? value : null;
           if (type === "Object") {
             const values = Object.values(value);
@@ -467,6 +525,7 @@
             return acc;
           }, {});
         };
+        const filterExts = new Set(FetchSet2.FilterExts);
         const videoExts = new Set(Process2.VideoExts);
         const imageExts = new Set(Process2.ImageExts);
         this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
@@ -478,7 +537,8 @@
           return data.reduce((acc, file) => {
             const name = file.name;
             const path = file.path;
-            const extension = Syn2.SuffixName(path, "");
+            const extension = Lib2.suffixName(path, "");
+            if (filterExts.has(extension)) return acc;
             const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
             const url = `${server}${path}`;
             if (this.isVideo(extension)) {
@@ -506,18 +566,20 @@
           return data.reduce((acc, file) => {
             const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
             if (uri) {
-              const extension = Syn2.SuffixName(uri, "");
-              const url = uri.startsWith("http") ? uri : `${Syn2.$origin}${uri}`;
-              const getDownloadName = (link) => link.download?.trim() || link.$text();
+              const extension = Lib2.suffixName(uri, "");
+              if (filterExts.has(extension)) return acc;
+              const url = uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`;
+              const getDownloadName = (link) => this.deepDecodeURIComponent(
+                link.download?.trim() || link.$text()
+              );
               if (this.isVideo(extension)) {
-                const name = getDownloadName(file);
-                acc.video[name] = `${url}?f=${name}`;
+                acc.video[getDownloadName(file)] = url;
               } else if (this.isImage(extension)) {
                 const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                acc.img[name] = `${url}?f=${name}`;
+                acc.img[name] = `${url}?filename=${name}`;
               } else {
-                const name = this.deepDecodeURIComponent(getDownloadName(file));
-                acc.other[name] = `${url}?f=${name}`;
+                const name = getDownloadName(file);
+                acc.other[name] = `${url}?filename=${name}`;
               }
             }
             return acc;
@@ -526,7 +588,7 @@
         this.specialLinkParse = (data) => {
           const Cache = {};
           try {
-            for (const a of Syn2.DomParse(data).$qa("body a")) {
+            for (const a of Lib2.domParse(data).$qa("body a")) {
               const href = a.href;
               const hash = md52(href).slice(0, 16);
               if (href.startsWith("https://mega.nz")) {
@@ -553,7 +615,7 @@
             }
             ;
           } catch (error) {
-            Syn2.Log("Error specialLinkParse", error, { dev: General2.Dev, type: "error", collapsed: false });
+            Lib2.log("Error specialLinkParse", error, { dev: General2.Dev, type: "error", collapsed: false });
           }
           return Cache;
         };
@@ -576,14 +638,14 @@
                 });
                 clearTimeout(timeoutId);
                 if (response.status === 429 || response.status === 503) {
-                  await Syn2.Sleep(sleepTime);
+                  await Lib2.sleep(sleepTime);
                   await checkRequest();
                 } else if (response.status === 200) {
                   resolve(response);
                 }
               } catch (err) {
                 clearTimeout(timeoutId);
-                await Syn2.Sleep(sleepTime);
+                await Lib2.sleep(sleepTime);
                 await checkRequest();
               }
             };
@@ -597,7 +659,7 @@
           });
           return promiseLock;
         };
-        this.worker = Syn2.WorkerCreation(`
+        this.worker = Lib2.workerCreate(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -657,11 +719,11 @@
       }
       /* 入口調用函數 */
       async fetchRun() {
-        const small = Syn2.$q("small");
-        const items = Syn2.$q(".card-list__items");
+        const small = Lib2.$q("small");
+        const items = Lib2.$q(".card-list__items");
         if (items) {
           Process2.Lock = true;
-          const currentPage = +Syn2.$q(".pagination-button-current b")?.$text();
+          const currentPage = +Lib2.$q(".pagination-button-current b")?.$text();
           currentPage && (this.currentPage = currentPage);
           if (small) {
             this.totalPages = +small.$text().split(" of ")[1] || 0;
@@ -681,7 +743,7 @@
             const { index, title, url, content: content2, error } = e.data;
             if (!error) resolve({ url, content: content2 });
             else {
-              Syn2.Log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
+              Lib2.log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
               await this.TooMany_TryAgain(url);
               this.worker.postMessage({ index, title, url });
             }
@@ -689,12 +751,12 @@
         });
         const { content } = homeData;
         Object.assign(homeData, { content: JSON.parse(content) });
-        Syn2.Log("HomeData", homeData, { collapsed: false });
+        Lib2.log("HomeData", homeData, { collapsed: false });
         const homeDataClone = structuredClone(homeData);
         homeDataClone.content.results = [{ id }];
         homeDataClone.content = JSON.stringify(homeDataClone.content);
         await this._fetchContent(homeDataClone);
-        Syn2.Log("PostDate", this.dataDict, { collapsed: false });
+        Lib2.log("PostDate", this.dataDict, { collapsed: false });
         this._reset();
       }
       /* ===== 主要抓取函數 ===== */
@@ -710,13 +772,13 @@
                   this.fetchDelay = Process2.dynamicParam(time, delay);
                   resolve(content);
                 } else {
-                  Syn2.Log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                   await this.TooMany_TryAgain(url2);
                   this.worker.postMessage({ index, title, url: url2, time, delay });
                 }
               };
             });
-            items = Syn2.DomParse(homeData)?.$q(".card-list__items");
+            items = Lib2.domParse(homeData)?.$q(".card-list__items");
           }
           if (items) {
             const article = items.$qa("article");
@@ -737,7 +799,7 @@
                 this.fetchDelay = Process2.dynamicParam(time, delay);
                 resolve({ url: url2, content });
               } else {
-                Syn2.Log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                 await this.TooMany_TryAgain(url2);
                 this.worker.postMessage({ index, title, url: url2, time, delay });
               }
@@ -758,9 +820,9 @@
           const resolvers = /* @__PURE__ */ new Map();
           const postCount = content.length;
           if (this.metaDict.size === 0) {
-            this.metaDict.set(Transl2("作者"), Syn2.$q("span[itemprop='name'], fix_name").$text());
+            this.metaDict.set(Transl2("作者"), Lib2.$q("span[itemprop='name'], fix_name").$text());
             this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-            this.metaDict.set(Transl2("建立時間"), Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+            this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
             this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
           }
           this.worker.onmessage = async (e) => {
@@ -769,7 +831,7 @@
               const { resolve, reject } = resolvers.get(index);
               this.fetchDelay = Process2.dynamicParam(time, delay);
               const standardTitle = this.normalizeName(title, index);
-              const postDom = Syn2.DomParse(content2);
+              const postDom = Lib2.domParse(content2);
               const classifiedFiles = this.nekoCategorize(standardTitle, [
                 ...postDom.$qa(".fileThumb"),
                 // 圖片連結
@@ -788,8 +850,8 @@
                 this.dataDict.set(standardTitle, generatedData);
               }
               resolve();
-              Syn2.title(`（${this.currentPage} - ${++taskCount}）`);
-              Syn2.Log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
+              Lib2.title(`（${this.currentPage} - ${++taskCount}）`);
+              Lib2.log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
             } else {
               await this.TooMany_TryAgain(url2);
               this.worker.postMessage({ index, title, url: url2, time, delay });
@@ -800,7 +862,7 @@
               resolvers.set(index, { resolve, reject });
               this.worker.postMessage({ index, title, url: url2, time: Date.now(), delay: this.fetchDelay });
             }));
-            await Syn2.Sleep(this.fetchDelay);
+            await Lib2.sleep(this.fetchDelay);
           }
           await Promise.allSettled(tasks);
         } else {
@@ -810,7 +872,7 @@
               const props = contentJson.props;
               this.metaDict.set(Transl2("作者"), props.name);
               this.metaDict.set(Transl2("帖子數量"), props.count);
-              this.metaDict.set(Transl2("建立時間"), Syn2.GetDate("{year}-{month}-{date} {hour}:{minute}"));
+              this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
               this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
               this.metaDict.set(Transl2("作者網站"), props.display_data.href);
             }
@@ -833,7 +895,7 @@
                       const classifiedFiles = this.kemerCategorize({
                         title: standardTitle,
                         data: [...previews, ...attachments],
-                        fillValue: Syn2.GetFill(previews?.length || 1)
+                        fillValue: Lib2.getFill(previews?.length || 1)
                       });
                       const generatedData = this.fetchGenerate({
                         PostLink: this.getPostURL(post.id),
@@ -849,14 +911,14 @@
                       }
                       ;
                       resolve();
-                      Syn2.title(`（${this.currentPage} - ${++this.progress}）`);
-                      Syn2.Log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
+                      Lib2.title(`（${this.currentPage} - ${++this.progress}）`);
+                      Lib2.log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
                     } else throw new Error("Json Parse Failed");
                   } else {
                     throw new Error("Request Failed");
                   }
                 } catch (error2) {
-                  Syn2.Log(error2, { index, title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Lib2.log(error2, { index, title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                   await this.TooMany_TryAgain(url2);
                   this.worker.postMessage({ index, title, url: url2, time, delay });
                 }
@@ -866,7 +928,7 @@
                   resolvers.set(index, { resolve, reject });
                   this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
                 }));
-                await Syn2.Sleep(this.fetchDelay);
+                await Lib2.sleep(this.fetchDelay);
               }
               await Promise.allSettled(tasks);
             } else {
@@ -883,7 +945,7 @@
                     title: standardTitle,
                     data: [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments],
                     serverDict,
-                    fillValue: Syn2.GetFill(previews?.length || 1)
+                    fillValue: Lib2.getFill(previews?.length || 1)
                   });
                   const generatedData = this.fetchGenerate({
                     PostLink: this.getPostURL(post.id),
@@ -896,15 +958,15 @@
                     this.dataDict.set(standardTitle, generatedData);
                   }
                   ;
-                  Syn2.title(`（${this.currentPage}）`);
-                  Syn2.Log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General2.Dev, collapsed: false });
+                  Lib2.title(`（${this.currentPage}）`);
+                  Lib2.log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General2.Dev, collapsed: false });
                 } catch (error) {
-                  Syn2.Log(error, { index, title: standardTitle, url }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Lib2.log(error, { index, title: standardTitle, url }, { dev: General2.Dev, type: "error", collapsed: false });
                   continue;
                 }
               }
             }
-            await Syn2.Sleep(this.fetchDelay);
+            await Lib2.sleep(this.fetchDelay);
           }
         }
         return true;
@@ -915,7 +977,7 @@
         this.dataDict = null;
         this.worker.terminate();
         Process2.Lock = false;
-        Syn2.title(this.titleCache);
+        Lib2.title(this.titleCache);
       }
       async _toTxt() {
         let content = "";
@@ -932,7 +994,7 @@
           }
         }
         if (content.endsWith("\n")) content = content.slice(0, -1);
-        Syn2.OutputTXT(content, this.metaDict.get(Transl2("作者")), () => {
+        Lib2.outputTXT(content, this.metaDict.get(Transl2("作者")), () => {
           content = null;
           this._reset();
         });
@@ -943,18 +1005,18 @@
           { [Transl2("元數據")]: Object.fromEntries(this.metaDict) },
           { [`${Transl2("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) }
         );
-        Syn2.OutputJson(jsonData, this.metaDict.get(Transl2("作者")), () => {
+        Lib2.outputJson(jsonData, this.metaDict.get(Transl2("作者")), () => {
           jsonData = null;
           this._reset();
         });
       }
     };
   }
-  function Menu(Syn2, Transl2, General2, FileName2, FetchSet2) {
+  function Menu(Lib2, Transl2, General2, FileName2, FetchSet2) {
     return class UI {
       constructor() {
         this.overlay = null;
-        this.shadow = Syn2.createElement(document.body, "div", { id: "kemer-settings" });
+        this.shadow = Lib2.createElement(document.body, "div", { id: "kemer-settings" });
         this.shadowRoot = this.shadow.attachShadow({ mode: "open" });
         this._loadUi();
       }
@@ -974,7 +1036,7 @@
             "kemono": "#e8a17d",
             "coomer": "#99ddff",
             "nekohouse": "#bb91ff"
-          }[Syn2.$domain.split(".")[0]],
+          }[Lib2.$domain.split(".")[0]],
           Background: "#2c2c2e",
           BackgroundLight: "#3a3a3c",
           Border: "#545458",
@@ -1137,16 +1199,16 @@
         return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
       }
       _UiSwitchEvent() {
-        this.overlay = Syn2.Q(this.shadowRoot, "#overlay");
-        Syn2.one(this.overlay, "click", (event) => {
+        this.overlay = Lib2.$Q(this.shadowRoot, "#overlay");
+        Lib2.onE(this.overlay, "click", (event) => {
           const target = event.target;
           const tagName = target.tagName;
           if (tagName === "BUTTON") {
             if (target.classList.contains("active")) return;
-            Syn2.Q(this.shadowRoot, "button.active").classList.remove("active");
-            Syn2.Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
+            Lib2.$Q(this.shadowRoot, "button.active").classList.remove("active");
+            Lib2.$Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
             target.classList.add("active");
-            Syn2.Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
+            Lib2.$Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
           } else if (target === this.overlay) {
             this.close();
           }
@@ -1161,122 +1223,8 @@
       }
     };
   }
-  function Compressor(Syn2) {
-    const worker = Syn2.WorkerCreation(`
-            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
-            onmessage = function(e) {
-                const { files, level } = e.data;
-                try {
-                    const zipped = fflate.zipSync(files, { level });
-                    postMessage({ data: zipped }, [zipped.buffer]);
-                } catch (err) {
-                    postMessage({ error: err.message });
-                }
-            }
-        `);
-    return class Compression {
-      constructor() {
-        this.files = {};
-        this.tasks = [];
-      }
-      // 存入 blob 進行壓縮
-      async file(name, blob) {
-        const task = new Promise(async (resolve) => {
-          const buffer = await blob.arrayBuffer();
-          this.files[name] = new Uint8Array(buffer);
-          resolve();
-        });
-        this.tasks.push(task);
-        return task;
-      }
-      // 估計壓縮耗時
-      _estimateCompression() {
-        const IO_THRESHOLD = 50 * 1024 * 1024;
-        const UNCOMPRESSIBLE_EXTENSIONS = /* @__PURE__ */ new Set([
-          ".mp4",
-          ".mov",
-          ".avi",
-          ".mkv",
-          ".zip",
-          ".rar",
-          ".jpg",
-          ".jpeg",
-          ".png",
-          ".gif",
-          ".webp"
-        ]);
-        const IO_BYTES_PER_SECOND = 100 * 1024 * 1024;
-        const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024;
-        let totalEstimatedTime = 0;
-        let totalSize = 0;
-        Object.entries(this.files).forEach(([name, file]) => {
-          const fileSize = file.length;
-          totalSize += fileSize;
-          const extension = ("." + name.split(".").pop()).toLowerCase();
-          if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
-            totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
-          } else {
-            let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
-            const fileSizeMB = fileSize / (1024 * 1024);
-            if (fileSizeMB > 10) {
-              cpuTime *= 1 + Math.log10(fileSizeMB / 10) * 0.1;
-            }
-            totalEstimatedTime += cpuTime;
-          }
-        });
-        const fileCount = Object.keys(this.files).length;
-        if (fileCount > 1) {
-          totalEstimatedTime += fileCount * 0.01;
-        }
-        const totalSizeMB = totalSize / (1024 * 1024);
-        if (totalSizeMB > 100) {
-          totalEstimatedTime *= 1 + Math.log10(totalSizeMB / 100) * 0.05;
-        }
-        const calculateCurveParameter = (totalSizeMB2) => {
-          if (totalSizeMB2 < 50) return 5;
-          if (totalSizeMB2 < 500) return 4;
-          return 3;
-        };
-        const curveParameter = calculateCurveParameter(totalSizeMB);
-        return {
-          estimatedInMs: totalEstimatedTime * 1e3,
-          progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
-        };
-      }
-      // 生成壓縮
-      async generateZip(options = {}, progressCallback) {
-        await Promise.all(this.tasks);
-        const startTime = performance.now();
-        const updateInterval = 30;
-        const estimationData = this._estimateCompression();
-        const totalTime = estimationData.estimatedInMs;
-        const progressInterval = setInterval(() => {
-          const elapsedTime = performance.now() - startTime;
-          const ratio = Math.min(elapsedTime / totalTime, 0.99);
-          const fakeProgress = estimationData.progressCurve(ratio);
-          if (progressCallback) progressCallback(fakeProgress);
-          if (ratio >= 0.99) {
-            clearInterval(progressInterval);
-          }
-        }, updateInterval);
-        return new Promise((resolve, reject) => {
-          if (Object.keys(this.files).length === 0) return reject("Empty Data Error");
-          worker.postMessage({
-            files: this.files,
-            level: options.level || 5
-          }, Object.values(this.files).map((buf) => buf.buffer));
-          worker.onmessage = (e) => {
-            clearInterval(progressInterval);
-            if (progressCallback) progressCallback(100);
-            const { error, data } = e.data;
-            error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
-          };
-        });
-      }
-    };
-  }
-  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Syn2, saveAs2) {
-    let ZipEngine;
+  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Lib2, saveAs2) {
+    const zipper = Lib2.createCompressor();
     return class Download {
       constructor(compressMode, modeDisplay, button) {
         this.button = button;
@@ -1285,12 +1233,12 @@
         this.namedData = null;
         this.forceCompressSignal = false;
         this.originalTitle = () => {
-          const cache = Syn2.title();
+          const cache = Lib2.title();
           return cache.startsWith("✓ ") ? cache.slice(2) : cache;
         };
         const videoExts = new Set(Process2.VideoExts);
         this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.worker = this.compressMode ? Syn2.WorkerCreation(`
+        this.worker = this.compressMode ? Lib2.workerCreate(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -1352,7 +1300,7 @@
       }
       /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
       downloadTrigger() {
-        Syn2.WaitElem([
+        Lib2.waitEl([
           ".post__title, .scrape__title",
           ".post__files, .scrape__files",
           ".post__user-name, .scrape__user-name, fix_name"
@@ -1369,10 +1317,10 @@
             source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
             time: () => {
               if (Process2.IsNeko) {
-                return Syn2.$q(".timestamp").$text() || "";
+                return Lib2.$q(".timestamp").$text() || "";
               }
-              let published = Syn2.$q(".post__published").$copy();
-              Syn2.$q(".post__published");
+              let published = Lib2.$q(".post__published").$copy();
+              Lib2.$q(".post__published");
               published.firstElementChild.remove();
               return published.$text().split(" ")[0];
             }
@@ -1383,15 +1331,15 @@
             folderName,
             fillName
           ] = Object.keys(FileName2).slice(1).map((key) => this._nameAnalysis(FileName2[key]));
-          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), finalData = General2.IncludeExtras ? [...imgData, ...Syn2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] : imgData;
+          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), finalData = General2.IncludeExtras ? [...imgData, ...Lib2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] : imgData;
           for (const [index, file] of finalData.entries()) {
             const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
             if (uri) {
-              downloadData.set(index, uri.startsWith("http") ? uri : `${Syn2.$origin}${uri}`);
+              downloadData.set(index, uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`);
             }
           }
           if (downloadData.size == 0) General2.Dev = true;
-          Syn2.Log("Get Data", {
+          Lib2.log("Get Data", {
             FolderName: folderName,
             DownloadData: downloadData
           }, { dev: General2.Dev, collapsed: false });
@@ -1400,14 +1348,13 @@
       }
       /* 打包壓縮下載 */
       async _packDownload(compressName, folderName, fillName, data) {
-        ZipEngine ??= Compressor(Syn2);
         let show, extension, progress = 0, total = data.size;
-        const self = this, zipper = new ZipEngine(), titleCache = this.originalTitle();
-        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Syn2.GetFill(total) : fillValue[0];
+        const self = this, titleCache = this.originalTitle();
+        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
         async function forceDownload() {
-          self._compressFile(compressName, zipper, titleCache);
+          self._compressFile(compressName, titleCache);
         }
-        Syn2.Menu({
+        Lib2.regMenu({
           [Transl2("📥 強制壓縮下載")]: { func: () => forceDownload(), hotkey: "d" }
         }, { name: "Enforce" });
         folderName = folderName != "" ? `${folderName}/` : "";
@@ -1415,22 +1362,22 @@
           if (self.forceCompressSignal) return;
           requestAnimationFrame(() => {
             if (!error && blob instanceof Blob && blob.size > 0) {
-              extension = Syn2.SuffixName(url);
-              const fileName = `${fillName.replace("fill", Syn2.Mantissa(index, amount, filler))}.${extension}`;
-              self.isVideo(extension) ? zipper.file(`${folderName}${decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`, blob) : zipper.file(`${folderName}${fileName}`, blob);
+              extension = Lib2.suffixName(url);
+              const fileName = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
+              self.isVideo(extension) ? zipper.file(`${folderName}${decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`, blob) : zipper.file(`${folderName}${fileName}`, blob);
               data.delete(index);
             }
             show = `[${++progress}/${total}]`;
-            Syn2.title(show);
+            Lib2.title(show);
             self.button.$text(`${Transl2("下載進度")} ${show}`);
             if (progress == total) {
               total = data.size;
               if (total == 0) {
-                self._compressFile(compressName, zipper, titleCache);
+                self._compressFile(compressName, titleCache);
               } else {
                 show = "Wait for failed re download";
                 progress = 0;
-                Syn2.title(show);
+                Lib2.title(show);
                 self.button.$text(show);
                 setTimeout(() => {
                   for (const [index2, url2] of data.entries()) {
@@ -1471,34 +1418,34 @@
         }
         this.worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
-          error ? (request(index, url), Syn2.Log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (requestUpdate(index, url, blob), Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
+          error ? (request(index, url), Lib2.log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (requestUpdate(index, url, blob), Lib2.log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
         };
       }
       /* 單圖下載 */
       async _separDownload(fillName, data) {
         let show, url, fileName, extension, token = 5, stop = false, progress = 0;
         const self = this, process = [], promises = [], total = data.size, showTracking = {}, titleCache = this.originalTitle();
-        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Syn2.GetFill(total) : fillValue[0];
+        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
         async function _stop() {
           stop = true;
           process.forEach((pc) => pc.abort());
         }
-        Syn2.Menu({
+        Lib2.regMenu({
           [Transl2("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" }
         }, { name: "Abort" });
         async function request(index) {
           if (stop) return;
           url = data.get(index);
-          extension = Syn2.SuffixName(url);
-          const FileName3 = `${fillName.replace("fill", Syn2.Mantissa(index, amount, filler))}.${extension}`;
-          fileName = self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Syn2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
+          extension = Lib2.suffixName(url);
+          const FileName3 = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
+          fileName = self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
           return new Promise((resolve, reject) => {
             const completed = () => {
               if (!showTracking[index]) {
                 showTracking[index] = true;
-                Syn2.Log("Download Successful", url, { dev: General2.Dev, collapsed: false });
+                Lib2.log("Download Successful", url, { dev: General2.Dev, collapsed: false });
                 show = `[${++progress}/${total}]`;
-                Syn2.title(show);
+                Lib2.title(show);
                 self.button.$text(`${Transl2("下載進度")} ${show}`);
                 resolve();
               }
@@ -1513,7 +1460,7 @@
               onprogress: (progress2) => {
               },
               onerror: () => {
-                Syn2.Log("Download Error", url, { dev: General2.Dev, type: "error", collapsed: false });
+                Lib2.log("Download Error", url, { dev: General2.Dev, type: "error", collapsed: false });
                 setTimeout(() => {
                   reject();
                   token--;
@@ -1527,40 +1474,41 @@
         }
         for (let i = 0; i < total; i++) {
           promises.push(request(i));
-          await Syn2.Sleep(General2.ConcurrentDelay);
+          await Lib2.sleep(General2.ConcurrentDelay);
         }
         await Promise.allSettled(promises);
         GM_unregisterMenuCommand2("Abort-1");
-        Syn2.title(`✓ ${titleCache}`);
+        Lib2.title(`✓ ${titleCache}`);
         this.button.$text(Transl2("下載完成"));
         setTimeout(() => {
           this._resetButton();
         }, 3e3);
       }
       /* 壓縮檔案 */
-      async _compressFile(name, data, title) {
+      async _compressFile(name, title) {
         this.worker.terminate();
         this.forceCompressSignal = true;
         GM_unregisterMenuCommand2("Enforce-1");
-        data.generateZip({
+        zipper.generateZip({
           level: 9
         }, (progress) => {
           const display = `${progress.toFixed(1)} %`;
-          Syn2.title(display);
+          Lib2.title(display);
           this.button.$text(`${Transl2("封裝進度")}: ${display}`);
         }).then((zip) => {
           saveAs2(zip, `${name}.zip`);
-          Syn2.title(`✓ ${title}`);
+          Lib2.title(`✓ ${title}`);
           this.button.$text(Transl2("下載完成"));
           setTimeout(() => {
             this._resetButton();
           }, 3e3);
         }).catch((result) => {
-          Syn2.title(title);
+          Lib2.title(title);
           const errorShow = Transl2("壓縮封裝失敗");
           this.button.$text(errorShow);
-          Syn2.Log(errorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
+          Lib2.log(errorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
           setTimeout(() => {
+            Process2.Lock = false;
             this.button.disabled = false;
             this.button.$text(this.modeDisplay);
           }, 6e3);
@@ -1570,15 +1518,15 @@
       async _resetButton() {
         General2.CompleteClose && window.close();
         Process2.Lock = false;
-        const button = Syn2.$q("#Button-Container button");
+        const button = Lib2.$q("#Button-Container button");
         button.disabled = false;
         button.$text(`✓ ${this.modeDisplay}`);
       }
     };
   }
-  const { General, FileName, FetchSet, Process } = Config(Syn);
+  const { General, FileName, FetchSet, Process } = Config(Lib);
   const { Transl } = (() => {
-    const Matcher = Syn.TranslMatcher(Dict);
+    const Matcher = Lib.translMatcher(Dict);
     return {
       Transl: (Str) => Matcher[Str] ?? Str
     };
@@ -1592,8 +1540,8 @@
     }
     /* 按鈕創建 */
     async ButtonCreation() {
-      Syn.WaitElem(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
-        Syn.AddStyle(`
+      Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
+        Lib.addStyle(`
                 #Button-Container {
                     padding: 1rem;
                     font-size: 40% !important;
@@ -1625,11 +1573,11 @@
                     cursor: Synault;
                 }
             `, "Download-button-style", false);
-        Syn.$q("#Button-Container")?.remove();
+        Lib.$q("#Button-Container")?.remove();
         try {
           Files = [...Files].filter((file) => file.$text() === "Files");
           if (Files.length == 0) return;
-          const CompressMode = Syn.Local("Compression", { error: true });
+          const CompressMode = Lib.local("Compression", { error: true });
           const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
           this.Download ??= Downloader(
             // 懶加載 Download 類
@@ -1640,10 +1588,10 @@
             FileName,
             Process,
             Transl,
-            Syn,
+            Lib,
             saveAs
           );
-          Syn.createElement(Files[0], "span", {
+          Lib.createElement(Files[0], "span", {
             id: "Button-Container",
             on: {
               type: "click",
@@ -1665,8 +1613,8 @@
                         `
           });
         } catch (error) {
-          Syn.Log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
-          const Button = Syn.$q("#Button-Container button");
+          Lib.log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
+          const Button = Lib.$q("#Button-Container button");
           if (Button) {
             Button.disabled = true;
             Button.textContent = Transl("無法下載");
@@ -1676,24 +1624,24 @@
     }
     /* 一鍵開啟當前所有帖子 */
     async OpenAllPages() {
-      const card = Syn.$qa("article.post-card a");
+      const card = Lib.$qa("article.post-card a");
       if (card.length == 0) {
         throw new Error("No links found");
       }
       let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
       if (scope == null) return;
       scope = scope === "" ? "1-50" : scope;
-      for (const link of Syn.ScopeParsing(scope, card)) {
+      for (const link of Lib.scopeParse(scope, card)) {
         GM_openInTab(link.href, {
           insert: false,
           setParent: false
         });
-        await Syn.Sleep(General.BatchOpenDelay);
+        await Lib.sleep(General.BatchOpenDelay);
       }
     }
     /* 下載模式切換 */
     async DownloadModeSwitch() {
-      Syn.Local("Compression", { error: true }) ? Syn.Local("Compression", { value: false }) : Syn.Local("Compression", { value: true });
+      Lib.local("Compression", { error: true }) ? Lib.local("Compression", { value: false }) : Lib.local("Compression", { value: true });
       this.ButtonCreation();
     }
     /* 檢測創建 [ 檢測頁面創建按鈕, 創建菜單 ] */
@@ -1702,13 +1650,13 @@
       const self = this;
       GM_info.downloadMode = "browser";
       GM_info.isIncognito = true;
-      registerMenu(Syn.$url);
-      self.Content(Syn.$url) && self.ButtonCreation();
-      const UI = Menu(Syn, Transl, General, FileName, FetchSet);
+      registerMenu(Lib.$url);
+      self.Content(Lib.$url) && self.ButtonCreation();
+      const UI = Menu(Lib, Transl, General, FileName, FetchSet);
       this.Menu = new UI();
       async function registerMenu(Page) {
         if (self.Content(Page)) {
-          Syn.Menu({
+          Lib.regMenu({
             [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
           }, { reset: true });
         } else if (self.Preview(Page)) {
@@ -1718,10 +1666,10 @@
             FetchSet,
             Process,
             Transl,
-            Syn,
+            Lib,
             md5
           );
-          Syn.Menu({
+          Lib.regMenu({
             [Transl("📑 獲取帖子數據")]: () => {
               if (!Process.Lock) {
                 let Instantiate = null;
@@ -1732,7 +1680,7 @@
             [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
           }, { reset: true });
           if (General.Dev && !Process.IsNeko) {
-            Syn.Menu({
+            Lib.regMenu({
               // 不支援 Neko, 抓取邏輯不同
               "🛠️ 開發者獲取": () => {
                 const ID = prompt("輸入請求的 ID");
@@ -1745,7 +1693,7 @@
           }
         }
       }
-      Syn.onUrlChange((change) => {
+      Lib.onUrlChange((change) => {
         self.Content(change.url) && self.ButtonCreation();
         registerMenu(change.url);
       });
