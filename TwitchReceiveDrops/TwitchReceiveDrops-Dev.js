@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             0.0.17-Beta1
+// @version             2025.08.06
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -370,7 +370,7 @@
                 Online: "span.jAIlLI", // 正在觀看直播人數標籤 (觀看人數)
                 TagLabel: "span.hzGgmO", // 頻道 Tag 標籤
                 Container: "div.hTjsYU", // 頻道播放的容器
-                ContainerHandle: "div.lnRTrz .simplebar-scroll-content", // 容器滾動句柄
+                ContainerHandle: "div.scrollable-area", // 容器滾動句柄
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
             };
