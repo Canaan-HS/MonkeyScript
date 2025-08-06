@@ -31,26 +31,9 @@ export default function Downloader(
                 async function processQueue() {
                     if (queue.length > 0) {
                         const {index, url} = queue.shift();
-                        XmlRequest(index, url);
+                        FetchRequest(index, url);
                         processQueue();
                     } else {processing = false}
-                }
-
-                async function XmlRequest(index, url) {
-                    let xhr = new XMLHttpRequest();
-                    xhr.responseType = "blob";
-                    xhr.open("GET", url, true);
-                    xhr.onload = function() {
-                        if (xhr.readyState === 4 && xhr.status === 200) {
-                            postMessage({ index, url: url, blob: xhr.response, error: false });
-                        } else {
-                            FetchRequest(index, url);
-                        }
-                    }
-                    xhr.onerror = function() {
-                        FetchRequest(index, url);
-                    }
-                    xhr.send();
                 }
 
                 async function FetchRequest(index, url) {
@@ -87,7 +70,7 @@ export default function Downloader(
         }
 
         /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-        downloadTrigger() { // 下載數據, 文章標題, 作者名稱
+        downloadTrigger(sourceType) { // 下載數據, 文章標題, 作者名稱
             Lib.waitEl([
                 ".post__title, .scrape__title",
                 ".post__files, .scrape__files",
@@ -122,13 +105,16 @@ export default function Downloader(
                     fillName
                 ] = Object.keys(FileName).slice(1).map(key => this._nameAnalysis(FileName[key]));
 
-                const // 這種寫法適應於還未完全載入原圖時
-                    imgData = [...files.children]
-                        .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
-                        .filter(Boolean),
-                    finalData = General.IncludeExtras
-                        ? [...imgData, ...Lib.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] // 包含下載附加內容
-                        : imgData;
+                // 這種寫法適應於還未完全載入原圖時
+                const imgData = [...files.children]
+                    .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
+                    .filter(Boolean);
+
+                const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a");
+
+                const finalData = General.IncludeExtras
+                    ? [...imgData, ...extrasData] // 包含所有下載內容
+                    : sourceType === "Files" ? imgData : extrasData; // 根據類型選擇
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of finalData.entries()) {
@@ -420,9 +406,10 @@ export default function Downloader(
         async _resetButton() {
             General.CompleteClose && window.close();
             Process.Lock = false;
-            const button = Lib.$q("#Button-Container button");
-            button.disabled = false;
-            button.$text(`✓ ${this.modeDisplay}`);
+            Lib.$qa(".Download_Button[disabled]").forEach(button => {
+                button.disabled = false;
+                button.$text(`✓ ${this.modeDisplay}`);
+            });
         }
     }
 }
