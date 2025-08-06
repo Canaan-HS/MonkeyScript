@@ -88,7 +88,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 if (Pointer.length === 0) return;
 
                 const CompressMode = Lib.local("Compression", { error: true });
-                const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
+                const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單獨下載");
 
                 this.Download ??= Downloader( // 懶加載 Download 類
                     GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
