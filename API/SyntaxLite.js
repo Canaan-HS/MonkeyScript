@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/08/06
+// @version      2025/08/07
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -9,7 +9,6 @@
 // ==/UserScript==
 
 const Lib = (() => {
-    const $mark = {};
     const $type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const deviceCall = {
         get sX() { return window.scrollX },
@@ -260,7 +259,6 @@ const Lib = (() => {
         },
     };
 
-    const eventRecord = new Map();
     /**
      * @description 簡化版監聽器 (不檢測是否重複添加, 不回傳註冊監聽器, 只能透過 once 移除)
      * @param {element|string} element - 監聽元素, 或查找字串
@@ -304,6 +302,7 @@ const Lib = (() => {
         } catch { resolve && resolve(false) }
     };
 
+    const eventRecord = new Map();
     /**
      * ! 匹配全域的腳本建議使用 mark 定義鍵值
      * @description 添加監聽器 (可透過 offEvent 移除, element 和 type 不能有完全重複的, 否則會被排除)
@@ -478,11 +477,14 @@ const Lib = (() => {
      * addStyle(Rule, ID, RepeatAdd)
      * addScript(Rule, ID, RepeatAdd)
      */
+    const addRecord = new Set();
     const addCall = {
-        addStyle: (rule, id, repeatAdd = true) => addHead("style", rule, id, repeatAdd),
-        addScript: (rule, id, repeatAdd = true) => addHead("script", rule, id, repeatAdd),
+        addStyle: (rule, id, repeatAdd) => addHead("style", rule, id, repeatAdd),
+        addScript: (rule, id, repeatAdd) => addHead("script", rule, id, repeatAdd),
     };
-    async function addHead(type, rule, id, repeatAdd) {
+    async function addHead(type, rule, id = crypto.randomUUID(), repeatAdd = true) {
+        if (!repeatAdd && addRecord.has(id)) return;
+
         let element = document.getElementById(id);
         if (!element) {
             element = document.createElement(type);
@@ -494,9 +496,11 @@ const Lib = (() => {
             else waitEl("head").then(head => {
                 sugar.head = head;
                 head.appendChild(element);
-            });
-        } else if (!repeatAdd) return;
+            })
+        };
+
         element.textContent += rule;
+        addRecord.add(id);
     };
 
     /**
@@ -525,6 +529,7 @@ const Lib = (() => {
      *    ob.observe(document.body, op); // 重建觀察器
      * });
      */
+    const observerRecord = new Set();
     async function $observer(target, onFunc, options = {}, callback = null) {
         const {
             mark = "",
@@ -537,7 +542,7 @@ const Lib = (() => {
         } = options || {};
 
         if (mark) {
-            if ($mark[mark]) { return } else { $mark[mark] = true }
+            if (observerRecord.has(mark)) { return } else { observerRecord.add(mark) };
         };
 
         const [rateFunc, delayMs] = debounce > 0 ? [$debounce, debounce] : [$throttle, throttle];
@@ -1031,10 +1036,11 @@ const Lib = (() => {
      *      console.log(call.key, call.nv);
      * })
      */
+    const listenRecord = new Set();
     async function storeListen(object, callback) {
         object.forEach(label => {
-            if (!$mark[label]) {
-                $mark[label] = true;
+            if (!listenRecord.has(label)) {
+                listenRecord.add(label);
                 GM_addValueChangeListener(label, function (key, old_value, new_value, remote) {
                     callback({ key, ov: old_value, nv: new_value, far: remote });
                 })
