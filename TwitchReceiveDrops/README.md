@@ -94,7 +94,7 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.17-Beta1**
+**Release Version: 2025.08.06**
 
 ### **Updates**
 1. Website changes adaptation fix
