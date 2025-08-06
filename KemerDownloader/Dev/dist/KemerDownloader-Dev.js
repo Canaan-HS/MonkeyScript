@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      0.0.21-Beta8
+// @version      2025.08.06-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1636325/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1636681/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -94,120 +94,10 @@
     const Process2 = {
       IsNeko: Lib2.$domain.startsWith("nekohouse"),
       ImageExts: [
-        "jpg",
-        "jpeg",
-        "png",
-        "gif",
-        "bmp",
-        "webp",
-        "tiff",
-        "tif",
-        "svg",
-        "heic",
-        "heif",
-        "raw",
-        "ico",
-        "avif",
-        "jxl",
-        "cr2",
-        "nef",
-        "arw",
-        "orf",
-        "rw2",
-        "tga",
-        "pcx",
-        "crw",
-        "cr2",
-        "cr3",
-        "dng",
-        "eps",
-        "xcf",
-        "ai",
-        "psd",
-        "psb",
-        "pef",
-        "nrw",
-        "ptx",
-        "srf",
-        "sr2",
-        "raf",
-        "rwl",
-        "3fr",
-        "fff",
-        "iiq",
-        "x3f",
-        "ari",
-        "bay",
-        "dcr",
-        "kdc",
-        "mef",
-        "mos",
-        "dng",
-        "usdz",
-        "jxr",
-        "cdr",
-        "wmf",
-        "emf",
-        "dxf",
-        "svgz",
-        "obj",
-        "fbx",
-        "stl",
-        "gltf",
-        "glb",
-        "gltf",
-        "glb",
-        "dae",
-        "blend",
-        "max",
-        "c4d",
-        "step",
-        "stp",
-        "iges"
+        "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"
       ],
       VideoExts: [
-        "mp4",
-        "avi",
-        "mkv",
-        "mov",
-        "flv",
-        "wmv",
-        "webm",
-        "mpg",
-        "mpeg",
-        "m4v",
-        "ogv",
-        "3gp",
-        "asf",
-        "ts",
-        "vob",
-        "rm",
-        "rmvb",
-        "m2ts",
-        "f4v",
-        "mts",
-        "mpe",
-        "mpv",
-        "m2v",
-        "m4a",
-        "bdmv",
-        "ifo",
-        "r3d",
-        "braw",
-        "cine",
-        "qt",
-        "f4p",
-        "swf",
-        "mng",
-        "gifv",
-        "yuv",
-        "roq",
-        "nsv",
-        "amv",
-        "svi",
-        "mod",
-        "mxf",
-        "ogg"
+        "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"
       ],
       Lock: false,
       dynamicParam: Lib2.createNnetworkObserver({
@@ -1012,217 +902,6 @@
       }
     };
   }
-  function Menu(Lib2, Transl2, General2, FileName2, FetchSet2) {
-    return class UI {
-      constructor() {
-        this.overlay = null;
-        this.shadow = Lib2.createElement(document.body, "div", { id: "kemer-settings" });
-        this.shadowRoot = this.shadow.attachShadow({ mode: "open" });
-        this._loadUi();
-      }
-      open() {
-        this.overlay.style.display = "flex";
-        setTimeout(() => this.overlay.classList.add("visible"), 10);
-      }
-      close() {
-        this.overlay.classList.remove("visible");
-        setTimeout(() => {
-          this.overlay.style.display = "none";
-        }, 200);
-      }
-      _getStyles() {
-        const color = {
-          Primary: {
-            "kemono": "#e8a17d",
-            "coomer": "#99ddff",
-            "nekohouse": "#bb91ff"
-          }[Lib2.$domain.split(".")[0]],
-          Background: "#2c2c2e",
-          BackgroundLight: "#3a3a3c",
-          Border: "#545458",
-          Text: "#f5f5f7",
-          TextSecondary: "#8e8e93"
-        };
-        return `
-                :host { --primary-color: ${color.Primary}; font-size: 16px; }
-                #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); }
-                #modal { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: ${color.Background}; color: ${color.Text}; border-radius: 14px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); transform: scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
-                #overlay.visible #modal { transform: scale(1); opacity: 1; }
-                .header h2 { margin: 0 0 16px 0; font-size: 1.5em; font-weight: 600; text-align: center; }
-                .tabs { display: flex; border-bottom: 1px solid ${color.Border}; margin-bottom: 16px; }
-                .tab-link { padding: 10px 16px; cursor: pointer; background: none; border: none; color: ${color.TextSecondary}; font-size: 1em; font-weight: 500; transition: color 0.2s, border-bottom 0.2s; border-bottom: 3px solid transparent; }
-                .tab-link.active { color: #fff; border-bottom: 3px solid var(--primary-color); }
-                .tab-content { display: none; } .tab-content.active { display: block; }
-                .form-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 14px 4px; border-bottom: 1px solid ${color.BackgroundLight}; }
-                .form-row:last-child { border-bottom: none; }
-                .form-row-full { grid-template-columns: 1fr; }
-                .form-row label { display: flex; align-items: center; gap: 8px; font-size: 0.95em; }
-                .tooltip-icon { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; border-radius: 50%; background-color: #555; color: #fff; font-weight: bold; cursor: help; position: relative; font-size: 14px; }
-                .tooltip-icon.separate { margin-left: 8px; }
-                .tooltip-icon:hover::after { content: attr(data-tooltip); z-index: 9999; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%); background-color: #1c1c1e; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.8em; width: max-content; max-width: 250px; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid ${color.Border}; }
-                .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
-                .switch input { opacity: 0; width: 0; height: 0; }
-                .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; }
-                .slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
-                input:checked + .slider { background-color: var(--primary-color); }
-                input:checked + .slider:before { transform: translateX(22px); }
-                .slider.round { border-radius: 28px; } .slider.round:before { border-radius: 50%; }
-                input[type="text"], select { background-color: ${color.BackgroundLight}; border: 1px solid ${color.Border}; color: ${color.Text}; border-radius: 8px; padding: 10px; width: 120px; text-align: center; font-size: 0.9em; }
-                .accordion { border: 1px solid ${color.Border}; border-radius: 8px; margin-bottom: 16px; background-color: ${color.BackgroundLight}; overflow: hidden; }
-                .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 14px; background-color: ${color.BackgroundLight}; }
-                .accordion-icon { transition: transform 0.3s ease; font-size: 12px; }
-                .accordion-content { max-height: 0; overflow: hidden; position: relative; transition: max-height 0.3s ease-out, padding 0.3s ease-out; padding: 0 14px; }
-                .accordion-toggle:checked + .accordion-header .accordion-icon { transform: rotate(90deg); }
-                .accordion-toggle:checked ~ .accordion-content { max-height: 200px; padding: 14px; }
-                #fetch-conditional-settings { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
-                .conditional-trigger:checked + .form-row + #fetch-conditional-settings { max-height: 500px; }
-                .conditional-trigger:checked + .form-row .switch .slider { background-color: var(--primary-color); }
-                .conditional-trigger:checked + .form-row .switch .slider:before { transform: translateX(22px); }
-                .multi-select { align-items: start; }
-                .multi-select-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
-                .multi-select-btn input { display: none; }
-                .multi-select-btn span { display: block; text-align: center; padding: 8px 12px; border: 1px solid ${color.Border}; border-radius: 16px; cursor: pointer; transition: all 0.2s; font-size: 0.85em; }
-                .multi-select-btn input:checked + span { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-                pre { background-color: #1c1c1e; border: 1px solid #545458; border-radius: 8px; padding: 15px; overflow-x: auto; font-size: 0.85em; line-height: 1.4; color: #e0e0e0; }
-                code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; }
-            `;
-      }
-      _createHTML() {
-        const createFormItems = (settings, category) => {
-          return Object.entries(settings).map(([key, value]) => {
-            if (key === "Dev" || category === "FetchSet" && (key === "Mode" || key === "Format")) return "";
-            const type = typeof value;
-            const label = Transl2(key);
-            const id = `${category}-${key}`;
-            const tooltip = `<span class="tooltip-icon" data-tooltip="${Transl2("說明")}">!</span>`;
-            if (category === "FetchSet" && key === "UseFormat") {
-              return `
-                        <input type="checkbox" id="${id}" class="conditional-trigger" style="display: none;" ${value ? "checked" : ""}>
-                        <div class="form-row">
-                            <label for="${id}">${label}${tooltip}</label>
-                            <label class="switch" for="${id}">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                        ${this._createFetchConditionalItems()}
-                    `;
-            } else if (type === "boolean") {
-              return `
-                        <div class="form-row">
-                            <label for="${id}">${label}${tooltip}</label>
-                            <label class="switch">
-                                <input type="checkbox" id="${id}" ${value ? "checked" : ""}>
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    `;
-            } else if (key === "FillValue") {
-              return `
-                        <div class="accordion form-row-full">
-                            <input type="checkbox" id="accordion-${id}" class="accordion-toggle" style="display: none;">
-                            <label class="accordion-header" for="accordion-${id}">
-                                <span>${label}</span>
-                                <span class="accordion-icon">▶</span>
-                            </label>
-                            <div class="accordion-content">
-                                <div class="form-row">
-                                    <label for="${id}-Filler">${Transl2("Filler")}<span class="tooltip-icon" data-tooltip="${Transl2("FillerHelp")}">!</span></label>
-                                    <input type="text" id="${id}-Filler" value="${value.Filler}">
-                                </div>
-                                <div class="form-row">
-                                    <label for="${id}-Amount">${Transl2("Amount")}<span class="tooltip-icon" data-tooltip="${Transl2("AmountHelp")}">!</span></label>
-                                    <input type="text" id="${id}-Amount" value="${value.Amount}">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-            } else if (type === "string" || type === "number") {
-              return `
-                        <div class="form-row">
-                            <label for="${id}">${label}${tooltip}</label>
-                            <input type="text" id="${id}" value="${value}">
-                        </div>
-                    `;
-            }
-            return "";
-          }).join("");
-        };
-        const fileNameConfigContent = `
-                \r{Time} | ${Transl2("發佈時間")}
-                \r{Title} | ${Transl2("標題")}
-                \r{Artist} | ${Transl2("作者|繪師")}
-                \r{Source} | ${Transl2("(Pixiv Fanbox) 之類的標籤")}
-                \r{Fill} | ${Transl2("只適用於檔名的填充值, 必須存在該值")}
-            `;
-        return `
-                <div id="overlay">
-                    <div id="modal">
-                        <div class="header"><h2>${Transl2("Settings")}</h2></div>
-                        <div class="tabs">
-                            <button class="tab-link active" data-tab="tab-config">${Transl2("General")}</button>
-                            <button class="tab-link" data-tab="tab-filename">${Transl2("FileName")}</button>
-                            <button class="tab-link" data-tab="tab-fetch">${Transl2("FetchSet")}</button>
-                        </div>
-                        <div class="tab-content active" id="tab-config">${createFormItems(General2, "General")}</div>
-                        <div class="tab-content" id="tab-filename">
-                            ${createFormItems(FileName2, "FileName")}
-                            <pre class="filename-config-display">${fileNameConfigContent}</pre>
-                        </div>
-                        <div class="tab-content" id="tab-fetch">${createFormItems(FetchSet2, "FetchSet")}</div>
-                    </div>
-                </div>
-            `;
-      }
-      _createFetchConditionalItems() {
-        const modeHtml = `
-                <div class="form-row">
-                    <label for="fetch-Mode">${Transl2("Mode")}<span class="tooltip-icon" data-tooltip="${Transl2("模式說明")}">!</span></label>
-                    <select id="fetch-Mode">
-                        <option value="FilterMode" ${FetchSet2.Mode === "FilterMode" ? "selected" : ""}>${Transl2("FilterMode")}</option>
-                        <option value="OnlyMode" ${FetchSet2.Mode === "OnlyMode" ? "selected" : ""}>${Transl2("OnlyMode")}</option>
-                    </select>
-                </div>
-            `;
-        const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
-        const formatButtons = formatOptions.map((opt) => `
-                <label class="multi-select-btn">
-                    <input type="checkbox" name="fetch-Format" value="${opt}" ${FetchSet2.Format.includes(opt) ? "checked" : ""}>
-                    <span>${Transl2(opt)}</span>
-                </label>
-            `).join("");
-        const formatHtml = `
-                <div class="form-row multi-select form-row-full">
-                    <label>${Transl2("Format")}<span class="tooltip-icon" data-tooltip="${Transl2("格式說明")}">!</span></label>
-                    <div class="multi-select-group">${formatButtons}</div>
-                </div>
-            `;
-        return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
-      }
-      _UiSwitchEvent() {
-        this.overlay = Lib2.$Q(this.shadowRoot, "#overlay");
-        Lib2.onE(this.overlay, "click", (event) => {
-          const target = event.target;
-          const tagName = target.tagName;
-          if (tagName === "BUTTON") {
-            if (target.classList.contains("active")) return;
-            Lib2.$Q(this.shadowRoot, "button.active").classList.remove("active");
-            Lib2.$Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
-            target.classList.add("active");
-            Lib2.$Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
-          } else if (target === this.overlay) {
-            this.close();
-          }
-        });
-      }
-      _loadUi() {
-        this.shadowRoot.innerHTML = `
-                <style>${this._getStyles()}</style>
-                ${this._createHTML()}
-            `;
-        this._UiSwitchEvent();
-      }
-    };
-  }
   function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Lib2, saveAs2) {
     const zipper = Lib2.createCompressor();
     return class Download {
@@ -1247,26 +926,9 @@
                 async function processQueue() {
                     if (queue.length > 0) {
                         const {index, url} = queue.shift();
-                        XmlRequest(index, url);
+                        FetchRequest(index, url);
                         processQueue();
                     } else {processing = false}
-                }
-
-                async function XmlRequest(index, url) {
-                    let xhr = new XMLHttpRequest();
-                    xhr.responseType = "blob";
-                    xhr.open("GET", url, true);
-                    xhr.onload = function() {
-                        if (xhr.readyState === 4 && xhr.status === 200) {
-                            postMessage({ index, url: url, blob: xhr.response, error: false });
-                        } else {
-                            FetchRequest(index, url);
-                        }
-                    }
-                    xhr.onerror = function() {
-                        FetchRequest(index, url);
-                    }
-                    xhr.send();
                 }
 
                 async function FetchRequest(index, url) {
@@ -1299,7 +961,7 @@
         } else;
       }
       /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-      downloadTrigger() {
+      downloadTrigger(sourceType) {
         Lib2.waitEl([
           ".post__title, .scrape__title",
           ".post__files, .scrape__files",
@@ -1331,7 +993,9 @@
             folderName,
             fillName
           ] = Object.keys(FileName2).slice(1).map((key) => this._nameAnalysis(FileName2[key]));
-          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean), finalData = General2.IncludeExtras ? [...imgData, ...Lib2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a")] : imgData;
+          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
+          const extrasData = Lib2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a");
+          const finalData = General2.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
           for (const [index, file] of finalData.entries()) {
             const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
             if (uri) {
@@ -1518,9 +1182,10 @@
       async _resetButton() {
         General2.CompleteClose && window.close();
         Process2.Lock = false;
-        const button = Lib2.$q("#Button-Container button");
-        button.disabled = false;
-        button.$text(`✓ ${this.modeDisplay}`);
+        Lib2.$qa(".Download_Button[disabled]").forEach((button) => {
+          button.disabled = false;
+          button.$text(`✓ ${this.modeDisplay}`);
+        });
       }
     };
   }
@@ -1541,6 +1206,7 @@
     /* 按鈕創建 */
     async ButtonCreation() {
       Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
+        if (Files.length === 0) return;
         Lib.addStyle(`
                 #Button-Container {
                     padding: 1rem;
@@ -1573,10 +1239,17 @@
                     cursor: Synault;
                 }
             `, "Download-button-style", false);
-        Lib.$q("#Button-Container")?.remove();
         try {
-          Files = [...Files].filter((file) => file.$text() === "Files");
-          if (Files.length == 0) return;
+          Lib.$qa("[id^='Button-Container-']").forEach((button) => button.remove());
+          const Pointer = [...Files].filter((file) => {
+            const text = file.$text();
+            if (text === "Downloads" || text === "Files") {
+              file.id = text;
+              return true;
+            }
+            return false;
+          });
+          if (Pointer.length === 0) return;
           const CompressMode = Lib.local("Compression", { error: true });
           const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
           this.Download ??= Downloader(
@@ -1591,26 +1264,34 @@
             Lib,
             saveAs
           );
-          Lib.createElement(Files[0], "span", {
-            id: "Button-Container",
-            on: {
-              type: "click",
-              listener: (event) => {
-                const target = event.target;
-                if (target.tagName === "BUTTON") {
-                  let Instantiate = null;
-                  Instantiate = new this.Download(CompressMode, ModeDisplay, target);
-                  Instantiate.downloadTrigger();
-                } else if (target.closest("svg")) {
-                  this.Menu.open();
-                }
+          Pointer.forEach((pointer, index) => {
+            Lib.createElement(pointer, "span", {
+              id: `Button-Container-${index}`,
+              on: {
+                type: "click",
+                listener: (event) => {
+                  const target = event.target;
+                  if (target.tagName === "BUTTON") {
+                    if (Process.Lock) {
+                      target.$text(Transl("下載中鎖定"));
+                      target.disabled = true;
+                      return;
+                    }
+                    ;
+                    let Instantiate = null;
+                    Instantiate = new this.Download(CompressMode, ModeDisplay, target);
+                    Instantiate.downloadTrigger(target.closest("h2").id);
+                  } else if (target.closest("svg")) {
+                    alert("Currently Invalid");
+                  }
+                },
+                add: { capture: true, passive: true }
               },
-              add: { capture: true, passive: true }
-            },
-            innerHTML: `
+              innerHTML: `
                             <svg class="Setting_Button" xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
                             <button class="Download_Button" ${Process.Lock ? "disabled" : ""}>${Process.Lock ? Transl("下載中鎖定") : ModeDisplay}</button>
                         `
+            });
           });
         } catch (error) {
           Lib.log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
@@ -1652,8 +1333,6 @@
       GM_info.isIncognito = true;
       registerMenu(Lib.$url);
       self.Content(Lib.$url) && self.ButtonCreation();
-      const UI = Menu(Lib, Transl, General, FileName, FetchSet);
-      this.Menu = new UI();
       async function registerMenu(Page) {
         if (self.Content(Page)) {
           Lib.regMenu({
