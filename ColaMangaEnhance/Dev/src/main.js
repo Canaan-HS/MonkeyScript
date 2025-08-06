@@ -196,7 +196,7 @@ async function HotkeySwitch(Use) {
                 }
 
                 Param.MangaList = Manga; // 漫畫列表
-                Param.BottomStrip = Readend.$q("a"); // 以閱讀完畢的那條, 看到他跳轉
+                Param.BottomStrip = Readend.$q(".endtip2"); // 底部黃條
 
                 if ([
                     Param.Body,
