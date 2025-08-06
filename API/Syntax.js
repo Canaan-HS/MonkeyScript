@@ -53,7 +53,7 @@ const Lib = (() => {
     function selector(root = document, select, all) {
         const head = select[0];
         const headless = select.slice(1);
-        const complicated = /[ #.\[:]/.test(headless);
+        const complicated = /[ .#:[\]>+~*,()^$=]/.test(headless);
 
         if (complicated) {
             return all ? root.querySelectorAll(select) : root.querySelector(select);
