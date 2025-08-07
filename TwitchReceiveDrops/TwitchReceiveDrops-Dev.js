@@ -556,7 +556,7 @@
     };
 
     /* 使窗口保持活躍 */
-    async function StayActive(Target) {
+    async function StayActive(target) {
         const script = document.createElement("script");
         script.id = "Stay-Active";
         script.textContent = `
@@ -564,23 +564,48 @@
                 const blob = new Blob([code], {type: "application/javascript"});
                 return new Worker(URL.createObjectURL(blob));
             }
+
             const Active = WorkerCreation(\`
                 onmessage = function(e) {
-                    setTimeout(()=> {
-                        const {url} = e.data;
+                    setTimeout(() => {
+                        const { url } = e.data;
                         fetch(url);
-                        postMessage({url});
+                        postMessage({ url });
                     }, 1e4);
                 }
             \`);
-            Active.postMessage({ url: location.href});
+
+            Active.postMessage({ url: location.href });
             Active.onmessage = (e) => {
                 const { url } = e.data;
                 document.querySelector("video")?.play();
-                Active.postMessage({ url: url});
+                Active.postMessage({ url });
             };
+
+            let emptyAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA...");
+            emptyAudio.loop = true;
+            emptyAudio.muted = true;
+
+            // 後台播放 / 前台暫停
+            const visHandler = (isHidden) => {
+                if (typeof isHidden !== 'boolean') isHidden = document.hidden;
+                if (isHidden) {
+                    emptyAudio.play().catch(()=>{});
+                } else {
+                    emptyAudio.pause();
+                }
+            };
+
+            if (typeof document.hidden !== "undefined") {
+                document.addEventListener("visibilitychange", () => visHandler());
+            } else {
+                window.addEventListener("focus", () => visHandler(false));
+                window.addEventListener("blur", () => visHandler(true));
+            }
+
+            visHandler();
         `;
-        Target.head.append(script);
+        target.head.append(script);
     };
 
     if (Object.keys(Backup).length > 0) {
