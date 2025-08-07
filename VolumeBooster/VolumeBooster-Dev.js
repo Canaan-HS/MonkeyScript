@@ -25,25 +25,25 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1637297/SyntaxLite_min.js
 // ==/UserScript==
 
 (async () => {
 
-    const { Transl } = Language(); // 語言翻譯
+    const { transl } = Language(); // 語言翻譯
 
     const BannedDomains = (() => {
-        let Banned = new Set(Syn.gV("Banned", [])); // 禁用網域
-        let ExcludeStatus = Banned.has(Syn.$domain); // 排除狀態
+        let Banned = new Set(Lib.getV("Banned", [])); // 禁用網域
+        let ExcludeStatus = Banned.has(Lib.$domain); // 排除狀態
 
         return {
             IsEnabled: (callback) => callback(!ExcludeStatus), // 返回排除狀態
             AddBanned: async () => {
                 ExcludeStatus
-                    ? Banned.delete(Syn.$domain)
-                    : Banned.add(Syn.$domain);
+                    ? Banned.delete(Lib.$domain)
+                    : Banned.add(Lib.$domain);
 
-                Syn.sV("Banned", [...Banned]); // 更新禁用網域
+                Lib.setV("Banned", [...Banned]); // 更新禁用網域
                 location.reload(); // 重新加載頁面
             }
         }
@@ -64,7 +64,7 @@
         const audioContext = window.AudioContext || window.webkitAudioContext; // 音頻上下文
 
         const updateParame = () => {
-            let Config = Syn.gV(Syn.$domain, {}); // 獲取當前網域設置
+            let Config = Lib.getV(Lib.$domain, {}); // 獲取當前網域設置
 
             if (typeof Config === "number") {
                 Config = { Gain: Config }; // 舊數據轉移
@@ -89,7 +89,7 @@
 
         /* 註冊快捷鍵(開啟菜單) */
         const menuHotkey = async () => {
-            Syn.onEvent(document, "keydown", event => {
+            Lib.onEvent(document, "keydown", event => {
                 if (event.altKey && event.key.toUpperCase() == "B") EnhancerMenu();
             }, { passive: true, capture: true, mark: "Volume-Booster-Hotkey" });
         };
@@ -97,7 +97,7 @@
         /* 增強處理 */
         function boosterCore(media_object) {
             try {
-                if (!audioContext) throw new Error(Transl("不支援音頻增強節點"));
+                if (!audioContext) throw new Error(transl("不支援音頻增強節點"));
                 if (!mediaAudioContent) mediaAudioContent = new audioContext();
                 if (mediaAudioContent.state === "suspended") mediaAudioContent.resume();
 
@@ -109,10 +109,9 @@
                     if (
                         media.mediaKeys || media.encrypted // 檢查 DRM 保護
                         || (window.MediaSource && media.srcObject instanceof MediaSource) // 檢查 MSE
-                        || media.readyState === 0 // 檢查未載入
                     ) {
-                        Syn.Log(
-                            Transl("不支援的媒體跳過"), media, { collapsed: false }
+                        Lib.log(
+                            transl("不支援的媒體跳過"), media, { collapsed: false }
                         );
                         continue;
                     };
@@ -128,7 +127,7 @@
                         const CompressorNode = mediaAudioContent.createDynamicsCompressor(); // 動態壓縮節點
 
                         // 設置初始增量
-                        GainNode.gain.value = parame.Gain ** 2;
+                        GainNode.gain.value = parame.Gain;
 
                         /* 低音慮波增強 */
                         LowFilterNode.type = "lowshelf";
@@ -182,8 +181,8 @@
                         // 紀錄增強成功的節點
                         successNode.push(media);
                     } catch (e) {
-                        Syn.Log(
-                            Transl("添加增強節點失敗"), media, { collapsed: false }
+                        Lib.log(
+                            transl("添加增強節點失敗"), media, { collapsed: false }
                         );
                     }
                 };
@@ -192,8 +191,8 @@
                 if (successNode.length > 0) {
                     processing = false;
 
-                    Syn.Log(
-                        Transl("添加增強節點成功"), successNode, { collapsed: false }
+                    Lib.log(
+                        transl("添加增強節點成功"), successNode, { collapsed: false }
                     );
 
                     // 初始化創建
@@ -201,13 +200,13 @@
                         initialized = true;
                         menuHotkey();
 
-                        Syn.Menu({
-                            [Transl("📜 菜單熱鍵")]: () => alert(Transl("熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)")),
-                            [Transl("🛠️ 調整菜單")]: () => EnhancerMenu()
+                        Lib.regMenu({
+                            [transl("📜 菜單熱鍵")]: () => alert(transl("熱鍵呼叫調整菜單!!\n\n快捷組合 : (Alt + B)")),
+                            [transl("🛠️ 調整菜單")]: () => EnhancerMenu()
                         }, { index: 2 });
 
-                        Syn.StoreListen([Syn.$domain], call => { // 全局監聽保存值變化
-                            if (call.far && call.key == Syn.$domain) { // 由遠端且觸發網域相同
+                        Lib.storeListen([Lib.$domain], call => { // 全局監聽保存值變化
+                            if (call.far && call.key == Lib.$domain) { // 由遠端且觸發網域相同
                                 Object.entries(call.nv).forEach(([type, value]) => {
                                     controller.setBooster(type, value); // 更新增強參數
                                 })
@@ -220,12 +219,12 @@
                     setBooster: (type, value) => { // 設置增強參數
                         parame[type] = value; // 更新增強參數 (原始值)
                         enhancedNodes.forEach(items => {
-                            items[type].value = value ** 2; // 次方增加
+                            items[type].value = value;
                         })
                     }
                 }
             } catch (error) {
-                Syn.Log(Transl("增強錯誤"), error, { type: "error", collapsed: false });
+                Lib.log(transl("增強錯誤"), error, { type: "error", collapsed: false });
             }
         };
 
@@ -238,14 +237,14 @@
 
                 controller = boosterCore(media);
             } catch (error) {
-                Syn.Log("Trigger Error : ", error, { type: "error", collapsed: false });
+                Lib.log("Trigger Error : ", error, { type: "error", collapsed: false });
             }
         };
 
         function start() {
             BannedDomains.IsEnabled(Status => {
                 const menu = async (name) => { // 簡化註冊菜單
-                    Syn.Menu({
+                    Lib.regMenu({
                         [name]: () => BannedDomains.AddBanned()
                     })
                 };
@@ -253,11 +252,11 @@
                 if (Status) {
 
                     // 查找媒體元素
-                    const findMedia = Syn.Debounce((func) => {
+                    const findMedia = Lib.$debounce((func) => {
                         const media = [];
 
                         const tree = document.createTreeWalker(
-                            Syn.body,
+                            Lib.body,
                             NodeFilter.SHOW_ELEMENT,
                             {
                                 acceptNode: (node) => {
@@ -281,7 +280,7 @@
                     }, 50);
 
                     // 觀察者持續觸發查找
-                    Syn.Observer(document.body, () => {
+                    Lib.$observer(Lib.body, () => {
                         if (processing) return;
 
                         findMedia(media => {
@@ -290,10 +289,15 @@
                         })
 
                     }, { mark: "Media-Booster", attributes: false, throttle: 200 }, () => {
-                        menu(Transl("❌ 禁用增幅"));
+                        menu(transl("❌ 禁用增幅"));
                     });
 
-                } else menu(Transl("✅ 啟用增幅"));
+                    // 網址變化
+                    Lib.onUrlChange(() => {
+                        processedElements.clear();
+                    });
+
+                } else menu(transl("✅ 啟用增幅"));
             })
         };
 
@@ -306,7 +310,7 @@
 
     /* 語言翻譯 */
     function Language() {
-        const Word = Syn.TranslMatcher({
+        const Word = Lib.translMatcher({
             Traditional: {},
             Simplified: {
                 "📜 菜單熱鍵": "📜 菜单热键",
@@ -369,7 +373,7 @@
         });
 
         return {
-            Transl: (Str) => Word[Str] ?? Str
+            transl: (Str) => Word[Str] ?? Str
         }
     };
 
@@ -380,9 +384,9 @@
     /* 調整菜單 */
     async function EnhancerMenu() {
         const shadowID = "Booster_Modal_Background";
-        if (Syn.$q(`#${shadowID}`)) return;
+        if (Lib.$q(`#${shadowID}`)) return;
 
-        const shadow = Syn.createElement("div", { id: shadowID });
+        const shadow = Lib.createElement(Lib.body, "div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
 
         const style = `
@@ -628,7 +632,8 @@
                 }
                 .Booster-Value {
                     padding: 0 1rem;
-                    font-weight: 600;
+                    font-size: larger;
+                    font-weight: bolder;
                     color: var(--highlight-color);
                 }
                 .Booster-Mini-Slider {
@@ -688,21 +693,21 @@
             ${style}
             <Booster_Modal_Background id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
-                    <h2 class="Booster-Title">${Transl("音量增強器")}</h2>
+                    <h2 class="Booster-Title">${transl("音量增強器")}</h2>
 
                     <div class="Booster-Multiplier">
                         <span>
-                            <img src="${GM_getResourceURL("Img")}">${Transl("增強倍數 ")}
-                            <span id="Gain-Value" class="Booster-Value"> ${parame.Gain} </span>${Transl(" 倍")}
+                            <img src="${GM_getResourceURL("Img")}">${transl("增強倍數 ")}
+                            <span id="Gain-Value" class="Booster-Value">${parame.Gain}</span>${transl(" 倍")}
                         </span>
                         <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${parame.Gain}" step="0.1">
                     </div>
 
-                    <button class="Booster-Accordion">${Transl("低頻設定")}</button>
+                    <button class="Booster-Accordion">${transl("低頻設定")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("增益")}</span>
+                                <span>${transl("增益")}</span>
                                 <span id="LowFilterGain-Value" class="Booster-Value">${parame.LowFilterGain}</span>
                             </div>
                             <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${parame.LowFilterGain}" step="0.1">
@@ -710,18 +715,18 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("頻率")}</span>
+                                <span>${transl("頻率")}</span>
                                 <span id="LowFilterFreq-Value" class="Booster-Value">${parame.LowFilterFreq}</span>
                             </div>
                             <input type="range" id="LowFilterFreq" class="Booster-Mini-Slider" min="20" max="1000" value="${parame.LowFilterFreq}" step="20">
                         </div>
                     </div>
 
-                    <button class="Booster-Accordion">${Transl("中頻設定")}</button>
+                    <button class="Booster-Accordion">${transl("中頻設定")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("增益")}</span>
+                                <span>${transl("增益")}</span>
                                 <span id="MidFilterGain-Value" class="Booster-Value">${parame.MidFilterGain}</span>
                             </div>
                             <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${parame.MidFilterGain}" step="0.1">
@@ -729,7 +734,7 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("頻率")}</span>
+                                <span>${transl("頻率")}</span>
                                 <span id="MidFilterFreq-Value" class="Booster-Value">${parame.MidFilterFreq}</span>
                             </div>
                             <input type="range" id="MidFilterFreq" class="Booster-Mini-Slider" min="200" max="8000" value="${parame.MidFilterFreq}" step="100">
@@ -737,18 +742,18 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("Q值")}</span>
+                                <span>${transl("Q值")}</span>
                                 <span id="MidFilterQ-Value" class="Booster-Value">${parame.MidFilterQ}</span>
                             </div>
                             <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.5" max="5" value="${parame.MidFilterQ}" step="0.1">
                         </div>
                     </div>
 
-                    <button class="Booster-Accordion">${Transl("高頻設定")}</button>
+                    <button class="Booster-Accordion">${transl("高頻設定")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("增益")}</span>
+                                <span>${transl("增益")}</span>
                                 <span id="HighFilterGain-Value" class="Booster-Value">${parame.HighFilterGain}</span>
                             </div>
                             <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${parame.HighFilterGain}" step="0.1">
@@ -756,18 +761,18 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("頻率")}</span>
+                                <span>${transl("頻率")}</span>
                                 <span id="HighFilterFreq-Value" class="Booster-Value">${parame.HighFilterFreq}</span>
                             </div>
                             <input type="range" id="HighFilterFreq" class="Booster-Mini-Slider" min="2000" max="22000" value="${parame.HighFilterFreq}" step="500">
                         </div>
                     </div>
 
-                    <button class="Booster-Accordion">${Transl("動態壓縮")}</button>
+                    <button class="Booster-Accordion">${transl("動態壓縮")}</button>
                     <div class="Booster-Panel">
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("壓縮率")}</span>
+                                <span>${transl("壓縮率")}</span>
                                 <span id="CompressorRatio-Value" class="Booster-Value">${parame.CompressorRatio}</span>
                             </div>
                             <input type="range" id="CompressorRatio" class="Booster-Mini-Slider" min="1" max="30" value="${parame.CompressorRatio}" step="0.1">
@@ -775,7 +780,7 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("過渡反應")}</span>
+                                <span>${transl("過渡反應")}</span>
                                 <span id="CompressorKnee-Value" class="Booster-Value">${parame.CompressorKnee}</span>
                             </div>
                             <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${parame.CompressorKnee}" step="1">
@@ -783,7 +788,7 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("閾值")}</span>
+                                <span>${transl("閾值")}</span>
                                 <span id="CompressorThreshold-Value" class="Booster-Value">${parame.CompressorThreshold}</span>
                             </div>
                             <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-60" max="0" value="${parame.CompressorThreshold}" step="1">
@@ -791,7 +796,7 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("起音速度")}</span>
+                                <span>${transl("起音速度")}</span>
                                 <span id="CompressorAttack-Value" class="Booster-Value">${parame.CompressorAttack}</span>
                             </div>
                             <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0.001" max="0.5" value="${parame.CompressorAttack}" step="0.001">
@@ -799,7 +804,7 @@
 
                         <div class="Booster-Control-Group">
                             <div class="Booster-Control-Label">
-                                <span>${Transl("釋放速度")}</span>
+                                <span>${transl("釋放速度")}</span>
                                 <span id="CompressorRelease-Value" class="Booster-Value">${parame.CompressorRelease}</span>
                             </div>
                             <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0.01" max="2" value="${parame.CompressorRelease}" step="0.01">
@@ -807,23 +812,21 @@
                     </div>
 
                     <div class="Booster-Buttons">
-                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${Transl("關閉")}</button>
-                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${Transl("保存")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${transl("關閉")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${transl("保存")}</button>
                     </div>
                 </div>
             </Booster_Modal_Background>
         `);
 
-        document.body.appendChild(shadow);
-
         const shadowGate = shadow.shadowRoot;
-        const Modal = shadowGate.querySelector("Booster_Modal_Background");
-        const Content = shadowGate.querySelector(".Booster-Modal-Content");
+        const modal = shadowGate.querySelector("Booster_Modal_Background");
+        const content = shadowGate.querySelector(".Booster-Modal-Content");
 
         // 關閉菜單
         function DeleteMenu() {
-            Modal.classList.add("close");
-            Content.classList.add("close");
+            modal.classList.add("close");
+            content.classList.add("close");
 
             setTimeout(() => {
                 shadow.remove();
@@ -838,7 +841,7 @@
         };
 
         // 監聽滑桿變化
-        Content.addEventListener("input", event => {
+        content.addEventListener("input", event => {
             const target = event.target;
 
             const id = target.id;
@@ -849,7 +852,7 @@
         });
 
         // 監聽保存關閉
-        Modal.addEventListener("click", click => {
+        modal.addEventListener("click", click => {
             const target = click.target;
             click.stopPropagation();
 
@@ -866,12 +869,12 @@
                 }
 
             } else if (target.id === "Booster-Sound-Save") {
-                Syn.sV(Syn.domain, parame);
+                Lib.setV(Lib.domain, parame);
                 DeleteMenu();
             } else if (
                 target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu"
             ) {
-                DeleteMenu()
+                DeleteMenu();
             }
         });
     };
