@@ -192,7 +192,7 @@ $window.FindName("Compiler").Add_Click({
             $OpenPath = $Compile_Output_UPath
         }
         "Mode3" { # google-closure-compiler 進階壓縮
-            google-closure-compiler $Path --compilation_level ADVANCED --language_out ECMASCRIPT_NEXT --js_output_file $Compile_Output_GPath
+            google-closure-compiler $Path --language_out ECMASCRIPT_NEXT --js_output_file $Compile_Output_GPath
             $OpenPath = $Compile_Output_GPath
         }
         "Mode4" { # uglifyjs(壓縮) + google-closure-compiler(預設)
