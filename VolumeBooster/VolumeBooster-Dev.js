@@ -378,7 +378,7 @@
         const shadow = Syn.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
 
-        shadowRoot.$iHtml(`
+        const style = `
             <style id="Booster-Menu">
                 :host {
                     --primary-color: #3a7bfd;
@@ -674,7 +674,10 @@
                     }
                 }
             </style>
+        `;
 
+        shadowRoot.$iHtml(`
+            ${style}
             <Booster_Modal_Background id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
                     <h2 class="Booster-Title">${Transl("音量增強器")}</h2>
@@ -802,6 +805,7 @@
                 </div>
             </Booster_Modal_Background>
         `);
+
         document.body.appendChild(shadow);
 
         const shadowGate = shadow.shadowRoot;
