@@ -1,4 +1,4 @@
-import meta from './ColaMangaEnhance/Dev/src/metadata.js';
+import meta from './xxx/Dev/src/metadata.js';
 
 function parseMeta(meta) {
   if (typeof meta !== 'string') {
