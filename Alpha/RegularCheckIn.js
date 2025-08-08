@@ -12,7 +12,6 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/10233/10233926.png
 
-// @run-at       document-start
 // @grant        GM_info
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -23,6 +22,9 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.3.1/dist/index.umd.min.js
+// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
+
+// @run-at       document-start
 // ==/UserScript==
 
 (async () => {
@@ -86,7 +88,7 @@
     ];
 
     // 建立簽到請求
-    function CreateRequest({ Name, API, verifyStatus }) {
+    function createRequest({ Name, API, verifyStatus }) {
 
         const deBug = (Result) => {
             console.table(Object.assign({ name: Name }, Result));
@@ -125,27 +127,7 @@
         }
     };
 
-    const ListenerRecord = new WeakMap();
-    Object.assign(EventTarget.prototype, {
-        one(type, listener, add = {}) {
-            this.addEventListener(type, listener, add);
-        },
-        onEvent(type, listener, options = {}) {
-            const record = ListenerRecord.get(this);
-            if (record?.has(type)) return;
-            this.addEventListener(type, listener, options);
-            if (!record) ListenerRecord.set(this, new Map());
-            ListenerRecord.get(this).set(type, listener);
-        },
-        offEvent(type) {
-            const listen = ListenerRecord.get(this)?.get(type);
-            if (!listen) return;
-            this.removeEventListener(type, listen);
-            ListenerRecord.get(this).delete(type);
-        }
-    });
-
-    const RegisterTask = (() => {
+    const createTask = (() => {
         let Stop = false;
         let Registered = false;
 
@@ -156,18 +138,18 @@
         async function DestroyReset() {
             Stop = true;
             clearTimeout(Timers);
-            document.offEvent("visibilitychange");
+            Lib.offEvent(document, "visibilitychange");
             GM_removeValueChangeListener(Listeners);
 
             // 恢復預設狀態
-            requestIdleCallback(() => {
+            setTimeout(() => {
                 Stop = false;
                 Registered = false;
             })
         };
 
         // 註冊變化監聽器
-        async function Listener(name) {
+        async function changeListener(name) {
             Listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
                 if (remote) { // 來自其他窗口修改
                     DestroyReset();
@@ -199,7 +181,7 @@
         };
 
         // 格式化時間
-        function TimeFormat(time) {
+        function timeFormat(time) {
             const year = time.getFullYear();
             const month = `${time.getMonth() + 1}`.padStart(2, "0");
             const date = `${time.getDate()}`.padStart(2, "0");
@@ -217,7 +199,7 @@
         };
 
         // 計算簽到時間
-        function CheckInTime(newDate) {
+        function getCheckInTime(newDate) {
             const tomorrow = new Date();
             tomorrow.setDate(newDate.getDate() + 1); // 設置隔天時間
             tomorrow.setHours(0, 0, 3, 0); // 00:03
@@ -225,47 +207,54 @@
         };
 
         // 更新記錄
-        function SetNewRecord(newDate) {
-            GM_setValue(Config.TimerKey, {
-                RecordTime: TimeFormat(newDate),
-                CheckInTime: TimeFormat(CheckInTime(newDate))
+        function setTimestamp(newDate) {
+            Lib.setV(Config.TimerKey, {
+                RecordTime: timeFormat(newDate),
+                CheckInTime: timeFormat(getCheckInTime(newDate))
             })
         };
 
         // 任務詢輪
-        function Query(newDate = new Date()) {
+        function taskQuery(newDate = new Date()) {
             /*
+                ! 未實現
+
                 Todo: 將 RecordTime 紀錄移除, 保留 CheckInTime
-                Todo: 將 CheckInTime 的格式改成 {CheckInTime: {"時間戳": ["任務"], "時間戳2": ["任務2"]}}, 已自定個別任務時間
+                Todo: 將 CheckInTime 的格式改成 {CheckInTime: {"時間戳": ["任務"], "時間戳2": ["任務2"]}}, 可自訂個別任務時間
+
                 * 檢查時所有的時間戳都會被檢查, 然後當有命中的時間戳, 紀錄的任務必須同時命中, 此處的任務表 與 有在任務列表內的, 如果沒特定時間
                 * 將會被設置為 {"時間戳": ["All"]}, 輪詢始終只創建一個
                 * 可能的定義與解析: const time = "01:05:30".split(":").map(value => parseInt(value));
             */
             if (Stop) return;
 
-            const Tasks = GM_getValue(Config.TaskKey, []); // 取得任務列表
+            const Tasks = Lib.getV(Config.TaskKey, []); // 取得任務列表
 
             // 料表類型錯誤, 直接複寫空陣列
             if (!Array.isArray(Tasks)) {
-                GM_setValue(Config.TaskKey, []);
+                Lib.setV(Config.TaskKey, []);
 
-                Config.Dev && console.log("錯誤的任務列表, 詢輪已被停止");
+                Lib.log(null, "錯誤的任務列表, 詢輪已被停止", {
+                    dev: Config.Dev, type: "error"
+                });
                 return;
             };
 
             // 沒有任務不執行 (並清除不需要的值)
             if (Tasks.length === 0) {
-                GM_deleteValue(Config.TaskKey);
-                GM_deleteValue(Config.TimerKey);
-                GM_deleteValue(Config.RegisterKey);
+                Lib.delV(Config.TaskKey);
+                Lib.delV(Config.TimerKey);
+                Lib.delV(Config.RegisterKey);
 
                 DestroyReset();
-                Config.Dev && console.log("沒有任務, 詢輪已被停止");
+                Lib.log(null, "沒有任務, 詢輪已被停止", {
+                    dev: Config.Dev, type: "error"
+                });
                 return;
             };
 
             try {
-                const TaskTimer = GM_getValue(Config.TimerKey); // 取得時間戳
+                const TaskTimer = Lib.getV(Config.TimerKey); // 取得時間戳
 
                 if (TaskTimer) {
                     const CheckInDate = TaskTimer['CheckInTime']; // 主要驗證
@@ -275,12 +264,11 @@
                         navigator.onLine && newDate > new Date(CheckInDate) // 有網路時, 當前時間 > 簽到時間
                         || RecordDate && isPrevious(newDate, new Date(RecordDate)) // 判斷紀錄時間是前一天
                     ) { // 執行簽到
-                        SetNewRecord(newDate); // 更新記錄 (避免多次觸發, 嘗試提前更新記錄)
 
                         // ! 暫時檢測
                         console.log({
                             "網路狀態": navigator.onLine,
-                            "當前時間": TimeFormat(newDate),
+                            "當前時間": timeFormat(newDate),
                             "簽到觸發": newDate > new Date(CheckInDate),
                             "紀錄時間": RecordDate,
                             "前一天": isPrevious(newDate, new Date(RecordDate))
@@ -291,34 +279,48 @@
 
                         for (const Task of Task_List) {
                             if (!EnabledTask.has(Task.Name)) continue; // 判斷是否啟用
+                            if (Lib.getV(`${Task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
 
                             setTimeout(() => {
-                                CreateRequest(Task).Run();
+                                createRequest(Task).Run();
+                                Lib.setV(`${Task.Name}-CheckIn`, true);
                             }, Math.max(Index++ * 2000)); // 每個任務間隔 2 秒
                         }
+
+                        // ? 嘗試確保所有任務都簽到
+                        const allCheckIn = Task_List.every(({ Name }) => Lib.getV(`${Name}-CheckIn`));
+
+                        if (allCheckIn) {
+                            EnabledTask.clear();
+                            setTimestamp(newDate); // 更新時間戳
+
+                            Task_List.forEach(({ Name }) => { // 清除簽到記錄
+                                Lib.delV(`${Name}-CheckIn`);
+                            })
+                        };
                     } else DisplayTrigger(newDate, new Date(CheckInDate));
 
                 } else throw new Error("沒有時間戳記錄");
             } catch {
-                SetNewRecord(newDate);
+                setTimestamp(newDate);
             };
 
-            Timers = setTimeout(Query, 1e4); // 10 秒詢輪
+            Timers = setTimeout(taskQuery, 1e4); // 10 秒詢輪
         };
 
         return {
-            Register: () => {
+            register: () => {
                 if (Registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
                 Registered = true;
 
-                GM_setValue(Config.RegisterKey, TimeFormat(new Date())); // 紀錄註冊時間
-                Listener(Config.RegisterKey); // 監聽註冊時間變化
-                Query(); // 開始檢測
+                Lib.setV(Config.RegisterKey, timeFormat(new Date())); // 紀錄註冊時間
+                changeListener(Config.RegisterKey); // 監聽註冊時間變化
+                taskQuery(); // 開始檢測
 
-                document.onEvent("visibilitychange", () => {
+                Lib.onEvent(document, "visibilitychange", () => {
                     if (document.visibilityState === "visible") {
                         clearTimeout(Timers); // 清除舊的定時器
-                        Query(); // 重新檢測
+                        taskQuery(); // 重新檢測
                     }
                 });
 
@@ -339,7 +341,7 @@
         };
 
         // 雙擊確認
-        function DoubleClickConfirm(callback, delay) {
+        function doubleClickConfirm(callback, delay) {
             let lastTime = 0;
             let timerId;
 
@@ -369,22 +371,22 @@
         };
 
         // 取得任務列表
-        const EnabledTask = new Set(GM_getValue(Config.TaskKey, []));
+        const EnabledTask = new Set(Lib.getV(Config.TaskKey, []));
         // 根據版本號判斷菜單是否自動關閉
         const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
         // 透過菜單啟用任務
-        async function EnableTask() {
+        async function enableTask() {
 
             // 有任務時註冊
             if (EnabledTask.size > 0) {
-                RegisterTask.Register();
+                createTask.register();
             };
 
             for (const [Index, Task] of Task_List.entries()) {
                 const Icon = EnabledTask.has(Task.Name) ? "🟢" : "🔴";
 
-                GM_registerMenuCommand(`${Icon} ${Task.Name}`, DoubleClickConfirm((Open) => {
+                GM_registerMenuCommand(`${Icon} ${Task.Name}`, doubleClickConfirm((Open) => {
 
                     if (Open) {
                         const Url = Task['Page'];
@@ -396,8 +398,8 @@
                         ? EnabledTask.delete(Task.Name)
                         : EnabledTask.add(Task.Name);
 
-                    GM_setValue(Config.TaskKey, [...EnabledTask]);
-                    EnableTask(); // 遞迴更新狀態
+                    Lib.setV(Config.TaskKey, [...EnabledTask]);
+                    enableTask(); // 遞迴更新狀態
                 }, 200), {
                     id: `CheckIn-${Index}`,
                     autoClose
@@ -407,8 +409,8 @@
         };
 
         if (document.visibilityState === "hidden") {
-            document.one("visibilitychange", () => EnableTask(), { once: true });
-        } else EnableTask();
+            Lib.onE(document, "visibilitychange", () => enableTask(), { once: true });
+        } else enableTask();
     })();
 
 })();
