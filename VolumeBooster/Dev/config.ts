@@ -25,7 +25,7 @@ export default {
             'Img': 'https://cdn-icons-png.flaticon.com/512/11243/11243783.png',
         },
         require: [
-            'https://update.greasyfork.org/scripts/487608/1637297/SyntaxLite_min.js',
+            'https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js',
 
             util.dataUrl(`window.Lib=Lib`)
         ]
