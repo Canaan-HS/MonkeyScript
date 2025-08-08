@@ -21,7 +21,9 @@ export default {
             'GM_registerMenuCommand',
             'GM_addValueChangeListener'
         ],
-        resource: 'Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png',
+        resource: {
+            'Img': 'https://cdn-icons-png.flaticon.com/512/11243/11243783.png',
+        },
         require: [
             'https://update.greasyfork.org/scripts/487608/1637297/SyntaxLite_min.js',
 
