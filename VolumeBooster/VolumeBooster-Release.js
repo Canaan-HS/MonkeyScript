@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      0.0.42-Beta
+// @version      2025.08.08-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -17,7 +17,6 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -25,14 +24,43 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
+
+// @run-at       document-body
 // ==/UserScript==
 
-(async () => {
-    async function y() {
-        function h() { u.classList.add("close"); v.classList.add("close"); setTimeout(() => { g.remove() }, 800) } if (!Syn.$q("#Booster_Modal_Background")) {
-            var g = Syn.createElement("div", { id: "Booster_Modal_Background" }); g.attachShadow({ mode: "open" }).$iHtml(`
-            <style id="Booster-Menu">
+(function() {
+    const Share = {
+        Parame: null,
+        SetControl: null
+    };
+    const Default = {
+        Gain: 1,
+        LowFilterGain: 1.2,
+        LowFilterFreq: 200,
+        MidFilterQ: 1,
+        MidFilterGain: 1.6,
+        MidFilterFreq: 2e3,
+        HighFilterGain: 1.8,
+        HighFilterFreq: 1e4,
+        CompressorRatio: 3,
+        CompressorKnee: 4,
+        CompressorThreshold: -8,
+        CompressorAttack: .03,
+        CompressorRelease: .2
+    };
+    function CreateMenu(Lib2, Share2, Img, Transl2) {
+        return async () => {
+            const shadowID = "Booster_Menu";
+            if (Lib2.$q(`#${shadowID}`)) return;
+            const shadow = Lib2.createElement(Lib2.body, "div", {
+                id: shadowID
+            });
+            const shadowRoot = shadow.attachShadow({
+                mode: "open"
+            });
+            const style = `
+            <style>
                 :host {
                     --primary-color: #3a7bfd;
                     --secondary-color: #00d4ff;
@@ -42,8 +70,10 @@
                     --background-panel: #252b3a;
                     --highlight-color: #00e5ff;
                     --border-radius: 12px;
+                    --hover-bg: rgba(0, 229, 255, 0.06);
+                    --hover-border: rgba(0, 229, 255, 0.15);
                 }
-                Booster_Modal_Background {
+                ${shadowID} {
                     top: 0;
                     left: 0;
                     width: 100%;
@@ -59,7 +89,7 @@
                     transition: opacity 0.4s ease;
                     background-color: rgba(0, 0, 0, 0.4);
                 }
-                Booster_Modal_Background.close {
+                ${shadowID}.close {
                     animation: fadeOut 0.4s ease forwards;
                 }
                 .Booster-Modal-Content {
@@ -272,10 +302,6 @@
                     font-size: 14px;
                     color: rgba(255, 255, 255, 0.8);
                 }
-                .Booster-Value {
-                    color: var(--highlight-color);
-                    font-weight: 600;
-                }
                 .Booster-Mini-Slider {
                     -webkit-appearance: none;
                     appearance: none;
@@ -307,214 +333,559 @@
                     border-radius: 2px;
                     height: 4px;
                 }
+                .Booster-Label {
+                    padding: 0.1rem 0.2rem;
+                    font-size: larger;
+                    font-weight: bolder;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    min-width: 50px;
+                    text-align: center;
+                    color: var(--highlight-color);
+                    transition: background-color 0.2s;
+                }
+                .Booster-Label:hover {
+                    background-color: var(--hover-bg);
+                    border-color: var(--hover-border);
+                    box-shadow: 0 0 0.5rem rgba(0, 229, 255, 0.12);
+                    transform: translateY(-1px);
+                }
+                .Booster-Label-Input {
+                    width: 60px;
+                    padding: 2px 5px;
+                    font-size: 18px;
+                    font-weight: bolder;
+                    color: var(--text-color);
+                    background-color: var(--background-panel);
+                    border: 1px solid var(--primary-color);
+                    border-radius: 4px;
+                    text-align: center;
+                    outline: none;
+                }
                 @keyframes fadeOut {
-                    from {
-                        opacity: 1;
-                    }
-                    to {
-                        opacity: 0;
-                        pointer-events: none;
-                    }
+                    from {opacity: 1;}
+                    to {opacity: 0; pointer-events: none;}
                 }
                 @keyframes shrinkFadeOut {
-                    from {
-                        transform: scale(1);
-                        opacity: 1;
-                    }
-                    to {
-                        transform: scale(0.5);
-                        opacity: 0;
-                    }
+                    from {transform: scale(1); opacity: 1;}
+                    to {transform: scale(0.5); opacity: 0;}
                 }
             </style>
-
-            <Booster_Modal_Background id="Booster-Modal-Menu">
+        `;
+            const generateOtherTemplate = (label, groups) => `
+            <button class="Booster-Accordion">${Transl2(label)}</button>
+            <div class="Booster-Panel">
+                ${groups.map(group => `
+                    <div class="Booster-Control-Group">
+                        <div class="Booster-Control-Label">
+                            <span>${Transl2(group.label)}</span>
+                            <span id="${group.id}-Label" class="Booster-Label">${Share2.Parame[group.id]}</span>
+                        </div>
+                        <input type="range" id="${group.id}" class="Booster-Mini-Slider" min="${group.min}" max="${group.max}" value="${Share2.Parame[group.id]}" step="${group.step}">
+                    </div>
+                `).join("")}
+            </div>
+        `;
+            shadowRoot.$iHtml(`
+            ${style}
+            <${shadowID} id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
-                    <h2 class="Booster-Title">${c("\u97f3\u91cf\u589e\u5f37\u5668")}</h2>
 
+                    <h2 class="Booster-Title">${Transl2("音量增強器")}</h2>
                     <div class="Booster-Multiplier">
                         <span>
-                            <img src="${GM_getResourceURL("Img")}">${c("\u589e\u5f37\u500d\u6578 ")}
-                            <span id="Gain-Value" class="Booster-Value">${d.Gain}</span>${c(" \u500d")}
+                            <img src="${Img}">${Transl2("增強倍數 ")}
+                            <span id="Gain-Label" class="Booster-Label">${Share2.Parame.Gain}</span>${Transl2(" 倍")}
                         </span>
-                        <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${d.Gain}" step="0.1">
+                        <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${Share2.Parame.Gain}" step="0.1">
                     </div>
 
-                    <button class="Booster-Accordion">${c("\u4f4e\u983b\u8a2d\u5b9a")}</button>
-                    <div class="Booster-Panel">
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u589e\u76ca")}</span>
-                                <span id="LowFilterGain-Value" class="Booster-Value">${d.LowFilterGain}</span>
-                            </div>
-                            <input type="range" id="LowFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.LowFilterGain}" step="0.1">
-                        </div>
+            ${generateOtherTemplate("低頻設定", [ {
+                label: "增益",
+                id: "LowFilterGain",
+                min: "-12",
+                max: "12",
+                step: "0.1"
+            }, {
+                label: "頻率",
+                id: "LowFilterFreq",
+                min: "20",
+                max: "1000",
+                step: "20"
+            } ])}
 
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u983b\u7387")}</span>
-                                <span id="LowFilterFreq-Value" class="Booster-Value">${d.LowFilterFreq}</span>
-                            </div>
-                            <input type="range" id="LowFilterFreq" class="Booster-Mini-Slider" min="20" max="1000" value="${d.LowFilterFreq}" step="20">
-                        </div>
-                    </div>
+            ${generateOtherTemplate("中頻設定", [ {
+                label: "增益",
+                id: "MidFilterGain",
+                min: "-12",
+                max: "12",
+                step: "0.1"
+            }, {
+                label: "頻率",
+                id: "MidFilterFreq",
+                min: "200",
+                max: "8000",
+                step: "100"
+            }, {
+                label: "Q值",
+                id: "MidFilterQ",
+                min: "0.5",
+                max: "5",
+                step: "0.1"
+            } ])}
 
-                    <button class="Booster-Accordion">${c("\u4e2d\u983b\u8a2d\u5b9a")}</button>
-                    <div class="Booster-Panel">
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u589e\u76ca")}</span>
-                                <span id="MidFilterGain-Value" class="Booster-Value">${d.MidFilterGain}</span>
-                            </div>
-                            <input type="range" id="MidFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.MidFilterGain}" step="0.1">
-                        </div>
+            ${generateOtherTemplate("高頻設定", [ {
+                label: "增益",
+                id: "HighFilterGain",
+                min: "-12",
+                max: "12",
+                step: "0.1"
+            }, {
+                label: "頻率",
+                id: "HighFilterFreq",
+                min: "2000",
+                max: "22000",
+                step: "500"
+            } ])}
 
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u983b\u7387")}</span>
-                                <span id="MidFilterFreq-Value" class="Booster-Value">${d.MidFilterFreq}</span>
-                            </div>
-                            <input type="range" id="MidFilterFreq" class="Booster-Mini-Slider" min="200" max="8000" value="${d.MidFilterFreq}" step="100">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("Q\u503c")}</span>
-                                <span id="MidFilterQ-Value" class="Booster-Value">${d.MidFilterQ}</span>
-                            </div>
-                            <input type="range" id="MidFilterQ" class="Booster-Mini-Slider" min="0.5" max="5" value="${d.MidFilterQ}" step="0.1">
-                        </div>
-                    </div>
-
-                    <button class="Booster-Accordion">${c("\u9ad8\u983b\u8a2d\u5b9a")}</button>
-                    <div class="Booster-Panel">
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u589e\u76ca")}</span>
-                                <span id="HighFilterGain-Value" class="Booster-Value">${d.HighFilterGain}</span>
-                            </div>
-                            <input type="range" id="HighFilterGain" class="Booster-Mini-Slider" min="-12" max="12" value="${d.HighFilterGain}" step="0.1">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u983b\u7387")}</span>
-                                <span id="HighFilterFreq-Value" class="Booster-Value">${d.HighFilterFreq}</span>
-                            </div>
-                            <input type="range" id="HighFilterFreq" class="Booster-Mini-Slider" min="2000" max="22000" value="${d.HighFilterFreq}" step="500">
-                        </div>
-                    </div>
-
-                    <button class="Booster-Accordion">${c("\u52d5\u614b\u58d3\u7e2e")}</button>
-                    <div class="Booster-Panel">
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u58d3\u7e2e\u7387")}</span>
-                                <span id="CompressorRatio-Value" class="Booster-Value">${d.CompressorRatio}</span>
-                            </div>
-                            <input type="range" id="CompressorRatio" class="Booster-Mini-Slider" min="1" max="30" value="${d.CompressorRatio}" step="0.1">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u904e\u6e21\u53cd\u61c9")}</span>
-                                <span id="CompressorKnee-Value" class="Booster-Value">${d.CompressorKnee}</span>
-                            </div>
-                            <input type="range" id="CompressorKnee" class="Booster-Mini-Slider" min="0" max="40" value="${d.CompressorKnee}" step="1">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u95be\u503c")}</span>
-                                <span id="CompressorThreshold-Value" class="Booster-Value">${d.CompressorThreshold}</span>
-                            </div>
-                            <input type="range" id="CompressorThreshold" class="Booster-Mini-Slider" min="-60" max="0" value="${d.CompressorThreshold}" step="1">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u8d77\u97f3\u901f\u5ea6")}</span>
-                                <span id="CompressorAttack-Value" class="Booster-Value">${d.CompressorAttack}</span>
-                            </div>
-                            <input type="range" id="CompressorAttack" class="Booster-Mini-Slider" min="0.001" max="0.5" value="${d.CompressorAttack}" step="0.001">
-                        </div>
-
-                        <div class="Booster-Control-Group">
-                            <div class="Booster-Control-Label">
-                                <span>${c("\u91cb\u653e\u901f\u5ea6")}</span>
-                                <span id="CompressorRelease-Value" class="Booster-Value">${d.CompressorRelease}</span>
-                            </div>
-                            <input type="range" id="CompressorRelease" class="Booster-Mini-Slider" min="0.01" max="2" value="${d.CompressorRelease}" step="0.01">
-                        </div>
-                    </div>
+            ${generateOtherTemplate("動態壓縮", [ {
+                label: "壓縮率",
+                id: "CompressorRatio",
+                min: "1",
+                max: "30",
+                step: "0.1"
+            }, {
+                label: "過渡反應",
+                id: "CompressorKnee",
+                min: "0",
+                max: "40",
+                step: "1"
+            }, {
+                label: "閾值",
+                id: "CompressorThreshold",
+                min: "-60",
+                max: "0",
+                step: "1"
+            }, {
+                label: "起音速度",
+                id: "CompressorAttack",
+                min: "0.001",
+                max: "0.5",
+                step: "0.001"
+            }, {
+                label: "釋放速度",
+                id: "CompressorRelease",
+                min: "0.01",
+                max: "2",
+                step: "0.01"
+            } ])}
 
                     <div class="Booster-Buttons">
-                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${c("\u95dc\u9589")}</button>
-                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${c("\u4fdd\u5b58")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Menu-Close">${Transl2("關閉")}</button>
+                        <button class="Booster-Modal-Button" id="Booster-Sound-Save">${Transl2("保存")}</button>
                     </div>
                 </div>
-            </Booster_Modal_Background>
-        `); document.body.appendChild(g); var n = g.shadowRoot, u = n.querySelector("Booster_Modal_Background"), v = n.querySelector(".Booster-Modal-Content"), x = { ...Object.fromEntries([...n.querySelectorAll(".Booster-Value")].map(a => [a.id, a])) }; v.addEventListener("input", a => { var f = a.target; a = f.id; f = f.value; x[`${a}-Value`].textContent = f; C(a, f) }); u.addEventListener("click", a => {
-                const f = a.target; a.stopPropagation(); f.classList.contains("Booster-Accordion") ? (f.classList.toggle("active"), a = f.nextElementSibling, a.style.maxHeight ?
-                    (a.style.maxHeight = null, a.classList.remove("active")) : (a.style.maxHeight = a.scrollHeight + "px", a.classList.add("active"))) : "Booster-Sound-Save" === f.id ? (Syn.sV(Syn.domain, d), h()) : "Booster-Menu-Close" !== f.id && "Booster-Modal-Menu" !== f.id || h()
-            })
-        }
-    } const { Transl: c } = function () {
-        const h = Syn.TranslMatcher({
-            Traditional: {}, Simplified: {
-                "\ud83d\udcdc \u83dc\u55ae\u71b1\u9375": "\ud83d\udcdc \u83dc\u5355\u70ed\u952e", "\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae": "\ud83d\udee0\ufe0f \u8c03\u6574\u83dc\u5355", "\u274c \u7981\u7528\u589e\u5e45": "\u274c \u7981\u7528\u589e\u5e45",
-                "\u2705 \u555f\u7528\u589e\u5e45": "\u2705 \u542f\u7528\u589e\u5e45", "\u589e\u5f37\u932f\u8aa4": "\u589e\u5f3a\u9519\u8bef", "\u97f3\u91cf\u589e\u5f37\u5668": "\u97f3\u91cf\u589e\u5f3a\u5668", "\u589e\u5f37\u500d\u6578 ": "\u589e\u5f3a\u500d\u6570 ", " \u500d": " \u500d", "\u589e\u76ca": "\u589e\u76ca", "\u983b\u7387": "\u9891\u7387", "Q\u503c": "Q\u503c", "\u4f4e\u983b\u8a2d\u5b9a": "\u4f4e\u9891\u8bbe\u7f6e", "\u4e2d\u983b\u8a2d\u5b9a": "\u4e2d\u9891\u8bbe\u7f6e", "\u9ad8\u983b\u8a2d\u5b9a": "\u9ad8\u9891\u8bbe\u7f6e",
-                "\u52d5\u614b\u58d3\u7e2e": "\u52a8\u6001\u538b\u7f29", "\u58d3\u7e2e\u7387": "\u538b\u7f29\u7387", "\u904e\u6e21\u53cd\u61c9": "\u8fc7\u6e21\u53cd\u5e94", "\u95be\u503c": "\u9608\u503c", "\u8d77\u97f3\u901f\u5ea6": "\u8d77\u97f3\u901f\u5ea6", "\u91cb\u653e\u901f\u5ea6": "\u91ca\u653e\u901f\u5ea6", "\u95dc\u9589": "\u5173\u95ed", "\u4fdd\u5b58": "\u4fdd\u5b58", "\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede": "\u4e0d\u652f\u6301\u97f3\u9891\u589e\u5f3a\u8282\u70b9", "\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f": "\u6dfb\u52a0\u589e\u5f3a\u8282\u70b9\u6210\u529f",
-                "\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)": "\u70ed\u952e\u8c03\u7528\u8c03\u6574\u83dc\u5355!!\n\n\u5feb\u6377\u7ec4\u5408 : (Alt + B)"
-            }, English: {
-                "\ud83d\udcdc \u83dc\u55ae\u71b1\u9375": "\ud83d\udcdc Menu Hotkey", "\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae": "\ud83d\udee0\ufe0f Adjustment Menu", "\u274c \u7981\u7528\u589e\u5e45": "\u274c Disable Amplification", "\u2705 \u555f\u7528\u589e\u5e45": "\u2705 Enable Amplification", "\u589e\u5f37\u932f\u8aa4": "Enhancement Error",
-                "\u97f3\u91cf\u589e\u5f37\u5668": "Volume Booster", "\u589e\u5f37\u500d\u6578 ": "Enhancement Factor ", " \u500d": " times", "\u589e\u76ca": "Gain", "\u983b\u7387": "Frequency", "Q\u503c": "Q Factor", "\u4f4e\u983b\u8a2d\u5b9a": "Low Frequency Settings", "\u4e2d\u983b\u8a2d\u5b9a": "Mid Frequency Settings", "\u9ad8\u983b\u8a2d\u5b9a": "High Frequency Settings", "\u52d5\u614b\u58d3\u7e2e": "Dynamic Compression", "\u58d3\u7e2e\u7387": "Compression Ratio", "\u904e\u6e21\u53cd\u61c9": "Knee", "\u95be\u503c": "Threshold", "\u8d77\u97f3\u901f\u5ea6": "Attack Time",
-                "\u91cb\u653e\u901f\u5ea6": "Release Time", "\u95dc\u9589": "Close", "\u4fdd\u5b58": "Save", "\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede": "Audio Enhancement Node Not Supported", "\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f": "Enhancement Node Added Successfully", "\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)": "Hotkey Menu Opened!!\n\nShortcut Combination: (Alt + B)"
+            </${shadowID}>
+        `);
+            const shadowGate = shadow.shadowRoot;
+            const modal = shadowGate.querySelector(shadowID);
+            const content = shadowGate.querySelector(".Booster-Modal-Content");
+            function deleteMenu() {
+                modal.classList.add("close");
+                content.classList.add("close");
+                setTimeout(() => {
+                    shadow.remove();
+                }, 800);
             }
-        }); return { Transl: g => h[g] ?? g }
-    }(), z = (() => {
-        let h = new Set(Syn.gV("Banned", [])); var g =
-            Syn.gV("BannedDomains_v2"); g && (g = Object.keys(g), Syn.sV("Banned", g), Syn.dV("BannedDomains_v2"), h = new Set(g)); let n = h.has(Syn.$domain); return { IsEnabled: u => u(!n), AddBanned: async () => { n ? h.delete(Syn.$domain) : h.add(Syn.$domain); Syn.sV("Banned", [...h]); location.reload() } }
-    })(), { Start: D, SetControl: C, Parame: d } = function () {
-        function h(q) {
-            try {
-                if (!A) throw Error(c("\u4e0d\u652f\u63f4\u97f3\u983b\u589e\u5f37\u7bc0\u9ede")); p ||= new A; "suspended" === p.state && p.resume(); const w = f.length; for (const e of q) {
-                    e.crossOrigin ||
-                    (e.crossOrigin = "anonymous"); if (e.mediaKeys || e.encrypted || 0 < e.textTracks.length) continue; const k = p.createMediaElementSource(e), b = p.createGain(), r = p.createBiquadFilter(), l = p.createBiquadFilter(), t = p.createBiquadFilter(), m = p.createDynamicsCompressor(); b.gain.value = a.Gain; r.type = "lowshelf"; r.gain.value = a.LowFilterGain; r.frequency.value = a.LowFilterFreq; l.type = "peaking"; l.Q.value = a.MidFilterQ; l.gain.value = a.MidFilterGain; l.frequency.value = a.MidFilterFreq; t.type = "highshelf"; t.gain.value = a.HighFilterGain;
-                    t.frequency.value = a.HighFilterFreq; m.ratio.value = a.CompressorRatio; m.knee.value = a.CompressorKnee; m.threshold.value = a.CompressorThreshold; m.attack.value = a.CompressorAttack; m.release.value = a.CompressorRelease; k.connect(b).connect(r).connect(l).connect(t).connect(m).connect(p.destination); f.push({
-                        Gain: b.gain, LowFilterGain: r.gain, LowFilterFreq: r.frequency, MidFilterQ: l.Q, MidFilterGain: l.gain, MidFilterFreq: l.frequency, HighFilterGain: t.gain, HighFilterFreq: t.frequency, CompressorRatio: m.ratio, CompressorKnee: m.knee,
-                        CompressorThreshold: m.threshold, CompressorAttack: m.attack, CompressorRelease: m.release
-                    }); B.set(e, !0)
-                } f.length > w && (Syn.Log(c("\u6dfb\u52a0\u589e\u5f37\u7bc0\u9ede\u6210\u529f"), { "Booster Media : ": q }, { collapsed: !1 }), g || (g = !0, E(), Syn.Menu({ [c("\ud83d\udcdc \u83dc\u55ae\u71b1\u9375")]: () => alert(c("\u71b1\u9375\u547c\u53eb\u8abf\u6574\u83dc\u55ae!!\n\n\u5feb\u6377\u7d44\u5408 : (Alt + B)")), [c("\ud83d\udee0\ufe0f \u8abf\u6574\u83dc\u55ae")]: () => y() }, { index: 2 }), Syn.StoreListen([Syn.$domain], e => {
-                    e.far &&
-                    e.key == Syn.$domain && Object.entries(e.nv).forEach(([k, b]) => { v.SetBooster(k, b) })
-                }))); setTimeout(() => { n.observe(document, u) }, 3E3); return { SetBooster: (e, k) => { a[e] = k; f.forEach(b => { b[e].value = k }) } }
-            } catch (w) { Syn.Log(c("\u589e\u5f37\u932f\u8aa4"), w, { type: "error", collapsed: !1 }) }
-        } let g = !1, n = null, u = null, v = null, x = !1; const a = {}, f = [], B = new Map; let p = null; const A = window.AudioContext || window.webkitAudioContext, E = async () => {
-            Syn.onEvent(document, "keydown", q => { q.altKey && "B" == q.key.toUpperCase() && y() }, {
-                passive: !0, capture: !0,
-                mark: "Volume-Booster-Hotkey"
-            })
-        }; return {
-            Start: function () {
-                z.IsEnabled(q => {
-                    const w = async e => { Syn.Menu({ [e]: () => z.AddBanned() }) }; if (q) {
-                        const e = Syn.Debounce(k => { const b = [], r = document.createTreeWalker(Syn.body, NodeFilter.SHOW_ELEMENT, { acceptNode: l => { const t = l.tagName; return "VIDEO" !== t && "AUDIO" !== t || B.has(l) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT } }); for (; r.nextNode();)b.push(r.currentNode); 0 < b.length && k(b) }, 50); Syn.Observer(document, () => {
-                            e(k => {
-                                n.disconnect(); try {
-                                    if (!x) {
-                                        x = !0; let b = Syn.gV(Syn.$domain,
-                                            {}); "number" === typeof b && (b = { Gain: b }); Object.assign(a, {
-                                                Gain: b.Gain ?? 1, LowFilterGain: b.LowFilterGain ?? 1.2, LowFilterFreq: b.LowFilterFrequency ?? 200, MidFilterQ: b.MidFilterQ ?? 1, MidFilterGain: b.MidFilterGain ?? 1.6, MidFilterFreq: b.MidFilterFrequency ?? 2E3, HighFilterGain: b.HighFilterGain ?? 1.8, HighFilterFreq: b.HighFilterFreq ?? 1E4, CompressorRatio: b.CompressorRatio ?? 3, CompressorKnee: b.CompressorKnee ?? 4, CompressorThreshold: b.CompressorThreshold ?? -8, CompressorAttack: b.CompressorAttack ?? .03, CompressorRelease: b.CompressorRelease ??
-                                                    .2
-                                            })
-                                    } v = h(k)
-                                } catch (b) { Syn.Log("Trigger Error : ", b, { type: "error", collapsed: !1 }) }
-                            })
-                        }, { mark: "Media-Booster", attributes: !1, throttle: 200 }, ({ ob: k, op: b }) => { n = k; u = b; w(c("\u274c \u7981\u7528\u589e\u5e45")) })
-                    } else w(c("\u2705 \u555f\u7528\u589e\u5e45"))
-                })
-            }, SetControl: (...q) => v.SetBooster(...q), Parame: a
+            const displayMap = {
+                ...Object.fromEntries([ ...shadowGate.querySelectorAll(".Booster-Label") ].map(el => [ el.id, el ]))
+            };
+            function updateControl(id, value) {
+                displayMap[`${id}-Label`].textContent = value;
+                shadowGate.querySelector(`#${id}`).value = value;
+                Share2.SetControl(id, value);
+            }
+            content.addEventListener("input", event => {
+                const target = event.target;
+                if (target.type !== "range") return;
+                const id = target.id;
+                const value = parseFloat(target.value);
+                updateControl(id, value);
+            });
+            content.addEventListener("click", event => {
+                const target = event.target;
+                if (!target.classList.contains("Booster-Label") || target.isEditing) return;
+                target.isEditing = true;
+                const originalValue = target.textContent.trim();
+                const controlId = target.id.replace("-Label", "");
+                const slider = shadowGate.querySelector(`#${controlId}`);
+                const input = Lib2.createElement("input", {
+                    class: "Booster-Label-Input",
+                    value: originalValue,
+                    on: [ {
+                        type: "blur",
+                        listener: () => {
+                            let newValue = parseFloat(input.value);
+                            const min = parseFloat(slider.min);
+                            const max = parseFloat(slider.max);
+                            if (isNaN(newValue)) {
+                                newValue = parseFloat(originalValue);
+                            } else if (newValue < min) {
+                                newValue = min;
+                            } else if (newValue > max) {
+                                newValue = max;
+                            }
+                            target.isEditing = false;
+                            updateControl(controlId, newValue);
+                            target.textContent = newValue;
+                        },
+                        add: {
+                            once: true
+                        }
+                    }, {
+                        type: "keydown",
+                        listener: e => {
+                            if (e.key === "Enter") e.target.blur();
+                            if (e.key === "Escape") {
+                                e.target.value = originalValue;
+                                e.target.blur();
+                            }
+                        }
+                    } ]
+                });
+                target.textContent = "";
+                target.appendChild(input);
+                input.focus();
+            });
+            modal.addEventListener("click", click => {
+                const target = click.target;
+                click.stopPropagation();
+                if (target.classList.contains("Booster-Accordion")) {
+                    target.classList.toggle("active");
+                    const panel = target.nextElementSibling;
+                    if (panel.style.maxHeight) {
+                        panel.style.maxHeight = null;
+                        panel.classList.remove("active");
+                    } else {
+                        panel.style.maxHeight = panel.scrollHeight + "px";
+                        panel.classList.add("active");
+                    }
+                } else if (target.id === "Booster-Sound-Save") {
+                    Lib2.setV(Lib2.domain, Share2.Parame);
+                    deleteMenu();
+                } else if (target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu") {
+                    deleteMenu();
+                }
+            });
+        };
+    }
+    const Words = {
+        Traditional: {},
+        Simplified: {
+            "🛠️ 調整菜單": "🛠️ 调整菜单",
+            "✂️ 斷開增幅": "✂️ 断开增幅",
+            "🔗 恢復增幅": "🔗 恢复增幅",
+            "❌ 禁用網域": "❌ 禁用网域",
+            "✅ 啟用網域": "✅ 启用网域",
+            "增強錯誤": "增强错误",
+            "音量增強器": "音量增强器",
+            "增強倍數 ": "增强倍数 ",
+            " 倍": " 倍",
+            "增益": "增益",
+            "頻率": "频率",
+            "Q值": "Q值",
+            "低頻設定": "低频设置",
+            "中頻設定": "中频设置",
+            "高頻設定": "高频设置",
+            "動態壓縮": "动态压缩",
+            "壓縮率": "压缩率",
+            "過渡反應": "过渡反应",
+            "閾值": "阈值",
+            "起音速度": "起音速度",
+            "釋放速度": "释放速度",
+            "關閉": "关闭",
+            "保存": "保存",
+            "不支援的媒體跳過": "不支持的媒体跳过",
+            "不支援音頻增強節點": "不支持音频增强节点",
+            "添加增強節點成功": "添加增强节点成功",
+            "添加增強節點失敗": "添加增强节点失败",
+            "當前沒有被增幅的媒體": "当前没有被增幅的媒体",
+            "快捷組合 : (Alt + B)": "快捷组合 : (Alt + B)"
+        },
+        English: {
+            "🛠️ 調整菜單": "🛠️ Settings Menu",
+            "✂️ 斷開增幅": "✂️ Disconnect Amplification",
+            "🔗 恢復增幅": "🔗 Restore Amplification",
+            "❌ 禁用網域": "❌ Disable Domain",
+            "✅ 啟用網域": "✅ Enable Domain",
+            "增強錯誤": "Enhancement Error",
+            "音量增強器": "Volume Booster",
+            "增強倍數 ": "Enhancement Multiplier ",
+            " 倍": "x",
+            "增益": "Gain",
+            "頻率": "Frequency",
+            "Q值": "Q Factor",
+            "低頻設定": "Low Frequency Settings",
+            "中頻設定": "Mid Frequency Settings",
+            "高頻設定": "High Frequency Settings",
+            "動態壓縮": "Dynamic Compressor",
+            "壓縮率": "Compression Ratio",
+            "過渡反應": "Knee",
+            "閾值": "Threshold",
+            "起音速度": "Attack",
+            "釋放速度": "Release",
+            "關閉": "Close",
+            "保存": "Save",
+            "不支援的媒體跳過": "Unsupported Media Skipped",
+            "不支援音頻增強節點": "Audio Enhancement Node Not Supported",
+            "添加增強節點成功": "Enhancement Node Added Successfully",
+            "添加增強節點失敗": "Failed to Add Enhancement Node",
+            "當前沒有被增幅的媒體": "No media is currently being amplified",
+            "快捷組合 : (Alt + B)": "Shortcut: (Alt + B)"
         }
-    }(); D()
+    };
+    const bannedDomains = (() => {
+        let banned = new Set(Lib.getV("Banned", []));
+        let excludeStatus = banned.has(Lib.$domain);
+        return {
+            isEnabled: callback => callback(!excludeStatus),
+            addBanned: async () => {
+                excludeStatus ? banned.delete(Lib.$domain) : banned.add(Lib.$domain);
+                Lib.setV("Banned", [ ...banned ]);
+                location.reload();
+            }
+        };
+    })();
+    const {
+        Transl
+    } = (() => {
+        const matcher = Lib.translMatcher(Words);
+        return {
+            Transl: Str => matcher[Str] ?? Str
+        };
+    })();
+    (async () => {
+        let menu = null;
+        let updated = false;
+        let processing = false;
+        let initialized = false;
+        const enhancedNodes = [];
+        const processedElements = new Map();
+        let mediaAudioContent = null;
+        const audioContext = window.AudioContext || window.webkitAudioContext;
+        const updateParame = () => {
+            let Config = Lib.getV(Lib.$domain, {});
+            if (typeof Config === "number") {
+                Config = {
+                    Gain: Config
+                };
+            }
+            Share.Parame = Object.assign(Default, Config);
+        };
+        function boosterCore(mediaObject) {
+            try {
+                if (!audioContext) throw new Error(Transl("不支援音頻增強節點"));
+                if (!mediaAudioContent) mediaAudioContent = new audioContext();
+                if (mediaAudioContent.state === "suspended") mediaAudioContent.resume();
+                const successNode = [];
+                for (const media of mediaObject) {
+                    processedElements.set(media, true);
+                    if (media.mediaKeys || media.encrypted || window.MediaSource && media.srcObject instanceof MediaSource) {
+                        Lib.log(Transl("不支援的媒體跳過"), media, {
+                            collapsed: false
+                        });
+                        continue;
+                    }
+                    try {
+                        if (!media.crossOrigin) media.crossOrigin = "anonymous";
+                        const SourceNode = mediaAudioContent.createMediaElementSource(media);
+                        const GainNode = mediaAudioContent.createGain();
+                        const LowFilterNode = mediaAudioContent.createBiquadFilter();
+                        const MidFilterNode = mediaAudioContent.createBiquadFilter();
+                        const HighFilterNode = mediaAudioContent.createBiquadFilter();
+                        const CompressorNode = mediaAudioContent.createDynamicsCompressor();
+                        GainNode.gain.value = Share.Parame.Gain;
+                        LowFilterNode.type = "lowshelf";
+                        LowFilterNode.gain.value = Share.Parame.LowFilterGain;
+                        LowFilterNode.frequency.value = Share.Parame.LowFilterFreq;
+                        MidFilterNode.type = "peaking";
+                        MidFilterNode.Q.value = Share.Parame.MidFilterQ;
+                        MidFilterNode.gain.value = Share.Parame.MidFilterGain;
+                        MidFilterNode.frequency.value = Share.Parame.MidFilterFreq;
+                        HighFilterNode.type = "highshelf";
+                        HighFilterNode.gain.value = Share.Parame.HighFilterGain;
+                        HighFilterNode.frequency.value = Share.Parame.HighFilterFreq;
+                        CompressorNode.ratio.value = Share.Parame.CompressorRatio;
+                        CompressorNode.knee.value = Share.Parame.CompressorKnee;
+                        CompressorNode.threshold.value = Share.Parame.CompressorThreshold;
+                        CompressorNode.attack.value = Share.Parame.CompressorAttack;
+                        CompressorNode.release.value = Share.Parame.CompressorRelease;
+                        SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(mediaAudioContent.destination);
+                        enhancedNodes.push({
+                            Destination: mediaAudioContent.destination,
+                            SourceNode: SourceNode,
+                            GainNode: GainNode,
+                            LowFilterNode: LowFilterNode,
+                            MidFilterNode: MidFilterNode,
+                            HighFilterNode: HighFilterNode,
+                            CompressorNode: CompressorNode,
+                            Gain: GainNode.gain,
+                            LowFilterGain: LowFilterNode.gain,
+                            LowFilterFreq: LowFilterNode.frequency,
+                            MidFilterQ: MidFilterNode.Q,
+                            MidFilterGain: MidFilterNode.gain,
+                            MidFilterFreq: MidFilterNode.frequency,
+                            HighFilterGain: HighFilterNode.gain,
+                            HighFilterFreq: HighFilterNode.frequency,
+                            CompressorRatio: CompressorNode.ratio,
+                            CompressorKnee: CompressorNode.knee,
+                            CompressorThreshold: CompressorNode.threshold,
+                            CompressorAttack: CompressorNode.attack,
+                            CompressorRelease: CompressorNode.release
+                        });
+                        successNode.push(media);
+                    } catch (e) {
+                        Lib.log(Transl("添加增強節點失敗"), media, {
+                            collapsed: false
+                        });
+                    }
+                }
+                if (successNode.length > 0) {
+                    processing = false;
+                    Lib.log(Transl("添加增強節點成功"), successNode, {
+                        collapsed: false
+                    });
+                    if (!initialized) {
+                        let regChange2 = function() {
+                            Lib.regMenu({
+                                [Transl(disconnected ? "🔗 恢復增幅" : "✂️ 斷開增幅")]: () => {
+                                    if (enhancedNodes.length === 0) {
+                                        alert(Transl("當前沒有被增幅的媒體"));
+                                        return;
+                                    }
+                                    enhancedNodes.forEach(items => {
+                                        const {
+                                            SourceNode,
+                                            GainNode,
+                                            LowFilterNode,
+                                            MidFilterNode,
+                                            HighFilterNode,
+                                            CompressorNode,
+                                            Destination
+                                        } = items;
+                                        if (disconnected) {
+                                            SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(Destination);
+                                        } else {
+                                            SourceNode.disconnect();
+                                            GainNode.disconnect();
+                                            LowFilterNode.disconnect();
+                                            MidFilterNode.disconnect();
+                                            HighFilterNode.disconnect();
+                                            CompressorNode.disconnect();
+                                            SourceNode.connect(Destination);
+                                        }
+                                    });
+                                    disconnected = !disconnected;
+                                    regChange2();
+                                },
+                                [Transl("🛠️ 調整菜單")]: {
+                                    desc: Transl("快捷組合 : (Alt + B)"),
+                                    func: () => {
+                                        menu();
+                                    }
+                                }
+                            }, {
+                                index: 2
+                            });
+                        };
+                        var regChange = regChange2;
+                        initialized = true;
+                        let disconnected = false;
+                        regChange2();
+                        Lib.onEvent(document, "keydown", event => {
+                            if (event.altKey && event.key.toUpperCase() == "B") menu();
+                        }, {
+                            passive: true,
+                            capture: true,
+                            mark: "Media-Booster-Hotkey"
+                        });
+                        Lib.storeListen([ Lib.$domain ], call => {
+                            if (call.far && call.key === Lib.$domain) {
+                                Object.entries(call.nv).forEach(([ type, value ]) => {
+                                    Share.SetControl(type, value);
+                                });
+                            }
+                        });
+                    }
+                }
+            } catch (error) {
+                Lib.log(Transl("增強錯誤"), error, {
+                    type: "error",
+                    collapsed: false
+                });
+            }
+        }
+        function trigger(media) {
+            try {
+                if (!updated) {
+                    updated = true;
+                    updateParame();
+                }
+                boosterCore(media);
+            } catch (error) {
+                Lib.log("Trigger Error : ", error, {
+                    type: "error",
+                    collapsed: false
+                });
+            }
+        }
+        bannedDomains.isEnabled(Status => {
+            const regMenu = async name => {
+                Lib.regMenu({
+                    [name]: () => bannedDomains.addBanned()
+                });
+            };
+            if (Status) {
+                Share.SetControl = (type, value) => {
+                    Share.Parame[type] = value;
+                    enhancedNodes.forEach(items => {
+                        items[type].value = value;
+                    });
+                };
+                menu = CreateMenu(Lib, Share, GM_getResourceURL("Img"), Transl);
+                const findMedia = Lib.$debounce(func => {
+                    const media = [];
+                    const tree = document.createTreeWalker(Lib.body, NodeFilter.SHOW_ELEMENT, {
+                        acceptNode: node => {
+                            const tag = node.tagName;
+                            if (tag === "VIDEO" || tag === "AUDIO") {
+                                if (!processedElements.has(node)) return NodeFilter.FILTER_ACCEPT;
+                            }
+                            return NodeFilter.FILTER_SKIP;
+                        }
+                    });
+                    while (tree.nextNode()) {
+                        media.push(tree.currentNode);
+                    }
+                    media.length > 0 && func(media);
+                }, 50);
+                Lib.$observer(Lib.body, () => {
+                    if (processing) return;
+                    findMedia(media => {
+                        processing = true;
+                        trigger(media);
+                    });
+                }, {
+                    mark: "Media-Booster",
+                    attributes: false,
+                    throttle: 200
+                }, () => {
+                    regMenu(Transl("❌ 禁用網域"));
+                });
+                Lib.onUrlChange(() => {
+                    processedElements.clear();
+                });
+            } else regMenu(Transl("✅ 啟用網域"));
+        });
+    })();
 })();
