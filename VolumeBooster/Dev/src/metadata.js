@@ -27,7 +27,7 @@ export default `
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1580134/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
 // ==/UserScript==
 
 `
