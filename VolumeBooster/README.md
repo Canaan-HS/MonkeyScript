@@ -82,9 +82,13 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.42-Beta**
+**Release Version: 2025.08.08-Beta**
 
 ### **Update Content**
-1. Remove menu opening animation
+1. Library update
+2. Removed quick info menu
+3. Tweaked Booster processing logic
+4. Added manual input for numeric labels in control menu
+5. Added manual “Disconnect Boost” and “Restore” functions in plugin menu (different from disable/enable)
 
 ---
