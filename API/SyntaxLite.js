@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025/08/07
+// @version      2025/08/08
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -229,10 +229,10 @@ const Lib = (() => {
             // 設置監聽器
             const event = {};
 
-            if (typeof on === "object") {
-                Object.assign(event, this._on(element, on));
-            } else if (Array.isArray(on)) {
+            if (Array.isArray(on)) {
                 on.forEach(item => Object.assign(event, this._on(element, item)));
+            } else if (typeof on === "object") {
+                Object.assign(event, this._on(element, on));
             }
 
             // 掛載監聽器函數
