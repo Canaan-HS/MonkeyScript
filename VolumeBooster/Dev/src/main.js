@@ -129,6 +129,7 @@ const { Transl } = (() => {
 
                     // 將完成的節點添加
                     enhancedNodes.push({
+                        Connected: true,
                         Destination: mediaAudioContent.destination,
                         SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode,
                         Gain: GainNode.gain,
@@ -178,9 +179,9 @@ const { Transl } = (() => {
                                 };
 
                                 enhancedNodes.forEach(items => {
-                                    const { SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
+                                    const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
 
-                                    if (disconnected) {
+                                    if (disconnected && !Connected) {
                                         SourceNode
                                             .connect(GainNode)
                                             .connect(LowFilterNode)
@@ -188,7 +189,9 @@ const { Transl } = (() => {
                                             .connect(HighFilterNode)
                                             .connect(CompressorNode)
                                             .connect(Destination);
-                                    } else {
+ 
+                                        items.Connected = true;
+                                    } else if (!disconnected && Connected) {
                                         SourceNode.disconnect();
                                         GainNode.disconnect();
                                         LowFilterNode.disconnect();
@@ -196,6 +199,8 @@ const { Transl } = (() => {
                                         HighFilterNode.disconnect();
                                         CompressorNode.disconnect();
                                         SourceNode.connect(Destination);
+
+                                        items.Connected = false;
                                     }
                                 });
 
