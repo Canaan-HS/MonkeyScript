@@ -29,7 +29,7 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(function() {
+(function () {
     const Share = {
         Parame: null,
         SetControl: null
@@ -400,7 +400,7 @@
                         <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${Share2.Parame.Gain}" step="0.1">
                     </div>
 
-            ${generateOtherTemplate("低頻設定", [ {
+            ${generateOtherTemplate("低頻設定", [{
                 label: "增益",
                 id: "LowFilterGain",
                 min: "-12",
@@ -412,9 +412,9 @@
                 min: "20",
                 max: "1000",
                 step: "20"
-            } ])}
+            }])}
 
-            ${generateOtherTemplate("中頻設定", [ {
+            ${generateOtherTemplate("中頻設定", [{
                 label: "增益",
                 id: "MidFilterGain",
                 min: "-12",
@@ -432,9 +432,9 @@
                 min: "0.5",
                 max: "5",
                 step: "0.1"
-            } ])}
+            }])}
 
-            ${generateOtherTemplate("高頻設定", [ {
+            ${generateOtherTemplate("高頻設定", [{
                 label: "增益",
                 id: "HighFilterGain",
                 min: "-12",
@@ -446,9 +446,9 @@
                 min: "2000",
                 max: "22000",
                 step: "500"
-            } ])}
+            }])}
 
-            ${generateOtherTemplate("動態壓縮", [ {
+            ${generateOtherTemplate("動態壓縮", [{
                 label: "壓縮率",
                 id: "CompressorRatio",
                 min: "1",
@@ -478,7 +478,7 @@
                 min: "0.01",
                 max: "2",
                 step: "0.01"
-            } ])}
+            }])}
 
                     <div class="Booster-Buttons">
                         <button class="Booster-Modal-Button" id="Booster-Menu-Close">${Transl2("關閉")}</button>
@@ -498,7 +498,7 @@
                 }, 800);
             }
             const displayMap = {
-                ...Object.fromEntries([ ...shadowGate.querySelectorAll(".Booster-Label") ].map(el => [ el.id, el ]))
+                ...Object.fromEntries([...shadowGate.querySelectorAll(".Booster-Label")].map(el => [el.id, el]))
             };
             function updateControl(id, value) {
                 displayMap[`${id}-Label`].textContent = value;
@@ -522,7 +522,7 @@
                 const input = Lib2.createElement("input", {
                     class: "Booster-Label-Input",
                     value: originalValue,
-                    on: [ {
+                    on: [{
                         type: "blur",
                         listener: () => {
                             let newValue = parseFloat(input.value);
@@ -551,7 +551,7 @@
                                 e.target.blur();
                             }
                         }
-                    } ]
+                    }]
                 });
                 target.textContent = "";
                 target.appendChild(input);
@@ -651,7 +651,7 @@
             isEnabled: callback => callback(!excludeStatus),
             addBanned: async () => {
                 excludeStatus ? banned.delete(Lib.$domain) : banned.add(Lib.$domain);
-                Lib.setV("Banned", [ ...banned ]);
+                Lib.setV("Banned", [...banned]);
                 location.reload();
             }
         };
@@ -722,6 +722,7 @@
                         CompressorNode.release.value = Share.Parame.CompressorRelease;
                         SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(mediaAudioContent.destination);
                         enhancedNodes.push({
+                            Connected: true,
                             Destination: mediaAudioContent.destination,
                             SourceNode: SourceNode,
                             GainNode: GainNode,
@@ -756,7 +757,7 @@
                         collapsed: false
                     });
                     if (!initialized) {
-                        let regChange2 = function() {
+                        let regChange2 = function () {
                             Lib.regMenu({
                                 [Transl(disconnected ? "🔗 恢復增幅" : "✂️ 斷開增幅")]: () => {
                                     if (enhancedNodes.length === 0) {
@@ -765,6 +766,7 @@
                                     }
                                     enhancedNodes.forEach(items => {
                                         const {
+                                            Connected,
                                             SourceNode,
                                             GainNode,
                                             LowFilterNode,
@@ -773,9 +775,10 @@
                                             CompressorNode,
                                             Destination
                                         } = items;
-                                        if (disconnected) {
+                                        if (disconnected && !Connected) {
                                             SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(Destination);
-                                        } else {
+                                            items.Connected = true;
+                                        } else if (!disconnected && Connected) {
                                             SourceNode.disconnect();
                                             GainNode.disconnect();
                                             LowFilterNode.disconnect();
@@ -783,6 +786,7 @@
                                             HighFilterNode.disconnect();
                                             CompressorNode.disconnect();
                                             SourceNode.connect(Destination);
+                                            items.Connected = false;
                                         }
                                     });
                                     disconnected = !disconnected;
@@ -809,9 +813,9 @@
                             capture: true,
                             mark: "Media-Booster-Hotkey"
                         });
-                        Lib.storeListen([ Lib.$domain ], call => {
+                        Lib.storeListen([Lib.$domain], call => {
                             if (call.far && call.key === Lib.$domain) {
-                                Object.entries(call.nv).forEach(([ type, value ]) => {
+                                Object.entries(call.nv).forEach(([type, value]) => {
                                     Share.SetControl(type, value);
                                 });
                             }
