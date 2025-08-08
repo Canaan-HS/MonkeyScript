@@ -19,7 +19,6 @@ export default `
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -28,6 +27,8 @@ export default `
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
 // @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
+
+// @run-at       document-body
 // ==/UserScript==
 
 `
