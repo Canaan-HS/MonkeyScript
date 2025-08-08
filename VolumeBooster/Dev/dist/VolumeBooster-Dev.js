@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.08.08-Beta
+// @version      0.0.42-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -17,7 +17,6 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @run-at       document-body
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -26,6 +25,8 @@
 // @grant        GM_addValueChangeListener
 // @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
 // @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
+
+// @run-at       document-body
 // ==/UserScript==
 
 (function () {
@@ -670,6 +671,7 @@
             CompressorNode.release.value = Share.Parame.CompressorRelease;
             SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(mediaAudioContent.destination);
             enhancedNodes.push({
+              Connected: true,
               Destination: mediaAudioContent.destination,
               SourceNode,
               GainNode,
@@ -718,10 +720,11 @@
                   }
                   ;
                   enhancedNodes.forEach((items) => {
-                    const { SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
-                    if (disconnected) {
+                    const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
+                    if (disconnected && !Connected) {
                       SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(Destination);
-                    } else {
+                      items.Connected = true;
+                    } else if (!disconnected && Connected) {
                       SourceNode.disconnect();
                       GainNode.disconnect();
                       LowFilterNode.disconnect();
@@ -729,6 +732,7 @@
                       HighFilterNode.disconnect();
                       CompressorNode.disconnect();
                       SourceNode.connect(Destination);
+                      items.Connected = false;
                     }
                   });
                   disconnected = !disconnected;
