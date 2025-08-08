@@ -58,10 +58,10 @@
     class Detection {
         constructor() {
             /* 解析進度(找到 < 100 的最大值) */
-            this.ProgressParse = progress => progress.sort((a, b) => b - a).find(number => number < 1e2);
+            this.progressParse = progress => progress.sort((a, b) => b - a).find(number => number < 1e2);
 
             /* 獲取當前時間 */
-            this.GetTime = () => {
+            this.getTime = () => {
                 const time = this.CurrentTime;
                 const year = time.getFullYear();
                 const month = `${time.getMonth() + 1}`.padStart(2, "0");
@@ -73,7 +73,7 @@
             };
 
             /* 保存數據 */
-            this.Storage = (key, value = null) => {
+            this.storage = (key, value = null) => {
                 let data,
                     Formula = {
                         Type: (parse) => Object.prototype.toString.call(parse).slice(8, -1),
@@ -87,8 +87,8 @@
             };
 
             /* 語言 時間格式 適配器 */
-            this.Adapter = {
-                __ConvertPM: (time) => time.replace(/(\d{1,2}):(\d{2})/, (_, hours, minutes) => `${+hours + 12}:${minutes}`), // 轉換 24 小時制
+            this.adapter = {
+                _convertPM: (time) => time.replace(/(\d{1,2}):(\d{2})/, (_, hours, minutes) => `${+hours + 12}:${minutes}`), // 轉換 24 小時制
                 "en-US": (timeStamp, currentYear) => new Date(`${timeStamp} ${currentYear}`), // English
                 "en-GB": (timeStamp, currentYear) => new Date(`${timeStamp} ${currentYear}`), // English - UK
                 "es-ES": (timeStamp, currentYear) => new Date(`${timeStamp} ${currentYear}`), // Español - España
@@ -172,7 +172,7 @@
                 },
                 "es-MX": (timeStamp, currentYear) => { // Español - Latinoamérica
                     const match = timeStamp.match(/^([a-zñáéíóúü]+) (\d{1,2}) de ([a-zñáéíóúü]+), (\d{1,2}:\d{1,2}) (?:[ap]\.m\.) (GMT[+-]\d{1,2})/i);
-                    const time = timeStamp.includes("p.m") ? this.Adapter.__ConvertPM(match[4]) : match[4];
+                    const time = timeStamp.includes("p.m") ? this.adapter._convertPM(match[4]) : match[4];
                     return new Date(`${match[1]}, ${match[2]} ${match[3]}, ${time} ${match[5]} ${currentYear}`);
                 },
                 "ja-JP": (timeStamp, currentYear) => { // 日本語
@@ -181,12 +181,12 @@
                 },
                 "ko-KR": (timeStamp, currentYear) => { // 한국어
                     const match = timeStamp.match(/(\d{1,2})\D+(\d{1,2})\D+(\d{1,2}:\d{1,2}) (GMT[+-]\d{1,2})/);
-                    const time = timeStamp.includes("오후") ? this.Adapter.__ConvertPM(match[3]) : match[3];
+                    const time = timeStamp.includes("오후") ? this.adapter._convertPM(match[3]) : match[3];
                     return new Date(`${currentYear}-${match[1]}-${match[2]} ${time}:00 ${match[4]}`);
                 },
                 "zh-TW": (timeStamp, currentYear) => { // 中文 繁體
                     const match = timeStamp.match(/(\d{1,2})\D+(\d{1,2})\D+\D+(\d{1,2}:\d{1,2}) \[(GMT[+-]\d{1,2})\]/);
-                    const time = timeStamp.includes("下午") ? this.Adapter.__ConvertPM(match[3]) : match[3];
+                    const time = timeStamp.includes("下午") ? this.adapter._convertPM(match[3]) : match[3];
                     return new Date(`${currentYear}-${match[1]}-${match[2]} ${time}:00 ${match[4]}`);
                 },
                 "zh-CN": (timeStamp, currentYear) => { // 中文 简体
@@ -196,7 +196,7 @@
             };
 
             /* 頁面刷新, 展示倒數 */
-            this.PageRefresh = async (display, interval) => {
+            this.pageRefresh = async (display, interval) => {
                 if (display) { // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
                     const start = Date.now();
                     const Refresh = setInterval(() => {
@@ -216,7 +216,7 @@
             };
 
             /* 展示進度於標籤 */
-            this.ShowProgress = () => {
+            this.showProgress = () => {
                 (new MutationObserver(() => {
                     document.title != this.ProgressValue && (document.title = this.ProgressValue);
                 })).observe(document.querySelector("title"), { childList: 1, subtree: 0 });
@@ -224,8 +224,8 @@
             };
 
             /* 查找過期的項目將其刪除 */
-            this.ExpiredCleanup = (Object, Adapter, Timestamp, Callback) => {
-                const targetTime = Adapter?.(Timestamp, this.CurrentTime.getFullYear()) ?? this.CurrentTime;
+            this.expiredCleanup = (Object, adapter, Timestamp, Callback) => {
+                const targetTime = adapter?.(Timestamp, this.CurrentTime.getFullYear()) ?? this.CurrentTime;
                 this.CurrentTime > targetTime ? (this.Config.ClearExpiration && Object.remove()) : Callback(Object);
             };
 
@@ -242,7 +242,7 @@
         }
 
         /* 主要運行 */
-        static async Ran() {
+        static async ran() {
             let Task = 0, Progress = 0, MaxElement = 0; // 任務數量, 掉寶進度, 最大進度元素
             const Progress_Info = {}; // 保存進度的資訊
 
@@ -252,26 +252,26 @@
             const Display = Self.UpdateDisplay;
 
             /* 主要處理函數 */
-            const Process = (Token) => {
+            const process = (Token) => {
 
                 // 這邊寫這麼複雜是為了處理, (1: 只有一個, 2: 存在兩個以上, 3: 存在兩個以上但有些過期)
-                const AllProgress = DevTrace("AllProgress", document.querySelectorAll(Self.AllProgress));
+                const AllProgress = devTrace("AllProgress", document.querySelectorAll(Self.AllProgress));
 
                 if (AllProgress && AllProgress.length > 0) {
-                    const Adapter = Detec.Adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
+                    const adapter = Detec.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
 
                     AllProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
-                        const ActivityTime = DevTrace("ActivityTime", data.querySelector(Self.ActivityTime));
+                        const activityTime = devTrace("ActivityTime", data.querySelector(Self.ActivityTime));
 
-                        Detec.ExpiredCleanup(
+                        Detec.expiredCleanup(
                             data, // 物件整體
-                            Adapter, // 適配器
-                            ActivityTime?.textContent, // 時間戳
-                            NotExpired => { // 取得未過期的物件
+                            adapter, // 適配器
+                            activityTime?.textContent, // 時間戳
+                            notExpired => { // 取得未過期的物件
                                 // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 AllProgress 遍歷)
-                                NotExpired.querySelectorAll("button").forEach(draw => { draw.click() });
+                                notExpired.querySelectorAll("button").forEach(draw => { draw.click() });
 
-                                const ProgressBar = DevTrace("ProgressBar", NotExpired.querySelectorAll(Self.ProgressBar));
+                                const ProgressBar = devTrace("ProgressBar", notExpired.querySelectorAll(Self.ProgressBar));
 
                                 // 紀錄為第幾個任務數, 與掉寶進度
                                 Progress_Info[Task++] = [...ProgressBar].map(progress => +progress.textContent);
@@ -279,9 +279,9 @@
                         )
                     });
 
-                    const OldTask = Detec.Storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
+                    const OldTask = Detec.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
                     const NewTask = Object.fromEntries( // 獲取新任務數據
-                        Object.entries(Progress_Info).map(([key, value]) => [key, Detec.ProgressParse(value)])
+                        Object.entries(Progress_Info).map(([key, value]) => [key, Detec.progressParse(value)])
                     );
 
                     // 開始找到當前運行的任務
@@ -298,19 +298,19 @@
                         }
                     };
 
-                    Detec.Storage("Task", NewTask); // 保存新任務狀態
+                    Detec.storage("Task", NewTask); // 保存新任務狀態
                 };
 
                 // 處理進度 (寫在這裡是, AllProgress 找不到時, 也要正確試錯)
                 if (Progress > 0) {
                     Detec.ProgressValue = `${Progress}%`; // 賦予進度值
-                    !Display && Detec.ShowProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 ShowProgress 動態處理展示
+                    !Display && Detec.showProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 showProgress 動態處理展示
                 } else if (Token > 0) {
-                    setTimeout(() => { Process(Token - 1) }, 2e3); // 試錯 (避免意外)
+                    setTimeout(() => { process(Token - 1) }, 2e3); // 試錯 (避免意外)
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
-                const [Record, Timestamp] = Detec.Storage("Record") ?? [0, Detec.GetTime()]; // 進度值, 時間戳
+                const [Record, Timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
                 const Diff = ~~((Detec.CurrentTime - new Date(Timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
                 /* 當無取得進度, 且啟用自動關閉, 且紀錄又不為 0, 判斷掉寶領取完成, 最後避免意外 Token 為 0 才觸發 */
@@ -320,21 +320,21 @@
 
                     /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
                 } else if (Diff >= Self.JudgmentInterval && Progress == Record) {
-                    Self.RestartLive && Restart.Ran(MaxElement); // 已最大進度對象, 進行直播重啟
-                    Detec.Storage("Record", [Progress, Detec.GetTime()]);
+                    Self.RestartLive && Restart.ran(MaxElement); // 已最大進度對象, 進行直播重啟
+                    Detec.storage("Record", [Progress, Detec.getTime()]);
 
                     /* 差異時間是 0 或 標題與進度值不同 = 有變化 */
                 } else if (Diff == 0 || Progress != Record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    if (Progress != 0) Detec.Storage("Record", [Progress, Detec.GetTime()]);
+                    if (Progress != 0) Detec.storage("Record", [Progress, Detec.getTime()]);
 
                 };
             };
 
-            WaitElem(document, Self.EndLine, () => { // 等待頁面載入
-                Process(4); // 預設能試錯 5 次
-                Self.TryStayActive && StayActive(document);
+            waitEl(document, Self.EndLine, () => { // 等待頁面載入
+                process(4); // 預設能試錯 5 次
+                Self.TryStayActive && stayActive(document);
             }, { timeoutResult: true });
-            Detec.PageRefresh(Display, Self.UpdateInterval); // 頁面刷新
+            Detec.pageRefresh(Display, Self.UpdateInterval); // 頁面刷新
         }
     };
 
@@ -342,21 +342,21 @@
     class RestartLive {
         constructor() {
             /* 重啟直播的靜音(持續執行 15 秒) */
-            this.LiveMute = async Newindow => {
-                WaitElem(Newindow.document, "video", video => {
+            this.liveMute = async Newindow => {
+                waitEl(Newindow.document, "video", video => {
                     const SilentInterval = setInterval(() => { video.muted = 1 }, 5e2);
                     setTimeout(() => { clearInterval(SilentInterval) }, 1.5e4);
                 })
             };
 
             /* 直播自動最低畫質 */
-            this.LiveLowQuality = async Newindow => {
+            this.liveLowQuality = async Newindow => {
                 const Dom = Newindow.document;
-                WaitElem(Dom, "[data-a-target='player-settings-button']", Menu => {
+                waitEl(Dom, "[data-a-target='player-settings-button']", Menu => {
                     Menu.click(); // 點擊設置選單
-                    WaitElem(Dom, "[data-a-target='player-settings-menu-item-quality']", Quality => {
+                    waitEl(Dom, "[data-a-target='player-settings-menu-item-quality']", Quality => {
                         Quality.click(); // 點擊畫質設定
-                        WaitElem(Dom, "[data-a-target='player-settings-menu']", Settings => {
+                        waitEl(Dom, "[data-a-target='player-settings-menu']", Settings => {
                             Settings.lastElementChild.click(); // 選擇最低畫質
                             setTimeout(() => { Menu.click() }, 800); // 等待一下關閉菜單
                         })
@@ -376,7 +376,7 @@
             };
         }
 
-        async Ran(Index) { // 傳入對應的頻道索引
+        async ran(Index) { // 傳入對應的頻道索引
             window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
             const Dir = this;
             const Self = Dir.Config;
@@ -386,35 +386,35 @@
 
             if (Channel) {
                 NewWindow = window.open(Channel.href, "LiveWindow");
-                DirectorySearch(NewWindow);
+                dirSearch(NewWindow);
             } else {
                 Channel = document.querySelectorAll(Self.ActivityLink1)[Index];
                 const OpenLink = [...Channel.querySelectorAll("a")].reverse();
 
-                FindLive(0);
-                async function FindLive(index) { // 持續找到有在直播的頻道
+                findLive(0);
+                async function findLive(index) { // 持續找到有在直播的頻道
                     if ((OpenLink.length - 1) < index) return 0;
 
                     const href = OpenLink[index].href;
                     NewWindow = !NewWindow ? window.open(href, "LiveWindow") : (NewWindow.location.assign(href), NewWindow);
 
                     if (href.includes("directory")) { // 是目錄頁面
-                        DirectorySearch(NewWindow);
+                        dirSearch(NewWindow);
                     } else {
                         let Offline, Online;
-                        const observer = new MutationObserver(Throttle(() => {
-                            Online = DevTrace("Online", NewWindow.document.querySelector(Self.Online));
-                            Offline = DevTrace("Offline", NewWindow.document.querySelector(Self.Offline));
+                        const observer = new MutationObserver($throttle(() => {
+                            Online = devTrace("Online", NewWindow.document.querySelector(Self.Online));
+                            Offline = devTrace("Offline", NewWindow.document.querySelector(Self.Offline));
 
                             if (Offline) {
                                 observer.disconnect();
-                                FindLive(index + 1);
+                                findLive(index + 1);
 
                             } else if (Online) {
                                 observer.disconnect();
-                                Self.RestartLiveMute && Dir.LiveMute(NewWindow);
-                                Self.TryStayActive && StayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
+                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
+                                Self.TryStayActive && stayActive(NewWindow.document);
+                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
 
                             }
                         }, 300));
@@ -429,19 +429,19 @@
             // 目錄頁面的查找邏輯
             const Pattern = Self.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
             const FindTag = new RegExp(Pattern, "i");
-            async function DirectorySearch(NewWindow) {
+            async function dirSearch(NewWindow) {
 
-                const observer = new MutationObserver(Throttle(() => {
-                    const Container = DevTrace("Container", NewWindow.document.querySelector(Self.Container));
+                const observer = new MutationObserver($throttle(() => {
+                    const Container = devTrace("Container", NewWindow.document.querySelector(Self.Container));
 
                     if (Container) {
                         observer.disconnect();
 
                         // 取得滾動句柄
-                        const ContainerHandle = DevTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
+                        const ContainerHandle = devTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
 
                         const StartFind = () => {
-                            const TagLabel = DevTrace("TagLabel", Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`));
+                            const TagLabel = devTrace("TagLabel", Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`));
 
                             const tag = [...TagLabel]
                                 .find(tag => {
@@ -453,9 +453,9 @@
                                 const Link = tag.closest("a");
                                 Link.click();
                                 Link.click(); // 避免意外點兩次
-                                Self.RestartLiveMute && Dir.LiveMute(NewWindow);
-                                Self.TryStayActive && StayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.LiveLowQuality(NewWindow);
+                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
+                                Self.TryStayActive && stayActive(NewWindow.document);
+                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
                             } else if (ContainerHandle) {
 
                                 ContainerHandle.scrollTo({ // 向下滾動
@@ -478,7 +478,7 @@
     };
 
     /* 節流函數 */
-    function Throttle(func, delay) {
+    function $throttle(func, delay) {
         let lastTime = 0;
         return (...args) => {
             const now = Date.now();
@@ -490,10 +490,31 @@
     };
 
     /* 開發模式追蹤 */
-    function DevTrace(tag, element) {
+    let cleaner = null;
+    let traceRecord = {};
+
+    function getCompositeKey(elements) {
+        return Array.from(elements).map(el => {
+            if (!(el instanceof Element)) return '';
+            return el.tagName + (el.id || 'id') + (el.className || 'class');
+        }).join('|');
+    };
+    function devTrace(tag, element) {
         if (!Config.Dev) return element;
 
-        const isEmpty = !element || (element.length !== undefined && element.length === 0);
+        const record = traceRecord[tag];
+        const isNodeList = element instanceof NodeList; // 只用於該腳本, 只會出現 NodeList 和 Element
+        const recordKey = isNodeList ? getCompositeKey(element) : element;
+
+        if (record && record.has(recordKey)) return element;
+        traceRecord[tag] = new Map().set(recordKey, true); // 記錄
+
+        clearTimeout(cleaner); // GC 清理工作
+        cleaner = setTimeout(() => {
+            traceRecord = {};
+        }, 1e4);
+
+        const isEmpty = !element || (isNodeList && element.length === 0);
 
         const baseStyle = 'padding: 2px 6px; border-radius: 3px; font-weight: bold; margin: 0 2px;';
         const tagStyle = `${baseStyle} background: linear-gradient(45deg, #667eea 0%, #764ba2 100%); color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);`;
@@ -533,12 +554,12 @@
     };
 
     /* 簡易的 等待元素 */
-    async function WaitElem(
+    async function waitEl(
         document, selector, found, { timeout = 1e4, throttle = 200, timeoutResult = false } = {}
     ) {
         let timer, element;
 
-        const observer = new MutationObserver(Throttle(() => {
+        const observer = new MutationObserver($throttle(() => {
             element = document.querySelector(selector);
             if (element) {
                 observer.disconnect();
@@ -556,7 +577,7 @@
     };
 
     /* 使窗口保持活躍 */
-    async function StayActive(target) {
+    async function stayActive(target) {
         const script = document.createElement("script");
         script.id = "Stay-Active";
         script.textContent = `
@@ -622,6 +643,6 @@
 
     // 主運行調用
     const Restart = new RestartLive();
-    Detection.Ran();
+    Detection.ran();
 
 })();
