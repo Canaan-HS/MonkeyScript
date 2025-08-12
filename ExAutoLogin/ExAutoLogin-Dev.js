@@ -26,7 +26,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/487608/1613825/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js
 
@@ -46,7 +46,7 @@
 // ==/UserScript==
 
 (async () => {
-    const domain = Syn.$domain;
+    const domain = Lib.$domain;
     const { Transl } = Language();
 
     (async function ImportStyle() {
@@ -63,7 +63,7 @@
             show_style = "background-color: #34353b; border: 2px ridge #5C0D12;"
             acc_style = "color: #f1f1f1; background-color: #34353b; border: 2px solid #8d8d8d;"
             button_style = "color: #fefefe; border: 2px solid #8d8d8d; background-color: #34353b;"
-            Syn.AddStyle(`
+            Lib.addStyle(`
                 body {
                     padding: 2px;
                     color: #f1f1f1;
@@ -72,7 +72,7 @@
                 }
             `);
         };
-        Syn.AddStyle(`
+        Lib.addStyle(`
             ${GM_getResourceText("jgrowl-css")}
             .jGrowl {
                 ${jGrowl_style}
@@ -253,7 +253,7 @@
     })();
 
     (async function Main($Cookie, $Shared) {
-        let Share = Syn.gV("Share", {});
+        let Share = Lib.getV("Share", {});
 
         // 新版數據轉換
         if (typeof Share === "string") {
@@ -261,7 +261,7 @@
         };
 
         // 頁面匹配
-        const url = Syn.$url;
+        const url = Lib.$url;
         const Post_Page = /https:\/\/[^\/]+\/g\/\d+\/[a-zA-Z0-9]+/;
         const Favorites_Page = /https:\/\/[^\/]+\/favorites.php/;
 
@@ -269,7 +269,7 @@
 
         /* 創建菜單 */
         const CreateMenu = async (Modal) => {
-            Syn.$q(".modal-background")?.remove();
+            Lib.$q(".modal-background")?.remove();
             $("body").append(Modal.replace(/>\s+</g, '><'));
             requestAnimationFrame(() => {
                 $(".modal-background").css({
@@ -294,7 +294,7 @@
 
         /* 創建延伸菜單 */
         const Expand = async () => {
-            Syn.Menu({
+            Lib.regMenu({
                 [Transl("📜 自動獲取")]: AutoGetCookie,
                 [Transl("📝 手動輸入")]: ManualSetting,
                 [Transl("🔍 查看保存")]: ViewSaveCookie,
@@ -305,20 +305,20 @@
 
         /* 刪除延伸菜單 */
         const Collapse = async () => {
-            for (let i = 1; i <= 5; i++) { GM_unregisterMenuCommand("Expand-" + i) }
+            for (let i = 1; i <= 5; i++) { Lib.unMenu("Expand-" + i) }
         };
 
         /* 切換開合菜單 */
         const MenuToggle = async () => {
-            const state = Syn.gV("Expand", false),
+            const state = Lib.getV("Expand", false),
                 disp = state ? Transl("📁 摺疊菜單") : Transl("📂 展開菜單");
 
-            Syn.Menu({
+            Lib.regMenu({
                 [disp]: {
                     func: () => {
                         state
-                            ? Syn.sV("Expand", false)
-                            : Syn.sV("Expand", true);
+                            ? Lib.setV("Expand", false)
+                            : Lib.setV("Expand", true);
                         MenuToggle();
                     }, hotkey: "c", close: false
                 }
@@ -332,15 +332,15 @@
 
         /* 自動檢測登陸 */
         const LoginToggle = async () => {
-            const cookie = Boolean(Syn.gJV("E/Ex_Cookies"));
-            const state = Syn.gV("Login", cookie); // 有 Cookie 預設為啟用
+            const cookie = Boolean(Lib.getJV("E/Ex_Cookies"));
+            const state = Lib.getV("Login", cookie); // 有 Cookie 預設為啟用
             const disp = state ? Transl("🟢 啟用檢測") : Transl("🔴 禁用檢測");
 
-            Syn.Menu({
+            Lib.regMenu({
                 [disp]: {
                     func: () => {
-                        if (state) Syn.sV("Login", false)
-                        else if (cookie) Syn.sV("Login", true)
+                        if (state) Lib.setV("Login", false)
+                        else if (cookie) Lib.setV("Login", true)
                         else {
                             alert(Transl("無保存的 Cookie, 無法啟用自動登入"));
                             return;
@@ -352,25 +352,25 @@
             }, { name: "Check" });
 
             //? 選擇檢測狀態後, 會重新創建選單, 避免跑板因此同樣重新創建下方菜單 (兼容舊版本插件的寫法)
-            Syn.Menu({ [Transl("🍪 共享登入")]: SharedLogin });
+            Lib.regMenu({ [Transl("🍪 共享登入")]: SharedLogin });
             MenuToggle();
         };
 
         /* 監聽選單切換, 全局套用 */
         const GlobalMenuToggle = async () => {
-            Syn.StoreListen(["Login", "Expand"], listen => {
+            Lib.storeListen(["Login", "Expand"], listen => {
                 listen.far && LoginToggle();
             })
         };
 
         /* 入口注射 */
         async function Injection() {
-            const cookie = Syn.gJV("E/Ex_Cookies"); // 嘗試取得 Cookie
-            const login = Syn.gV("Login", Boolean(cookie)); // 取得是否自動登入
+            const cookie = Lib.getJV("E/Ex_Cookies"); // 嘗試取得 Cookie
+            const login = Lib.getV("Login", Boolean(cookie)); // 取得是否自動登入
 
             if (login && cookie) {
                 let CurrentTime = new Date();
-                let DetectionTime = Syn.Local("DetectionTime");
+                let DetectionTime = Lib.local("DetectionTime");
 
                 DetectionTime = DetectionTime ? new Date(DetectionTime) : new Date(CurrentTime.getTime() + 11 * 60 * 1000);
 
@@ -428,7 +428,7 @@
                     $Shared.Update().then(Data => {
                         if (Data) {
                             Share = Data;
-                            Syn.sJV("Share", Data);
+                            Lib.setJV("Share", Data);
                             setTimeout(SharedLogin, 600);
                         }
                     })
@@ -458,7 +458,7 @@
                 const target = click.target;
 
                 if (target.id === "save") {
-                    Syn.sJV("E/Ex_Cookies", cookies);
+                    Lib.setJV("E/Ex_Cookies", cookies);
                     Growl(Transl("保存成功!"), "jGrowl", 1500);
                     DeleteMenu();
                 } else if (target.className === "modal-background" || target.id === "close") {
@@ -531,7 +531,7 @@
                 const target = click.target;
                 if (target.className === "modal-background" || target.id === "close") {
                     click.preventDefault();
-                    target.id === "close" && cookie && Syn.sJV("E/Ex_Cookies", cookie);
+                    target.id === "close" && cookie && Lib.setJV("E/Ex_Cookies", cookie);
                     DeleteMenu();
                 }
             })
@@ -550,7 +550,7 @@
                 </div>
             `);
 
-            const cookie = Syn.gJV("E/Ex_Cookies", {});
+            const cookie = Lib.getJV("E/Ex_Cookies", {});
             const textarea = $("<textarea>").attr({
                 rows: 20,
                 cols: 50,
@@ -566,7 +566,7 @@
                 const target = click.target;
 
                 if (target.id === "save") {
-                    Syn.sJV("E/Ex_Cookies", JSON.parse($("#view_SC").val()));
+                    Lib.setJV("E/Ex_Cookies", JSON.parse($("#view_SC").val()));
                     Growl(Transl("已保存變更"), "jGrowl", 1500);
                     DeleteMenu();
                 } else if (target.className === "modal-background" || target.id === "close") {
@@ -578,7 +578,7 @@
         /* 手動注入 Cookies 登入 */
         async function CookieInjection() {
             try {
-                const cookie = Syn.gJV("E/Ex_Cookies");
+                const cookie = Lib.getJV("E/Ex_Cookies");
                 if (cookie === null) throw new Error("No Cookies");
                 $Cookie.ReAdd(cookie);
             } catch (error) {
@@ -597,74 +597,85 @@
         /* 創建收藏按鈕 */
         function CreateFavoritesButton() {
             // 縮圖, 按鈕容器, 標題, 其他資訊
-            Syn.WaitElem(["#gd1 div", "#gd2", "#gmid"], ([thumbnail, container, info]) => {
+            Lib.waitEl(["#gd1 div", "#gd2", "#gmid"], ([thumbnail, container, info]) => {
                 const path = location.pathname;
                 const save_key = md5(path);
 
-                const Favorites = Syn.gV("Favorites", {});
+                const Favorites = Lib.getV("Favorites", {});
                 const favorite = Favorites[save_key];
 
                 // 添加收藏 邏輯
                 const addfavorite = async (Favorites) => {
-                    const img = getComputedStyle(thumbnail); // 縮略圖樣式
-                    const score = getComputedStyle(info.$q(".ir")); // 評分
-                    const icon = info.$q("#gdc div"); // 類型 icon
-                    const artist = info.$q("#gdn a"); // 藝術家連結
-                    const title = container.$q("#gj").$text() || container.$q("#gn").$text() // 標題 (優先找日文)
-                    const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//); // 解析 id
-                    const detail = info.$q("#gdd"); // 資訊內容
-                    const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
-                    const length = detail.$q("tr:nth-child(6) .gdt2").$text();
+                    return new Promise((resolve, reject) => {
+                        try {
+                            const img = getComputedStyle(thumbnail); // 縮略圖樣式
+                            const score = getComputedStyle(info.$q(".ir")); // 評分
+                            const icon = info.$q("#gdc div"); // 類型 icon
+                            const artist = info.$q("#gdn a"); // 藝術家連結
 
-                    // 獲取標籤
-                    const tagData = new Map();
-                    for (const a of info.$qa("#taglist tr a")) {
-                        const tags = a.id.slice(3).replace(/[_]/g, " ").split(":"); // 去除開頭 ta_ , 分出 類別 與 標籤
-                        if (!tagData.has(tags[0])) tagData.set(tags[0], []);
-                        tagData.get(tags[0]).push(tags[1]);
-                    };
+                            const title = container.$q("h1#gj").$text() || container.$q("h1#gn").$text() // 標題 (優先找日文)
+                            const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//); // 解析 id
+                            const detail = info.$q("div#gdd"); // 資訊內容
+                            const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
+                            const length = detail.$q("tr:nth-child(6) .gdt2").$text();
 
-                    const data = JSON.stringify({
-                        gid, tid, domain, posted, length,
-                        key: save_key,
-                        tags: [...tagData],
-                        score: score.backgroundPosition,
-                        post_title: title,
-                        artist_link: artist.href,
-                        artist_text: artist.$text(),
-                        icon_text: icon.$text(),
-                        icon_class: icon.className,
-                        img_width: img.width,
-                        img_height: img.height,
-                        img_url: img.background.match(/url\(["']?(.*?)["']?\)/)[1],
-                        favorited_time: Syn.GetDate("{year}-{month}-{date} {hour}:{minute}")
-                    });
+                            // 獲取標籤
+                            const tagData = new Map();
+                            for (const a of info.$qa("#taglist tr a")) {
+                                const tags = a.id.slice(3).replace(/[_]/g, " ").split(":"); // 去除開頭 ta_ , 分出 類別 與 標籤
+                                if (!tagData.has(tags[0])) tagData.set(tags[0], []);
+                                tagData.get(tags[0]).push(tags[1]);
+                            };
 
-                    Syn.sV("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(data, 9) }));
+                            const data = JSON.stringify({
+                                gid, tid, domain, posted, length,
+                                key: save_key,
+                                tags: [...tagData],
+                                score: score.backgroundPosition,
+                                post_title: title,
+                                artist_link: artist.href,
+                                artist_text: artist.$text(),
+                                icon_text: icon.$text(),
+                                icon_class: icon.className,
+                                img_width: img.width,
+                                img_height: img.height,
+                                img_url: img.background.match(/url\(["']?(.*?)["']?\)/)[1],
+                                favorited_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}")
+                            });
+
+                            Lib.setV("Favorites", Object.assign(Favorites, { [save_key]: LZString.compress(data, 9) }));
+                            resolve();
+                        } catch (error) {
+                            console.error(error);
+                            reject();
+                        }
+                    })
+
                 };
 
                 favorite && addfavorite(Favorites); // 當前為收藏狀態時, 進行狀態更新
 
                 // 創建收藏按鈕
-                const favoriteButton = Syn.createElement(container, "div", {
+                const favoriteButton = Lib.createElement(container, "div", {
                     class: favorite ? "cancelFavorite" : "addFavorite",
                     text: favorite ? Transl("💘 取消收藏") : Transl("💖 添加收藏"),
                     on: {
                         type: "click",
                         listener: () => {
-                            const Favorites = Syn.gV("Favorites", {});
+                            const Favorites = Lib.getV("Favorites", {});
 
                             if (Favorites[save_key]) {
                                 delete Favorites[save_key];
-                                Syn.sV("Favorites", Favorites);
+                                Lib.setV("Favorites", Favorites);
                                 favoriteButton.$text(Transl("💖 添加收藏"));
                                 favoriteButton.$replaceClass("cancelFavorite", "addFavorite");
                                 return;
                             };
 
-                            addfavorite(Favorites);
-                            favoriteButton.$text(Transl("💘 取消收藏"));
-                            favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
+                            addfavorite(Favorites).then(() => {
+                                favoriteButton.$text(Transl("💘 取消收藏"));
+                                favoriteButton.$replaceClass("addFavorite", "cancelFavorite");
+                            });
                         },
                     }
                 });
@@ -687,11 +698,11 @@
 
         /* 添加自定義收藏夾 */
         function AddCustomFavorites() {
-            const Favorites = Syn.gV("Favorites");
+            const Favorites = Lib.getV("Favorites");
 
             if (Favorites && Object.keys(Favorites).length > 0) {
 
-                Syn.WaitElem(".ido", ido => {
+                Lib.waitEl(".ido", ido => {
                     let delete_object = "tr";
 
                     const select = ido.$q(".searchnav div:last-of-type select option[selected='selected']");
@@ -701,7 +712,7 @@
                     const mode = !select ? "t" : select.value; // 展示的模式 (m:Minimal, p:Minimal+, l:Compact, e:Extended, t: Thumbnail)
 
                     if (!select) {
-                        const newform = Syn.createElement("form", {
+                        const newform = Lib.createElement("form", {
                             id: "favform",
                             name: "favform",
                             action: "",
@@ -769,7 +780,7 @@
                     };
 
                     let count = 0;
-                    const fragment = Syn.createFragment;
+                    const fragment = Lib.createFragment;
                     const RenderWait = requestIdleCallback || ((cb, _) => requestAnimationFrame(cb)); // 簡單的 fallback
 
                     /* 渲染預覽卡 */
@@ -831,7 +842,7 @@
                         /* ----- 後續按照模式個別生成 ----- */
 
                         if (mode === "m" || mode === "p") {
-                            const tr = Syn.createElement("tr");
+                            const tr = Lib.createElement("tr");
                             tr.$iHtml(`
                                 <td class="gl1m glcat">${Thumbnail}</td>
                                 <td class="gl2m">
@@ -866,7 +877,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "l") {
-                            const tr = Syn.createElement("tr");
+                            const tr = Lib.createElement("tr");
                             const posted = json.posted.split(" ");
                             tr.$iHtml(`
                                 <tr>
@@ -922,7 +933,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "e") {
-                            const tr = Syn.createElement("tr");
+                            const tr = Lib.createElement("tr");
                             tr.$iHtml(`
                                 <tr>
                                     <td class="gl1e" style="width:250px">
@@ -976,7 +987,7 @@
                             `.replace(/>\s+</g, '><'));
                             fragment.prepend(tr);
                         } else if (mode === "t") {
-                            const div = Syn.createElement("div", { class: "gl1t" });
+                            const div = Lib.createElement("div", { class: "gl1t" });
                             div.$iHtml(`
                                 <div class="gl4t glname glft">
                                     <div>
@@ -1021,13 +1032,13 @@
                     RenderCard(); // 完成最終渲染
 
                     /* 刪除收藏 */
-                    Syn.onEvent(ido, "click", event => {
+                    Lib.onEvent(ido, "click", event => {
                         const target = event.target;
 
                         if (target.className === "unFavorite") {
-                            const Favorites = Syn.gV("Favorites");
+                            const Favorites = Lib.getV("Favorites");
                             delete Favorites[target.id];
-                            Syn.sV("Favorites", Favorites);
+                            Lib.setV("Favorites", Favorites);
 
                             target.closest(delete_object).remove();
                         }
@@ -1087,7 +1098,7 @@
             const Shared = await Get();
 
             if (Object.keys(Shared).length > 0) {
-                const localHash = md5(Syn.gV("Share", ""));
+                const localHash = md5(Lib.getV("Share", ""));
                 const remoteHash = md5(JSON.stringify(Shared));
 
                 if (localHash !== remoteHash) {
@@ -1120,23 +1131,23 @@
 
         return {
             Get: () => { /* 取得 cookie */
-                return Syn.cookie().split("; ").reduce((acc, cookie) => {
+                return Lib.cookie().split("; ").reduce((acc, cookie) => {
                     const [name, value] = cookie.split("=");
                     acc[decodeURIComponent(name)] = decodeURIComponent(value);
                     return acc;
                 }, {});
             },
             Add: function (CookieObject) { /* 添加 cookie */
-                Syn.Local("DetectionTime", { value: Syn.GetDate() });
+                Lib.local("DetectionTime", { value: Lib.getDate() });
                 for (const Cookie of CookieObject) {
-                    Syn.cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
+                    Lib.cookie(`${encodeURIComponent(Cookie.name)}=${encodeURIComponent(Cookie.value)}; domain=.${domain}; path=/; expires=${Expires};`);
                 };
                 location.reload();
             },
             Delete: function () { /* 刪除 cookie (避免意外使用兩種清除) */
                 Object.keys(this.Get()).forEach(Name => {
-                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
-                    Syn.cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
+                    Lib.cookie(`${Name}=; expires=${UnixUTC}; path=/;`);
+                    Lib.cookie(`${Name}=; expires=${UnixUTC}; path=/; domain=.${domain}`);
                 });
             },
             ReAdd: function (Cookies) { /* 重新添加 */
@@ -1151,7 +1162,7 @@
                 if (!Result) {
                     this.ReAdd(Cookies);
                 } else {
-                    Syn.Local("DetectionTime", { value: Syn.GetDate() });
+                    Lib.local("DetectionTime", { value: Lib.getDate() });
                 }
             }
         }
@@ -1159,7 +1170,7 @@
 
     /* 語言支援 */
     function Language() {
-        const Word = Syn.TranslMatcher({
+        const Word = Lib.translMatcher({
             Traditional: {},
             Simplified: {
                 "🍪 共享登入": "🍪 共享登录",
