@@ -481,18 +481,9 @@
             Global_Cache: undefined,
             Preview_Cache: undefined,
             Content_Cache: undefined,
-            Global() {
-                if (!this.Global_Cache) this.Global_Cache = Global_Function();
-                return this.Global_Cache;
-            },
-            Preview() {
-                if (!this.Preview_Cache) this.Preview_Cache = Preview_Function();
-                return this.Preview_Cache;
-            },
-            Content() {
-                if (!this.Content_Cache) this.Content_Cache = Content_Function();
-                return this.Content_Cache;
-            }
+            Global: () => this.Global_Cache ??= Global_Function(),
+            Preview: () => this.Preview_Cache ??= Preview_Function(),
+            Content: () => this.Content_Cache ??= Content_Function(),
         };
 
         // 解析配置調用對應功能
