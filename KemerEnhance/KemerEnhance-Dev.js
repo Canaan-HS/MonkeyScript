@@ -86,7 +86,7 @@
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
                 enable: true,
-                experiment: false, // 實驗性替換方式
+                experiment: true, // 實驗性替換方式
             }
         }
     };
@@ -1871,199 +1871,313 @@
                      * 針對 Neko 網站的支援
                      */
                     const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const HrefParse = (element) => element.href || element.$gAttr("href");
+                    const hrefParse = (element) => element.href || element.$gAttr("href");
+
+                    // 載入原圖 (死圖重試)
+                    function imgReload(img, retry) {
+                        if (retry > 0) {
+                            const src = img?.src;
+                            if (!src) return;
+
+                            img.src = "";
+                            Object.assign(img, {
+                                src: src,
+                                alt: "Loading Failed"
+                            });
+                            img.onload = function () { img.$delClass("Image-loading-indicator") };
+                            img.onerror = function () {
+                                setTimeout(() => {
+                                    imgReload(img, --retry);
+                                }, 3000)
+                            };
+                        }
+                    };
+
+                    function loadFailedClick() {
+                        //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (目前也壞了, 感覺觸發不了)
+                        Lib.onE(".post__files, .scrape__files", "click", event => {
+                            const target = event.target.matches(".Image-link img");
+                            if (target && target.alt == "Loading Failed") {
+                                const src = img.src;
+                                img.src = "";
+                                img.src = src;
+                            }
+                        }, { capture: true, passive: true });
+                    };
 
                     /**
-                     * ! 目前有 Bug, 載入回條怪怪的不準確, 已經載入但觸發 onerror 又重載, 還無限遞迴
-                     * 這邊的邏輯, 因為是有延遲運行, 如果還在運行當中,
-                     * 頁面被 ExtraButton 的功能進行換頁, 就會出現報錯, 但我懶的處理
+                     * 渲染圖像
                      *
-                     * 另外這邊不使用 LoadFunc 懶加載的方式, 也是因為當 ExtraButton 換頁, 先前的函數還沒運行完成
-                     * 再次添加新的數據, 會有各種神奇的錯誤, 所以只能每次重新宣告
+                     * @param {Object} { ID, oldUrl, newUrl }
+                     * ID 用於標示用的
+                     * oldUrl 原始連結, 當 newUrl 並非原始連結, 可以傳遞該參數保留原始數據 (預設: null)
+                     * newUrl 用於渲染圖片的新連結
                      */
-                    const Origina_Requ = { // 自動原圖所需
-                        Reload: async (Img, Retry) => { // 載入原圖 (死圖重試)
-                            if (Retry > 0) {
-                                setTimeout(() => {
-                                    const src = Img?.src;
-                                    if (!src) return;
-
-                                    Img.src = "";
-                                    Object.assign(Img, {
-                                        src: src,
-                                        alt: "Loading Failed"
-                                    });
-                                    Img.onload = function () { Img.$delClass("Image-loading-indicator") };
-                                    Img.onerror = function () { Origina_Requ.Reload(Img, --Retry) };
-                                }, 3000); // 降低載入頻率
-                            }
+                    function imgRendering({ id, oldUrl = null, newUrl }) {
+                        return preact.h((oldUrl ? "rc" : "div"), {
+                            id,
+                            src: oldUrl,
+                            className: "Image-link"
                         },
-                        FailedClick: async () => {
-                            //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (目前也壞了, 感覺觸發不了)
-                            Lib.onE(".post__files, .scrape__files", "click", event => {
-                                const target = event.target.matches(".Image-link img");
-                                if (target && target.alt == "Loading Failed") {
-                                    const src = img.src;
-                                    img.src = "";
-                                    img.src = src;
+                            preact.h("img", {
+                                key: "img",
+                                src: newUrl,
+                                className: "Image-loading-indicator Image-style",
+                                onLoad: function () {
+                                    Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
+                                },
+                                onError: function () {
+                                    imgReload(Lib.$q(`#${id} img`), 10);
                                 }
-                            }, { capture: true, passive: true });
-                        },
-                        /**
-                         * 渲染圖像
-                         *
-                         * @param {Object} { ID, Ourl, Nurl }
-                         * ID 用於標示用的
-                         * Ourl 原始連結, 當 Nurl 並非原始連結, 可以傳遞該參數保留原始數據 (預設: null)
-                         * Nurl 用於渲染圖片的新連結
-                         */
-                        ImgRendering: ({ ID, Ourl = null, Nurl }) => {
-                            return preact.h((Ourl ? "rc" : "div"), {
-                                id: ID,
-                                src: Ourl,
-                                className: "Image-link"
-                            },
-                                preact.h("img", {
-                                    key: "img",
-                                    src: Nurl,
-                                    className: "Image-loading-indicator Image-style",
-                                    onLoad: function () {
-                                        Lib.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
-                                    },
-                                    onError: function () {
-                                        Origina_Requ.Reload(Lib.$q(`#${ID} img`), 10);
-                                    }
-                                })
-                            )
-                        },
-                        /**
-                         * 用於請求圖片數據為 blob 連結
-                         *
-                         * @param {Object} { Container, Url, Result }
-                         * Container 用於標示進度用的容器
-                         * Url 請求的圖片連結
-                         * Result 回傳圖片連結
-                         */
-                        Request: async function (Container, Url, Result) {
-                            const indicator = Lib.createElement(Container, "div", { class: "progress-indicator", text: "0%" });
-
-                            GM_xmlhttpRequest({
-                                url: Url,
-                                method: "GET",
-                                responseType: "blob",
-                                onprogress: progress => {
-                                    const done = ((progress.done / progress.total) * 100).toFixed(1);
-                                    indicator.$text(`${done}%`);
-                                },
-                                onload: response => {
-                                    const blob = response.response;
-                                    blob instanceof Blob && blob.size > 0
-                                        ? Result(URL.createObjectURL(blob)) : Result(Url);
-                                },
-                                onerror: () => Result(Url)
                             })
-                        },
-                        FastAuto: async function () { // mode 1 預設 (快速自動)
-                            this.FailedClick();
-                            thumbnail.forEach((object, index) => {
-                                requestIdleCallback(() => {
+                        )
+                    };
+
+                    /**
+                     * 獲取檔案資訊（內建5次重試）。
+                     * 此函式負責所有 HEAD 請求的邏輯，並且永遠不會 reject。
+                     * @param {string} url - 檔案連結。
+                     * @returns {Promise<{supportsRange: boolean, totalSize: number|null}>}
+                     */
+                    async function getFileSize(url) {
+                        for (let i = 0; i < 5; i++) {
+                            try {
+                                const result = await new Promise((resolve, reject) => {
+                                    GM_xmlhttpRequest({
+                                        method: "HEAD",
+                                        url: url,
+                                        onload: response => {
+                                            const headers = response.responseHeaders.trim().split(/[\r\n]+/).reduce((acc, line) => {
+                                                const [name, ...valueParts] = line.split(':');
+                                                if (name) acc[name.toLowerCase().trim()] = valueParts.join(':').trim();
+                                                return acc;
+                                            }, {});
+
+                                            const totalLength = parseInt(headers['content-length'], 10);
+                                            const supportsRange = headers['accept-ranges'] === 'bytes' && totalLength > 0;
+
+                                            resolve({
+                                                supportsRange: supportsRange,
+                                                totalSize: isNaN(totalLength) ? null : totalLength
+                                            });
+                                        },
+                                        onerror: reject, // 任何網路錯誤都 reject，以便觸發 catch 進行重試
+                                        ontimeout: reject
+                                    });
+                                });
+
+                                return result; // 只要成功一次，就立刻回傳結果
+                            } catch (error) {
+                                if (i < 4) await new Promise(res => setTimeout(res, 300)); // 如果不是最後一次，就稍等後重試
+                            }
+                        }
+                        // 5 次重試全部失敗後，靜默回傳「不支援」的狀態
+                        return { supportsRange: false, totalSize: null };
+                    }
+
+                    /**
+                     * 獲取圖片的 Blob URL (內建5次重試)。
+                     * 此函式負責所有 GET 請求的邏輯，會自動判斷採用分段或完整下載，並在最終失敗後回退。
+                     * @param {Object} Container - 用於標示進度用的容器。
+                     * @param {string} Url - 請求的圖片連結。
+                     * @param {function} Result - 接收最終結果 (Blob URL 或原始 URL) 的回呼函式。
+                     */
+                    async function imgRequest(Container, Url, Result) {
+                        const fileInfo = await getFileSize(Url);
+                        const indicator = Lib.createElement(Container, "div", { class: "progress-indicator" });
+
+                        let blob = null;
+                        try {
+                            // 策略一：如果支援分段下載
+                            if (fileInfo.supportsRange && fileInfo.totalSize) {
+                                const CHUNK_COUNT = 6;
+                                const totalSize = fileInfo.totalSize;
+                                const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
+                                const chunkProgress = new Array(CHUNK_COUNT).fill(0);
+
+                                // 更新進度的統一邏輯
+                                const updateProgress = () => {
+                                    const totalDownloaded = chunkProgress.reduce((sum, loaded) => sum + loaded, 0);
+                                    const percent = ((totalDownloaded / totalSize) * 100).toFixed(1);
+                                    indicator.$text(`${percent}%`);
+                                };
+
+                                const chunkPromises = Array.from({ length: CHUNK_COUNT }, (_, i) => {
+                                    return (async () => {
+                                        const start = i * chunkSize;
+                                        const end = Math.min(start + chunkSize - 1, totalSize - 1);
+                                        // 為每個分塊內建重試邏輯
+                                        for (let j = 0; j < 5; j++) {
+                                            try {
+                                                return await new Promise((resolve, reject) => {
+                                                    GM_xmlhttpRequest({
+                                                        method: "GET",
+                                                        url: Url,
+                                                        headers: { "Range": `bytes=${start}-${end}` },
+                                                        responseType: "blob",
+                                                        onload: res => (res.status === 206 ? resolve(res.response) : reject(res)),
+                                                        onerror: reject,
+                                                        ontimeout: reject,
+                                                        onprogress: progress => {
+                                                            chunkProgress[i] = progress.loaded;
+                                                            updateProgress();
+                                                        }
+                                                    });
+                                                });
+                                            } catch (error) {
+                                                if (j < 4) await new Promise(res => setTimeout(res, 300));
+                                            }
+                                        }
+                                        throw new Error(`Chunk ${i} failed after 5 retries.`); // 如果單一分塊最終失敗，則拋出錯誤
+                                    })();
+                                });
+
+                                const chunks = await Promise.all(chunkPromises);
+                                blob = new Blob(chunks);
+
+                                // 策略二：不支援分段，直接完整下載
+                            } else {
+                                // 為完整下載內建重試邏輯
+                                for (let i = 0; i < 5; i++) {
+                                    try {
+                                        blob = await new Promise((resolve, reject) => {
+                                            GM_xmlhttpRequest({
+                                                method: "GET",
+                                                url: Url,
+                                                responseType: "blob",
+                                                onload: res => (res.status === 200 ? resolve(res.response) : reject(res)),
+                                                onerror: reject,
+                                                ontimeout: reject,
+                                                onprogress: progress => {
+                                                    if (progress.lengthComputable) {
+                                                        const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
+                                                        indicator.$text(`${percent}%`);
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        break; // 成功後跳出重試迴圈
+                                    } catch (error) {
+                                        if (i < 4) await new Promise(res => setTimeout(res, 300));
+                                    }
+                                }
+                            }
+
+                            // 下載完成後的最終檢查
+                            if (blob && blob.size > 0) {
+                                Result(URL.createObjectURL(blob));
+                            } else {
+                                Result(Url);
+                            }
+                        } catch (error) {
+                            // 最終回退：任何下載環節徹底失敗，都使用原始 URL
+                            Result(Url);
+                        } finally {
+                            // 無論結果如何，都移除進度指示器
+                            indicator.remove();
+                        }
+                    };
+
+                    async function fastAutoLoad() { // mode 1 預設 (快速自動)
+                        loadFailedClick();
+                        thumbnail.forEach((object, index) => {
+                            setTimeout(() => {
+                                object.$dAttr("class");
+
+                                const a = object.$q(LinkObj);
+                                const hrefP = hrefParse(a);
+
+                                if (Config.experiment) {
+                                    a.$q("img").$addClass("Image-loading-indicator-experiment");
+
+                                    imgRequest(object, hrefP, href => {
+                                        render(preact.h(imgRendering, { id: `IMG-${index}`, oldUrl: hrefP, newUrl: href }), object);
+                                    });
+                                } else {
+                                    render(preact.h(imgRendering, { id: `IMG-${index}`, newUrl: hrefP }), object);
+                                }
+                            }, { timeout: index * 300 });
+                        });
+                    };
+
+                    async function slowAutoLoad(index) {
+                        if (index == thumbnail.length) return;
+                        const object = thumbnail[index];
+                        object.$dAttr("class");
+
+                        const a = object.$q(LinkObj);
+                        const hrefP = hrefParse(a);
+
+                        const img = a.$q("img");
+
+                        const replace_core = (newUrl, oldUrl = null) => {
+
+                            const container = Lib.createElement((oldUrl ? "rc" : "div"), {
+                                id: `IMG-${index}`,
+                                class: "Image-link",
+                            });
+
+                            oldUrl && container.$sAttr("src", oldUrl); // 當存在時進行設置
+
+                            const img = Lib.createElement(container, "img", {
+                                src: newUrl,
+                                class: "Image-loading-indicator Image-style"
+                            });
+
+                            img.onload = function () {
+                                img.$delClass("Image-loading-indicator");
+                                slowAutoLoad(++index);
+                            };
+
+                            object.$iHtml(""); // 清空物件元素
+                            object.appendChild(container);
+                        };
+
+                        if (Config.experiment) { // 替換調用
+                            img.$addClass("Image-loading-indicator-experiment");
+
+                            imgRequest(object, hrefP, href => replace_core(href, hrefP));
+                        } else {
+                            replace_core(hrefP);
+                        }
+                    };
+
+                    function observeLoad() { // mode 3 (觀察觸發)
+                        loadFailedClick();
+                        return new IntersectionObserver(observed => {
+                            observed.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    const object = entry.target;
+
+                                    observer.unobserve(object);
                                     object.$dAttr("class");
 
                                     const a = object.$q(LinkObj);
-                                    const hrefP = HrefParse(a);
+                                    const hrefP = hrefParse(a);
 
                                     if (Config.experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
 
-                                        this.Request(object, hrefP, href => {
-                                            render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Ourl: hrefP, Nurl: href }), object);
+                                        imgRequest(object, hrefP, href => {
+                                            render(preact.h(imgRendering, { id: object.alt, oldUrl: hrefP, newUrl: href }), object);
                                         });
                                     } else {
-                                        render(preact.h(this.ImgRendering, { ID: `IMG-${index}`, Nurl: hrefP }), object);
+                                        render(preact.h(imgRendering, { id: object.alt, newUrl: hrefP }), object);
                                     }
-                                }, { timeout: index * 300 });
+                                }
                             });
-                        },
-                        SlowAuto: async function (index) {
-                            if (index == thumbnail.length) return;
-                            const object = thumbnail[index];
-                            object.$dAttr("class");
-
-                            const a = object.$q(LinkObj);
-                            const hrefP = HrefParse(a);
-
-                            const img = a.$q("img");
-
-                            const replace_core = (Nurl, Ourl = null) => {
-
-                                const container = document.createElement((Ourl ? "rc" : "div"));
-                                Ourl && container.$sAttr("src", Ourl); // 當存在時進行設置
-
-                                Object.assign(container, {
-                                    id: `IMG-${index}`,
-                                    className: "Image-link"
-                                });
-
-                                const img = document.createElement("img");
-                                Object.assign(img, {
-                                    src: Nurl,
-                                    className: "Image-loading-indicator Image-style"
-                                });
-
-                                img.onload = function () {
-                                    img.$delClass("Image-loading-indicator");
-                                    Origina_Requ.SlowAuto(++index);
-                                };
-
-                                object.$iHtml(""); // 清空物件元素
-                                container.appendChild(img);
-                                object.appendChild(container);
-                            };
-
-                            if (Config.experiment) { // 替換調用
-                                img.$addClass("Image-loading-indicator-experiment");
-
-                                this.Request(object, hrefP, href => replace_core(href, hrefP));
-                            } else {
-                                replace_core(hrefP);
-                            }
-                        },
-                        ObserveTrigger: function () { // mode 3 (觀察觸發)
-                            this.FailedClick();
-                            return new IntersectionObserver(observed => {
-                                observed.forEach(entry => {
-                                    if (entry.isIntersecting) {
-                                        const object = entry.target;
-                                        observer.unobserve(object);
-                                        object.$dAttr("class");
-
-                                        const a = object.$q(LinkObj);
-                                        const hrefP = HrefParse(a);
-
-                                        if (Config.experiment) {
-                                            a.$q("img").$addClass("Image-loading-indicator-experiment");
-
-                                            this.Request(object, hrefP, href => {
-                                                render(preact.h(this.ImgRendering, { ID: object.alt, Ourl: hrefP, Nurl: href }), object);
-                                            });
-                                        } else {
-                                            render(preact.h(this.ImgRendering, { ID: object.alt, Nurl: hrefP }), object);
-                                        }
-                                    }
-                                });
-                            }, { threshold: 0.3 });
-                        }
+                        }, { threshold: 0.3 });
                     };
 
                     /* 模式選擇 */
                     let observer;
                     switch (Config.mode) {
                         case 2:
-                            Origina_Requ.SlowAuto(0);
+                            slowAutoLoad(0);
                             break;
 
                         case 3:
-                            observer = Origina_Requ.ObserveTrigger();
+                            observer = observeLoad();
                             thumbnail.forEach((object, index) => {
                                 object.alt = `IMG-${index}`;
                                 observer.observe(object);
@@ -2071,7 +2185,7 @@
                             break;
 
                         default:
-                            Origina_Requ.FastAuto();
+                            fastAutoLoad();
                     }
                 });
             },
