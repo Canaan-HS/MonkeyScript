@@ -22,7 +22,7 @@
 - When enabled, automatically checks login status every 10 minutes when entering the site and performs automatic login
 
 ### **Shared Account Login**
-- Use the Cookies I personally provided to log in (2025-6-25 | 5) [Please notify me if they expire]
+- Use the Cookies I personally provided to log in (2025-8-23 | 6) [Please notify me if they expire]
 - Account expiration is due to website restrictions. Updates require time and effort, and I cannot monitor them constantly. If I receive numerous negative reviews due to expired accounts again, I will discontinue maintaining this script
 
 ### **Local Favorites**
