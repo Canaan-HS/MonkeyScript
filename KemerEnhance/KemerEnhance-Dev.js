@@ -440,7 +440,7 @@
                     Transl: (Str) => ML[Str] ?? Str
                 }
             },
-            ...UserSet, Style, MenuRule, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement
+            ...UserSet, Style, MenuRule, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
         };
     })();
 
@@ -1073,8 +1073,10 @@
 
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
-
-                    if (target.matches("fix_edit")) {
+                    
+                    if (target.tagName === "TEXTAREA") {
+                        event.stopImmediatePropagation();
+                    } else if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
 
                         const display = target.nextElementSibling; // 取得下方的 name 元素
@@ -1118,7 +1120,7 @@
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.IsSearch()) {
                     Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
-                        if (DLL.Link.test(Url)) {
+                        if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             const artist = Lib.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist); // 預覽頁的 名稱修復
 
