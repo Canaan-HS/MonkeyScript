@@ -892,7 +892,7 @@
                 `, "Collapse_Effects", false);
             },
             async DeleteNotice(Config) { /* 刪除公告通知 */
-                Lib.waitEl("aside", null, { throttle: 50, timeout: 5 }).then(aside => aside.remove());
+                Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 5 }).then(announcement => announcement.remove());
             },
             async BlockAds(Config) { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
