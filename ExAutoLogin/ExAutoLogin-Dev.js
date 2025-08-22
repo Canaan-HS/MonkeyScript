@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      0.0.34-Beta3
+// @version      2025.08.23-Beta
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
@@ -613,9 +613,9 @@
                             const icon = info.$q("#gdc div"); // 類型 icon
                             const artist = info.$q("#gdn a"); // 藝術家連結
 
-                            const title = container.$q("h1#gj").$text() || container.$q("h1#gn").$text() // 標題 (優先找日文)
+                            const title = container.$q("#gj").$text() || container.$q("#gn").$text() // 標題 (優先找日文)
                             const [, gid, tid] = path.match(/\/g\/([^\/]+)\/([^\/]+)\//); // 解析 id
-                            const detail = info.$q("div#gdd"); // 資訊內容
+                            const detail = info.$q("#gdd"); // 資訊內容
                             const posted = detail.$q("tr:nth-child(1) .gdt2").$text();
                             const length = detail.$q("tr:nth-child(6) .gdt2").$text();
 
@@ -970,8 +970,7 @@
                                                                                 ${tagList.map(tag => `<div class="gtl" title="${tagCategory}:${tag}">${tag}</div>`).join('')}
                                                                             </td>
                                                                         </tr>
-                                                                    `;
-                            }).join('')}
+                                                                    `}).join('')}
                                                             </tbody>
                                                         </table>
                                                     </div>
