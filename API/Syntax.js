@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025/08/08
+// @version      2025/08/23
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -50,6 +50,8 @@ const Lib = (() => {
      * $qa("div").$qa("span")
      */
     function selector(root = document, select, all) {
+        if (root?.nodeType !== 1 && root?.nodeType !== 9) return all ? [] : undefined;
+
         const head = select[0];
         const headless = select.slice(1);
         const complicated = /[ .#:[\]>+~*,()^$=]/.test(headless);
@@ -58,16 +60,16 @@ const Lib = (() => {
             return all ? root.querySelectorAll(select) : root.querySelector(select);
         }
 
-        if (!all && head === '#') { // ID選擇器 (#id)
-            return root.getElementById(headless);
+        if (!all && head === '#') { // (#id) 選擇器 nodeType 9 是 document, 元素這樣判斷比 instanceof 更安全更快
+            return root.nodeType === 9 ? root.getElementById(headless) : root.querySelector(select);
         }
 
-        if (select[0] === '.') { // 類選擇器 (.class)
+        if (select[0] === '.') { // (.class) 選擇器
             const collection = root.getElementsByClassName(headless);
             return all ? [...collection] : collection[0];
         }
 
-        // 標籤選擇器 (tag)
+        // (tag) 選擇器
         const collection = root.getElementsByTagName(select);
         return all ? [...collection] : collection[0];
     };
@@ -256,7 +258,7 @@ const Lib = (() => {
                 }
             });
 
-            return root instanceof HTMLElement ? root.appendChild(element) : element;
+            return root?.nodeType === 1 ? root.appendChild(element) : element;
         },
     };
 
