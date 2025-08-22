@@ -101,6 +101,7 @@
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
         const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
 
@@ -426,7 +427,7 @@
         return {
             IsContent: () => Content.test(Url),
             IsAnnouncement: () => Announcement.test(Url),
-            IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
+            IsSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
             IsNeko: Lib.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
 
