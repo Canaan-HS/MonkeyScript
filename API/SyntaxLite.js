@@ -942,17 +942,17 @@ const Lib = (() => {
      *      "菜單2": ()=> { 方法2(參數) }
      * }, "ID");
      */
-    const Register = new Set();
-    async function regMenu(items, options = {}) {
+    const registerMenu = new Set();
+    function regMenu(items, options = {}) {
         let {
-            name = "Menu",
+            name = "regMenu",
             index = 1,
             reset = false
         } = options || {};
 
         if (reset) {
-            [...Register].map(id => GM_unregisterMenuCommand(id));
-            Register.clear();
+            [...registerMenu].map(id => GM_unregisterMenuCommand(id));
+            registerMenu.clear();
         };
 
         for (let [show, item] of Object.entries(items)) {
@@ -968,7 +968,7 @@ const Lib = (() => {
                 accessKey: item.hotkey,
             });
 
-            Register.add(id);
+            registerMenu.add(id);
         }
     };
 
@@ -977,18 +977,22 @@ const Lib = (() => {
      * @grant GM_unregisterMenuCommand
      * @example
      *
-     * unMenu("ID");
-     * unMenu("All");
+     * unMenu(); // 全部移除
+     * unMenu("ID"); // 單一移除
+     * unMenu(["ID1", "ID2"]); // 批量移除
      */
     async function unMenu(id) {
-        if (id.toLowerCase() === "all") {
-            [...Register].map(id => GM_unregisterMenuCommand(id));
-            Register.clear();
-        } else {
-            if (Register.has(id)) {
-                GM_unregisterMenuCommand(id);
-                Register.delete(id);
-            }
+        if (id == null) {
+            [...registerMenu].map(id => GM_unregisterMenuCommand(id));
+            registerMenu.clear();
+        } else if (Array.isArray(id)) {
+            id.forEach(item => {
+                if (registerMenu.delete(item)) {
+                    GM_unregisterMenuCommand(item);
+                }
+            })
+        } else if (registerMenu.delete(id)) {
+            GM_unregisterMenuCommand(id);
         }
     };
 
@@ -1023,6 +1027,7 @@ const Lib = (() => {
     /**
      * @description 監聽保存值的變化
      * @grant GM_addValueChangeListener
+     * @grant GM_removeValueChangeListener
      *
      * @param {array} object    - 一個可遍歷的, 標籤對象物件
      * @param {object} callback - 回條函數
@@ -1034,20 +1039,39 @@ const Lib = (() => {
      * nv - 對象新值
      * far - 是否是其他窗口觸發
      *
-     * storeListen(["key1", "key2"], call=> {
+     * const listenHandle = storeListen(["key1", "key2"], call=> {
      *      console.log(call.key, call.nv);
      * })
+     *
+     * listenHandle.off("key1");
+     * listenHandle.offAll();
      */
-    const listenRecord = new Set();
-    async function storeListen(object, callback) {
+    const listenRecord = new Map();
+    function storeListen(object, callback) {
         object.forEach(label => {
             if (!listenRecord.has(label)) {
-                listenRecord.add(label);
-                GM_addValueChangeListener(label, function (key, old_value, new_value, remote) {
-                    callback({ key, ov: old_value, nv: new_value, far: remote });
-                })
+                const id = GM_addValueChangeListener(label, function (key, oldValue, newValue, remote) {
+                    callback({ key, ov: oldValue, nv: newValue, far: remote });
+                });
+                listenRecord.set(label, id);
             }
-        })
+        });
+
+        return {
+            off(label) {
+                const id = listenRecord.get(label);
+                if (id) {
+                    GM_removeValueChangeListener(id);
+                    listenRecord.delete(label);
+                }
+            },
+            offAll() {
+                for (const id of listenRecord.values()) {
+                    GM_removeValueChangeListener(id);
+                }
+                listenRecord.clear();
+            }
+        }
     };
 
     /* ========== [ 其他 ] ========== */
