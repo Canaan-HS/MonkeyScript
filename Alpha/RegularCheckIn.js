@@ -22,7 +22,7 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.3.1/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1647211/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
@@ -36,9 +36,10 @@
         RegisterKey: "RegisterTime", // 註冊時間 Key
     };
 
-    const Task_List = [
+    const taskList = [
         {
             Name: "GenshInimpact", // 任務名
+            Method: "POST", // 請求方法
             API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481", // 簽到 API
             Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
             verifyStatus: (Name, { retcode }) => { // 驗證邏輯 Name: 任務名, { 要解構物件的值 }
@@ -47,6 +48,7 @@
         },
         {
             Name: "HonkaiStarRail",
+            Method: "POST",
             API: "https://sg-public-api.hoyolab.com/event/luna/os/sign?act_id=e202303301540311",
             Page: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
             verifyStatus: (Name, { retcode }) => {
@@ -55,6 +57,7 @@
         },
         {
             Name: "HonkaiImpact3rd",
+            Method: "POST",
             API: "https://sg-public-api.hoyolab.com/event/mani/sign?act_id=e202110291205111",
             Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
             verifyStatus: (Name, { retcode }) => {
@@ -63,6 +66,7 @@
         },
         // {
         //     Name: "ZenlessZoneZero",
+        //     Method: "POST",
         //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
         //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
         //     verifyStatus: (Name, { retcode }) => {
@@ -71,6 +75,7 @@
         // },
         {
             Name: "LeveCheckIn",
+            Method: "POST",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/",
             verifyStatus: (Name, { code }) => {
@@ -79,6 +84,7 @@
         },
         {
             Name: "LeveStageCheckIn",
+            Method: "POST",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
             verifyStatus: (Name, { code }) => {
@@ -88,14 +94,14 @@
     ];
 
     // 建立簽到請求
-    function createRequest({ Name, API, verifyStatus }) {
+    function createRequest({ Name, Method, API, verifyStatus }) {
 
         const deBug = (Result) => {
             console.table(Object.assign({ name: Name }, Result));
         };
 
         return {
-            Run: () => {
+            send: () => {
                 let CheckIn = undefined;
 
                 try {
@@ -103,7 +109,7 @@
                 } catch (error) { }
 
                 GM_xmlhttpRequest({
-                    method: "POST",
+                    method: Method,
                     url: API,
                     onload: (response) => {
                         const Result = JSON.parse(response.response);
@@ -135,7 +141,7 @@
         let Listeners = null; // 變化監聽器
 
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
-        async function DestroyReset() {
+        async function destroyReset() {
             Stop = true;
             clearTimeout(Timers);
             Lib.offEvent(document, "visibilitychange");
@@ -152,14 +158,14 @@
         async function changeListener(name) {
             Listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
                 if (remote) { // 來自其他窗口修改
-                    DestroyReset();
+                    destroyReset();
                     console.log("舊詢輪已被停止");
                 }
             })
         };
 
         // 顯示觸發時間
-        function DisplayTrigger(newDate, CheckInDate) {
+        function displayTriggerTime(newDate, CheckInDate) {
             if (!Config.Dev) return;
 
             const ms = CheckInDate - newDate;
@@ -246,7 +252,7 @@
                 Lib.delV(Config.TimerKey);
                 Lib.delV(Config.RegisterKey);
 
-                DestroyReset();
+                destroyReset();
                 Lib.log(null, "沒有任務, 詢輪已被停止", {
                     dev: Config.Dev, type: "error"
                 });
@@ -274,31 +280,31 @@
                             "前一天": isPrevious(newDate, new Date(RecordDate))
                         });
 
-                        let Index = 0;
-                        const EnabledTask = new Set(Tasks);
+                        let index = 0;
+                        const enabledTask = new Set(Tasks);
 
-                        for (const Task of Task_List) {
-                            if (!EnabledTask.has(Task.Name)) continue; // 判斷是否啟用
-                            if (Lib.getV(`${Task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
+                        for (const task of taskList) {
+                            if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
+                            if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
 
                             setTimeout(() => {
-                                createRequest(Task).Run();
-                                Lib.setV(`${Task.Name}-CheckIn`, true);
-                            }, Math.max(Index++ * 2000)); // 每個任務間隔 2 秒
+                                createRequest(task).send();
+                                Lib.setV(`${task.Name}-CheckIn`, true);
+                            }, Math.max(index++ * 2000)); // 每個任務間隔 2 秒
                         }
 
                         // ? 嘗試確保所有任務都簽到
-                        const allCheckIn = Task_List.every(({ Name }) => Lib.getV(`${Name}-CheckIn`));
+                        const allCheckIn = taskList.every(({ Name }) => Lib.getV(`${Name}-CheckIn`));
 
                         if (allCheckIn) {
-                            EnabledTask.clear();
+                            enabledTask.clear();
                             setTimestamp(newDate); // 更新時間戳
 
-                            Task_List.forEach(({ Name }) => { // 清除簽到記錄
+                            taskList.forEach(({ Name }) => { // 清除簽到記錄
                                 Lib.delV(`${Name}-CheckIn`);
                             })
                         };
-                    } else DisplayTrigger(newDate, new Date(CheckInDate));
+                    } else displayTriggerTime(newDate, new Date(CheckInDate));
 
                 } else throw new Error("沒有時間戳記錄");
             } catch {
@@ -371,7 +377,7 @@
         };
 
         // 取得任務列表
-        const EnabledTask = new Set(Lib.getV(Config.TaskKey, []));
+        const enabledTask = new Set(Lib.getV(Config.TaskKey, []));
         // 根據版本號判斷菜單是否自動關閉
         const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
@@ -379,29 +385,29 @@
         async function enableTask() {
 
             // 有任務時註冊
-            if (EnabledTask.size > 0) {
+            if (enabledTask.size > 0) {
                 createTask.register();
             };
 
-            for (const [Index, Task] of Task_List.entries()) {
-                const Icon = EnabledTask.has(Task.Name) ? "🟢" : "🔴";
+            for (const [index, task] of taskList.entries()) {
+                const icon = enabledTask.has(task.Name) ? "🟢" : "🔴";
 
-                GM_registerMenuCommand(`${Icon} ${Task.Name}`, doubleClickConfirm((Open) => {
+                GM_registerMenuCommand(`${icon} ${task.Name}`, doubleClickConfirm((open) => {
 
-                    if (Open) {
-                        const Url = Task['Page'];
-                        isValidURL(Url) && window.open(Url);
+                    if (open) {
+                        const url = task['Page'];
+                        isValidURL(url) && window.open(url);
                         return;
                     };
 
-                    EnabledTask.has(Task.Name)
-                        ? EnabledTask.delete(Task.Name)
-                        : EnabledTask.add(Task.Name);
+                    enabledTask.has(task.Name)
+                        ? enabledTask.delete(task.Name)
+                        : enabledTask.add(task.Name);
 
-                    Lib.setV(Config.TaskKey, [...EnabledTask]);
+                    Lib.setV(Config.TaskKey, [...enabledTask]);
                     enableTask(); // 遞迴更新狀態
                 }, 200), {
-                    id: `CheckIn-${Index}`,
+                    id: `CheckIn-${index}`,
                     autoClose
                 })
 
