@@ -48,7 +48,6 @@
         },
         {
             Name: "HonkaiStarRail",
-            Method: "POST",
             API: "https://sg-public-api.hoyolab.com/event/luna/os/sign?act_id=e202303301540311",
             Page: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
             verifyStatus: (Name, { retcode }) => {
@@ -57,7 +56,6 @@
         },
         {
             Name: "HonkaiImpact3rd",
-            Method: "POST",
             API: "https://sg-public-api.hoyolab.com/event/mani/sign?act_id=e202110291205111",
             Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
             verifyStatus: (Name, { retcode }) => {
@@ -66,7 +64,6 @@
         },
         // {
         //     Name: "ZenlessZoneZero",
-        //     Method: "POST",
         //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
         //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
         //     verifyStatus: (Name, { retcode }) => {
@@ -75,7 +72,6 @@
         // },
         {
             Name: "LeveCheckIn",
-            Method: "POST",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/",
             verifyStatus: (Name, { code }) => {
@@ -84,20 +80,33 @@
         },
         {
             Name: "LeveStageCheckIn",
-            Method: "POST",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
             verifyStatus: (Name, { code }) => {
                 code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 || code === 1002007 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
             }
+        },
+        {
+            Name: "Android 台灣中文網",
+            Method: "GET",
+            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=250db20b&zjtesttimes=1756224218&inajax=1&ajaxtarget=my_amupper",
+            Page: "https://apk.tw/forum.php",
+            verifyStatus: (Name, Response) => {
+                Response?.includes("wb.gif") ? Qmsg.success(`${Name} 簽到成功`) : Qmsg.error(`${Name} 簽到失敗`)
+            }
         }
     ];
 
     // 建立簽到請求
-    function createRequest({ Name, Method, API, verifyStatus }) {
+    function createRequest({ Name, Method = "POST", API, verifyStatus }) {
 
-        const deBug = (Result) => {
-            console.table(Object.assign({ name: Name }, Result));
+        const deBug = (result) => {
+            console.table(Object.assign(
+                { name: Name },
+                result?.constructor === Object ? result : { result }
+            ));
+
+            return result;
         };
 
         return {
@@ -112,21 +121,29 @@
                     method: Method,
                     url: API,
                     onload: (response) => {
-                        const Result = JSON.parse(response.response);
-                        deBug(Result);
-
                         CheckIn?.close();
-                        if (response.status === 200) {
-                            verifyStatus(Name, Result);
-                        } else {
+
+                        if (response.status !== 200) {
                             Qmsg.error(`${Name} 簽到失敗`);
+                            return;
+                        }
+
+                        try {
+                            verifyStatus(Name, deBug(JSON.parse(response.response)));
+                        } catch {
+                            verifyStatus(Name, deBug(response.response));
                         }
                     },
                     onerror: (response) => {
-                        deBug(JSON.parse(response.response));
-
                         CheckIn?.close();
-                        Qmsg.error(`${Name} 簽到失敗`);
+
+                        try {
+                            deBug(JSON.parse(response.response));
+                        } catch {
+                            deBug(response.response);
+                        } finally {
+                            Qmsg.error(`${Name} 簽到失敗`);
+                        }
                     }
                 })
             }
