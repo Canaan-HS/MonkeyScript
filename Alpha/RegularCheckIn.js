@@ -151,41 +151,42 @@
     };
 
     const createTask = (() => {
-        let Stop = false;
-        let Registered = false;
+        let stop = false;
+        let registered = false;
 
-        let Timers = null; // 任務定時器
-        let Listeners = null; // 變化監聽器
+        let timers = null; // 任務定時器
+        let listeners = null; // 變化監聽器
 
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
-        async function destroyReset() {
-            Stop = true;
-            clearTimeout(Timers);
+        async function destroyReset(recover=true) {
+            stop = true;
+            clearTimeout(timers);
             Lib.offEvent(document, "visibilitychange");
-            GM_removeValueChangeListener(Listeners);
+            GM_removeValueChangeListener(listeners);
 
-            // 恢復預設狀態
+            if (!recover) return;
+            // 恢復預設狀態 (允許重複註冊)
             setTimeout(() => {
-                Stop = false;
-                Registered = false;
-            })
+                stop = false;
+                registered = false;
+            });
         };
 
         // 註冊變化監聽器
         async function changeListener(name) {
-            Listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
+            listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
                 if (remote) { // 來自其他窗口修改
-                    destroyReset();
+                    destroyReset(false);
                     console.log("舊詢輪已被停止");
                 }
             })
         };
 
         // 顯示觸發時間
-        function displayTriggerTime(newDate, CheckInDate) {
+        function displayTriggerTime(newDate, checkInDate) {
             if (!Config.Dev) return;
 
-            const ms = CheckInDate - newDate;
+            const ms = checkInDate - newDate;
             const [
                 day_ms, minute_ms, seconds_ms
             ] = [
@@ -249,12 +250,11 @@
                 * 將會被設置為 {"時間戳": ["All"]}, 輪詢始終只創建一個
                 * 可能的定義與解析: const time = "01:05:30".split(":").map(value => parseInt(value));
             */
-            if (Stop) return;
-
-            const Tasks = Lib.getV(Config.TaskKey, []); // 取得任務列表
+            if (stop) return;
+            const tasks = Lib.getV(Config.TaskKey, []); // 取得任務列表
 
             // 料表類型錯誤, 直接複寫空陣列
-            if (!Array.isArray(Tasks)) {
+            if (!Array.isArray(tasks)) {
                 Lib.setV(Config.TaskKey, []);
 
                 Lib.log(null, "錯誤的任務列表, 詢輪已被停止", {
@@ -264,7 +264,7 @@
             };
 
             // 沒有任務不執行 (並清除不需要的值)
-            if (Tasks.length === 0) {
+            if (tasks.length === 0) {
                 Lib.delV(Config.TaskKey);
                 Lib.delV(Config.TimerKey);
                 Lib.delV(Config.RegisterKey);
@@ -277,28 +277,29 @@
             };
 
             try {
-                const TaskTimer = Lib.getV(Config.TimerKey); // 取得時間戳
+                const taskTimer = Lib.getV(Config.TimerKey); // 取得時間戳
 
-                if (TaskTimer) {
-                    const CheckInDate = TaskTimer['CheckInTime']; // 主要驗證
-                    const RecordDate = TaskTimer['RecordTime']; // 附加驗證 (非必要)
+                if (taskTimer) {
+                    const checkInDate = taskTimer['CheckInTime']; // 主要驗證
+                    const recordDate = taskTimer['RecordTime']; // 附加驗證 (非必要)
 
                     if (
-                        navigator.onLine && newDate > new Date(CheckInDate) // 有網路時, 當前時間 > 簽到時間
-                        || RecordDate && isPrevious(newDate, new Date(RecordDate)) // 判斷紀錄時間是前一天
+                        navigator.onLine && newDate > new Date(checkInDate) // 有網路時, 當前時間 > 簽到時間
+                        || recordDate && isPrevious(newDate, new Date(recordDate)) // 判斷紀錄時間是前一天
                     ) { // 執行簽到
+                        destroyReset(false); // 簽到時停止詢輪
 
                         // ! 暫時檢測
                         console.log({
                             "網路狀態": navigator.onLine,
                             "當前時間": timeFormat(newDate),
-                            "簽到觸發": newDate > new Date(CheckInDate),
-                            "紀錄時間": RecordDate,
-                            "前一天": isPrevious(newDate, new Date(RecordDate))
+                            "簽到觸發": newDate > new Date(checkInDate),
+                            "紀錄時間": recordDate,
+                            "前一天": isPrevious(newDate, new Date(recordDate))
                         });
 
                         let index = 0;
-                        const enabledTask = new Set(Tasks);
+                        const enabledTask = new Set(tasks);
 
                         for (const task of taskList) {
                             if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
@@ -321,20 +322,21 @@
                                 Lib.delV(`${Name}-CheckIn`);
                             })
                         };
-                    } else displayTriggerTime(newDate, new Date(CheckInDate));
+                    } else displayTriggerTime(newDate, new Date(checkInDate));
 
                 } else throw new Error("沒有時間戳記錄");
             } catch {
                 setTimestamp(newDate);
             };
 
-            Timers = setTimeout(taskQuery, 1e4); // 10 秒詢輪
+            if (stop) return;
+            timers = setTimeout(taskQuery, 1e4); // 10 秒詢輪
         };
 
         return {
             register: () => {
-                if (Registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
-                Registered = true;
+                if (registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
+                registered = true;
 
                 Lib.setV(Config.RegisterKey, timeFormat(new Date())); // 紀錄註冊時間
                 changeListener(Config.RegisterKey); // 監聽註冊時間變化
@@ -342,7 +344,7 @@
 
                 Lib.onEvent(document, "visibilitychange", () => {
                     if (document.visibilityState === "visible") {
-                        clearTimeout(Timers); // 清除舊的定時器
+                        clearTimeout(timers); // 清除舊的定時器
                         taskQuery(); // 重新檢測
                     }
                 });
