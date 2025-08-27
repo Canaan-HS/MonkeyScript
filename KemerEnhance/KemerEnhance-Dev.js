@@ -565,7 +565,8 @@
                         "MAP", "AREA"
                     ]),
                     urlMatch(str) {
-                        // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
+                        // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec(), 沒有重設 lastIndex 會有意外狀況
+                        // 不直接用 match 是為了性能, 因為節點可能很多, test 比 match 開銷更小
                         this.URL_Regex.lastIndex = 0;
                         return this.URL_Regex.test(str);
                     },
