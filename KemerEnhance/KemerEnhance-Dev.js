@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.08.06-Beta
+// @version      2025.08.28-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -86,7 +86,7 @@
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
                 enable: true,
-                experiment: true, // 實驗性替換方式
+                experiment: false, // 實驗性替換方式
             }
         }
     };
@@ -290,7 +290,7 @@
                         font-size: 14px;
                         padding: 3px 6px;
                         position: absolute;
-                        border-radius: 5px;
+                        border-radius: 3px;
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
@@ -527,6 +527,7 @@
     // 監聽網址變化
     Lib.onUrlChange(change => {
         Url = change.url;
+
         WaitDom.observe(document, {
             attributes: true,
             childList: true,
@@ -1674,57 +1675,64 @@
         const LoadFunc = {
             LinkBeautify_Cache: undefined,
             LinkBeautify_Dependent() {
-                return this.LinkBeautify_Cache ??= async function ShowBrowse(Browse) {
-                    const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
+                return this.LinkBeautify_Cache ??= async function showBrowse(browse) {
+                    const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
 
                     // 初始化
-                    Browse.style.position = "relative"; // 修改樣式避免跑版
-                    Browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
+                    browse.style.position = "relative"; // 修改樣式避免跑版
+                    browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
 
                     GM_xmlhttpRequest({
                         method: "GET",
-                        url: URL,
+                        url,
+                        headers: {
+                            "Accept": "text/css",
+                            "User-Agent": navigator.userAgent
+                        },
                         onload: response => {
                             if (response.status !== 200) return;
 
                             if (DLL.IsNeko) {
-                                const Main = response.responseXML.$q("main");
-                                const View = Lib.createElement("View", { class: "View" });
-                                const Buffer = Lib.createFragment;
-                                for (const br of Main.$qa("br")) { // 取得 br 數據
-                                    Buffer.append( // 將以下元素都添加到 Buffer
+                                // ! 忘記這個 API 有什麼用了, IsNeko 好像是沒有用
+
+                                const main = response.responseXML.$q("main");
+                                const view = Lib.createElement("View", { class: "View" });
+                                const buffer = Lib.createFragment;
+                                for (const br of main.$qa("br")) { // 取得 br 數據
+                                    buffer.append( // 將以下元素都添加到 buffer
                                         document.createTextNode(br.previousSibling.$text()),
                                         br
                                     );
                                 }
-                                View.appendChild(Buffer);
-                                Browse.appendChild(View);
+
+                                view.appendChild(buffer);
+                                browse.appendChild(view);
                             } else {
-                                const ResponseJson = JSON.parse(response.responseText);
-                                const View = Lib.createElement("View", { class: "View" });
-                                const Buffer = Lib.createFragment;
+                                const responseJson = JSON.parse(response.responseText);
+                                const view = Lib.createElement("View", { class: "View" });
+                                const buffer = Lib.createFragment;
 
                                 // 添加密碼數據
-                                const password = ResponseJson['password'];
+                                const password = responseJson['password'];
                                 if (password) {
-                                    Buffer.append(
+                                    buffer.append(
                                         document.createTextNode(`password: ${password}`),
                                         Lib.createElement("br")
                                     )
                                 };
 
                                 // 添加檔案數據
-                                for (const text of ResponseJson['file_list']) {
-                                    Buffer.append(
+                                for (const text of responseJson['file_list']) {
+                                    buffer.append(
                                         document.createTextNode(text), Lib.createElement("br")
                                     )
                                 };
 
-                                View.appendChild(Buffer);
-                                Browse.appendChild(View);
+                                view.appendChild(buffer);
+                                browse.appendChild(view);
                             }
                         },
-                        onerror: error => { ShowBrowse(Browse) }
+                        onerror: error => { showBrowse(browse) }
                     });
                 }
             },
@@ -1795,7 +1803,7 @@
                 `, "Link_Effects", false);
 
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
-                    const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
+                    const showBrowse = LoadFunc.LinkBeautify_Dependent();
 
                     for (const link of post) {
                         const text = link.$text().replace("Download", ""); // 修正原文本
@@ -1803,10 +1811,10 @@
                         link.$text(text); // 修改文本
                         DLL.IsNeko && link.$sAttr("download", text); // ? 修改標籤 (非 Neko 的網站修改標籤會導致 AJAX 換頁時意外無法變更)
 
-                        const Browse = link.nextElementSibling; // 查找是否含有 Browse 元素
-                        if (!Browse) continue;
+                        const browse = link.nextElementSibling; // 查找是否含有 browse 元素
+                        if (!browse) continue;
 
-                        ShowBrowse(Browse); // 請求顯示 Browse 數據
+                        showBrowse(browse); // 請求顯示 browse 數據
                     }
                 });
             },
@@ -1936,12 +1944,6 @@
                         )
                     };
 
-                    /**
-                     * 獲取檔案資訊（內建5次重試）。
-                     * 此函式負責所有 HEAD 請求的邏輯，並且永遠不會 reject。
-                     * @param {string} url - 檔案連結。
-                     * @returns {Promise<{supportsRange: boolean, totalSize: number|null}>}
-                     */
                     async function getFileSize(url) {
                         for (let i = 0; i < 5; i++) {
                             try {
@@ -1974,25 +1976,20 @@
                                 if (i < 4) await new Promise(res => setTimeout(res, 300)); // 如果不是最後一次，就稍等後重試
                             }
                         }
+
                         // 5 次重試全部失敗後，靜默回傳「不支援」的狀態
                         return { supportsRange: false, totalSize: null };
                     }
 
-                    /**
-                     * 獲取圖片的 Blob URL (內建5次重試)。
-                     * 此函式負責所有 GET 請求的邏輯，會自動判斷採用分段或完整下載，並在最終失敗後回退。
-                     * @param {Object} Container - 用於標示進度用的容器。
-                     * @param {string} Url - 請求的圖片連結。
-                     * @param {function} Result - 接收最終結果 (Blob URL 或原始 URL) 的回呼函式。
-                     */
                     async function imgRequest(Container, Url, Result) {
-                        const fileInfo = await getFileSize(Url);
+                        // ! 實驗性分段下載 (暫時關閉)
+                        // const fileInfo = await getFileSize(Url);
                         const indicator = Lib.createElement(Container, "div", { class: "progress-indicator" });
 
                         let blob = null;
                         try {
-                            // 策略一：如果支援分段下載
-                            if (fileInfo.supportsRange && fileInfo.totalSize) {
+                            // 如果支援分段下載
+                            if (false /* fileInfo.supportsRange && fileInfo.totalSize */) {
                                 const CHUNK_COUNT = 6;
                                 const totalSize = fileInfo.totalSize;
                                 const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
@@ -2099,7 +2096,7 @@
                                 } else {
                                     render(preact.h(imgRendering, { id: `IMG-${index}`, newUrl: hrefP }), object);
                                 }
-                            }, { timeout: index * 300 });
+                            }, index * 300);
                         });
                     };
 
