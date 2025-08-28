@@ -48,17 +48,18 @@ export default function Fetch(
                 return `${url.origin}${url.pathname}${params}`;
             };
 
+            const apiTemplate = `${this.firstURL}`.replace(this.host, `${this.host}/api/v1`);
 
-            // 內部連結的 API 模板
-            this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
+            this.profileAPI = `${apiTemplate}/profile`; // 帖子配置 API
+            this.postAPI = `${apiTemplate}/post`; // 內部連結的 API 模板
 
             // 將預覽頁面轉成 API 連結
             this.getPreviewAPI = url =>
                 /[?&]o=/.test(url)
-                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1")
+                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts$1")
                     : this.queryValue // 如果有搜尋關鍵字
-                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`)
-                        : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
+                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts${this.queryValue}`)
+                        : url.replace(this.host, `${this.host}/api/v1`) + "/posts";
 
             // 根據類型判斷有效值
             this.getValidValue = (value) => {
@@ -75,7 +76,7 @@ export default function Fetch(
             };
 
             // 預設添加的數據
-            this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
+            this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"]);
 
             /**
              * 生成數據
@@ -112,7 +113,7 @@ export default function Fetch(
             this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(((this.currentPage - 1) * 50) + (index + 1)).padStart(2, "0")}`;
 
             // 正規化帖子時間戳 (傳入 Post 的物件)
-            this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
+            this.normalizeTimestamp = (post) => new Date(post.added || post.published)?.toLocaleString();
 
             // 適用 kemono 和 coomer 的分類 (data = api 文件數據, serverDict = api 伺服器字典, fillValue = 填充數字的位數)
             this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
@@ -247,6 +248,9 @@ export default function Fetch(
                         try {
                             const response = await fetch(url, {
                                 method: "HEAD",
+                                headers: {
+                                    "Accept": "text/css",
+                                },
                                 signal: signal,
                                 cache: 'no-store'
                             });
@@ -295,17 +299,19 @@ export default function Fetch(
                     } else {processing = false}
                 }
                 async function FetchRequest(index, title, url, time, delay) {
-                    fetch(url).then(response => {
+                    fetch(url, {
+                        headers: {
+                            "Accept": "text/css",
+                        }
+                    }).then(response => {
                         if (response.ok) {
-                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
                             response.text().then(content => {
                                 postMessage({ index, title, url, content, time, delay, error: false });
                             });
                         } else {
                             postMessage({ index, title, url, content: "", time, delay, error: true });
                         }
-                    })
-                    .catch(error => {
+                    }).catch(error => {
                         postMessage({ index, title, url, content: "", time, delay, error: true });
                     });
                 }
@@ -372,31 +378,13 @@ export default function Fetch(
         async fetchTest(id) {
             Process.Lock = true;
 
-            this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(this.firstURL) });
-            const homeData = await new Promise((resolve, reject) => {
-                this.worker.onmessage = async (e) => {
-                    const { index, title, url, content, error } = e.data;
-                    if (!error) resolve({ url, content });
-                    else {
-                        Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
-                        await this.TooMany_TryAgain(url);
-                        this.worker.postMessage({ index, title, url });
-                    };
-                }
+            await this._fetchContent({
+                content: JSON.stringify([{
+                    id,
+                    title: this.titleCache
+                }])
             });
 
-            const { content } = homeData;
-
-            Object.assign(homeData, { content: JSON.parse(content) });
-            Lib.log("HomeData", homeData, { collapsed: false });
-
-            // 恢復 _fetchContent 處理數據格式
-            const homeDataClone = structuredClone(homeData);
-            homeDataClone.content.results = [{ id }]; // 修改數據
-            homeDataClone.content = JSON.stringify(homeDataClone.content); // 轉換為字符串
-
-            await this._fetchContent(homeDataClone);
-            Lib.log("PostDate", this.dataDict, { collapsed: false });
             this._reset();
         };
 
@@ -408,11 +396,11 @@ export default function Fetch(
             if (Process.IsNeko) {
 
                 if (!items) { // 第二輪開始 只會得到 url
-                    this.worker.postMessage({ index: 0, title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
+                    this.worker.postMessage({ title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
 
                     const homeData = await new Promise((resolve, reject) => {
                         this.worker.onmessage = async (e) => {
-                            const { index, title, url, content, time, delay, error } = e.data;
+                            const { title, url, content, time, delay, error } = e.data;
                             if (!error) {
                                 this.fetchDelay = Process.dynamicParam(time, delay);
                                 resolve(content);
@@ -420,7 +408,7 @@ export default function Fetch(
                             else {
                                 Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                                 await this.TooMany_TryAgain(url);
-                                this.worker.postMessage({ index, title, url, time, delay });
+                                this.worker.postMessage({ title, url, time, delay });
                             };
                         }
                     });
@@ -440,12 +428,12 @@ export default function Fetch(
                     await this._fetchContent({ content });
                 };
             } else {
-                this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
+                this.worker.postMessage({ title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
 
                 // 等待主頁數據
                 const homeData = await new Promise((resolve, reject) => {
                     this.worker.onmessage = async (e) => {
-                        const { index, title, url, content, time, delay, error } = e.data;
+                        const { title, url, content, time, delay, error } = e.data;
                         if (!error) {
                             this.fetchDelay = Process.dynamicParam(time, delay);
                             resolve({ url, content });
@@ -453,7 +441,7 @@ export default function Fetch(
                         else {
                             Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
                             await this.TooMany_TryAgain(url);
-                            this.worker.postMessage({ index, title, url, time, delay });
+                            this.worker.postMessage({ title, url, time, delay });
                         };
                     }
                 });
@@ -536,22 +524,33 @@ export default function Fetch(
 
             } else {
                 /* ----- 這邊是主頁的數據 ----- */
-                const contentJson = JSON.parse(content);
+                const homeJson = JSON.parse(content);
 
-                if (contentJson) {
+                if (homeJson) {
 
                     if (this.metaDict.size === 0) {
-                        const props = contentJson.props;
+                        this.worker.postMessage({ url: this.profileAPI });
 
-                        this.metaDict.set(Transl("作者"), props.name);
-                        this.metaDict.set(Transl("帖子數量"), props.count);
+                        const profile = await new Promise((resolve, reject) => {
+                            this.worker.onmessage = async (e) => {
+                                const { url, content, error } = e.data;
+                                if (!error) resolve(JSON.parse(content));
+                                else {
+                                    Lib.log(error, url, { dev: General.Dev, type: "error", collapsed: false });
+                                    await this.TooMany_TryAgain(url);
+                                    this.worker.postMessage({ url });
+                                };
+                            }
+                        })
+
+                        this.metaDict.set(Transl("作者"), profile.name);
+                        this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
                         this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
                         this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-                        this.metaDict.set(Transl("作者網站"), props.display_data.href);
                     }
 
-                    const results = contentJson.results;
-                    if (this.advancedFetch) {
+                    // ! 目前網站修改, 只支援 advancedFetch
+                    if (true || this.advancedFetch) {
                         const tasks = [];
                         const resolvers = new Map();
 
@@ -607,7 +606,7 @@ export default function Fetch(
                         };
 
                         // 生成任務
-                        for (const [index, post] of results.entries()) {
+                        for (const [index, post] of homeJson.entries()) {
                             tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(index, { resolve, reject }); // 存儲解析器
                                 this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
@@ -620,10 +619,10 @@ export default function Fetch(
                         await Promise.allSettled(tasks);
 
                     } else {
-                        const previews = contentJson.result_previews || []; // 圖片所需的數據
-                        const attachments = contentJson.result_attachments || []; // 下載所需的數據
+                        const previews = homeJson.result_previews || []; // 圖片所需的數據
+                        const attachments = homeJson.result_attachments || []; // 下載所需的數據
 
-                        for (const [index, post] of results.entries()) {
+                        for (const [index, post] of homeJson.entries()) {
                             const standardTitle = this.normalizeName(post.title, index);
 
                             try {
