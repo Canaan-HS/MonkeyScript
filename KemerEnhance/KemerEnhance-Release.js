@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.08.06-Beta
+// @version      2025.08.28-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -29,7 +29,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1636326/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1647211/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -98,6 +98,7 @@
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
         const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
         const Color = {
@@ -281,7 +282,7 @@
                         font-size: 14px;
                         padding: 3px 6px;
                         position: absolute;
-                        border-radius: 5px;
+                        border-radius: 3px;
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
@@ -413,7 +414,7 @@
         return {
             IsContent: () => Content.test(Url),
             IsAnnouncement: () => Announcement.test(Url),
-            IsSearch: () => Search.test(Url) || Link.test(Url) || FavorArtist.test(Url),
+            IsSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
             IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
             IsNeko: Lib.$domain.startsWith("nekohouse"),
             Language() {
@@ -437,7 +438,8 @@
             Search: Search,
             Content: Content,
             FavorArtist: FavorArtist,
-            Announcement: Announcement
+            Announcement: Announcement,
+            Recommended: Recommended
         };
     })();
     const Enhance = (() => {
@@ -453,18 +455,9 @@
             Global_Cache: undefined,
             Preview_Cache: undefined,
             Content_Cache: undefined,
-            Global() {
-                if (!this.Global_Cache) this.Global_Cache = Global_Function();
-                return this.Global_Cache;
-            },
-            Preview() {
-                if (!this.Preview_Cache) this.Preview_Cache = Preview_Function();
-                return this.Preview_Cache;
-            },
-            Content() {
-                if (!this.Content_Cache) this.Content_Cache = Content_Function();
-                return this.Content_Cache;
-            }
+            Global: () => this.Global_Cache ??= Global_Function(),
+            Preview: () => this.Preview_Cache ??= Preview_Function(),
+            Content: () => this.Content_Cache ??= Content_Function()
         };
         let Ord;
         async function Call(page, config = User_Config[page]) {
@@ -513,60 +506,57 @@
         const LoadFunc = {
             TextToLink_Cache: undefined,
             TextToLink_Dependent: function (Config) {
-                if (!this.TextToLink_Cache) {
-                    this.TextToLink_Cache = {
-                        Exclusion_Regex: /onfanbokkusuokibalab\.net/,
-                        URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
-                        Exclusion_Tags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
-                        UrlMatch(str) {
-                            this.URL_Regex.lastIndex = 0;
-                            return this.URL_Regex.test(str);
-                        },
-                        getTextNodes(root) {
-                            const nodes = [];
-                            const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-                                acceptNode: node => {
-                                    const parentElement = node.parentElement;
-                                    if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
-                                    const content = node.$text();
-                                    if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
-                                    return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-                                }
-                            });
-                            while (tree.nextNode()) {
-                                nodes.push(tree.currentNode.parentElement);
+                return this.TextToLink_Cache ??= {
+                    Exclusion_Regex: /onfanbokkusuokibalab\.net/,
+                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
+                    Exclusion_Tags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
+                    urlMatch(str) {
+                        this.URL_Regex.lastIndex = 0;
+                        return this.URL_Regex.test(str);
+                    },
+                    getTextNodes(root) {
+                        const nodes = [];
+                        const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                            acceptNode: node => {
+                                const parentElement = node.parentElement;
+                                if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+                                const content = node.$text();
+                                if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
+                                return this.urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                             }
-                            return nodes;
-                        },
-                        ProtocolParse(url) {
-                            if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
-                            if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
-                            if (/^\/\//.test(url)) return "https:" + url;
-                            return url;
-                        },
-                        async ParseModify(father, content) {
-                            father.$iHtml(content.replace(this.URL_Regex, url => {
-                                const decode = decodeURIComponent(url).trim();
-                                return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
-                            }));
-                        },
-                        async JumpTrigger(root) {
-                            const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
-                            Lib.onEvent(root, "click", event => {
-                                const target = event.target.closest("a:not(.fileThumb)");
-                                if (!target || target.$hAttr("download")) return;
-                                event.preventDefault();
-                                !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
-                                    active: Active,
-                                    insert: Insert
-                                });
-                            }, {
-                                capture: true
-                            });
+                        });
+                        while (tree.nextNode()) {
+                            nodes.push(tree.currentNode.parentElement);
                         }
-                    };
-                }
-                return this.TextToLink_Cache;
+                        return nodes;
+                    },
+                    protocolParse(url) {
+                        if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+                        if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+                        if (/^\/\//.test(url)) return "https:" + url;
+                        return url;
+                    },
+                    async parseModify(father, content) {
+                        father.$iHtml(content.replace(this.URL_Regex, url => {
+                            const decode = decodeURIComponent(url).trim();
+                            return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                        }));
+                    },
+                    async jumpTrigger(root) {
+                        const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                        Lib.onEvent(root, "click", event => {
+                            const target = event.target.closest("a:not(.fileThumb)");
+                            if (!target || target.$hAttr("download")) return;
+                            event.preventDefault();
+                            !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
+                                active: Active,
+                                insert: Insert
+                            });
+                        }, {
+                            capture: true
+                        });
+                    }
+                };
             },
             FixArtist_Cache: undefined,
             FixArtist_Dependent: function () {
@@ -801,10 +791,10 @@
                 `, "Collapse_Effects", false);
             },
             async DeleteNotice(Config) {
-                Lib.waitEl("aside", null, {
+                Lib.waitEl("#announcement-banner", null, {
                     throttle: 50,
                     timeout: 5
-                }).then(aside => aside.remove());
+                }).then(announcement => announcement.remove());
             },
             async BlockAds(Config) {
                 if (DLL.IsNeko) return;
@@ -920,16 +910,16 @@
                 const Func = LoadFunc.TextToLink_Dependent(Config);
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
-                        Func.JumpTrigger(body);
+                        Func.jumpTrigger(body);
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
-                                Func.ParseModify(span, span.$text());
+                                Func.parseModify(span, span.$text());
                             }
                         } else if (content) {
                             Func.getTextNodes(content).forEach(node => {
-                                Func.ParseModify(node, node.$text());
+                                Func.parseModify(node, node.$text());
                             });
                         }
                     });
@@ -938,9 +928,9 @@
                         raf: true
                     }).then(() => {
                         const items = Lib.$q(".card-list__items");
-                        Func.JumpTrigger(items);
+                        Func.jumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
-                            Func.ParseModify(node, node.$text());
+                            Func.parseModify(node, node.$text());
                         });
                     });
                 }
@@ -951,7 +941,9 @@
                 const [Device, Newtab, Active, Insert] = [Lib.platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
-                    if (target.matches("fix_edit")) {
+                    if (target.tagName === "TEXTAREA") {
+                        event.stopImmediatePropagation();
+                    } else if (target.matches("fix_edit")) {
                         event.stopImmediatePropagation();
                         const display = target.nextElementSibling;
                         const text = Lib.createElement("textarea", {
@@ -1000,7 +992,7 @@
                         raf: true,
                         timeout: 10
                     }).then(card_items => {
-                        if (DLL.Link.test(Url)) {
+                        if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             const artist = Lib.$q("span[itemprop='name']");
                             artist && Func.Other_Fix(artist);
                             for (const items of card_items.$qa("a")) {
@@ -1476,95 +1468,93 @@
         const LoadFunc = {
             LinkBeautify_Cache: undefined,
             LinkBeautify_Dependent() {
-                if (!this.LinkBeautify_Cache) {
-                    this.LinkBeautify_Cache = async function ShowBrowse(Browse) {
-                        const URL = DLL.IsNeko ? Browse.href : Browse.href.replace("posts/archives", "api/v1/file");
-                        Browse.style.position = "relative";
-                        Browse.$q(".View")?.remove();
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: URL,
-                            onload: response => {
-                                if (response.status !== 200) return;
-                                if (DLL.IsNeko) {
-                                    const Main = response.responseXML.$q("main");
-                                    const View = Lib.createElement("View", {
-                                        class: "View"
-                                    });
-                                    const Buffer = Lib.createFragment;
-                                    for (const br of Main.$qa("br")) {
-                                        Buffer.append(document.createTextNode(br.previousSibling.$text()), br);
-                                    }
-                                    View.appendChild(Buffer);
-                                    Browse.appendChild(View);
-                                } else {
-                                    const ResponseJson = JSON.parse(response.responseText);
-                                    const View = Lib.createElement("View", {
-                                        class: "View"
-                                    });
-                                    const Buffer = Lib.createFragment;
-                                    const password = ResponseJson["password"];
-                                    if (password) {
-                                        Buffer.append(document.createTextNode(`password: ${password}`), Lib.createElement("br"));
-                                    }
-                                    for (const text of ResponseJson["file_list"]) {
-                                        Buffer.append(document.createTextNode(text), Lib.createElement("br"));
-                                    }
-                                    View.appendChild(Buffer);
-                                    Browse.appendChild(View);
+                return this.LinkBeautify_Cache ??= async function showBrowse(browse) {
+                    const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file");
+                    browse.style.position = "relative";
+                    browse.$q(".View")?.remove();
+                    GM_xmlhttpRequest({
+                        method: "GET",
+                        url: url,
+                        headers: {
+                            Accept: "text/css",
+                            "User-Agent": navigator.userAgent
+                        },
+                        onload: response => {
+                            if (response.status !== 200) return;
+                            if (DLL.IsNeko) {
+                                const main = response.responseXML.$q("main");
+                                const view = Lib.createElement("View", {
+                                    class: "View"
+                                });
+                                const buffer = Lib.createFragment;
+                                for (const br of main.$qa("br")) {
+                                    buffer.append(document.createTextNode(br.previousSibling.$text()), br);
                                 }
-                            },
-                            onerror: error => {
-                                ShowBrowse(Browse);
+                                view.appendChild(buffer);
+                                browse.appendChild(view);
+                            } else {
+                                const responseJson = JSON.parse(response.responseText);
+                                const view = Lib.createElement("View", {
+                                    class: "View"
+                                });
+                                const buffer = Lib.createFragment;
+                                const password = responseJson["password"];
+                                if (password) {
+                                    buffer.append(document.createTextNode(`password: ${password}`), Lib.createElement("br"));
+                                }
+                                for (const text of responseJson["file_list"]) {
+                                    buffer.append(document.createTextNode(text), Lib.createElement("br"));
+                                }
+                                view.appendChild(buffer);
+                                browse.appendChild(view);
                             }
-                        });
-                    };
-                }
-                return this.LinkBeautify_Cache;
+                        },
+                        onerror: error => {
+                            showBrowse(browse);
+                        }
+                    });
+                };
             },
             ExtraButton_Cache: undefined,
             ExtraButton_Dependent() {
-                if (!this.ExtraButton_Cache) {
-                    this.ExtraButton_Cache = async function GetNextPage(url, old_main) {
-                        GM_xmlhttpRequest({
-                            method: "GET",
-                            url: url,
-                            nocache: false,
-                            onload: response => {
-                                if (response.status !== 200) {
-                                    GetNextPage(url, old_main);
-                                    return;
-                                }
-                                const XML = response.responseXML;
-                                const Main = XML.$q("main");
-                                old_main.replaceChildren(...Main.childNodes);
-                                history.pushState(null, null, url);
-                                const Title = XML.$q("title")?.$text();
-                                Title && Lib.title(Title);
-                                setTimeout(() => {
-                                    Lib.waitEl(".post__content, .scrape__content", null, {
-                                        raf: true,
-                                        timeout: 10
-                                    }).then(post => {
-                                        post.$qa("p").forEach(p => {
-                                            p.childNodes.forEach(node => {
-                                                node.nodeName == "BR" && node.parentNode.remove();
-                                            });
-                                        });
-                                        post.$qa("a").forEach(a => {
-                                            /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove();
+                return this.ExtraButton_Cache ??= async function GetNextPage(url, old_main) {
+                    GM_xmlhttpRequest({
+                        method: "GET",
+                        url: url,
+                        nocache: false,
+                        onload: response => {
+                            if (response.status !== 200) {
+                                GetNextPage(url, old_main);
+                                return;
+                            }
+                            const XML = response.responseXML;
+                            const Main = XML.$q("main");
+                            old_main.replaceChildren(...Main.childNodes);
+                            history.pushState(null, null, url);
+                            const Title = XML.$q("title")?.$text();
+                            Title && Lib.title(Title);
+                            setTimeout(() => {
+                                Lib.waitEl(".post__content, .scrape__content", null, {
+                                    raf: true,
+                                    timeout: 10
+                                }).then(post => {
+                                    post.$qa("p").forEach(p => {
+                                        p.childNodes.forEach(node => {
+                                            node.nodeName == "BR" && node.parentNode.remove();
                                         });
                                     });
-                                    Lib.$q(".post__title, .scrape__title").scrollIntoView();
-                                }, 300);
-                            },
-                            onerror: error => {
-                                GetNextPage(url, old_main);
-                            }
-                        });
-                    };
-                }
-                return this.ExtraButton_Cache;
+                                    post.$qa("a").forEach(a => {
+                                        /\.(jpg|jpeg|png|gif)$/i.test(a.href) && a.remove();
+                                    });
+                                });
+                                Lib.$q(".post__title, .scrape__title").scrollIntoView();
+                            }, 300);
+                        },
+                        onerror: error => {
+                            GetNextPage(url, old_main);
+                        }
+                    });
+                };
             }
         };
         return {
@@ -1593,14 +1583,14 @@
                     all: true,
                     timeout: 5
                 }).then(post => {
-                    const ShowBrowse = LoadFunc.LinkBeautify_Dependent();
+                    const showBrowse = LoadFunc.LinkBeautify_Dependent();
                     for (const link of post) {
                         const text = link.$text().replace("Download", "");
                         link.$text(text);
                         DLL.IsNeko && link.$sAttr("download", text);
-                        const Browse = link.nextElementSibling;
-                        if (!Browse) continue;
-                        ShowBrowse(Browse);
+                        const browse = link.nextElementSibling;
+                        if (!browse) continue;
+                        showBrowse(browse);
                     }
                 });
             },
@@ -1669,182 +1659,275 @@
                     timeout: 5
                 }).then(thumbnail => {
                     const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const HrefParse = element => element.href || element.$gAttr("href");
-                    const Origina_Requ = {
-                        Reload: async (Img, Retry) => {
-                            if (Retry > 0) {
+                    const hrefParse = element => element.href || element.$gAttr("href");
+                    function imgReload(img, retry) {
+                        if (retry > 0) {
+                            const src = img?.src;
+                            if (!src) return;
+                            img.src = "";
+                            Object.assign(img, {
+                                src: src,
+                                alt: "Loading Failed"
+                            });
+                            img.onload = function () {
+                                img.$delClass("Image-loading-indicator");
+                            };
+                            img.onerror = function () {
                                 setTimeout(() => {
-                                    const src = Img?.src;
-                                    if (!src) return;
-                                    Img.src = "";
-                                    Object.assign(Img, {
-                                        src: src,
-                                        alt: "Loading Failed"
-                                    });
-                                    Img.onload = function () {
-                                        Img.$delClass("Image-loading-indicator");
-                                    };
-                                    Img.onerror = function () {
-                                        Origina_Requ.Reload(Img, --Retry);
-                                    };
+                                    imgReload(img, --retry);
                                 }, 3e3);
+                            };
+                        }
+                    }
+                    function loadFailedClick() {
+                        Lib.onE(".post__files, .scrape__files", "click", event => {
+                            const target = event.target.matches(".Image-link img");
+                            if (target && target.alt == "Loading Failed") {
+                                const src = img.src;
+                                img.src = "";
+                                img.src = src;
                             }
-                        },
-                        FailedClick: async () => {
-                            Lib.onE(".post__files, .scrape__files", "click", event => {
-                                const target = event.target.matches(".Image-link img");
-                                if (target && target.alt == "Loading Failed") {
-                                    const src = img.src;
-                                    img.src = "";
-                                    img.src = src;
+                        }, {
+                            capture: true,
+                            passive: true
+                        });
+                    }
+                    function imgRendering({
+                        id,
+                        oldUrl = null,
+                        newUrl
+                    }) {
+                        return preact.h(oldUrl ? "rc" : "div", {
+                            id: id,
+                            src: oldUrl,
+                            className: "Image-link"
+                        }, preact.h("img", {
+                            key: "img",
+                            src: newUrl,
+                            className: "Image-loading-indicator Image-style",
+                            onLoad: function () {
+                                Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
+                            },
+                            onError: function () {
+                                imgReload(Lib.$q(`#${id} img`), 10);
+                            }
+                        }));
+                    }
+                    async function getFileSize(url) {
+                        for (let i = 0; i < 5; i++) {
+                            try {
+                                const result = await new Promise((resolve, reject) => {
+                                    GM_xmlhttpRequest({
+                                        method: "HEAD",
+                                        url: url,
+                                        onload: response => {
+                                            const headers = response.responseHeaders.trim().split(/[\r\n]+/).reduce((acc, line) => {
+                                                const [name, ...valueParts] = line.split(":");
+                                                if (name) acc[name.toLowerCase().trim()] = valueParts.join(":").trim();
+                                                return acc;
+                                            }, {});
+                                            const totalLength = parseInt(headers["content-length"], 10);
+                                            const supportsRange = headers["accept-ranges"] === "bytes" && totalLength > 0;
+                                            resolve({
+                                                supportsRange: supportsRange,
+                                                totalSize: isNaN(totalLength) ? null : totalLength
+                                            });
+                                        },
+                                        onerror: reject,
+                                        ontimeout: reject
+                                    });
+                                });
+                                return result;
+                            } catch (error) {
+                                if (i < 4) await new Promise(res => setTimeout(res, 300));
+                            }
+                        }
+                        return {
+                            supportsRange: false,
+                            totalSize: null
+                        };
+                    }
+                    async function imgRequest(Container, Url, Result) {
+                        const indicator = Lib.createElement(Container, "div", {
+                            class: "progress-indicator"
+                        });
+                        let blob = null;
+                        try {
+                            if (false) {
+                                const CHUNK_COUNT = 6;
+                                const totalSize = fileInfo.totalSize;
+                                const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
+                                const chunkProgress = new Array(CHUNK_COUNT).fill(0);
+                                const updateProgress = () => {
+                                    const totalDownloaded = chunkProgress.reduce((sum, loaded) => sum + loaded, 0);
+                                    const percent = (totalDownloaded / totalSize * 100).toFixed(1);
+                                    indicator.$text(`${percent}%`);
+                                };
+                                const chunkPromises = Array.from({
+                                    length: CHUNK_COUNT
+                                }, (_, i) => {
+                                    return (async () => {
+                                        const start = i * chunkSize;
+                                        const end = Math.min(start + chunkSize - 1, totalSize - 1);
+                                        for (let j = 0; j < 5; j++) {
+                                            try {
+                                                return await new Promise((resolve, reject) => {
+                                                    GM_xmlhttpRequest({
+                                                        method: "GET",
+                                                        url: Url,
+                                                        headers: {
+                                                            Range: `bytes=${start}-${end}`
+                                                        },
+                                                        responseType: "blob",
+                                                        onload: res => res.status === 206 ? resolve(res.response) : reject(res),
+                                                        onerror: reject,
+                                                        ontimeout: reject,
+                                                        onprogress: progress => {
+                                                            chunkProgress[i] = progress.loaded;
+                                                            updateProgress();
+                                                        }
+                                                    });
+                                                });
+                                            } catch (error) {
+                                                if (j < 4) await new Promise(res => setTimeout(res, 300));
+                                            }
+                                        }
+                                        throw new Error(`Chunk ${i} failed after 5 retries.`);
+                                    })();
+                                });
+                                const chunks = await Promise.all(chunkPromises);
+                                blob = new Blob(chunks);
+                            } else {
+                                for (let i = 0; i < 5; i++) {
+                                    try {
+                                        blob = await new Promise((resolve, reject) => {
+                                            GM_xmlhttpRequest({
+                                                method: "GET",
+                                                url: Url,
+                                                responseType: "blob",
+                                                onload: res => res.status === 200 ? resolve(res.response) : reject(res),
+                                                onerror: reject,
+                                                ontimeout: reject,
+                                                onprogress: progress => {
+                                                    if (progress.lengthComputable) {
+                                                        const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                                                        indicator.$text(`${percent}%`);
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        break;
+                                    } catch (error) {
+                                        if (i < 4) await new Promise(res => setTimeout(res, 300));
+                                    }
                                 }
-                            }, {
-                                capture: true,
-                                passive: true
-                            });
-                        },
-                        ImgRendering: ({
-                            ID,
-                            Ourl = null,
-                            Nurl
-                        }) => {
-                            return preact.h(Ourl ? "rc" : "div", {
-                                id: ID,
-                                src: Ourl,
-                                className: "Image-link"
-                            }, preact.h("img", {
-                                key: "img",
-                                src: Nurl,
-                                className: "Image-loading-indicator Image-style",
-                                onLoad: function () {
-                                    Lib.$q(`#${ID} img`)?.$delClass("Image-loading-indicator");
-                                },
-                                onError: function () {
-                                    Origina_Requ.Reload(Lib.$q(`#${ID} img`), 10);
+                            }
+                            if (blob && blob.size > 0) {
+                                Result(URL.createObjectURL(blob));
+                            } else {
+                                Result(Url);
+                            }
+                        } catch (error) {
+                            Result(Url);
+                        } finally {
+                            indicator.remove();
+                        }
+                    }
+                    async function fastAutoLoad() {
+                        loadFailedClick();
+                        thumbnail.forEach((object, index) => {
+                            setTimeout(() => {
+                                object.$dAttr("class");
+                                const a = object.$q(LinkObj);
+                                const hrefP = hrefParse(a);
+                                if (Config.experiment) {
+                                    a.$q("img").$addClass("Image-loading-indicator-experiment");
+                                    imgRequest(object, hrefP, href => {
+                                        render(preact.h(imgRendering, {
+                                            id: `IMG-${index}`,
+                                            oldUrl: hrefP,
+                                            newUrl: href
+                                        }), object);
+                                    });
+                                } else {
+                                    render(preact.h(imgRendering, {
+                                        id: `IMG-${index}`,
+                                        newUrl: hrefP
+                                    }), object);
                                 }
-                            }));
-                        },
-                        Request: async function (Container, Url, Result) {
-                            const indicator = Lib.createElement(Container, "div", {
-                                class: "progress-indicator",
-                                text: "0%"
+                            }, index * 300);
+                        });
+                    }
+                    async function slowAutoLoad(index) {
+                        if (index == thumbnail.length) return;
+                        const object = thumbnail[index];
+                        object.$dAttr("class");
+                        const a = object.$q(LinkObj);
+                        const hrefP = hrefParse(a);
+                        const img = a.$q("img");
+                        const replace_core = (newUrl, oldUrl = null) => {
+                            const container = Lib.createElement(oldUrl ? "rc" : "div", {
+                                id: `IMG-${index}`,
+                                class: "Image-link"
                             });
-                            GM_xmlhttpRequest({
-                                url: Url,
-                                method: "GET",
-                                responseType: "blob",
-                                onprogress: progress => {
-                                    const done = (progress.done / progress.total * 100).toFixed(1);
-                                    indicator.$text(`${done}%`);
-                                },
-                                onload: response => {
-                                    const blob = response.response;
-                                    blob instanceof Blob && blob.size > 0 ? Result(URL.createObjectURL(blob)) : Result(Url);
-                                },
-                                onerror: () => Result(Url)
+                            oldUrl && container.$sAttr("src", oldUrl);
+                            const img = Lib.createElement(container, "img", {
+                                src: newUrl,
+                                class: "Image-loading-indicator Image-style"
                             });
-                        },
-                        FastAuto: async function () {
-                            this.FailedClick();
-                            thumbnail.forEach((object, index) => {
-                                requestIdleCallback(() => {
+                            img.onload = function () {
+                                img.$delClass("Image-loading-indicator");
+                                slowAutoLoad(++index);
+                            };
+                            object.$iHtml("");
+                            object.appendChild(container);
+                        };
+                        if (Config.experiment) {
+                            img.$addClass("Image-loading-indicator-experiment");
+                            imgRequest(object, hrefP, href => replace_core(href, hrefP));
+                        } else {
+                            replace_core(hrefP);
+                        }
+                    }
+                    function observeLoad() {
+                        loadFailedClick();
+                        return new IntersectionObserver(observed => {
+                            observed.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    const object = entry.target;
+                                    observer.unobserve(object);
                                     object.$dAttr("class");
                                     const a = object.$q(LinkObj);
-                                    const hrefP = HrefParse(a);
+                                    const hrefP = hrefParse(a);
                                     if (Config.experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                        this.Request(object, hrefP, href => {
-                                            render(preact.h(this.ImgRendering, {
-                                                ID: `IMG-${index}`,
-                                                Ourl: hrefP,
-                                                Nurl: href
+                                        imgRequest(object, hrefP, href => {
+                                            render(preact.h(imgRendering, {
+                                                id: object.alt,
+                                                oldUrl: hrefP,
+                                                newUrl: href
                                             }), object);
                                         });
                                     } else {
-                                        render(preact.h(this.ImgRendering, {
-                                            ID: `IMG-${index}`,
-                                            Nurl: hrefP
+                                        render(preact.h(imgRendering, {
+                                            id: object.alt,
+                                            newUrl: hrefP
                                         }), object);
                                     }
-                                }, {
-                                    timeout: index * 300
-                                });
+                                }
                             });
-                        },
-                        SlowAuto: async function (index) {
-                            if (index == thumbnail.length) return;
-                            const object = thumbnail[index];
-                            object.$dAttr("class");
-                            const a = object.$q(LinkObj);
-                            const hrefP = HrefParse(a);
-                            const img = a.$q("img");
-                            const replace_core = (Nurl, Ourl = null) => {
-                                const container = document.createElement(Ourl ? "rc" : "div");
-                                Ourl && container.$sAttr("src", Ourl);
-                                Object.assign(container, {
-                                    id: `IMG-${index}`,
-                                    className: "Image-link"
-                                });
-                                const img = document.createElement("img");
-                                Object.assign(img, {
-                                    src: Nurl,
-                                    className: "Image-loading-indicator Image-style"
-                                });
-                                img.onload = function () {
-                                    img.$delClass("Image-loading-indicator");
-                                    Origina_Requ.SlowAuto(++index);
-                                };
-                                object.$iHtml("");
-                                container.appendChild(img);
-                                object.appendChild(container);
-                            };
-                            if (Config.experiment) {
-                                img.$addClass("Image-loading-indicator-experiment");
-                                this.Request(object, hrefP, href => replace_core(href, hrefP));
-                            } else {
-                                replace_core(hrefP);
-                            }
-                        },
-                        ObserveTrigger: function () {
-                            this.FailedClick();
-                            return new IntersectionObserver(observed => {
-                                observed.forEach(entry => {
-                                    if (entry.isIntersecting) {
-                                        const object = entry.target;
-                                        observer.unobserve(object);
-                                        object.$dAttr("class");
-                                        const a = object.$q(LinkObj);
-                                        const hrefP = HrefParse(a);
-                                        if (Config.experiment) {
-                                            a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                            this.Request(object, hrefP, href => {
-                                                render(preact.h(this.ImgRendering, {
-                                                    ID: object.alt,
-                                                    Ourl: hrefP,
-                                                    Nurl: href
-                                                }), object);
-                                            });
-                                        } else {
-                                            render(preact.h(this.ImgRendering, {
-                                                ID: object.alt,
-                                                Nurl: hrefP
-                                            }), object);
-                                        }
-                                    }
-                                });
-                            }, {
-                                threshold: .3
-                            });
-                        }
-                    };
+                        }, {
+                            threshold: .3
+                        });
+                    }
                     let observer;
                     switch (Config.mode) {
                         case 2:
-                            Origina_Requ.SlowAuto(0);
+                            slowAutoLoad(0);
                             break;
 
                         case 3:
-                            observer = Origina_Requ.ObserveTrigger();
+                            observer = observeLoad();
                             thumbnail.forEach((object, index) => {
                                 object.alt = `IMG-${index}`;
                                 observer.observe(object);
@@ -1852,7 +1935,7 @@
                             break;
 
                         default:
-                            Origina_Requ.FastAuto();
+                            fastAutoLoad();
                     }
                 });
             },
