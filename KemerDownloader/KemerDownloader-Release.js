@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.08.06-Beta
+// @version      2025.08.28-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1636681/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1647210/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -172,7 +172,6 @@
             "帖子數量": "帖子数量",
             "建立時間": "建立时间",
             "獲取頁面": "获取页面",
-            "作者網站": "作者网站",
             "未取得數據": "未获取到数据",
             "模式切換": "模式切换",
             "數據處理中": "数据处理中",
@@ -219,7 +218,6 @@
             "帖子數量": "投稿数",
             "建立時間": "作成日時",
             "獲取頁面": "ページ取得",
-            "作者網站": "作者のサイト",
             "未取得數據": "データ取得失敗",
             "模式切換": "モード切替",
             "數據處理中": "データ処理中",
@@ -266,7 +264,6 @@
             "帖子數量": "게시물 수",
             "建立時間": "생성 시간",
             "獲取頁面": "페이지 로딩",
-            "作者網站": "작성자 웹사이트",
             "未取得數據": "데이터를 가져오지 못함",
             "模式切換": "모드 전환",
             "數據處理中": "데이터 처리 중",
@@ -313,7 +310,6 @@
             "帖子數量": "Количество постов",
             "建立時間": "Время создания",
             "獲取頁面": "Загрузка страницы",
-            "作者網站": "Сайт автора",
             "未取得數據": "Не удалось получить данные",
             "模式切換": "Смена режима",
             "數據處理中": "Обработка данных",
@@ -329,8 +325,6 @@
             "📃 開啟當前頁面帖子": "📃 Open Posts on This Page",
             "📥 強制壓縮下載": "📥 Force ZIP Download",
             "⛔️ 取消下載": "⛔️ Cancel Download",
-            "壓縮下載模式": "ZIP Download Mode",
-            "單圖下載模式": "Individual Download Mode",
             "壓縮下載": "Download as ZIP",
             "單獨下載": "Download Individually",
             "開始下載": "Start Download",
@@ -355,7 +349,6 @@
             "帖子數量": "Number of Posts",
             "建立時間": "Created At",
             "獲取頁面": "Fetching Page",
-            "作者網站": "Author's Website",
             "未取得數據": "Failed to Retrieve Data",
             "模式切換": "Switch Mode",
             "數據處理中": "Processing Data",
@@ -400,8 +393,10 @@
                     const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
                     return `${url.origin}${url.pathname}${params}`;
                 };
-                this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
-                this.getPreviewAPI = url => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
+                const apiTemplate = `${this.firstURL}`.replace(this.host, `${this.host}/api/v1`);
+                this.profileAPI = `${apiTemplate}/profile`;
+                this.postAPI = `${apiTemplate}/post`;
+                this.getPreviewAPI = url => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts";
                 this.getValidValue = value => {
                     if (!value) return null;
                     const type = Lib2.$type(value);
@@ -412,7 +407,7 @@
                     }
                     return value;
                 };
-                this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
+                this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"]);
                 this.fetchGenerate = Data => {
                     return Object.keys(Data).reduce((acc, key) => {
                         if (this.infoRules.has(key)) {
@@ -428,7 +423,7 @@
                 this.isVideo = str => videoExts.has(str.replace(/^\./, "").toLowerCase());
                 this.isImage = str => imageExts.has(str.replace(/^\./, "").toLowerCase());
                 this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
-                this.normalizeTimestamp = post => new Date(post.published || post.added)?.toLocaleString();
+                this.normalizeTimestamp = post => new Date(post.added || post.published)?.toLocaleString();
                 this.kemerCategorize = ({
                     title,
                     data,
@@ -543,6 +538,9 @@
                             try {
                                 const response = await fetch(url, {
                                     method: "HEAD",
+                                    headers: {
+                                        Accept: "text/css"
+                                    },
                                     signal: signal,
                                     cache: "no-store"
                                 });
@@ -583,17 +581,19 @@
                     } else {processing = false}
                 }
                 async function FetchRequest(index, title, url, time, delay) {
-                    fetch(url).then(response => {
+                    fetch(url, {
+                        headers: {
+                            "Accept": "text/css",
+                        }
+                    }).then(response => {
                         if (response.ok) {
-                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
                             response.text().then(content => {
                                 postMessage({ index, title, url, content, time, delay, error: false });
                             });
                         } else {
                             postMessage({ index, title, url, content: "", time, delay, error: true });
                         }
-                    })
-                    .catch(error => {
+                    }).catch(error => {
                         postMessage({ index, title, url, content: "", time, delay, error: true });
                     });
                 }
@@ -629,58 +629,11 @@
             }
             async fetchTest(id) {
                 Process2.Lock = true;
-                this.worker.postMessage({
-                    index: 0,
-                    title: this.titleCache,
-                    url: this.getPreviewAPI(this.firstURL)
-                });
-                const homeData = await new Promise((resolve, reject) => {
-                    this.worker.onmessage = async e => {
-                        const {
-                            index,
-                            title,
-                            url,
-                            content: content2,
-                            error
-                        } = e.data;
-                        if (!error) resolve({
-                            url: url,
-                            content: content2
-                        }); else {
-                            Lib2.log(error, {
-                                title: title,
-                                url: url
-                            }, {
-                                dev: General2.Dev,
-                                type: "error",
-                                collapsed: false
-                            });
-                            await this.TooMany_TryAgain(url);
-                            this.worker.postMessage({
-                                index: index,
-                                title: title,
-                                url: url
-                            });
-                        }
-                    };
-                });
-                const {
-                    content
-                } = homeData;
-                Object.assign(homeData, {
-                    content: JSON.parse(content)
-                });
-                Lib2.log("HomeData", homeData, {
-                    collapsed: false
-                });
-                const homeDataClone = structuredClone(homeData);
-                homeDataClone.content.results = [{
-                    id: id
-                }];
-                homeDataClone.content = JSON.stringify(homeDataClone.content);
-                await this._fetchContent(homeDataClone);
-                Lib2.log("PostDate", this.dataDict, {
-                    collapsed: false
+                await this._fetchContent({
+                    content: JSON.stringify([{
+                        id: id,
+                        title: this.titleCache
+                    }])
                 });
                 this._reset();
             }
@@ -688,7 +641,6 @@
                 if (Process2.IsNeko) {
                     if (!items) {
                         this.worker.postMessage({
-                            index: 0,
                             title: this.titleCache,
                             url: url,
                             time: Date.now(),
@@ -697,7 +649,6 @@
                         const homeData = await new Promise((resolve, reject) => {
                             this.worker.onmessage = async e => {
                                 const {
-                                    index,
                                     title,
                                     url: url2,
                                     content,
@@ -719,7 +670,6 @@
                                     });
                                     await this.TooMany_TryAgain(url2);
                                     this.worker.postMessage({
-                                        index: index,
                                         title: title,
                                         url: url2,
                                         time: time,
@@ -743,7 +693,6 @@
                     }
                 } else {
                     this.worker.postMessage({
-                        index: 0,
                         title: this.titleCache,
                         url: this.getPreviewAPI(url),
                         time: Date.now(),
@@ -752,7 +701,6 @@
                     const homeData = await new Promise((resolve, reject) => {
                         this.worker.onmessage = async e => {
                             const {
-                                index,
                                 title,
                                 url: url2,
                                 content,
@@ -777,7 +725,6 @@
                                 });
                                 await this.TooMany_TryAgain(url2);
                                 this.worker.postMessage({
-                                    index: index,
                                     title: title,
                                     url: url2,
                                     time: time,
@@ -881,18 +828,38 @@
                     }
                     await Promise.allSettled(tasks);
                 } else {
-                    const contentJson = JSON.parse(content);
-                    if (contentJson) {
+                    const homeJson = JSON.parse(content);
+                    if (homeJson) {
                         if (this.metaDict.size === 0) {
-                            const props = contentJson.props;
-                            this.metaDict.set(Transl2("作者"), props.name);
-                            this.metaDict.set(Transl2("帖子數量"), props.count);
+                            this.worker.postMessage({
+                                url: this.profileAPI
+                            });
+                            const profile = await new Promise((resolve, reject) => {
+                                this.worker.onmessage = async e => {
+                                    const {
+                                        url: url2,
+                                        content: content2,
+                                        error
+                                    } = e.data;
+                                    if (!error) resolve(JSON.parse(content2)); else {
+                                        Lib2.log(error, url2, {
+                                            dev: General2.Dev,
+                                            type: "error",
+                                            collapsed: false
+                                        });
+                                        await this.TooMany_TryAgain(url2);
+                                        this.worker.postMessage({
+                                            url: url2
+                                        });
+                                    }
+                                };
+                            });
+                            this.metaDict.set(Transl2("作者"), profile.name);
+                            this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
                             this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
                             this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
-                            this.metaDict.set(Transl2("作者網站"), props.display_data.href);
                         }
-                        const results = contentJson.results;
-                        if (this.advancedFetch) {
+                        {
                             const tasks = [];
                             const resolvers = new Map();
                             this.worker.onmessage = async e => {
@@ -912,11 +879,11 @@
                                             reject
                                         } = resolvers.get(index);
                                         this.fetchDelay = Process2.dynamicParam(time, delay);
-                                        const contentJson2 = JSON.parse(content2);
-                                        if (contentJson2) {
-                                            const post = contentJson2.post;
-                                            const previews = contentJson2.previews || [];
-                                            const attachments = contentJson2.attachments || [];
+                                        const contentJson = JSON.parse(content2);
+                                        if (contentJson) {
+                                            const post = contentJson.post;
+                                            const previews = contentJson.previews || [];
+                                            const attachments = contentJson.attachments || [];
                                             const standardTitle = this.normalizeName(post.title, index);
                                             const classifiedFiles = this.kemerCategorize({
                                                 title: standardTitle,
@@ -970,7 +937,7 @@
                                     });
                                 }
                             };
-                            for (const [index, post] of results.entries()) {
+                            for (const [index, post] of homeJson.entries()) {
                                 tasks.push(new Promise((resolve, reject) => {
                                     resolvers.set(index, {
                                         resolve: resolve,
@@ -987,55 +954,6 @@
                                 await Lib2.sleep(this.fetchDelay);
                             }
                             await Promise.allSettled(tasks);
-                        } else {
-                            const previews = contentJson.result_previews || [];
-                            const attachments = contentJson.result_attachments || [];
-                            for (const [index, post] of results.entries()) {
-                                const standardTitle = this.normalizeName(post.title, index);
-                                try {
-                                    const serverDict = [...previews[index], ...attachments[index]].reduce((acc, item) => {
-                                        acc[item.path] = item.server;
-                                        return acc;
-                                    }, {});
-                                    const classifiedFiles = this.kemerCategorize({
-                                        title: standardTitle,
-                                        data: [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments],
-                                        serverDict: serverDict,
-                                        fillValue: Lib2.getFill(previews?.length || 1)
-                                    });
-                                    const generatedData = this.fetchGenerate({
-                                        PostLink: this.getPostURL(post.id),
-                                        Timestamp: this.normalizeTimestamp(post),
-                                        ImgLink: classifiedFiles.img,
-                                        VideoLink: classifiedFiles.video,
-                                        DownloadLink: classifiedFiles.other
-                                    });
-                                    if (Object.keys(generatedData).length !== 0) {
-                                        this.dataDict.set(standardTitle, generatedData);
-                                    }
-                                    Lib2.title(`（${this.currentPage}）`);
-                                    Lib2.log("Parsed Successful", {
-                                        index: index,
-                                        title: standardTitle,
-                                        url: url,
-                                        data: generatedData
-                                    }, {
-                                        dev: General2.Dev,
-                                        collapsed: false
-                                    });
-                                } catch (error) {
-                                    Lib2.log(error, {
-                                        index: index,
-                                        title: standardTitle,
-                                        url: url
-                                    }, {
-                                        dev: General2.Dev,
-                                        type: "error",
-                                        collapsed: false
-                                    });
-                                    continue;
-                                }
-                            }
                         }
                         await Lib2.sleep(this.fetchDelay);
                     }
