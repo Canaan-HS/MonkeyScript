@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.08.06-Beta
+// @version      2025.08.28-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1636681/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1647210/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -48,45 +48,29 @@
   function Config(Lib2) {
     const General2 = {
       Dev: false,
-      // 顯示請求資訊, 與錯誤資訊
       IncludeExtras: false,
-      // 下載時包含 影片 與 其他附加檔案
       CompleteClose: false,
-      // 下載完成後關閉
       ConcurrentDelay: 500,
-      // 下載線程延遲 (ms) [壓縮下載]
       ConcurrentQuantity: 5,
-      // 下載線程數量 [壓縮下載]
       BatchOpenDelay: 500,
-      // 一鍵開啟帖子的延遲 (ms)
       ...Lib2.getJV("General", {})
     };
     const FileName2 = {
       FillValue: {
         Filler: "0",
-        // 填充元素 / 填料
         Amount: "Auto"
-        // 填充數量 [輸入 auto 或 任意數字]
       },
       CompressName: "({Artist}) {Title}",
-      // 壓縮檔案名稱
       FolderName: "{Title}",
-      // 資料夾名稱 (用空字串, 就直接沒資料夾)
       FillName: "{Title} {Fill}",
-      // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
       ...Lib2.getJV("FileName", {})
     };
     const FetchSet2 = {
       Delay: 100,
-      // 獲取延遲 (ms) [太快會被 BAN]
       AdvancedFetch: true,
-      // 進階獲取 (只需要 一般媒體連結, 關閉該功能獲取會快很多) [ nekohouse 不適用]
       ToLinkTxt: false,
-      // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
       FilterExts: [],
-      // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
       UseFormat: false,
-      // 這裡為 false 下面兩項就不生效
       Mode: "FilterMode",
       Format: ["Timestamp", "TypeTag"],
       ...Lib2.getJV("FetchSet", {})
@@ -94,10 +78,120 @@
     const Process2 = {
       IsNeko: Lib2.$domain.startsWith("nekohouse"),
       ImageExts: [
-        "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "webp",
+        "tiff",
+        "tif",
+        "svg",
+        "heic",
+        "heif",
+        "raw",
+        "ico",
+        "avif",
+        "jxl",
+        "cr2",
+        "nef",
+        "arw",
+        "orf",
+        "rw2",
+        "tga",
+        "pcx",
+        "crw",
+        "cr2",
+        "cr3",
+        "dng",
+        "eps",
+        "xcf",
+        "ai",
+        "psd",
+        "psb",
+        "pef",
+        "nrw",
+        "ptx",
+        "srf",
+        "sr2",
+        "raf",
+        "rwl",
+        "3fr",
+        "fff",
+        "iiq",
+        "x3f",
+        "ari",
+        "bay",
+        "dcr",
+        "kdc",
+        "mef",
+        "mos",
+        "dng",
+        "usdz",
+        "jxr",
+        "cdr",
+        "wmf",
+        "emf",
+        "dxf",
+        "svgz",
+        "obj",
+        "fbx",
+        "stl",
+        "gltf",
+        "glb",
+        "gltf",
+        "glb",
+        "dae",
+        "blend",
+        "max",
+        "c4d",
+        "step",
+        "stp",
+        "iges"
       ],
       VideoExts: [
-        "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"
+        "mp4",
+        "avi",
+        "mkv",
+        "mov",
+        "flv",
+        "wmv",
+        "webm",
+        "mpg",
+        "mpeg",
+        "m4v",
+        "ogv",
+        "3gp",
+        "asf",
+        "ts",
+        "vob",
+        "rm",
+        "rmvb",
+        "m2ts",
+        "f4v",
+        "mts",
+        "mpe",
+        "mpv",
+        "m2v",
+        "m4a",
+        "bdmv",
+        "ifo",
+        "r3d",
+        "braw",
+        "cine",
+        "qt",
+        "f4p",
+        "swf",
+        "mng",
+        "gifv",
+        "yuv",
+        "roq",
+        "nsv",
+        "amv",
+        "svi",
+        "mod",
+        "mxf",
+        "ogg"
       ],
       Lock: false,
       dynamicParam: Lib2.createNnetworkObserver({
@@ -127,10 +221,8 @@
       "📃 開啟當前頁面帖子": "📃 打开当前页面帖子",
       "📥 強制壓縮下載": "📥 强制压缩下载",
       "⛔️ 取消下載": "⛔️ 取消下载",
-      "壓縮下載模式": "压缩下载模式",
-      "單圖下載模式": "单图下载模式",
       "壓縮下載": "压缩下载",
-      "單圖下載": "单图下载",
+      "單獨下載": "单独下载",
       "開始下載": "开始下载",
       "無法下載": "无法下载",
       "下載進度": "下载进度",
@@ -159,7 +251,6 @@
       "帖子數量": "帖子数量",
       "建立時間": "建立时间",
       "獲取頁面": "获取页面",
-      "作者網站": "作者网站",
       "未取得數據": "未获取到数据",
       "模式切換": "模式切换",
       "數據處理中": "数据处理中",
@@ -175,10 +266,8 @@
       "📃 開啟當前頁面帖子": "📃 現在のページの投稿を開く",
       "📥 強制壓縮下載": "📥 強制ZIPダウンロード",
       "⛔️ 取消下載": "⛔️ ダウンロードをキャンセル",
-      "壓縮下載模式": "ZIPダウンロードモード",
-      "單圖下載模式": "個別ダウンロードモード",
       "壓縮下載": "ZIPダウンロード",
-      "單圖下載": "個別ダウンロード",
+      "單獨下載": "個別ダウンロード",
       "開始下載": "ダウンロード開始",
       "無法下載": "ダウンロード不可",
       "下載進度": "ダウンロード進捗",
@@ -208,7 +297,6 @@
       "帖子數量": "投稿数",
       "建立時間": "作成日時",
       "獲取頁面": "ページ取得",
-      "作者網站": "作者のサイト",
       "未取得數據": "データ取得失敗",
       "模式切換": "モード切替",
       "數據處理中": "データ処理中",
@@ -224,10 +312,8 @@
       "📃 開啟當前頁面帖子": "📃 현재 페이지 게시물 열기",
       "📥 強制壓縮下載": "📥 강제 압축 다운로드",
       "⛔️ 取消下載": "⛔️ 다운로드 취소",
-      "壓縮下載模式": "압축 다운로드 모드",
-      "單圖下載模式": "개별 다운로드 모드",
       "壓縮下載": "압축 다운로드",
-      "單圖下載": "개별 다운로드",
+      "單獨下載": "개별 다운로드",
       "開始下載": "다운로드 시작",
       "無法下載": "다운로드 불가",
       "下載進度": "다운로드 진행률",
@@ -257,7 +343,6 @@
       "帖子數量": "게시물 수",
       "建立時間": "생성 시간",
       "獲取頁面": "페이지 로딩",
-      "作者網站": "작성자 웹사이트",
       "未取得數據": "데이터를 가져오지 못함",
       "模式切換": "모드 전환",
       "數據處理中": "데이터 처리 중",
@@ -273,10 +358,8 @@
       "📃 開啟當前頁面帖子": "📃 Открыть посты на странице",
       "📥 強制壓縮下載": "📥 Принудительно скачать архивом",
       "⛔️ 取消下載": "⛔️ Отменить загрузку",
-      "壓縮下載模式": "Режим скачивания архивом",
-      "單圖下載模式": "Режим одиночной загрузки",
       "壓縮下載": "Скачать архивом",
-      "單圖下載": "Одиночная загрузка",
+      "單獨下載": "Одиночная загрузка",
       "開始下載": "Начать загрузку",
       "無法下載": "Ошибка загрузки",
       "下載進度": "Прогресс загрузки",
@@ -306,7 +389,6 @@
       "帖子數量": "Количество постов",
       "建立時間": "Время создания",
       "獲取頁面": "Загрузка страницы",
-      "作者網站": "Сайт автора",
       "未取得數據": "Не удалось получить данные",
       "模式切換": "Смена режима",
       "數據處理中": "Обработка данных",
@@ -322,10 +404,8 @@
       "📃 開啟當前頁面帖子": "📃 Open Posts on This Page",
       "📥 強制壓縮下載": "📥 Force ZIP Download",
       "⛔️ 取消下載": "⛔️ Cancel Download",
-      "壓縮下載模式": "ZIP Download Mode",
-      "單圖下載模式": "Individual Download Mode",
       "壓縮下載": "Download as ZIP",
-      "單圖下載": "Download Individually",
+      "單獨下載": "Download Individually",
       "開始下載": "Start Download",
       "無法下載": "Download Failed",
       "下載進度": "Download Progress",
@@ -348,7 +428,6 @@
       "帖子數量": "Number of Posts",
       "建立時間": "Created At",
       "獲取頁面": "Fetching Page",
-      "作者網站": "Author's Website",
       "未取得數據": "Failed to Retrieve Data",
       "模式切換": "Switch Mode",
       "數據處理中": "Processing Data",
@@ -363,8 +442,8 @@
     return class FetchData {
       static Try_Again_Promise = null;
       constructor() {
-        this.metaDict = /* @__PURE__ */ new Map();
-        this.dataDict = /* @__PURE__ */ new Map();
+        this.metaDict = new Map();
+        this.dataDict = new Map();
         this.sourceURL = Lib2.url;
         this.titleCache = Lib2.title();
         this.URL = new URL(this.sourceURL);
@@ -393,8 +472,10 @@
           const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
           return `${url.origin}${url.pathname}${params}`;
         };
-        this.postAPI = `${this.firstURL}/post`.replace(this.host, `${this.host}/api/v1`);
-        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts-legacy$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts-legacy${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts-legacy";
+        const apiTemplate = `${this.firstURL}`.replace(this.host, `${this.host}/api/v1`);
+        this.profileAPI = `${apiTemplate}/profile`;
+        this.postAPI = `${apiTemplate}/post`;
+        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts";
         this.getValidValue = (value) => {
           if (!value) return null;
           const type = Lib2.$type(value);
@@ -405,7 +486,7 @@
           }
           return value;
         };
-        this.infoRules = /* @__PURE__ */ new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]);
+        this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"]);
         this.fetchGenerate = (Data) => {
           return Object.keys(Data).reduce((acc, key) => {
             if (this.infoRules.has(key)) {
@@ -421,7 +502,7 @@
         this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
         this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
         this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
-        this.normalizeTimestamp = (post) => new Date(post.published || post.added)?.toLocaleString();
+        this.normalizeTimestamp = (post) => new Date(post.added || post.published)?.toLocaleString();
         this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
           let imgNumber = 0;
           return data.reduce((acc, file) => {
@@ -523,6 +604,9 @@
               try {
                 const response = await fetch(url, {
                   method: "HEAD",
+                  headers: {
+                    "Accept": "text/css"
+                  },
                   signal,
                   cache: "no-store"
                 });
@@ -563,37 +647,25 @@
                     } else {processing = false}
                 }
                 async function FetchRequest(index, title, url, time, delay) {
-                    fetch(url).then(response => {
+                    fetch(url, {
+                        headers: {
+                            "Accept": "text/css",
+                        }
+                    }).then(response => {
                         if (response.ok) {
-                            // 目前不同網站不一定都是 Json, 所以這裡用 text()
                             response.text().then(content => {
                                 postMessage({ index, title, url, content, time, delay, error: false });
                             });
                         } else {
                             postMessage({ index, title, url, content: "", time, delay, error: true });
                         }
-                    })
-                    .catch(error => {
+                    }).catch(error => {
                         postMessage({ index, title, url, content: "", time, delay, error: true });
                     });
                 }
             `);
         FetchSet2.UseFormat && this._fetchConfig(FetchSet2.Mode, FetchSet2.Format);
       }
-      /**
-       * 設置抓取規則
-       * @param {string} mode - "FilterMode" | "OnlyMode"
-       * @param {Array} userSet - 要進行的設置
-       *
-       * @example
-       * 可配置項目: ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink"]
-       *
-       * 這會將這些項目移除在顯示
-       * _fetchConfig("FilterMode", ["PostLink", "ImgLink", "DownloadLink"]);
-       *
-       * 這會只顯示這些項目
-       * _fetchConfig("OnlyMode", ["PostLink", "ImgLink", "DownloadLink"]);
-       */
       async _fetchConfig(mode = "FilterMode", userSet = []) {
         if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
         if (mode.toLowerCase() === "filtermode") {
@@ -607,7 +679,6 @@
           );
         }
       }
-      /* 入口調用函數 */
       async fetchRun() {
         const small = Lib2.$q("small");
         const items = Lib2.$q(".card-list__items");
@@ -624,47 +695,31 @@
           alert(Transl2("未取得數據"));
         }
       }
-      /* 測試進階抓取數據 */
       async fetchTest(id) {
         Process2.Lock = true;
-        this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(this.firstURL) });
-        const homeData = await new Promise((resolve, reject) => {
-          this.worker.onmessage = async (e) => {
-            const { index, title, url, content: content2, error } = e.data;
-            if (!error) resolve({ url, content: content2 });
-            else {
-              Lib2.log(error, { title, url }, { dev: General2.Dev, type: "error", collapsed: false });
-              await this.TooMany_TryAgain(url);
-              this.worker.postMessage({ index, title, url });
-            }
-          };
+        await this._fetchContent({
+          content: JSON.stringify([{
+            id,
+            title: this.titleCache
+          }])
         });
-        const { content } = homeData;
-        Object.assign(homeData, { content: JSON.parse(content) });
-        Lib2.log("HomeData", homeData, { collapsed: false });
-        const homeDataClone = structuredClone(homeData);
-        homeDataClone.content.results = [{ id }];
-        homeDataClone.content = JSON.stringify(homeDataClone.content);
-        await this._fetchContent(homeDataClone);
-        Lib2.log("PostDate", this.dataDict, { collapsed: false });
         this._reset();
       }
-      /* ===== 主要抓取函數 ===== */
-      /* 獲取預覽頁數據 */
+
       async _fetchPage(items, url) {
         if (Process2.IsNeko) {
           if (!items) {
-            this.worker.postMessage({ index: 0, title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
+            this.worker.postMessage({ title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
             const homeData = await new Promise((resolve, reject) => {
               this.worker.onmessage = async (e) => {
-                const { index, title, url: url2, content, time, delay, error } = e.data;
+                const { title, url: url2, content, time, delay, error } = e.data;
                 if (!error) {
                   this.fetchDelay = Process2.dynamicParam(time, delay);
                   resolve(content);
                 } else {
                   Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                   await this.TooMany_TryAgain(url2);
-                  this.worker.postMessage({ index, title, url: url2, time, delay });
+                  this.worker.postMessage({ title, url: url2, time, delay });
                 }
               };
             });
@@ -673,7 +728,6 @@
           if (items) {
             const article = items.$qa("article");
             const content = article.map((item, index) => ({
-              // 獲取帖子內部連結
               index,
               title: item.$q("header").$text(),
               url: item.$q("a").href
@@ -681,17 +735,17 @@
             await this._fetchContent({ content });
           }
         } else {
-          this.worker.postMessage({ index: 0, title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
+          this.worker.postMessage({ title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
           const homeData = await new Promise((resolve, reject) => {
             this.worker.onmessage = async (e) => {
-              const { index, title, url: url2, content, time, delay, error } = e.data;
+              const { title, url: url2, content, time, delay, error } = e.data;
               if (!error) {
                 this.fetchDelay = Process2.dynamicParam(time, delay);
                 resolve({ url: url2, content });
               } else {
                 Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
                 await this.TooMany_TryAgain(url2);
-                this.worker.postMessage({ index, title, url: url2, time, delay });
+                this.worker.postMessage({ title, url: url2, time, delay });
               }
             };
           });
@@ -700,14 +754,13 @@
         this.currentPage++;
         this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
       }
-      /* 獲取帖子內部數據 */
       async _fetchContent(homeData) {
         this.progress = 0;
         const { url, content } = homeData;
         if (Process2.IsNeko) {
           let taskCount = 0;
           const tasks = [];
-          const resolvers = /* @__PURE__ */ new Map();
+          const resolvers = new Map();
           const postCount = content.length;
           if (this.metaDict.size === 0) {
             this.metaDict.set(Transl2("作者"), Lib2.$q("span[itemprop='name'], fix_name").$text());
@@ -724,9 +777,7 @@
               const postDom = Lib2.domParse(content2);
               const classifiedFiles = this.nekoCategorize(standardTitle, [
                 ...postDom.$qa(".fileThumb"),
-                // 圖片連結
                 ...postDom.$qa(".scrape__attachments a")
-                // 下載連結
               ]);
               const generatedData = this.fetchGenerate({
                 PostLink: url2,
@@ -734,7 +785,6 @@
                 ImgLink: classifiedFiles.img,
                 VideoLink: classifiedFiles.video,
                 DownloadLink: classifiedFiles.other
-                // ExternalLink: this.specialLinkParse(post.content)
               });
               if (Object.keys(generatedData).length !== 0) {
                 this.dataDict.set(standardTitle, generatedData);
@@ -756,31 +806,40 @@
           }
           await Promise.allSettled(tasks);
         } else {
-          const contentJson = JSON.parse(content);
-          if (contentJson) {
+          const homeJson = JSON.parse(content);
+          if (homeJson) {
             if (this.metaDict.size === 0) {
-              const props = contentJson.props;
-              this.metaDict.set(Transl2("作者"), props.name);
-              this.metaDict.set(Transl2("帖子數量"), props.count);
+              this.worker.postMessage({ url: this.profileAPI });
+              const profile = await new Promise((resolve, reject) => {
+                this.worker.onmessage = async (e) => {
+                  const { url: url2, content: content2, error } = e.data;
+                  if (!error) resolve(JSON.parse(content2));
+                  else {
+                    Lib2.log(error, url2, { dev: General2.Dev, type: "error", collapsed: false });
+                    await this.TooMany_TryAgain(url2);
+                    this.worker.postMessage({ url: url2 });
+                  }
+                };
+              });
+              this.metaDict.set(Transl2("作者"), profile.name);
+              this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
               this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
               this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
-              this.metaDict.set(Transl2("作者網站"), props.display_data.href);
             }
-            const results = contentJson.results;
-            if (this.advancedFetch) {
+            {
               const tasks = [];
-              const resolvers = /* @__PURE__ */ new Map();
+              const resolvers = new Map();
               this.worker.onmessage = async (e) => {
                 const { index, title, url: url2, content: content2, time, delay, error } = e.data;
                 try {
                   if (!error) {
                     const { resolve, reject } = resolvers.get(index);
                     this.fetchDelay = Process2.dynamicParam(time, delay);
-                    const contentJson2 = JSON.parse(content2);
-                    if (contentJson2) {
-                      const post = contentJson2.post;
-                      const previews = contentJson2.previews || [];
-                      const attachments = contentJson2.attachments || [];
+                    const contentJson = JSON.parse(content2);
+                    if (contentJson) {
+                      const post = contentJson.post;
+                      const previews = contentJson.previews || [];
+                      const attachments = contentJson.attachments || [];
                       const standardTitle = this.normalizeName(post.title, index);
                       const classifiedFiles = this.kemerCategorize({
                         title: standardTitle,
@@ -813,7 +872,7 @@
                   this.worker.postMessage({ index, title, url: url2, time, delay });
                 }
               };
-              for (const [index, post] of results.entries()) {
+              for (const [index, post] of homeJson.entries()) {
                 tasks.push(new Promise((resolve, reject) => {
                   resolvers.set(index, { resolve, reject });
                   this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
@@ -821,47 +880,12 @@
                 await Lib2.sleep(this.fetchDelay);
               }
               await Promise.allSettled(tasks);
-            } else {
-              const previews = contentJson.result_previews || [];
-              const attachments = contentJson.result_attachments || [];
-              for (const [index, post] of results.entries()) {
-                const standardTitle = this.normalizeName(post.title, index);
-                try {
-                  const serverDict = [...previews[index], ...attachments[index]].reduce((acc, item) => {
-                    acc[item.path] = item.server;
-                    return acc;
-                  }, {});
-                  const classifiedFiles = this.kemerCategorize({
-                    title: standardTitle,
-                    data: [...post.file ? Array.isArray(post.file) ? post.file : Object.keys(post.file).length ? [post.file] : [] : [], ...post.attachments],
-                    serverDict,
-                    fillValue: Lib2.getFill(previews?.length || 1)
-                  });
-                  const generatedData = this.fetchGenerate({
-                    PostLink: this.getPostURL(post.id),
-                    Timestamp: this.normalizeTimestamp(post),
-                    ImgLink: classifiedFiles.img,
-                    VideoLink: classifiedFiles.video,
-                    DownloadLink: classifiedFiles.other
-                  });
-                  if (Object.keys(generatedData).length !== 0) {
-                    this.dataDict.set(standardTitle, generatedData);
-                  }
-                  ;
-                  Lib2.title(`（${this.currentPage}）`);
-                  Lib2.log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General2.Dev, collapsed: false });
-                } catch (error) {
-                  Lib2.log(error, { index, title: standardTitle, url }, { dev: General2.Dev, type: "error", collapsed: false });
-                  continue;
-                }
-              }
             }
             await Lib2.sleep(this.fetchDelay);
           }
         }
         return true;
       }
-      /* ===== 輸出生成 ===== */
       async _reset() {
         this.metaDict = null;
         this.dataDict = null;
@@ -946,7 +970,6 @@
                 }
             `) : null;
       }
-      /* 解析名稱格式 */
       _nameAnalysis(format) {
         if (typeof format == "string") {
           return format.split(/{([^}]+)}/g).filter(Boolean).map((data) => {
@@ -960,7 +983,6 @@
           return [amount, filler];
         } else;
       }
-      /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
       downloadTrigger(sourceType) {
         Lib2.waitEl([
           ".post__title, .scrape__title",
@@ -970,9 +992,8 @@
           const [title, files, artist] = found;
           Process2.Lock = true;
           this.button.disabled = true;
-          const downloadData = /* @__PURE__ */ new Map();
+          const downloadData = new Map();
           this.namedData = {
-            // 建立數據
             fill: () => "fill",
             title: () => title.$q("span").$text().replaceAll("/", "／"),
             artist: () => artist.$text(),
@@ -988,7 +1009,6 @@
             }
           };
           const [
-            // 獲取名稱
             compressName,
             folderName,
             fillName
@@ -1010,7 +1030,6 @@
           this.compressMode ? this._packDownload(compressName, folderName, fillName, downloadData) : this._separDownload(fillName, downloadData);
         }, { raf: true });
       }
-      /* 打包壓縮下載 */
       async _packDownload(compressName, folderName, fillName, data) {
         let show, extension, progress = 0, total = data.size;
         const self = this, titleCache = this.originalTitle();
@@ -1085,7 +1104,6 @@
           error ? (request(index, url), Lib2.log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (requestUpdate(index, url, blob), Lib2.log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
         };
       }
-      /* 單圖下載 */
       async _separDownload(fillName, data) {
         let show, url, fileName, extension, token = 5, stop = false, progress = 0;
         const self = this, process = [], promises = [], total = data.size, showTracking = {}, titleCache = this.originalTitle();
@@ -1148,7 +1166,6 @@
           this._resetButton();
         }, 3e3);
       }
-      /* 壓縮檔案 */
       async _compressFile(name, title) {
         this.worker.terminate();
         this.forceCompressSignal = true;
@@ -1178,7 +1195,6 @@
           }, 6e3);
         });
       }
-      /* 按鈕重置 */
       async _resetButton() {
         General2.CompleteClose && window.close();
         Process2.Lock = false;
@@ -1203,7 +1219,6 @@
       this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
       this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
     }
-    /* 按鈕創建 */
     async ButtonCreation() {
       Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
         if (Files.length === 0) return;
@@ -1251,9 +1266,8 @@
           });
           if (Pointer.length === 0) return;
           const CompressMode = Lib.local("Compression", { error: true });
-          const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
+          const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單獨下載");
           this.Download ??= Downloader(
-            // 懶加載 Download 類
             GM_unregisterMenuCommand,
             GM_xmlhttpRequest,
             GM_download,
@@ -1303,7 +1317,6 @@
         }
       });
     }
-    /* 一鍵開啟當前所有帖子 */
     async OpenAllPages() {
       const card = Lib.$qa("article.post-card a");
       if (card.length == 0) {
@@ -1320,12 +1333,10 @@
         await Lib.sleep(General.BatchOpenDelay);
       }
     }
-    /* 下載模式切換 */
     async DownloadModeSwitch() {
       Lib.local("Compression", { error: true }) ? Lib.local("Compression", { value: false }) : Lib.local("Compression", { value: true });
       this.ButtonCreation();
     }
-    /* 檢測創建 [ 檢測頁面創建按鈕, 創建菜單 ] */
     async Init() {
       let FetchData;
       const self = this;
@@ -1340,7 +1351,6 @@
           }, { reset: true });
         } else if (self.Preview(Page)) {
           FetchData ??= Fetch(
-            // 懶加載 FetchData 類
             General,
             FetchSet,
             Process,
@@ -1360,7 +1370,6 @@
           }, { reset: true });
           if (General.Dev && !Process.IsNeko) {
             Lib.regMenu({
-              // 不支援 Neko, 抓取邏輯不同
               "🛠️ 開發者獲取": () => {
                 const ID = prompt("輸入請求的 ID");
                 if (ID == null || ID === "") return;
