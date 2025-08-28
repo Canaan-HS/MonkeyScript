@@ -116,8 +116,8 @@ const { Transl } = (() => { // 取得對應語言翻譯
                                     Instantiate = new this.Download(CompressMode, ModeDisplay, target);
                                     Instantiate.downloadTrigger(target.closest("h2").id); // 傳遞觸發類型
                                 } else if (target.closest("svg")) {
-                                    // alert("Currently Invalid");
-                                    this.Menu.open(); // 打開設置菜單
+                                    alert("Currently Invalid");
+                                    // this.Menu.open(); // 打開設置菜單
                                 }
                             },
                             add: { capture: true, passive: true }
@@ -182,8 +182,8 @@ const { Transl } = (() => { // 取得對應語言翻譯
         self.Content(Lib.$url) && self.ButtonCreation();
 
         // 加載菜單
-        const UI = Menu(Lib, Transl, General, FileName, FetchSet);
-        this.Menu = new UI();
+        // const UI = Menu(Lib, Transl, General, FileName, FetchSet);
+        // this.Menu = new UI();
 
         /* 註冊菜單 */
         async function registerMenu(Page) {
