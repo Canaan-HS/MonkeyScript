@@ -29,7 +29,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1636326/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1647211/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
