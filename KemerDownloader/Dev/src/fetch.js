@@ -189,45 +189,168 @@ export default function Fetch(
                 }, { video: {}, img: {}, other: {} });
             };
 
-            // 解析特別連結
+            /* specialLinkParse 的依賴 */
+            const allowType = new Set(["A", "P", "STRONG", "BODY"]); // 允許解析的類型
+            const pFilter = new Set(["mega.nz"]); // 過濾 P 中不是 Url 但是會被解析的類型
+            const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+            const protocolParse = (url) => {
+                if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+                if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+                if (/^\/\//.test(url)) return "https:" + url;
+                return url;
+            };
+            const searchPassword = (href, text) => {
+                if (!text) return href;
+                const lowerText = text.toLowerCase();
+
+                if (text.startsWith("#")) {
+                    href += text;
+                    href = href.match(urlRegex)?.[0] ?? href;  // ? 避免連結格式錯誤 (實驗性)
+                }
+                else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // ! 目前只判斷 16 ~ 43 的長度
+                    href += "#" + text;
+                    href = href.match(urlRegex)?.[0] ?? href;
+                }
+                else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+                    const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+                    if (key) href += "#" + key;
+                }
+
+                return href;
+            }
+            // 解析特別連結 (不適用 nekohouse)
             this.specialLinkParse = (data) => {
-                const Cache = {};
+                const parsed = {};
 
                 try {
-                    for (const a of Lib.domParse(data).$qa("body a")) {
-                        const href = a.href;
-                        const hash = md5(href).slice(0, 16);
+                    const parseAdd = (name, href) => {
+                        if (!href) return;
+                        if (name.includes("frame embed")) name = ""; // 臨時過濾
 
-                        if (href.startsWith("https://mega.nz")) {
-
-                            let name = (a.previousElementSibling?.$text().replace(":", "") || hash);
-                            if (name === "") continue;
-
-                            let pass = "";
-                            const nextNode = a.nextElementSibling;
-
-                            if (nextNode) {
-                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                                if (nodeText.startsWith("Pass")) {
-                                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
-                                }
-                            };
-
-                            Cache[name] = pass ? {
-                                [Transl("密碼")]: pass,
-                                [Transl("連結")]: href
-                            } : href;
-                        } else if (href) {
-                            const description = a.previousSibling?.$text() ?? "";
-                            const name = `${description} ${a?.$text()}`.trim();
-                            Cache[name ? name : hash] = href;
-                        }
+                        // 名稱為 空 與 連結相同 時, 用哈希值名稱
+                        parsed[
+                            name && name !== href ? name : md5(href).slice(0, 16)
+                        ] = href;
                     };
+
+                    let nodes = new Set();
+                    // ! 為了通用性 同時獲取 A 和 P 很容易會有重複
+                    const tree = document.createTreeWalker(
+                        Lib.domParse(data),
+                        NodeFilter.SHOW_TEXT,
+                        {
+                            acceptNode: (node) => {
+                                return allowType.has(node.parentElement.tagName)
+                                    ? NodeFilter.FILTER_ACCEPT
+                                    : NodeFilter.FILTER_REJECT;
+                            }
+                        }
+                    );
+
+                    while (tree.nextNode()) {
+                        nodes.add(tree.currentNode.parentElement); // ! 這裡會有重複
+                    };
+
+                    // ! 只有在 節點數量為 1 時, 才允許獨立解析 body (不然會有怪怪的東西)
+                    const allowBody = nodes.size === 1;
+                    const urlRecord = new Set();
+
+                    console.log(Lib.domParse(data));
+                    // ! 這網站有一堆不同的格式, 很難寫出通用的解析方式
+                    nodes = [...nodes];
+                    for (const [index, node] of nodes.entries()) {
+                        const tag = node.tagName;
+
+                        let name = "";
+                        let href = "";
+                        let endAdd = true;
+
+                        console.log(tag, node.$text());
+
+                        if (tag === "A") {
+                            href = node.href;
+
+                            // 取得 Mega 密碼 (判斷是 Mega 連結, 且沒有 # 的連結)
+                            if (href.toLowerCase().startsWith("https://mega.nz") && !href.includes("#")) {
+                                // 簡單搜索同層級 是否有密碼
+                                const nextNode = node.nextSibling;
+                                if (nextNode) {
+                                    if (nextNode.nodeType === Node.TEXT_NODE) {
+                                        href = searchPassword(href, nextNode.$text());
+                                    } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                                        const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                                        href = searchPassword(href, nodeText);
+                                    }
+                                } else {
+                                    for (let i = index + 1; i < nodes.length; i++) {
+                                        const newHref = searchPassword(href, nodes[i].$text());
+
+                                        if (newHref !== href) {
+                                            href = newHref;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 有名稱嘗試賦予
+                            const previousNode = node.previousSibling;
+                            if (previousNode?.nodeType === Node.ELEMENT_NODE) {
+                                name = previousNode.$text().replace(":", "");
+                            } else {
+                                const text = node.$text();
+                                name = !href.includes(text) ? text : ""; // ! 實驗性, 可能不通用
+                            }
+                        } else if (tag === "P") {
+                            const url = node.$text().match(urlRegex);
+
+                            if (url && !pFilter.has(url[0])) {
+                                href = protocolParse(url[0]);
+                            }
+                        } else if (tag === "STRONG") {
+                            const parentElement = node.parentElement;
+
+                            /* 父元素是 A, 代表這是名稱 */
+                            if (parentElement.tagName === "A") {
+                                href = parentElement.href;
+                                name = node.$text();
+                            };
+                        } else if (tag === "BODY" && allowBody) {
+                            node.$text().replace(urlRegex, (url, offset, fullText) => {
+                                // 取出 url 之前的內容
+                                const before = fullText.slice(0, offset);
+
+                                // 找到最後一個換行
+                                const lines = before.split(/\r?\n/);
+                                let currentLine = lines[lines.length - 1].trim();
+
+                                let name = "";
+                                if (currentLine.length > 0) { // 當前行有文字 視為 name
+                                    name = currentLine;
+                                } else { // 當前行是空的 往前一行找 (只找一層)
+                                    if (lines.length > 1) {
+                                        name = lines[lines.length - 2].trim();
+                                    }
+                                }
+
+                                // ! 目前 遇到 Mega 不支援 password 獲取
+                                parseAdd(name, protocolParse(url)); // 直接進行加入
+                            });
+
+                            endAdd = false;
+                        }
+
+                        // 加入判斷 與 除重
+                        if (endAdd && !urlRecord.has(href)) {
+                            urlRecord.add(href);
+                            parseAdd(name, href);
+                        }
+                    }
                 } catch (error) {
                     Lib.log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
                 }
 
-                return Cache;
+                return parsed;
             };
 
             // ! 目前有 Bug, 只能使用一次, 第二次後 response 的狀態直接都變成 200, 但實際上是 429
