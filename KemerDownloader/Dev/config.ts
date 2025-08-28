@@ -28,7 +28,7 @@ export default {
             'GM_unregisterMenuCommand'
         ],
         require: [
-            'https://update.greasyfork.org/scripts/495339/1636681/Syntax_min.js',
+            'https://update.greasyfork.org/scripts/495339/1647210/Syntax_min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
 
