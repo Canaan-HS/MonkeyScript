@@ -564,7 +564,7 @@
                         // 其他交互元素
                         "MAP", "AREA"
                     ]),
-                    UrlMatch(str) {
+                    urlMatch(str) {
                         // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec()|match(), 沒有重設 lastIndex 會有意外狀況
                         this.URL_Regex.lastIndex = 0;
                         return this.URL_Regex.test(str);
@@ -581,7 +581,7 @@
 
                                     const content = node.$text();
                                     if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
-                                    return this.UrlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                                    return this.urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
                             }
                         );
@@ -590,19 +590,19 @@
                         }
                         return nodes;
                     },
-                    ProtocolParse(url) {
+                    protocolParse(url) {
                         if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
                         if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
                         if (/^\/\//.test(url)) return "https:" + url;
                         return url;
                     },
-                    async ParseModify(father, content) { // 解析後轉換網址
+                    async parseModify(father, content) { // 解析後轉換網址
                         father.$iHtml(content.replace(this.URL_Regex, url => {
                             const decode = decodeURIComponent(url).trim();
-                            return `<a href="${this.ProtocolParse(decode)}">${decode}</a>`;
+                            return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                         }))
                     },
-                    async JumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
+                    async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
                         const [Newtab, Active, Insert] = [
                             Config.newtab ?? true,
                             Config.newtab_active ?? false,
@@ -1029,7 +1029,7 @@
 
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
-                        Func.JumpTrigger(body);
+                        Func.jumpTrigger(body);
 
                         let [article, content] = [
                             body.$q("article"),
@@ -1039,12 +1039,12 @@
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
-                                Func.ParseModify(span, span.$text());
+                                Func.parseModify(span, span.$text());
                             }
 
                         } else if (content) {
                             Func.getTextNodes(content).forEach(node => {
-                                Func.ParseModify(node, node.$text());
+                                Func.parseModify(node, node.$text());
                             })
                         }
                     });
@@ -1053,9 +1053,9 @@
                     Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
                         const items = Lib.$q(".card-list__items");
 
-                        Func.JumpTrigger(items);
+                        Func.jumpTrigger(items);
                         Func.getTextNodes(items).forEach(node => {
-                            Func.ParseModify(node, node.$text());
+                            Func.parseModify(node, node.$text());
                         });
                     })
                 }
