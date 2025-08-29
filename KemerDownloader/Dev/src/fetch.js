@@ -36,10 +36,10 @@ export default function Fetch(
             const apiInterface = "api/v1";
 
             // 帖子內部連結
-            this.getPostURL = ({service, user, id}) => `${this.origin}/${service}/user/${user}/post/${id}`;
+            this.getPostURL = ({ service, user, id }) => `${this.origin}/${service}/user/${user}/post/${id}`;
 
             // 帖子內部 API 連結
-            this.getPostAPI = ({service, user, id}) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+            this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
 
             // 帖子配置 API (獲取基本數據)
             this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
@@ -119,7 +119,7 @@ export default function Fetch(
             this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(((this.currentPage - 1) * 50) + (index + 1)).padStart(2, "0")}`;
 
             // 正規化帖子時間戳 (傳入 Post 的物件)
-            this.normalizeTimestamp = ({added, published}) => new Date(added || published)?.toLocaleString();
+            this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
 
             // 適用 kemono 和 coomer 的分類 (data = api 文件數據, serverDict = api 伺服器字典, fillValue = 填充數字的位數)
             this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
@@ -370,6 +370,10 @@ export default function Fetch(
                                     }
                                 }
 
+                                if (name.match(urlRegex)) { // 檢查 如果 name 匹配網址, 則不是名稱
+                                    name = "";
+                                }
+
                                 if (checkProcessableLink(url)) {
                                     const after = fullText.slice(offset + url.length);
                                     const linesAfter = after.split(/\r?\n/); // 拆分行數
@@ -571,11 +575,26 @@ export default function Fetch(
             };
 
             Process.Lock = true;
+
+            // 回傳 service, user
+            const parseInfo = (url) => {
+                url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
+                url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
+                return url.length >= 3 ? [url[0], url[2]] : url;
+            };
+
+            const [service, user] = parseInfo(this.sourceURL);
+            const pack = {
+                id,
+                user,
+                service,
+                title: this.titleCache
+            };
+
+            Lib.log("Fetch Test", pack, { dev: General.Dev, collapsed: false });
+
             await this._fetchContent({
-                content: JSON.stringify([{
-                    id,
-                    title: this.titleCache
-                }])
+                content: JSON.stringify([pack])
             });
 
             this._reset();
