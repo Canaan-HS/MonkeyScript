@@ -545,7 +545,7 @@
             TextToLink_Dependent: function (Config) {
                 return this.TextToLink_Cache ??= {
                     Exclusion_Regex: /onfanbokkusuokibalab\.net/,
-                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
+                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
                     Exclusion_Tags: new Set([
                         // 腳本和樣式
                         "SCRIPT", "STYLE", "NOSCRIPT",
