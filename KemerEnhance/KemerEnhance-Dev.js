@@ -1713,7 +1713,7 @@
 
                     // 初始化
                     browse.style.position = "relative"; // 修改樣式避免跑版
-                    browse.$q(".View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
+                    browse.$q("View")?.remove(); // 查找是否存在 View 元素, 先將其刪除
 
                     GM_xmlhttpRequest({
                         method: "GET",
@@ -1729,7 +1729,7 @@
                                 // ! 忘記這個 API 有什麼用了, IsNeko 好像是沒有用
 
                                 const main = response.responseXML.$q("main");
-                                const view = Lib.createElement("View", { class: "View" });
+                                const view = Lib.createElement("View");
                                 const buffer = Lib.createFragment;
                                 for (const br of main.$qa("br")) { // 取得 br 數據
                                     buffer.append( // 將以下元素都添加到 buffer
@@ -1742,7 +1742,7 @@
                                 browse.appendChild(view);
                             } else {
                                 const responseJson = JSON.parse(response.responseText);
-                                const view = Lib.createElement("View", { class: "View" });
+                                const view = Lib.createElement("View");
                                 const buffer = Lib.createFragment;
 
                                 // 添加密碼數據
@@ -1816,7 +1816,7 @@
         return {
             async LinkBeautify(Config) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
                 Lib.addStyle(`
-                    .View {
+                    View {
                         top: -10px;
                         z-index: 1;
                         padding: 10%;
@@ -1832,24 +1832,41 @@
                         border: 1px solid #737373;
                         background-color: #3b3e44;
                     }
-                    a:hover .View { display: block }
+                    a:hover View { display: block }
+                    .post__attachment-link:not([beautify]) { display: none !important; }
                 `, "Link_Effects", false);
 
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                     const showBrowse = loadFunc.linkBeautifyRequ();
 
                     for (const link of post) {
-                        const text = link.$text().replace("Download", ""); // 修正原文本
 
-                        // ? 修改標籤 (有些頁面被修改後 AJAX 切換會有問題) [暫時只支持 nekohouse]
+                        // 過濾先前處理層
+                        if (!DLL.IsNeko && link.$gAttr("beautify")) {
+                            link.remove();
+                            continue;
+                        };
+
+                        const text = link.$text().replace("Download ", ""); // 修正原文本
+
                         if (DLL.IsNeko) {
                             link.$text(text);
                             link.$sAttr("download", text);
+                        } else {
+                            // ! 該站點是 React 渲染的, 直接修改會導致變更異常
+                            const newA = Lib.createElement("a", {
+                                class: link.getAttribute("class"),
+                                href: link.href,
+                                download: text,
+                                attr: { beautify: true },
+                                text
+                            });
+
+                            link.parentNode.insertBefore(newA, link);
                         };
 
                         const browse = link.nextElementSibling; // 查找是否含有 browse 元素
                         if (!browse) continue;
-
                         showBrowse(browse); // 請求顯示 browse 數據
                     }
                 });
@@ -1897,6 +1914,7 @@
 
                                     move && link.parentNode.remove(); // 刪除對應下載連結
                                     let element = link.$copy();
+                                    element.$sAttr("beautify", true); // ? LinkBeautify 的適應, 避免被隱藏
                                     element.$text(element.$text().replace("Download", "")); // 修改載入連結
 
                                     summary.$text("");
