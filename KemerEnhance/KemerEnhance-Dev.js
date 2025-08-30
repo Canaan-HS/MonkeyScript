@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.08.28-Beta
+// @version      2025.08.31-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -973,7 +973,7 @@
                             const cached = cache.get(url);
                             return new Response(cached.body, {
                                 status: cached.status,
-                                headers: cached.reders
+                                headers: cached.headers
                             });
                         }
 
@@ -983,8 +983,7 @@
                             const response = await originalFetch.apply(this, args);
 
                             // 檢查是否滿足所有快取條件
-                            const contentType = response.headers.get('content-type') || '';
-                            if (response.status === 200 && contentType.includes('json')) {
+                            if (response.status === 200 && url.includes('api')) {
 
                                 // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
                                 (async () => {
