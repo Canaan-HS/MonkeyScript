@@ -103,8 +103,7 @@
             FilterExts: [], // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
             UseFormat: false, // 這裡為 false 下面兩項就不生效
             Mode: "FilterMode",
-            Format: ["Timestamp", "TypeTag"],
-            ...Lib2.getJV("FetchSet", {})
+            Format: ["Timestamp", "TypeTag"]
         };
         const Process2 = {
             IsNeko: Lib2.$domain.startsWith("nekohouse"),
