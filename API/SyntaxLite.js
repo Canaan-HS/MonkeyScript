@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025.08.23
+// @version      2025.08.31
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -300,8 +300,8 @@ const Lib = (() => {
                 events.forEach(type => element.addEventListener(type, trigger, add));
             }
 
-            resolve && resolve(true);
-        } catch { resolve && resolve(false) }
+            resolve?.(true);
+        } catch { resolve?.(false) }
     };
 
     const eventRecord = new Map();
@@ -506,7 +506,7 @@ const Lib = (() => {
     };
 
     /**
-     * @description 持續監聽 DOM 變化並執行回調函數
+     * @description 持續監聽 DOM 變化並執行回調函數 
      * @param {Element} target - 要觀察的DOM元素
      * @param {Function} onFunc - 當觀察到變化時執行的回調函數
      * @param {Object} [options] - 配置選項
@@ -521,6 +521,8 @@ const Lib = (() => {
      * @returns {MutationObserver} 創建的觀察器實例
      *
      * @example
+     * 使用字串作為 mark，當出現新的元素，會自動清除舊的觀察器，再創建新的觀察器
+     *
      * $observer(document.body, () => {
      *     console.log("DOM發生變化");
      * }, {
@@ -531,7 +533,7 @@ const Lib = (() => {
      *    ob.observe(document.body, op); // 重建觀察器
      * });
      */
-    const observerRecord = new Set();
+    const observerRecord = new Map();
     async function $observer(target, onFunc, options = {}, callback = null) {
         const {
             mark = "",
@@ -544,19 +546,26 @@ const Lib = (() => {
         } = options || {};
 
         if (mark) {
-            if (observerRecord.has(mark)) { return } else { observerRecord.add(mark) };
+            const record = observerRecord.get(mark);
+
+            if (record) {
+                if (record.target === target) return;
+                record.ob.disconnect();
+                observerRecord.delete(mark);
+            }
         };
 
-        const [rateFunc, delayMs] = debounce > 0 ? [$debounce, debounce] : [$throttle, throttle];
-        const op = {
-            subtree: subtree,
-            childList: childList,
-            attributes: attributes,
-            characterData: characterData
-        }, ob = new MutationObserver(rateFunc(() => { onFunc() }, delayMs));
+        const [rateFunc, delayMs] = debounce > 0
+            ? [$debounce, debounce]
+            : [$throttle, throttle];
+
+        const op = { subtree, childList, attributes, characterData }
+        const ob = new MutationObserver(rateFunc(() => { onFunc() }, delayMs));
 
         ob.observe(target, op);
-        callback && callback({ ob, op });
+        mark && observerRecord.set(mark, { target, ob });
+
+        callback?.({ ob, op });
     };
 
     /**
@@ -641,7 +650,7 @@ const Lib = (() => {
                             cancelAnimationFrame(AnimationFrame);
                             clearTimeout(timer);
 
-                            found && found(result);
+                            found?.(result);
                             resolve(result);
                         } else {
                             AnimationFrame = requestAnimationFrame(queryRun);
@@ -654,7 +663,7 @@ const Lib = (() => {
                         cancelAnimationFrame(AnimationFrame);
 
                         if (timeoutResult) {
-                            found && found(result);
+                            found?.(result);
                             resolve(result);
                         }
                     }, (1000 * timeout));
@@ -668,22 +677,17 @@ const Lib = (() => {
                             observer.disconnect();
                             clearTimeout(timer);
 
-                            found && found(result);
+                            found?.(result);
                             resolve(result);
                         }
                     }, delayMs));
 
-                    observer.observe(root, {
-                        subtree: subtree,
-                        childList: childList,
-                        attributes: attributes,
-                        characterData: characterData
-                    });
+                    observer.observe(root, { subtree, childList, attributes, characterData });
 
                     timer = setTimeout(() => {
                         observer.disconnect();
                         if (timeoutResult) {
-                            found && found(result);
+                            found?.(result);
                             resolve(result);
                         }
                     }, (1000 * timeout));
@@ -791,31 +795,33 @@ const Lib = (() => {
 
     /**
      * @description 輸出 Json 檔案
-     * @param {*} Data      - 可轉成 Json 格式的數據
+     * @param {*} data      - 可轉成 Json 格式的數據
      * @param {string} Name - 輸出的檔名 (不用打副檔名)
-     * @param {function} Success   - 選擇是否回傳輸出狀態
+     * @param {function} success   - 選擇是否回傳輸出狀態
      *
      * @example
-     * outputJson(JsonData, "MyJson", Success=> {
-     *      console.log(Success);
+     * outputJson(JsonData, "MyJson", success=> {
+     *      console.log(success);
      * })
      */
-    async function outputJson(Data, Name, Success = null) {
+    async function outputJson(data, name, success = null) {
         try {
-            Data = typeof Data !== "string" ? JSON.stringify(Data, null, 4) : Data;
-            Name = typeof Name !== "string" ? "Anonymous.json" : Name.endsWith(".json") ? Name : `${Name}.json`;
+            data = typeof data !== "string" ? JSON.stringify(data, null, 4) : data;
+            name = typeof name !== "string"
+                ? `Untitled-${crypto.randomUUID().slice(9, 23)}.json`
+                : name.endsWith(".json") ? name : `${name}.json`;
 
-            const Json = new Blob([Data], { type: "application/json" });
+            const Json = new Blob([data], { type: "application/json" });
             const Link = document.createElement("a");
             Link.href = URL.createObjectURL(Json);
-            Link.download = Name;
+            Link.download = name;
             Link.click();
 
             URL.revokeObjectURL(Link.href);
             Link.remove();
 
-            Success && Success({ State: true });
-        } catch (error) { Success && Success({ State: false, Info: error }) }
+            success?.({ State: true });
+        } catch (error) { success?.({ State: false, Info: error }) }
     };
 
     /* ========== 特別用途 ========== */
@@ -1089,7 +1095,8 @@ const Lib = (() => {
         deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
             ...addCall, ...storageCall, ...storeCall,
-            $type, eventRecord, onE, onEvent, offEvent, onUrlChange,
+            eventRecord, addRecord, observerRecord,
+            $type, onE, onEvent, offEvent, onUrlChange,
             log, $observer, waitEl, $throttle, $debounce, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storeListen
         }
