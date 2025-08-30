@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.08.28-Beta
+// @version      2025.08.31-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -29,7 +29,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1647211/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -97,7 +97,7 @@
         const User = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/;
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
-        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/new\/?.*$/;
         const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
@@ -488,13 +488,13 @@
         };
     })();
     Enhance.Run();
-    const WaitDom = new MutationObserver(() => {
-        WaitDom.disconnect();
+    const waitDom = new MutationObserver(() => {
+        waitDom.disconnect();
         Enhance.Run();
     });
     Lib.onUrlChange(change => {
         Url = change.url;
-        WaitDom.observe(document, {
+        waitDom.observe(document, {
             attributes: true,
             childList: true,
             subtree: true,
@@ -507,21 +507,21 @@
             TextToLink_Cache: undefined,
             TextToLink_Dependent: function (Config) {
                 return this.TextToLink_Cache ??= {
-                    Exclusion_Regex: /onfanbokkusuokibalab\.net/,
-                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[（）()「」『』【】\[\]{}、"'，。！？；：…—～~]|$|\s)/g,
-                    Exclusion_Tags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
+                    exclusionRegex: /onfanbokkusuokibalab\.net/,
+                    urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
+                    exclusionTags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
                     urlMatch(str) {
-                        this.URL_Regex.lastIndex = 0;
-                        return this.URL_Regex.test(str);
+                        this.urlRegex.lastIndex = 0;
+                        return this.urlRegex.test(str);
                     },
                     getTextNodes(root) {
                         const nodes = [];
                         const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                             acceptNode: node => {
                                 const parentElement = node.parentElement;
-                                if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+                                if (!parentElement || this.exclusionTags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
                                 const content = node.$text();
-                                if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
+                                if (!content || this.exclusionRegex.test(content)) return NodeFilter.FILTER_REJECT;
                                 return this.urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                             }
                         });
@@ -537,7 +537,7 @@
                         return url;
                     },
                     async parseModify(father, content) {
-                        father.$iHtml(content.replace(this.URL_Regex, url => {
+                        father.$iHtml(content.replace(this.urlRegex, url => {
                             const decode = decodeURIComponent(url).trim();
                             return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                         }));
@@ -558,38 +558,37 @@
                     }
                 };
             },
-            FixArtist_Cache: undefined,
+            fixArtistCache: undefined,
             FixArtist_Dependent: function () {
-                if (!this.FixArtist_Cache) {
-                    const Fix_Requ = {
-                        Record_Cache: undefined,
-                        Fix_Cache: new Map(),
-                        Register_Eement: new Map(),
-                        Get_Record() {
+                if (!this.fixArtistCache) {
+                    const fixRequ = {
+                        recordCache: undefined,
+                        fixCache: new Map(),
+                        getRecord() {
                             const record = Lib.local("fix_record_v2", {
                                 error: new Map()
                             });
                             return record instanceof Map ? record : new Map();
                         },
-                        async Save_Record(save) {
+                        async saveRecord(save) {
                             await Lib.local("fix_record_v2", {
-                                value: new Map([...this.Get_Record(), ...save])
+                                value: new Map([...this.getRecord(), ...save])
                             });
-                            this.Fix_Cache.clear();
+                            this.fixCache.clear();
                         },
-                        Replace_Url_Tail(url, tail) {
+                        replaceUrlTail(url, tail) {
                             const uri = new URL(url);
                             uri.pathname = tail;
                             url = uri.href;
                             return url;
                         },
-                        Parse_Url(url) {
+                        parseUrlInfo(url) {
                             url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
                             url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
                             return url.length >= 3 ? [url[0], url[2]] : url;
                         },
-                        Save_Work: (() => Lib.$debounce(() => Fix_Requ.Save_Record(Fix_Requ.Fix_Cache), 1e3))(),
-                        async Fix_Request(url, headers = {}) {
+                        saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1e3))(),
+                        async fixRequest(url, headers = {}) {
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
                                     method: "GET",
@@ -602,8 +601,8 @@
                                 });
                             });
                         },
-                        async Get_Pixiv_Name(id) {
-                            const response = await this.Fix_Request(`https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, {
+                        async getPixivName(id) {
+                            const response = await this.fixRequest(`https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, {
                                 referer: "https://www.pixiv.net/"
                             });
                             if (response.status === 200) {
@@ -615,8 +614,8 @@
                                 return user_name;
                             } else return;
                         },
-                        async Get_Candfans_Name(id) {
-                            const response = await this.Fix_Request(`https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`);
+                        async getCandfansName(id) {
+                            const response = await this.fixRequest(`https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`);
                             if (response.status === 200) {
                                 const user = response.response.data[0];
                                 const user_code = user?.user_code || "";
@@ -624,17 +623,17 @@
                                 return [user_code, username];
                             } else return;
                         },
-                        Candfans_Page_Adapt(oldId, newId, oldUrl, oldName, newName) {
+                        candfansPageAdapt(oldId, newId, oldUrl, oldName, newName) {
                             if (DLL.IsSearch()) {
                                 oldId = newId ? newId : oldId;
                             } else {
-                                oldUrl = newId ? this.Replace_Url_Tail(oldUrl, newId) : oldUrl;
+                                oldUrl = newId ? this.replaceUrlTail(oldUrl, newId) : oldUrl;
                             }
                             oldName = newName ? newName : oldName;
                             return [oldId, oldUrl, oldName];
                         },
-                        Fix_Name_Support: new Set(["pixiv", "fanbox", "candfans"]),
-                        Fix_Tag_Support: {
+                        fixNameSupport: new Set(["pixiv", "fanbox", "candfans"]),
+                        fixTagSupport: {
                             ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
                             NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
                             Fantia: "https://fantia.jp/fanclubs/{id}/posts",
@@ -654,7 +653,7 @@
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts"
                         },
-                        async Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) {
+                        async fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) {
                             const edit = Lib.createElement("fix_edit", {
                                 id: infoID,
                                 class: "edit_artist",
@@ -662,19 +661,19 @@
                             });
                             nameEl.parentNode.insertBefore(edit, nameEl);
                             nameEl.$oHtml(`<fix_name jump="${mainUrl}">${showText.trim()}</fix_name>`);
-                            const [tag_text, support_id, support_name] = [tagEl.$text(), this.Fix_Tag_Support.ID, this.Fix_Tag_Support.NAME];
+                            const [tag_text, support_id, support_name] = [tagEl.$text(), this.fixTagSupport.ID, this.fixTagSupport.NAME];
                             if (!tag_text) return;
                             const [mark, matchId] = support_id.test(tag_text) ? ["{id}", support_id] : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
                             if (!mark) return;
                             tagEl.$iHtml(tag_text.replace(matchId, tag => {
                                 let supported = false;
-                                const supportFormat = appendTag ? (supported = this.Fix_Tag_Support[`${tag}${appendTag}`],
-                                    supported ? (infoID = this.Parse_Url(otherUrl)[1],
-                                        supported) : this.Fix_Tag_Support[tag]) : this.Fix_Tag_Support[tag];
+                                const supportFormat = appendTag ? (supported = this.fixTagSupport[`${tag}${appendTag}`],
+                                    supported ? (infoID = this.parseUrlInfo(otherUrl)[1],
+                                        supported) : this.fixTagSupport[tag]) : this.fixTagSupport[tag];
                                 return `<fix_tag jump="${supportFormat.replace(mark, infoID)}">${tag}</fix_tag>`;
                             }));
                         },
-                        async Fix_Trigger(data) {
+                        async fixTrigger(data) {
                             let {
                                 mainUrl,
                                 otherUrl,
@@ -684,38 +683,38 @@
                                 tagEl,
                                 appendTag
                             } = data;
-                            let recordName = this.Record_Cache.get(infoID);
+                            let recordName = this.recordCache.get(infoID);
                             if (recordName) {
                                 if (webSite === "candfans") {
-                                    [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(infoID, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
+                                    [infoID, mainUrl, recordName] = this.candfansPageAdapt(infoID, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
                                 }
-                                this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
+                                this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
                             } else {
-                                if (this.Fix_Name_Support.has(webSite)) {
+                                if (this.fixNameSupport.has(webSite)) {
                                     if (webSite === "candfans") {
-                                        const [user_code, username] = await this.Get_Candfans_Name(infoID) ?? nameEl.$text();
-                                        if (user_code && username) this.Fix_Cache.set(infoID, [user_code, username]);
-                                        [infoID, mainUrl, recordName] = this.Candfans_Page_Adapt(infoID, user_code, mainUrl, nameEl.$text(), username);
-                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                        const [user_code, username] = await this.getCandfansName(infoID) ?? nameEl.$text();
+                                        if (user_code && username) this.fixCache.set(infoID, [user_code, username]);
+                                        [infoID, mainUrl, recordName] = this.candfansPageAdapt(infoID, user_code, mainUrl, nameEl.$text(), username);
+                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
                                     } else {
-                                        const username = await this.Get_Pixiv_Name(infoID) ?? nameEl.$text();
-                                        this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
-                                        this.Fix_Cache.set(infoID, username);
+                                        const username = await this.getPixivName(infoID) ?? nameEl.$text();
+                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                        this.fixCache.set(infoID, username);
                                     }
-                                    this.Save_Work();
+                                    this.saveWork();
                                 } else {
-                                    this.Fix_Update_Ui(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
+                                    this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
                                 }
                             }
                         },
-                        async Search_Fix(items) {
+                        async searchFix(items) {
                             items.$sAttr("fix", true);
                             const url = items.href;
                             const img = items.$q("img");
-                            const [webSite, infoID] = this.Parse_Url(url);
+                            const [webSite, infoID] = this.parseUrlInfo(url);
                             img.$sAttr("jump", url);
                             items.$dAttr("href");
-                            this.Fix_Trigger({
+                            this.fixTrigger({
                                 mainUrl: url,
                                 otherUrl: "",
                                 webSite: webSite,
@@ -725,12 +724,12 @@
                                 appendTag: ""
                             });
                         },
-                        async Other_Fix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") {
+                        async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") {
                             try {
                                 const parent = artist.parentNode;
                                 const url = mainUrl ?? parent.href;
-                                const [webSite, infoID] = this.Parse_Url(url);
-                                await this.Fix_Trigger({
+                                const [webSite, infoID] = this.parseUrlInfo(url);
+                                await this.fixTrigger({
                                     mainUrl: url,
                                     otherUrl: otherUrl,
                                     webSite: webSite,
@@ -746,27 +745,23 @@
                                 });
                             } catch { }
                         },
-                        async Dynamic_Fix(Listen, Element) {
-                            if (this.Register_Eement.has(Listen)) return;
-                            this.Register_Eement.set(Listen, true);
-                            Lib.$observer(Listen, () => {
-                                this.Record_Cache = this.Get_Record();
-                                const element = typeof Element === "string" ? Lib.$q(Element) : Element;
-                                if (element) {
-                                    for (const items of element.$qa("a")) {
-                                        !items.$gAttr("fix") && this.Search_Fix(items);
-                                    }
+                        async dynamicFix(element) {
+                            Lib.$observer(element, () => {
+                                this.recordCache = this.getRecord();
+                                for (const items of element.$qa("a")) {
+                                    !items.$gAttr("fix") && this.searchFix(items);
                                 }
                             }, {
+                                mark: "dynamic-fix",
                                 subtree: false,
                                 debounce: 50
                             });
                         }
                     };
-                    Fix_Requ.Record_Cache = Fix_Requ.Get_Record();
-                    this.FixArtist_Cache = Fix_Requ;
+                    fixRequ.recordCache = fixRequ.getRecord();
+                    this.fixArtistCache = fixRequ;
                 }
-                return this.FixArtist_Cache;
+                return this.fixArtistCache;
             }
         };
         return {
@@ -862,7 +857,7 @@
                             const cached = cache.get(url);
                             return new Response(cached.body, {
                                 status: cached.status,
-                                headers: cached.reders
+                                headers: cached.headers
                             });
                         }
 
@@ -872,8 +867,7 @@
                             const response = await originalFetch.apply(this, args);
 
                             // 檢查是否滿足所有快取條件
-                            const contentType = response.headers.get('content-type') || '';
-                            if (response.status === 200 && contentType.includes('json')) {
+                            if (response.status === 200 && url.includes('api')) {
 
                                 // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
                                 (async () => {
@@ -961,7 +955,7 @@
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name);
-                                        Func.Save_Record(new Map([[target.id, change_name]]));
+                                        Func.saveRecord(new Map([[target.id, change_name]]));
                                     }
                                     text.remove();
                                 }, {
@@ -994,30 +988,26 @@
                     }).then(card_items => {
                         if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             const artist = Lib.$q("span[itemprop='name']");
-                            artist && Func.Other_Fix(artist);
-                            for (const items of card_items.$qa("a")) {
-                                Func.Search_Fix(items);
-                            }
-                        } else {
-                            Func.Dynamic_Fix(card_items, card_items);
-                            Lib.createElement(card_items, "fix-trigger", {
-                                style: "display: none;"
-                            });
+                            artist && Func.otherFix(artist);
                         }
+                        Func.dynamicFix(card_items);
+                        Lib.createElement(card_items, "fix-trigger", {
+                            style: "display: none;"
+                        });
                     });
                 } else if (DLL.IsContent()) {
                     Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
                         raf: true,
                         timeout: 10
                     }).then(([title, artist]) => {
-                        Func.Other_Fix(artist, title, artist.href, Lib.url, "<fix_cont>");
+                        Func.otherFix(artist, title, artist.href, Lib.url, "<fix_cont>");
                     });
                 } else {
                     Lib.waitEl("span[itemprop='name']", null, {
                         raf: true,
-                        timeout: 5
+                        timeout: 3
                     }).then(artist => {
-                        Func.Other_Fix(artist);
+                        Func.otherFix(artist);
                     });
                 }
             },
@@ -1627,8 +1617,8 @@
                                 return data;
                             }));
                             for (const li of parents) {
-                                const WaitLoad = new MutationObserver(Lib.$debounce(() => {
-                                    WaitLoad.disconnect();
+                                const waitLoad = new MutationObserver(Lib.$debounce(() => {
+                                    waitLoad.disconnect();
                                     let [video, summary] = [li.$q("video"), li.$q("summary")];
                                     if (!video || !summary) return;
                                     video.$sAttr("preload", "metadata");
@@ -1640,7 +1630,7 @@
                                     summary.$text("");
                                     summary.appendChild(element);
                                 }, 100));
-                                WaitLoad.observe(li, {
+                                waitLoad.observe(li, {
                                     attributes: true,
                                     characterData: true,
                                     childList: true,
