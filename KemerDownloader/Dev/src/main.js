@@ -33,10 +33,10 @@ const { Transl } = (() => { // 取得對應語言翻譯
         this.Preview = (URL) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL)
             || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL)
             || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL);
-    }
+    };
 
     /* 按鈕創建 */
-    async ButtonCreation() {
+    async _buttonCreation() {
         Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then(Files => {
             if (Files.length === 0) return;
 
@@ -139,10 +139,10 @@ const { Transl } = (() => { // 取得對應語言翻譯
                 }
             }
         })
-    }
+    };
 
     /* 一鍵開啟當前所有帖子 */
-    async OpenAllPages() {
+    async _openAllPages() {
         const card = Lib.$qa("article.post-card a");
         if (card.length == 0) { throw new Error("No links found") }
 
@@ -158,18 +158,18 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
             await Lib.sleep(General.BatchOpenDelay);
         }
-    }
+    };
 
     /* 下載模式切換 */
-    async DownloadModeSwitch() {
+    async _downloadModeSwitch() {
         Lib.local("Compression", { error: true })
             ? Lib.local("Compression", { value: false })
             : Lib.local("Compression", { value: true });
-        this.ButtonCreation();
-    }
+        this._buttonCreation();
+    };
 
     /* 檢測創建 [ 檢測頁面創建按鈕, 創建菜單 ] */
-    async Init() {
+    async init() {
         let FetchData;
         const self = this;
 
@@ -179,7 +179,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
 
         // 首次載入嘗試註冊
         registerMenu(Lib.$url);
-        self.Content(Lib.$url) && self.ButtonCreation();
+        self.Content(Lib.$url) && self._buttonCreation();
 
         // 加載菜單
         // const UI = Menu(Lib, Transl, General, FileName, FetchSet);
@@ -189,7 +189,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
         async function registerMenu(Page) {
             if (self.Content(Page)) {
                 Lib.regMenu({
-                    [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
+                    [Transl("🔁 切換下載模式")]: { func: () => self._downloadModeSwitch(), close: false, hotkey: "c" }
                 }, { reset: true });
             } else if (self.Preview(Page)) {
                 FetchData ??= Fetch( // 懶加載 FetchData 類
@@ -204,7 +204,7 @@ const { Transl } = (() => { // 取得對應語言翻譯
                             Instantiate.fetchRun();
                         }
                     },
-                    [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
+                    [Transl("📃 開啟當前頁面帖子")]: self._openAllPages
                 }, { reset: true });
 
                 if (General.Dev && !Process.IsNeko) {
@@ -223,9 +223,9 @@ const { Transl } = (() => { // 取得對應語言翻譯
         };
 
         Lib.onUrlChange(change => {
-            self.Content(change.url) && self.ButtonCreation();
+            self.Content(change.url) && self._buttonCreation();
             registerMenu(change.url);
         });
 
-    }
-}).Init();
+    };
+}).init();
