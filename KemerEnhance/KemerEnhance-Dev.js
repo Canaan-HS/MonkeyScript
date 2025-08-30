@@ -854,7 +854,7 @@
                                 for (const items of element.$qa("a")) {
                                     !items.$gAttr("fix") && this.searchFix(items); // 沒有修復標籤的才修復
                                 }
-                            }, { mark: element, subtree: false, debounce: 50 });
+                            }, { mark: "dynamic-fix", subtree: false, debounce: 50 });
                         }
                     }
 
