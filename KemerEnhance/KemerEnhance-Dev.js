@@ -544,9 +544,9 @@
             TextToLink_Cache: undefined,
             TextToLink_Dependent: function (Config) {
                 return this.TextToLink_Cache ??= {
-                    Exclusion_Regex: /onfanbokkusuokibalab\.net/,
-                    URL_Regex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
-                    Exclusion_Tags: new Set([
+                    exclusionRegex: /onfanbokkusuokibalab\.net/,
+                    urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
+                    exclusionTags: new Set([
                         // 腳本和樣式
                         "SCRIPT", "STYLE", "NOSCRIPT",
                         // 多媒體元素
@@ -567,8 +567,8 @@
                     urlMatch(str) {
                         // ? 使用 /g 全局匹配, 如果不重新宣告 使用 test()|exec(), 沒有重設 lastIndex 會有意外狀況
                         // 不直接用 match 是為了性能, 因為節點可能很多, test 比 match 開銷更小
-                        this.URL_Regex.lastIndex = 0;
-                        return this.URL_Regex.test(str);
+                        this.urlRegex.lastIndex = 0;
+                        return this.urlRegex.test(str);
                     },
                     getTextNodes(root) {
                         const nodes = [];
@@ -578,10 +578,10 @@
                             {
                                 acceptNode: (node) => {
                                     const parentElement = node.parentElement;
-                                    if (!parentElement || this.Exclusion_Tags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+                                    if (!parentElement || this.exclusionTags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
 
                                     const content = node.$text();
-                                    if (!content || this.Exclusion_Regex.test(content)) return NodeFilter.FILTER_REJECT;
+                                    if (!content || this.exclusionRegex.test(content)) return NodeFilter.FILTER_REJECT;
                                     return this.urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                                 }
                             }
@@ -598,7 +598,7 @@
                         return url;
                     },
                     async parseModify(father, content) { // 解析後轉換網址
-                        father.$iHtml(content.replace(this.URL_Regex, url => {
+                        father.$iHtml(content.replace(this.urlRegex, url => {
                             const decode = decodeURIComponent(url).trim();
                             return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                         }))
