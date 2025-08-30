@@ -14,9 +14,10 @@ export default function Fetch(
             this.URL = new URL(this.sourceURL); // 解析連結
 
             this.host = this.URL.host;
+            this.isPost = this.URL.pathname !== "/posts"; // 用於判斷是 post 還是 posts
             this.firstURL = this.URL.origin + this.URL.pathname; // 第一頁連結
-            this.queryValue = this.URL.search;
 
+            this.queryValue = this.URL.search;
             if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
                 this.URL.searchParams.delete("q");
                 this.sourceURL = this.URL.href;
@@ -54,12 +55,13 @@ export default function Fetch(
             this.postAPI = `${apiTemplate}/post`; // 內部連結的 API 模板
 
             // 將預覽頁面轉成 API 連結
+            const append = this.isPost ? "/posts" : "";
             this.getPreviewAPI = url =>
                 /[?&]o=/.test(url)
-                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts$1")
+                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, `${append}$1`)
                     : this.queryValue // 如果有搜尋關鍵字
-                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts${this.queryValue}`)
-                        : url.replace(this.host, `${this.host}/api/v1`) + "/posts";
+                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `${append}${this.queryValue}`)
+                        : url.replace(this.host, `${this.host}/api/v1`) + append;
 
             // 根據類型判斷有效值
             this.getValidValue = (value) => {
@@ -193,56 +195,87 @@ export default function Fetch(
             const allowType = new Set(["A", "P", "STRONG", "BODY"]); // 允許解析的類型
             const pFilter = new Set(["mega.nz"]); // 過濾 P 中不是 Url 但是會被解析的類型
             const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+            const safeInclud = (target, checkStr) => {
+                if (typeof target !== "string") return false;
+                return target?.includes(checkStr || "");
+            };
             const protocolParse = (url) => {
                 if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
                 if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
                 if (/^\/\//.test(url)) return "https:" + url;
                 return url;
             };
+            // ! 目前都只解析 MEGA 的連結, 還有其他連結類型 暫時不支援
+            const checkProcessableLink = (link) => {
+                return link.toLowerCase().startsWith("https://mega.nz") && (!safeInclud(link, "#") || safeInclud(link, "#P!"))
+            };
             const searchPassword = (href, text) => {
-                if (!text) return href;
+                let pass = "";
+                let state = false;
+                if (!text) return { pass, state, href };
+
                 const lowerText = text.toLowerCase();
+                const encryptedHref = safeInclud(href, "#P!");
 
                 if (text.startsWith("#")) {
-                    href += text;
-                    href = href.match(urlRegex)?.[0] ?? href;  // ? 避免連結格式錯誤 (實驗性)
+                    state = true;
+                    if (encryptedHref) { pass = text.slice(1) } else { href += text }
                 }
                 else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // ! 目前只判斷 16 ~ 43 的長度
-                    href += "#" + text;
-                    href = href.match(urlRegex)?.[0] ?? href;
+                    state = true;
+                    if (encryptedHref) { pass = text } else { href += "#" + text }
                 }
                 else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
                     const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-                    if (key) href += "#" + key;
+                    if (key) {
+                        state = true;
+                        if (encryptedHref) { pass = key } else { href += "#" + key }
+                    }
                 }
 
-                return href;
+                return {
+                    pass,
+                    state,
+                    href: href.match(urlRegex)?.[0] ?? href
+                };
             }
             // 解析特別連結 (不適用 nekohouse)
             this.specialLinkParse = (data) => {
                 const parsed = {};
 
                 try {
-                    const parseAdd = (name, href) => {
+                    const domBody = Lib.domParse(data).body;
+
+                    const parseAdd = (name, href, pass) => {
                         if (!href) return;
-                        if (name.includes("frame embed")) name = ""; // 臨時過濾
+                        if (safeInclud(name, "frame embed")) name = ""; // 臨時過濾
 
                         // 名稱為 空 與 連結相同 時, 用哈希值名稱
                         parsed[
                             name && name !== href ? name : md5(href).slice(0, 16)
-                        ] = href;
+                        ] = pass ? {
+                            [Transl("密碼")]: pass,
+                            [Transl("連結")]: href
+                        } : href;
                     };
 
-                    let nodes = new Set();
                     // ! 為了通用性 同時獲取 A 和 P 很容易會有重複
+                    let nodes = new Set();
                     const tree = document.createTreeWalker(
-                        Lib.domParse(data),
+                        domBody,
                         NodeFilter.SHOW_TEXT,
                         {
                             acceptNode: (node) => {
-                                return allowType.has(node.parentElement.tagName)
-                                    ? NodeFilter.FILTER_ACCEPT
-                                    : NodeFilter.FILTER_REJECT;
+                                const parentElement = node.parentElement;
+                                const tag = parentElement.tagName;
+
+                                if (!allowType.has(tag)) return NodeFilter.FILTER_REJECT;
+                                // ? 直接排除 P 中含有 A 的情況, 可能會有例外狀況
+                                if (tag === "P" && parentElement.getElementsByTagName("a").length > 0) {
+                                    return NodeFilter.FILTER_REJECT;
+                                }
+
+                                return NodeFilter.FILTER_ACCEPT;
                             }
                         }
                     );
@@ -255,38 +288,37 @@ export default function Fetch(
                     const allowBody = nodes.size === 1;
                     const urlRecord = new Set();
 
-                    console.log(Lib.domParse(data));
                     // ! 這網站有一堆不同的格式, 很難寫出通用的解析方式
                     nodes = [...nodes];
+                    Lib.log("specialLinkParse DOM", domBody, { dev: General.Dev });
                     for (const [index, node] of nodes.entries()) {
                         const tag = node.tagName;
+                        Lib.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General.Dev, collapsed: false });
 
                         let name = "";
                         let href = "";
+                        let pass = "";
                         let endAdd = true;
-
-                        console.log(tag, node.$text());
 
                         if (tag === "A") {
                             href = node.href;
 
-                            // 取得 Mega 密碼 (判斷是 Mega 連結, 且沒有 # 的連結)
-                            if (href.toLowerCase().startsWith("https://mega.nz") && !href.includes("#")) {
+                            if (checkProcessableLink(href)) {
                                 // 簡單搜索同層級 是否有密碼
                                 const nextNode = node.nextSibling;
                                 if (nextNode) {
                                     if (nextNode.nodeType === Node.TEXT_NODE) {
-                                        href = searchPassword(href, nextNode.$text());
+                                        ({ href, pass } = searchPassword(href, nextNode.$text()));
                                     } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
                                         const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                                        href = searchPassword(href, nodeText);
+                                        ({ href, pass } = searchPassword(href, nodeText));
                                     }
                                 } else {
                                     for (let i = index + 1; i < nodes.length; i++) {
-                                        const newHref = searchPassword(href, nodes[i].$text());
+                                        const newData = searchPassword(href, nodes[i].$text());
 
-                                        if (newHref !== href) {
-                                            href = newHref;
+                                        if (newData.state) {
+                                            ({ href, pass } = newData);
                                             break;
                                         }
                                     }
@@ -299,7 +331,7 @@ export default function Fetch(
                                 name = previousNode.$text().replace(":", "");
                             } else {
                                 const text = node.$text();
-                                name = !href.includes(text) ? text : ""; // ! 實驗性, 可能不通用
+                                name = !safeInclud(href, text) ? text : ""; // ! 實驗性, 可能不通用
                             }
                         } else if (tag === "P") {
                             const url = node.$text().match(urlRegex);
@@ -317,24 +349,35 @@ export default function Fetch(
                             };
                         } else if (tag === "BODY" && allowBody) {
                             node.$text().replace(urlRegex, (url, offset, fullText) => {
-                                // 取出 url 之前的內容
-                                const before = fullText.slice(0, offset);
 
-                                // 找到最後一個換行
-                                const lines = before.split(/\r?\n/);
-                                let currentLine = lines[lines.length - 1].trim();
+                                const before = fullText.slice(0, offset); // url 前面的內容
+                                const linesBefore = before.split(/\r?\n/); // 拆分行數
+                                let currentLine = linesBefore[linesBefore.length - 1].trim();
 
-                                let name = "";
                                 if (currentLine.length > 0) { // 當前行有文字 視為 name
                                     name = currentLine;
                                 } else { // 當前行是空的 往前一行找 (只找一層)
-                                    if (lines.length > 1) {
-                                        name = lines[lines.length - 2].trim();
+                                    if (linesBefore.length > 1) {
+                                        name = linesBefore[linesBefore.length - 2].trim();
                                     }
                                 }
 
-                                // ! 目前 遇到 Mega 不支援 password 獲取
-                                parseAdd(name, protocolParse(url)); // 直接進行加入
+                                if (checkProcessableLink(url)) {
+                                    const after = fullText.slice(offset + url.length);
+                                    const linesAfter = after.split(/\r?\n/); // 拆分行數
+                                    for (const line of linesAfter) {
+                                        const trimmed = line.trim();
+                                        if (!trimmed) continue;
+
+                                        const newData = searchPassword(url, trimmed);
+                                        if (newData.state) {
+                                            ({ href, pass } = newData);
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                parseAdd(name, protocolParse(url), pass); // 直接進行加入
                             });
 
                             endAdd = false;
@@ -343,7 +386,7 @@ export default function Fetch(
                         // 加入判斷 與 除重
                         if (endAdd && !urlRecord.has(href)) {
                             urlRecord.add(href);
-                            parseAdd(name, href);
+                            parseAdd(name, href, pass);
                         }
                     }
                 } catch (error) {
@@ -499,8 +542,12 @@ export default function Fetch(
 
         /* 測試進階抓取數據 */
         async fetchTest(id) {
-            Process.Lock = true;
+            if (!this.isPost) {
+                alert("This Page Does Not Support Test");
+                return;
+            };
 
+            Process.Lock = true;
             await this._fetchContent({
                 content: JSON.stringify([{
                     id,
@@ -647,24 +694,31 @@ export default function Fetch(
 
             } else {
                 /* ----- 這邊是主頁的數據 ----- */
-                const homeJson = JSON.parse(content);
+                let homeJson = JSON.parse(content);
 
                 if (homeJson) {
 
                     if (this.metaDict.size === 0) {
-                        this.worker.postMessage({ url: this.profileAPI });
+                        let profile = {name: "unknown"};
 
-                        const profile = await new Promise((resolve, reject) => {
-                            this.worker.onmessage = async (e) => {
-                                const { url, content, error } = e.data;
-                                if (!error) resolve(JSON.parse(content));
-                                else {
-                                    Lib.log(error, url, { dev: General.Dev, type: "error", collapsed: false });
-                                    await this.TooMany_TryAgain(url);
-                                    this.worker.postMessage({ url });
-                                };
-                            }
-                        })
+                        if (this.isPost) {
+                            this.worker.postMessage({ url: this.profileAPI });
+
+                            profile = await new Promise((resolve, reject) => {
+                                this.worker.onmessage = async (e) => {
+                                    const { url, content, error } = e.data;
+                                    if (!error) resolve(JSON.parse(content));
+                                    else {
+                                        Lib.log(error, url, { dev: General.Dev, type: "error", collapsed: false });
+                                        await this.TooMany_TryAgain(url);
+                                        this.worker.postMessage({ url });
+                                    };
+                                }
+                            })
+                        } else {
+                            this.finalPage = "1000"; // 該頁面能翻的只有 1000
+                            profile["post_count"] = homeJson.true_count;
+                        }
 
                         this.metaDict.set(Transl("作者"), profile.name);
                         this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
@@ -729,10 +783,17 @@ export default function Fetch(
                         };
 
                         // 生成任務
+                        homeJson = this.isPost ? homeJson : homeJson.posts;
                         for (const [index, post] of homeJson.entries()) {
                             tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(index, { resolve, reject }); // 存儲解析器
-                                this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
+                                this.worker.postMessage({
+                                    index,
+                                    title: post.title,
+                                    url: this.isPost ? `${this.postAPI}/${post.id}` : `${this.URL.origin}/api/v1/${post.service}/user/${post.user}/post/${post.id}`,
+                                    time: Date.now(),
+                                    delay: this.fetchDelay
+                                })
                             }));
 
                             await Lib.sleep(this.fetchDelay);
