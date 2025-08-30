@@ -14,8 +14,9 @@ export default function Fetch(
             this.URL = new URL(this.sourceURL); // 解析連結
 
             this.host = this.URL.host;
+            this.origin = this.URL.origin;
+            this.pathname = this.URL.pathname;
             this.isPost = this.URL.pathname !== "/posts"; // 用於判斷是 post 還是 posts
-            this.firstURL = this.URL.origin + this.URL.pathname; // 第一頁連結
 
             this.queryValue = this.URL.search;
             if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
@@ -32,8 +33,16 @@ export default function Fetch(
             this.toLinkTxt = FetchSet.ToLinkTxt; // 判斷是否輸出為連結文本
             this.advancedFetch = FetchSet.AdvancedFetch; // 判斷是否往內抓數據
 
+            const apiInterface = "api/v1";
+
             // 帖子內部連結
-            this.getPostURL = id => `${this.firstURL}/post/${id}`;
+            this.getPostURL = ({service, user, id}) => `${this.origin}/${service}/user/${user}/post/${id}`;
+
+            // 帖子內部 API 連結
+            this.getPostAPI = ({service, user, id}) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+
+            // 帖子配置 API (獲取基本數據)
+            this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
 
             // 下一頁連結
             this.getNextPageURL = urlStr => {
@@ -49,22 +58,17 @@ export default function Fetch(
                 return `${url.origin}${url.pathname}${params}`;
             };
 
-            const apiTemplate = `${this.firstURL}`.replace(this.host, `${this.host}/api/v1`);
-
-            this.profileAPI = `${apiTemplate}/profile`; // 帖子配置 API
-            this.postAPI = `${apiTemplate}/post`; // 內部連結的 API 模板
-
             // 將預覽頁面轉成 API 連結
             const append = this.isPost ? "/posts" : "";
             this.getPreviewAPI = url =>
                 /[?&]o=/.test(url)
-                    ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, `${append}$1`)
+                    ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(/([?&]o=)/, `${append}$1`)
                     : this.queryValue // 如果有搜尋關鍵字
-                        ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `${append}${this.queryValue}`)
-                        : url.replace(this.host, `${this.host}/api/v1`) + append;
+                        ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(this.queryValue, `${append}${this.queryValue}`)
+                        : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
 
             // 根據類型判斷有效值
-            this.getValidValue = (value) => {
+            this.getValidValue = value => {
                 if (!value) return null;
 
                 const type = Lib.$type(value);
@@ -115,7 +119,7 @@ export default function Fetch(
             this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String(((this.currentPage - 1) * 50) + (index + 1)).padStart(2, "0")}`;
 
             // 正規化帖子時間戳 (傳入 Post 的物件)
-            this.normalizeTimestamp = (post) => new Date(post.added || post.published)?.toLocaleString();
+            this.normalizeTimestamp = ({added, published}) => new Date(added || published)?.toLocaleString();
 
             // 適用 kemono 和 coomer 的分類 (data = api 文件數據, serverDict = api 伺服器字典, fillValue = 填充數字的位數)
             this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
@@ -248,7 +252,11 @@ export default function Fetch(
 
                     const parseAdd = (name, href, pass) => {
                         if (!href) return;
-                        if (safeInclud(name, "frame embed")) name = ""; // 臨時過濾
+                        // ! 過濾有副檔名的 (只允許網站連結) (實驗性)
+                        // ? 在這過濾是避免 specialLinkParse 解析時的意外, 所以不在 tree 直接過濾
+                        if (/\.[a-zA-Z0-9]+$/.test(href)) return;
+                        // 臨時過濾方式
+                        if (safeInclud(name, "frame embed")) name = "";
 
                         // 名稱為 空 與 連結相同 時, 用哈希值名稱
                         parsed[
@@ -290,10 +298,10 @@ export default function Fetch(
 
                     // ! 這網站有一堆不同的格式, 很難寫出通用的解析方式
                     nodes = [...nodes];
-                    Lib.log("specialLinkParse DOM", domBody, { dev: General.Dev });
+                    Lib.log("specialLinkParse DOM", domBody, { dev: General.Dev, collapsed: false });
                     for (const [index, node] of nodes.entries()) {
                         const tag = node.tagName;
-                        Lib.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General.Dev, collapsed: false });
+                        Lib.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General.Dev });
 
                         let name = "";
                         let href = "";
@@ -396,8 +404,7 @@ export default function Fetch(
                 return parsed;
             };
 
-            // ! 目前有 Bug, 只能使用一次, 第二次後 response 的狀態直接都變成 200, 但實際上是 429
-            this.TooMany_TryAgain = function (url) {
+            this.tooManyTryAgain = function (url) {
                 if (FetchData.Try_Again_Promise) {
                     return FetchData.Try_Again_Promise;
                 }
@@ -485,6 +492,15 @@ export default function Fetch(
 
             // 設置抓取規則
             FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
+
+            Lib.log("Fetch Init", {
+                Title: this.titleCache,
+                isPost: this.isPost,
+                QueryValue: this.queryValue,
+                ProfileAPI: this.profileAPI,
+                GenerateRules: this.infoRules,
+                ParseUrl: this.URL,
+            }, { dev: General.Dev });
         }
 
         /**
@@ -534,6 +550,13 @@ export default function Fetch(
                     this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
                 }
 
+                Lib.log("Fetch Run", {
+                    small, items,
+                    CurrentPage: this.currentPage,
+                    TotalPages: this.totalPages,
+                    FinalPage: this.finalPage
+                }, { dev: General.Dev });
+
                 this._fetchPage(items, this.sourceURL); // 開始抓取
             } else {
                 alert(Transl("未取得數據"));
@@ -577,7 +600,7 @@ export default function Fetch(
                             }
                             else {
                                 Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
-                                await this.TooMany_TryAgain(url);
+                                await this.tooManyTryAgain(url);
                                 this.worker.postMessage({ title, url, time, delay });
                             };
                         }
@@ -610,7 +633,7 @@ export default function Fetch(
                         }
                         else {
                             Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
-                            await this.TooMany_TryAgain(url);
+                            await this.tooManyTryAgain(url);
                             this.worker.postMessage({ title, url, time, delay });
                         };
                     }
@@ -629,6 +652,7 @@ export default function Fetch(
         async _fetchContent(homeData) {
             this.progress = 0; // 重置進度
             const { url, content } = homeData; // 解構數據
+            Lib.log("Fetch Content", homeData, { dev: General.Dev });
 
             // 解析處理的數據
             if (Process.IsNeko) {
@@ -665,6 +689,7 @@ export default function Fetch(
                             ImgLink: classifiedFiles.img,
                             VideoLink: classifiedFiles.video,
                             DownloadLink: classifiedFiles.other,
+                            // ? 暫時不支援 ExternalLink 的解析
                             // ExternalLink: this.specialLinkParse(post.content)
                         });
 
@@ -676,7 +701,7 @@ export default function Fetch(
                         Lib.title(`（${this.currentPage} - ${++taskCount}）`); // ? 如果直接使用 index, 順序會亂跳, 因為是異步執行
                         Lib.log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
                     } else {
-                        await this.TooMany_TryAgain(url);
+                        await this.tooManyTryAgain(url);
                         this.worker.postMessage({ index, title, url, time, delay });
                     }
                 };
@@ -699,7 +724,7 @@ export default function Fetch(
                 if (homeJson) {
 
                     if (this.metaDict.size === 0) {
-                        let profile = {name: "unknown"};
+                        let profile = { name: "Unknown" };
 
                         if (this.isPost) {
                             this.worker.postMessage({ url: this.profileAPI });
@@ -710,7 +735,7 @@ export default function Fetch(
                                     if (!error) resolve(JSON.parse(content));
                                     else {
                                         Lib.log(error, url, { dev: General.Dev, type: "error", collapsed: false });
-                                        await this.TooMany_TryAgain(url);
+                                        await this.tooManyTryAgain(url);
                                         this.worker.postMessage({ url });
                                     };
                                 }
@@ -724,6 +749,8 @@ export default function Fetch(
                         this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
                         this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
                         this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+
+                        Lib.log("Meta Data", this.metaDict, { dev: General.Dev });
                     }
 
                     // ! 目前網站修改, 只支援 advancedFetch
@@ -754,7 +781,7 @@ export default function Fetch(
 
                                         // 生成請求數據 (處理要抓什麼數據)
                                         const generatedData = this.fetchGenerate({
-                                            PostLink: this.getPostURL(post.id),
+                                            PostLink: this.getPostURL(post),
                                             Timestamp: this.normalizeTimestamp(post),
                                             TypeTag: post.tags,
                                             ImgLink: classifiedFiles.img,
@@ -777,7 +804,7 @@ export default function Fetch(
                                 }
                             } catch (error) {
                                 Lib.log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
-                                await this.TooMany_TryAgain(url); // 錯誤等待
+                                await this.tooManyTryAgain(url); // 錯誤等待
                                 this.worker.postMessage({ index, title, url, time, delay });
                             }
                         };
@@ -787,10 +814,11 @@ export default function Fetch(
                         for (const [index, post] of homeJson.entries()) {
                             tasks.push(new Promise((resolve, reject) => {
                                 resolvers.set(index, { resolve, reject }); // 存儲解析器
+
                                 this.worker.postMessage({
                                     index,
                                     title: post.title,
-                                    url: this.isPost ? `${this.postAPI}/${post.id}` : `${this.URL.origin}/api/v1/${post.service}/user/${post.user}/post/${post.id}`,
+                                    url: this.getPostAPI(post),
                                     time: Date.now(),
                                     delay: this.fetchDelay
                                 })
@@ -832,7 +860,7 @@ export default function Fetch(
                                 });
 
                                 const generatedData = this.fetchGenerate({
-                                    PostLink: this.getPostURL(post.id),
+                                    PostLink: this.getPostURL(post),
                                     Timestamp: this.normalizeTimestamp(post),
                                     ImgLink: classifiedFiles.img,
                                     VideoLink: classifiedFiles.video,
