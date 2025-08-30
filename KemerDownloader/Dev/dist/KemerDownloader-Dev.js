@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.08.28-Beta
+// @version      2025.08.31-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -448,7 +448,9 @@
         this.titleCache = Lib2.title();
         this.URL = new URL(this.sourceURL);
         this.host = this.URL.host;
-        this.firstURL = this.URL.origin + this.URL.pathname;
+        this.origin = this.URL.origin;
+        this.pathname = this.URL.pathname;
+        this.isPost = this.URL.pathname !== "/posts";
         this.queryValue = this.URL.search;
         if (this.queryValue === "") {
           this.URL.searchParams.delete("q");
@@ -462,7 +464,10 @@
         this.fetchDelay = FetchSet2.Delay;
         this.toLinkTxt = FetchSet2.ToLinkTxt;
         this.advancedFetch = FetchSet2.AdvancedFetch;
-        this.getPostURL = (id) => `${this.firstURL}/post/${id}`;
+        const apiInterface = "api/v1";
+        this.getPostURL = ({ service, user, id }) => `${this.origin}/${service}/user/${user}/post/${id}`;
+        this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+        this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
         this.getNextPageURL = (urlStr) => {
           const url = new URL(urlStr);
           const search = url.searchParams;
@@ -472,10 +477,8 @@
           const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
           return `${url.origin}${url.pathname}${params}`;
         };
-        const apiTemplate = `${this.firstURL}`.replace(this.host, `${this.host}/api/v1`);
-        this.profileAPI = `${apiTemplate}/profile`;
-        this.postAPI = `${apiTemplate}/post`;
-        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/api/v1`).replace(/([?&]o=)/, "/posts$1") : this.queryValue ? url.replace(this.host, `${this.host}/api/v1`).replace(this.queryValue, `/posts${this.queryValue}`) : url.replace(this.host, `${this.host}/api/v1`) + "/posts";
+        const append = this.isPost ? "/posts" : "";
+        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(/([?&]o=)/, `${append}$1`) : this.queryValue ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(this.queryValue, `${append}${this.queryValue}`) : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
         this.getValidValue = (value) => {
           if (!value) return null;
           const type = Lib2.$type(value);
@@ -502,7 +505,7 @@
         this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
         this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
         this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
-        this.normalizeTimestamp = (post) => new Date(post.added || post.published)?.toLocaleString();
+        this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
         this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
           let imgNumber = 0;
           return data.reduce((acc, file) => {
@@ -556,41 +559,186 @@
             return acc;
           }, { video: {}, img: {}, other: {} });
         };
-        this.specialLinkParse = (data) => {
-          const Cache = {};
-          try {
-            for (const a of Lib2.domParse(data).$qa("body a")) {
-              const href = a.href;
-              const hash = md52(href).slice(0, 16);
-              if (href.startsWith("https://mega.nz")) {
-                let name = a.previousElementSibling?.$text().replace(":", "") || hash;
-                if (name === "") continue;
-                let pass = "";
-                const nextNode = a.nextElementSibling;
-                if (nextNode) {
-                  const nodeText = [...nextNode.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                  if (nodeText.startsWith("Pass")) {
-                    pass = nodeText.match(/Pass:([^<]*)/)?.[1]?.trim() ?? "";
-                  }
-                }
-                ;
-                Cache[name] = pass ? {
-                  [Transl2("密碼")]: pass,
-                  [Transl2("連結")]: href
-                } : href;
-              } else if (href) {
-                const description = a.previousSibling?.$text() ?? "";
-                const name = `${description} ${a?.$text()}`.trim();
-                Cache[name ? name : hash] = href;
+        const allowType = new Set(["A", "P", "STRONG", "BODY"]);
+        const pFilter = new Set(["mega.nz"]);
+        const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+        const safeInclud = (target, checkStr) => {
+          if (typeof target !== "string") return false;
+          return target?.includes(checkStr || "");
+        };
+        const protocolParse = (url) => {
+          if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+          if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+          if (/^\/\//.test(url)) return "https:" + url;
+          return url;
+        };
+        const checkProcessableLink = (link) => {
+          return link.toLowerCase().startsWith("https://mega.nz") && (!safeInclud(link, "#") || safeInclud(link, "#P!"));
+        };
+        const searchPassword = (href, text) => {
+          let pass = "";
+          let state = false;
+          if (!text) return { pass, state, href };
+          const lowerText = text.toLowerCase();
+          const encryptedHref = safeInclud(href, "#P!");
+          if (text.startsWith("#")) {
+            state = true;
+            if (encryptedHref) {
+              pass = text.slice(1);
+            } else {
+              href += text;
+            }
+          } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
+            state = true;
+            if (encryptedHref) {
+              pass = text;
+            } else {
+              href += "#" + text;
+            }
+          } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+            const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+            if (key) {
+              state = true;
+              if (encryptedHref) {
+                pass = key;
+              } else {
+                href += "#" + key;
               }
             }
+          }
+          return {
+            pass,
+            state,
+            href: href.match(urlRegex)?.[0] ?? href
+          };
+        };
+        this.specialLinkParse = (data) => {
+          const parsed = {};
+          try {
+            const domBody = Lib2.domParse(data).body;
+            const parseAdd = (name, href, pass) => {
+              if (!href) return;
+              if (/\.[a-zA-Z0-9]+$/.test(href)) return;
+              if (safeInclud(name, "frame embed")) name = "";
+              parsed[name && name !== href ? name : md52(href).slice(0, 16)] = pass ? {
+                [Transl2("密碼")]: pass,
+                [Transl2("連結")]: href
+              } : href;
+            };
+            let nodes = new Set();
+            const tree = document.createTreeWalker(
+              domBody,
+              NodeFilter.SHOW_TEXT,
+              {
+                acceptNode: (node) => {
+                  const parentElement = node.parentElement;
+                  const tag = parentElement.tagName;
+                  if (!allowType.has(tag)) return NodeFilter.FILTER_REJECT;
+                  if (tag === "P" && parentElement.getElementsByTagName("a").length > 0) {
+                    return NodeFilter.FILTER_REJECT;
+                  }
+                  return NodeFilter.FILTER_ACCEPT;
+                }
+              }
+            );
+            while (tree.nextNode()) {
+              nodes.add(tree.currentNode.parentElement);
+            }
             ;
+            const allowBody = nodes.size === 1;
+            const urlRecord = new Set();
+            nodes = [...nodes];
+            Lib2.log("specialLinkParse DOM", domBody, { dev: General2.Dev, collapsed: false });
+            for (const [index, node] of nodes.entries()) {
+              const tag = node.tagName;
+              Lib2.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General2.Dev });
+              let name = "";
+              let href = "";
+              let pass = "";
+              let endAdd = true;
+              if (tag === "A") {
+                href = node.href;
+                if (checkProcessableLink(href)) {
+                  const nextNode = node.nextSibling;
+                  if (nextNode) {
+                    if (nextNode.nodeType === Node.TEXT_NODE) {
+                      ({ href, pass } = searchPassword(href, nextNode.$text()));
+                    } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                      const nodeText = [...nextNode.childNodes].find((node2) => node2.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                      ({ href, pass } = searchPassword(href, nodeText));
+                    }
+                  } else {
+                    for (let i = index + 1; i < nodes.length; i++) {
+                      const newData = searchPassword(href, nodes[i].$text());
+                      if (newData.state) {
+                        ({ href, pass } = newData);
+                        break;
+                      }
+                    }
+                  }
+                }
+                const previousNode = node.previousSibling;
+                if (previousNode?.nodeType === Node.ELEMENT_NODE) {
+                  name = previousNode.$text().replace(":", "");
+                } else {
+                  const text = node.$text();
+                  name = !safeInclud(href, text) ? text : "";
+                }
+              } else if (tag === "P") {
+                const url = node.$text().match(urlRegex);
+                if (url && !pFilter.has(url[0])) {
+                  href = protocolParse(url[0]);
+                }
+              } else if (tag === "STRONG") {
+                const parentElement = node.parentElement;
+                if (parentElement.tagName === "A") {
+                  href = parentElement.href;
+                  name = node.$text();
+                }
+                ;
+              } else if (tag === "BODY" && allowBody) {
+                node.$text().replace(urlRegex, (url, offset, fullText) => {
+                  const before = fullText.slice(0, offset);
+                  const linesBefore = before.split(/\r?\n/);
+                  let currentLine = linesBefore[linesBefore.length - 1].trim();
+                  if (currentLine.length > 0) {
+                    name = currentLine;
+                  } else {
+                    if (linesBefore.length > 1) {
+                      name = linesBefore[linesBefore.length - 2].trim();
+                    }
+                  }
+                  if (name.match(urlRegex)) {
+                    name = "";
+                  }
+                  if (checkProcessableLink(url)) {
+                    const after = fullText.slice(offset + url.length);
+                    const linesAfter = after.split(/\r?\n/);
+                    for (const line of linesAfter) {
+                      const trimmed = line.trim();
+                      if (!trimmed) continue;
+                      const newData = searchPassword(url, trimmed);
+                      if (newData.state) {
+                        ({ href, pass } = newData);
+                        break;
+                      }
+                    }
+                  }
+                  parseAdd(name, protocolParse(url), pass);
+                });
+                endAdd = false;
+              }
+              if (endAdd && !urlRecord.has(href)) {
+                urlRecord.add(href);
+                parseAdd(name, href, pass);
+              }
+            }
           } catch (error) {
             Lib2.log("Error specialLinkParse", error, { dev: General2.Dev, type: "error", collapsed: false });
           }
-          return Cache;
+          return parsed;
         };
-        this.TooMany_TryAgain = function (url) {
+        this.tooManyTryAgain = function (url) {
           if (FetchData.Try_Again_Promise) {
             return FetchData.Try_Again_Promise;
           }
@@ -665,6 +813,14 @@
                 }
             `);
         FetchSet2.UseFormat && this._fetchConfig(FetchSet2.Mode, FetchSet2.Format);
+        Lib2.log("Fetch Init", {
+          Title: this.titleCache,
+          isPost: this.isPost,
+          QueryValue: this.queryValue,
+          ProfileAPI: this.profileAPI,
+          GenerateRules: this.infoRules,
+          ParseUrl: this.URL
+        }, { dev: General2.Dev });
       }
       async _fetchConfig(mode = "FilterMode", userSet = []) {
         if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
@@ -690,18 +846,39 @@
             this.totalPages = +small.$text().split(" of ")[1] || 0;
             this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
           }
+          Lib2.log("Fetch Run", {
+            small,
+            items,
+            CurrentPage: this.currentPage,
+            TotalPages: this.totalPages,
+            FinalPage: this.finalPage
+          }, { dev: General2.Dev });
           this._fetchPage(items, this.sourceURL);
         } else {
           alert(Transl2("未取得數據"));
         }
       }
       async fetchTest(id) {
+        if (!this.isPost) {
+          alert("This Page Does Not Support Test");
+          return;
+        }
         Process2.Lock = true;
+        const parseInfo = (url) => {
+          url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
+          url = url.splice(1).map((url2) => url2.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
+          return url.length >= 3 ? [url[0], url[2]] : url;
+        };
+        const [service, user] = parseInfo(this.sourceURL);
+        const pack = {
+          id,
+          user,
+          service,
+          title: this.titleCache
+        };
+        Lib2.log("Fetch Test", pack, { dev: General2.Dev, collapsed: false });
         await this._fetchContent({
-          content: JSON.stringify([{
-            id,
-            title: this.titleCache
-          }])
+          content: JSON.stringify([pack])
         });
         this._reset();
       }
@@ -718,7 +895,7 @@
                   resolve(content);
                 } else {
                   Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
-                  await this.TooMany_TryAgain(url2);
+                  await this.tooManyTryAgain(url2);
                   this.worker.postMessage({ title, url: url2, time, delay });
                 }
               };
@@ -744,7 +921,7 @@
                 resolve({ url: url2, content });
               } else {
                 Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
-                await this.TooMany_TryAgain(url2);
+                await this.tooManyTryAgain(url2);
                 this.worker.postMessage({ title, url: url2, time, delay });
               }
             };
@@ -757,6 +934,7 @@
       async _fetchContent(homeData) {
         this.progress = 0;
         const { url, content } = homeData;
+        Lib2.log("Fetch Content", homeData, { dev: General2.Dev });
         if (Process2.IsNeko) {
           let taskCount = 0;
           const tasks = [];
@@ -785,6 +963,7 @@
                 ImgLink: classifiedFiles.img,
                 VideoLink: classifiedFiles.video,
                 DownloadLink: classifiedFiles.other
+
               });
               if (Object.keys(generatedData).length !== 0) {
                 this.dataDict.set(standardTitle, generatedData);
@@ -793,7 +972,7 @@
               Lib2.title(`（${this.currentPage} - ${++taskCount}）`);
               Lib2.log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
             } else {
-              await this.TooMany_TryAgain(url2);
+              await this.tooManyTryAgain(url2);
               this.worker.postMessage({ index, title, url: url2, time, delay });
             }
           };
@@ -806,25 +985,32 @@
           }
           await Promise.allSettled(tasks);
         } else {
-          const homeJson = JSON.parse(content);
+          let homeJson = JSON.parse(content);
           if (homeJson) {
             if (this.metaDict.size === 0) {
-              this.worker.postMessage({ url: this.profileAPI });
-              const profile = await new Promise((resolve, reject) => {
-                this.worker.onmessage = async (e) => {
-                  const { url: url2, content: content2, error } = e.data;
-                  if (!error) resolve(JSON.parse(content2));
-                  else {
-                    Lib2.log(error, url2, { dev: General2.Dev, type: "error", collapsed: false });
-                    await this.TooMany_TryAgain(url2);
-                    this.worker.postMessage({ url: url2 });
-                  }
-                };
-              });
+              let profile = { name: "Unknown" };
+              if (this.isPost) {
+                this.worker.postMessage({ url: this.profileAPI });
+                profile = await new Promise((resolve, reject) => {
+                  this.worker.onmessage = async (e) => {
+                    const { url: url2, content: content2, error } = e.data;
+                    if (!error) resolve(JSON.parse(content2));
+                    else {
+                      Lib2.log(error, url2, { dev: General2.Dev, type: "error", collapsed: false });
+                      await this.tooManyTryAgain(url2);
+                      this.worker.postMessage({ url: url2 });
+                    }
+                  };
+                });
+              } else {
+                this.finalPage = "1000";
+                profile["post_count"] = homeJson.true_count;
+              }
               this.metaDict.set(Transl2("作者"), profile.name);
               this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
               this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
               this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
+              Lib2.log("Meta Data", this.metaDict, { dev: General2.Dev });
             }
             {
               const tasks = [];
@@ -847,7 +1033,7 @@
                         fillValue: Lib2.getFill(previews?.length || 1)
                       });
                       const generatedData = this.fetchGenerate({
-                        PostLink: this.getPostURL(post.id),
+                        PostLink: this.getPostURL(post),
                         Timestamp: this.normalizeTimestamp(post),
                         TypeTag: post.tags,
                         ImgLink: classifiedFiles.img,
@@ -868,14 +1054,21 @@
                   }
                 } catch (error2) {
                   Lib2.log(error2, { index, title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
-                  await this.TooMany_TryAgain(url2);
+                  await this.tooManyTryAgain(url2);
                   this.worker.postMessage({ index, title, url: url2, time, delay });
                 }
               };
+              homeJson = this.isPost ? homeJson : homeJson.posts;
               for (const [index, post] of homeJson.entries()) {
                 tasks.push(new Promise((resolve, reject) => {
                   resolvers.set(index, { resolve, reject });
-                  this.worker.postMessage({ index, title: post.title, url: `${this.postAPI}/${post.id}`, time: Date.now(), delay: this.fetchDelay });
+                  this.worker.postMessage({
+                    index,
+                    title: post.title,
+                    url: this.getPostAPI(post),
+                    time: Date.now(),
+                    delay: this.fetchDelay
+                  });
                 }));
                 await Lib2.sleep(this.fetchDelay);
               }
