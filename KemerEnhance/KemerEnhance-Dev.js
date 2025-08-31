@@ -68,7 +68,7 @@
             },
         },
         Preview: {
-            CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
+            CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮放大, 3 = 卡片放大 + 自動縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
             BetterThumbnail: { mode: 0, enable: true }, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
             QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
@@ -1685,7 +1685,8 @@
                             a:hover .post-card__footer {
                                 opacity: 1 !important;
                             }
-                        `, "CardText_Effects_2", false); break;
+                        `, "CardText_Effects_2", false);
+                        break;
                     default:
                         Lib.addStyle(`
                             .post-card__header {
@@ -1735,18 +1736,36 @@
                                 position: relative;
                             }
                         `, "CardZoom_Effects_2", false);
-                    default:
+                        break;
+                    case 3:
                         Lib.addStyle(`
-                            .card-list--legacy * { --card-size: 350px !important; }
-                            .post-card a {
-                                background: #000;
-                                overflow: hidden;
-                                border-radius: 8px;
-                                border: 3px solid #fff6;
-                                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                            .card-list--legacy { padding-bottom: calc(10vh + 1.5em) }
+                            .card-list--legacy .card-list__items {
+                                row-gap: 5.6em;
+                                column-gap: 2em;
                             }
-                        `, "CardZoom_Effects", false);
-                }
+                            .post-card a {
+                                width: 20vw;
+                                height: 50vh;
+                            }
+                            .post-card__image-container img { object-fit: contain }
+                        `, "CardZoom_Effects_3", false);
+                };
+
+                Lib.addStyle(`
+                    .card-list--legacy * {
+                        font-size: 20px !important;
+                        font-weight: 600 !important;
+                        --card-size: 350px !important;
+                    }
+                    .post-card a {
+                        background: #000;
+                        overflow: hidden;
+                        border-radius: 8px;
+                        border: 3px solid #fff6;
+                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    }
+                `, "CardZoom_Effects", false);
             },
             async BetterThumbnail(_) { /* 變更預覽卡縮圖 */
                 Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
@@ -1779,12 +1798,15 @@
 
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
-                        fetch(api, { "Accept": "text/css" })
-                            .then(response => {
+                        fetch(api, {
+                                headers: { "Accept": "text/css" }
+                            })
+                            .then(async response => {
                                 if (!response.ok) {
-                                    throw new Error(`Fetch failed url: ${response.url}, status: ${response.status}`)
+                                    const text = await response.text();
+                                    throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
                                 }
-                                return response.json();
+                                return await response.json();
 
                             })
                             .then(data => {
