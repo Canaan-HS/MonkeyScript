@@ -75,7 +75,7 @@
                 mode: 0,
                 enable: true,
                 newtab_active: false,
-                newtab_insert: false,
+                newtab_insert: true,
             },
         },
         Content: {
@@ -85,7 +85,7 @@
             VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點]
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
-                enable: true,
+                enable: false,
                 experiment: false, // 實驗性替換方式
             }
         }
@@ -176,14 +176,15 @@
                         white-space: nowrap;
                         text-overflow: ellipsis;
                     }
-                    .edit_artist {
-                        position: absolute;
+                    fix_edit {
                         top: 85px;
                         right: 8%;
                         color: #fff;
                         display: none;
-                        font-size: 14px;
+                        z-index: 9999;
+                        font-size: 1.1rem;
                         font-weight: 700;
+                        position: absolute;
                         background: #666;
                         white-space: nowrap;
                         padding: .25rem .5rem;
@@ -198,14 +199,14 @@
                         line-height: 5vh;
                         text-align: center;
                     }
-                    .user-card:hover .edit_artist {
+                    .user-card:hover fix_edit {
                         display: block;
                     }
                     .user-card:hover fix_name {
                         background-color: ${Color};
                     }
                     .edit_textarea ~ fix_name,
-                    .edit_textarea ~ .edit_artist {
+                    .edit_textarea ~ fix_edit {
                         display: none !important;
                     }
 
@@ -222,7 +223,7 @@
                         border-radius: .25rem;
                         transition: background-color 0.3s ease;
                     }
-                    fix_view .edit_artist {
+                    fix_view fix_edit {
                         top: 65px;
                         right: 5%;
                         transform: translateY(-80%);
@@ -230,28 +231,43 @@
                     fix_view:hover fix_name {
                         background-color: ${Color};
                     }
-                    fix_view:hover .edit_artist {
+                    fix_view:hover fix_edit {
                         display: block;
                     }
 
                     /* 內容頁面的樣式 */
                     fix_cont {
                         display: flex;
-                        justify-content: space-around;
+                        height: 5rem;
+                        width: 15rem;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    fix_cont fix_wrapper {
+                        position: relative;
+                        display: inline-block;
+                        margin-top: 1.5rem;
                     }
                     fix_cont fix_name {
                         color: ${Color};
-                        font-size: 1.25em;
+                        font-size: 1.8rem;
                         display: inline-block;
                     }
-                    fix_cont .edit_artist {
-                        top: 200px;
-                        right: -5%;
+                    fix_cont fix_edit {
+                        top: 2.2rem;
+                        right: -4.2rem;
+                        position: absolute;
                     }
-                    fix_cont:hover fix_name {
+                    fix_cont fix_wrapper::after {
+                        content: "";
+                        position: absolute;
+                        width: 5rem;
+                        height: 100%;
+                    }
+                    fix_cont fix_wrapper:hover fix_name {
                         background-color: #fff;
                     }
-                    fix_cont:hover .edit_artist {
+                    fix_cont fix_wrapper:hover fix_edit {
                         display: block;
                     }
                 `, "Global-Effects", false);
@@ -731,18 +747,21 @@
                         },
                         async fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
                             nameEl.$sAttr("style", "display: none;"); // 隱藏原始名稱
-                            const nameParent = nameEl.parentNode;
- 
-                            /* 創建編輯按鈕 */
-                            const edit = Lib.createElement("fix_edit", { id: infoID, class: "edit_artist", text: "Edit" });
-                            /* 創建名稱 */
-                            const fixName = Lib.createElement("fix_name", {
-                                text: showText.trim(),
-                                attr: { "jump": mainUrl }
-                            });
 
-                            nameParent.insertBefore(edit, nameEl);
-                            nameParent.insertBefore(fixName, nameEl);
+                            const parent = nameEl.parentNode;
+                            if (!parent.$q("fix_wrapper")) {
+                                const fix_wrapper = Lib.createElement("fix_wrapper");
+
+                                /* 創建名稱 */
+                                Lib.createElement(fix_wrapper, "fix_name", {
+                                    text: showText.trim(),
+                                    attr: { "jump": mainUrl }
+                                });
+
+                                /* 創建編輯按鈕 */
+                                Lib.createElement(fix_wrapper, "fix_edit", { id: infoID, text: "Edit" });
+                                parent.insertBefore(fix_wrapper, nameEl);
+                            };
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
@@ -837,7 +856,7 @@
                                 appendTag: "", // 附加 tag 文本
                             });
                         },
-                        async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") { // 針對其餘頁面的修復
+                        async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "fix_view") { // 針對其餘頁面的修復
                             try {
                                 const parent = artist.parentNode;
                                 const url = mainUrl ?? parent.href;
@@ -853,9 +872,9 @@
                                     appendTag: otherUrl ? "Post" : "" // 用於調用 Post API, 的附加標籤
                                 });
 
-                                $(parent).replaceWith(function () {
-                                    return $(reTag, { html: $(this).html() })
-                                });
+                                parent.replaceWith(
+                                    Lib.createElement(reTag, { innerHTML: parent.$iHtml() })
+                                );
                             } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */ }
                         },
                         async dynamicFix(element) {
@@ -1078,11 +1097,15 @@
                     const target = event.target;
 
                     if (target.tagName === "TEXTAREA") {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
                     } else if (target.matches("fix_edit")) {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
 
-                        const display = target.nextElementSibling; // 取得下方的 name 元素
+                        Lib.$q(".edit_textarea")?.remove(); // 移除上一次的編輯框 (避免意外)
+
+                        const display = target.previousElementSibling; // 取得上方的 name 元素
                         const text = Lib.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`,
@@ -1090,7 +1113,7 @@
 
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.parentNode.insertBefore(text, target);
+                        display.parentNode.insertBefore(text, display);
 
                         text.scrollTop = 0; // 滾動到最上方
                         setTimeout(() => {
@@ -1149,7 +1172,7 @@
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
                     ], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
-                        Func.otherFix(artist, title, artist.href, Lib.url, "<fix_cont>");
+                        Func.otherFix(artist, title, artist.href, Lib.url, "fix_cont");
                     });
 
                 } else { // 一般 預覽頁面
@@ -1257,7 +1280,7 @@
 
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
-                    target && ( 
+                    target && (
                         event.preventDefault(),
                         event.stopImmediatePropagation(),
                         GM_openInTab(target.href, { active, insert })
@@ -1814,8 +1837,11 @@
                     for (const link of post) {
                         const text = link.$text().replace("Download", ""); // 修正原文本
 
-                        link.$text(text); // 修改文本
-                        DLL.IsNeko && link.$sAttr("download", text); // ? 修改標籤 (非 Neko 的網站修改標籤會導致 AJAX 換頁時意外無法變更)
+                        // ? 修改標籤 (有些頁面被修改後 AJAX 切換會有問題) [暫時只支持 nekohouse]
+                        if (DLL.IsNeko) {
+                            link.$text(text);
+                            link.$sAttr("download", text);
+                        };
 
                         const browse = link.nextElementSibling; // 查找是否含有 browse 元素
                         if (!browse) continue;
