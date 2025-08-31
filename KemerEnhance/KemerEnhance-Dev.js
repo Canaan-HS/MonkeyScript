@@ -85,7 +85,7 @@
             VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點]
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
-                enable: false,
+                enable: true,
                 experiment: false, // 實驗性替換方式
             }
         }
