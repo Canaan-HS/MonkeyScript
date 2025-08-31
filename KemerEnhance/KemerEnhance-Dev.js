@@ -730,11 +730,19 @@
                             Fansly: "https://fansly.com/{name}/posts",
                         },
                         async fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
+                            nameEl.$sAttr("style", "display: none;"); // 隱藏原始名稱
+                            const nameParent = nameEl.parentNode;
+ 
                             /* 創建編輯按鈕 */
                             const edit = Lib.createElement("fix_edit", { id: infoID, class: "edit_artist", text: "Edit" });
+                            /* 創建名稱 */
+                            const fixName = Lib.createElement("fix_name", {
+                                text: showText.trim(),
+                                attr: { "jump": mainUrl }
+                            });
 
-                            nameEl.parentNode.insertBefore(edit, nameEl);
-                            nameEl.$oHtml(`<fix_name jump="${mainUrl}">${showText.trim()}</fix_name>`);
+                            nameParent.insertBefore(edit, nameEl);
+                            nameParent.insertBefore(fixName, nameEl);
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
