@@ -92,7 +92,7 @@
     };
 
     /* ==================== 依賴項目 ==================== */
-    let Url = Lib.$url;
+    let Url = Lib.$url; // 全局變化
     const DLL = (() => {
         // 頁面正則
         const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
@@ -139,7 +139,7 @@
                 element.style[property] = value;
             });
         };
-        const Style_Pointer = {
+        const stylePointer = {
             Top: value => NormalStyle(MenuRule[1], "top", value),
             Left: value => NormalStyle(MenuRule[1], "left", value),
             Width: value => ImportantStyle(ImgRule[1], "width", value),
@@ -319,10 +319,10 @@
                 Lib.storeListen(Object.values(SaveKey), call => {
                     if (call.far) {
                         if (Lib.$type(call.nv) === "String") {
-                            MenuTrigger();
+                            menuInit();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
-                                Style_Pointer[key](value);
+                                stylePointer[key](value);
                             }
                         }
                     }
@@ -459,19 +459,20 @@
                     Transl: (Str) => ML[Str] ?? Str
                 }
             },
-            ...UserSet, Style, MenuRule, Color, SaveKey, Style_Pointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
+            ...UserSet, Style, MenuRule, Color, SaveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
         };
     })();
 
     /* ==================== 配置解析 調用 ==================== */
     const Enhance = (() => {
         // 配置參數驗證 (避免使用者配置錯誤)
-        const Validate = (Bool, Num) => {
+        const validate = (Bool, Num) => {
             return Bool && typeof Bool === "boolean" && typeof Num === "number"
                 ? true : false;
         };
+
         // 呼叫順序
-        const Order = {
+        const order = {
             Global: [
                 "BlockAds",
                 "CacheFetch",
@@ -496,51 +497,53 @@
                 "CommentFormat",
             ],
         };
+
         // 懶加載函數
-        const LoadFunc = {
-            Global_Cache: undefined,
-            Preview_Cache: undefined,
-            Content_Cache: undefined,
-            Global: () => this.Global_Cache ??= Global_Function(),
-            Preview: () => this.Preview_Cache ??= Preview_Function(),
-            Content: () => this.Content_Cache ??= Content_Function(),
+        const loadFunc = {
+            globalCache: undefined,
+            previewCache: undefined,
+            contentCache: undefined,
+            Global: () => this.globalCache ??= globalFunc(),
+            Preview: () => this.previewCache ??= previewFunc(),
+            Content: () => this.contentCache ??= contentFunc(),
         };
 
         // 解析配置調用對應功能
-        let Ord;
-        async function Call(page, config = User_Config[page]) {
-            const func = LoadFunc[page](); // 載入對應函數
+        let ord;
+        async function call(page, config = User_Config[page]) {
+            const func = loadFunc[page](); // 載入對應函數
 
-            for (Ord of Order[page]) {
-                const { enable, mode, ...other } = config[Ord] ?? {};
+            for (ord of order[page]) {
+                const { enable, mode, ...other } = config[ord] ?? {};
 
-                if (Validate(enable, mode)) { // 這個驗證非必要, 但因為使用者可自行配置, 要避免可能的錯誤
-                    func[Ord]?.({ mode, ...other }); // 將模式與, 可能有的其他選項, 作為 Config 傳遞
+                if (validate(enable, mode)) { // 這個驗證非必要, 但因為使用者可自行配置, 要避免可能的錯誤
+                    func[ord]?.({ mode, ...other }); // 將模式與, 可能有的其他選項, 作為 Config 傳遞
                 }
             }
         }
 
         return {
-            Run: async () => {
-                Call("Global");
-                if (DLL.IsAllPreview()) Call("Preview");
+            async run() {
+                call("Global");
+
+                if (DLL.IsAllPreview()) call("Preview");
                 else if (DLL.IsContent()) {
                     /* 就算沒開啟原圖功能, 還是需要導入 Postview (暫時寫在這) */
                     DLL.Style.Postview(); // 導入 Post 頁面樣式
-                    Call("Content"); // 呼叫功能
-                    MenuTrigger(); // 創建菜單
+                    call("Content"); // 呼叫功能
+                    menuInit();
                 }
             }
         }
     })();
 
     /* ==================== 主運行 ==================== */
-    Enhance.Run();
+    Enhance.run();
 
     // 等待 DOM 更新
     const waitDom = new MutationObserver(() => {
         waitDom.disconnect();
-        Enhance.Run();
+        Enhance.run();
     });
 
     // 監聽網址變化
@@ -558,11 +561,11 @@
     });
 
     /* ==================== 全域功能 ==================== */
-    function Global_Function() {
-        const LoadFunc = {
-            TextToLink_Cache: undefined,
-            TextToLink_Dependent: function (Config) {
-                return this.TextToLink_Cache ??= {
+    function globalFunc() {
+        const loadFunc = {
+            textToLinkCache: undefined,
+            textToLinkRequ(Config) {
+                return this.textToLinkCache ??= {
                     exclusionRegex: /onfanbokkusuokibalab\.net/,
                     urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
                     exclusionTags: new Set([
@@ -642,7 +645,7 @@
                 };
             },
             fixArtistCache: undefined,
-            FixArtist_Dependent: function () {
+            fixArtistRequ() {
                 if (!this.fixArtistCache) {
                     const fixRequ = { // 宣告修復需要的函數
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
@@ -1047,7 +1050,7 @@
             async TextToLink(Config) { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
 
-                const Func = LoadFunc.TextToLink_Dependent(Config);
+                const Func = loadFunc.textToLinkRequ(Config);
 
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
@@ -1084,7 +1087,7 @@
             },
             async FixArtist(Config) { /* 修復藝術家名稱 */
                 DLL.Style.Global(); // 導入 Global 頁面樣式
-                const Func = LoadFunc.FixArtist_Dependent();
+                const Func = loadFunc.fixArtistRequ();
 
                 // 監聽點擊事件
                 const [newtab, active, insert] = [
@@ -1269,7 +1272,7 @@
     };
 
     /* ==================== 預覽頁功能 ==================== */
-    function Preview_Function() {
+    function previewFunc() {
         return {
             async NewTabOpens(Config) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
                 const [newtab, active, insert] = [
@@ -1278,6 +1281,7 @@
                     Config.newtab_insert ?? false,
                 ];
 
+                if (!newtab) return;
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
                     target && (
@@ -1700,11 +1704,11 @@
     };
 
     /* ==================== 內容頁功能 ==================== */
-    function Content_Function() {
-        const LoadFunc = {
-            LinkBeautify_Cache: undefined,
-            LinkBeautify_Dependent() {
-                return this.LinkBeautify_Cache ??= async function showBrowse(browse) {
+    function contentFunc() {
+        const loadFunc = {
+            linkBeautifyCache: undefined,
+            linkBeautifyRequ() {
+                return this.linkBeautifyCache ??= async function showBrowse(browse) {
                     const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
 
                     // 初始化
@@ -1765,10 +1769,10 @@
                     });
                 }
             },
-            ExtraButton_Cache: undefined,
-            ExtraButton_Dependent() {
+            extraButtonCache: undefined,
+            extraButtonRequ() {
                 // ! 這個函數目前只有 nekohouse 需要
-                return this.ExtraButton_Cache ??= async function GetNextPage(url, old_main) {
+                return this.extraButtonCache ??= async function GetNextPage(url, old_main) {
                     GM_xmlhttpRequest({
                         method: "GET",
                         url: url,
@@ -1832,7 +1836,7 @@
                 `, "Link_Effects", false);
 
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
-                    const showBrowse = LoadFunc.LinkBeautify_Dependent();
+                    const showBrowse = loadFunc.linkBeautifyRequ();
 
                     for (const link of post) {
                         const text = link.$text().replace("Download", ""); // 修正原文本
@@ -2013,10 +2017,10 @@
                         return { supportsRange: false, totalSize: null };
                     }
 
-                    async function imgRequest(Container, Url, Result) {
+                    async function imgRequest(container, url, result) {
                         // ! 實驗性分段下載 (暫時關閉)
-                        // const fileInfo = await getFileSize(Url);
-                        const indicator = Lib.createElement(Container, "div", { class: "progress-indicator" });
+                        // const fileInfo = await getFileSize(url);
+                        const indicator = Lib.createElement(container, "div", { class: "progress-indicator" });
 
                         let blob = null;
                         try {
@@ -2044,7 +2048,7 @@
                                                 return await new Promise((resolve, reject) => {
                                                     GM_xmlhttpRequest({
                                                         method: "GET",
-                                                        url: Url,
+                                                        url,
                                                         headers: { "Range": `bytes=${start}-${end}` },
                                                         responseType: "blob",
                                                         onload: res => (res.status === 206 ? resolve(res.response) : reject(res)),
@@ -2075,7 +2079,7 @@
                                         blob = await new Promise((resolve, reject) => {
                                             GM_xmlhttpRequest({
                                                 method: "GET",
-                                                url: Url,
+                                                url,
                                                 responseType: "blob",
                                                 onload: res => (res.status === 200 ? resolve(res.response) : reject(res)),
                                                 onerror: reject,
@@ -2097,13 +2101,13 @@
 
                             // 下載完成後的最終檢查
                             if (blob && blob.size > 0) {
-                                Result(URL.createObjectURL(blob));
+                                result(URL.createObjectURL(blob));
                             } else {
-                                Result(Url);
+                                result(Url);
                             }
                         } catch (error) {
                             // 最終回退：任何下載環節徹底失敗，都使用原始 URL
-                            Result(Url);
+                            result(Url);
                         } finally {
                             // 無論結果如何，都移除進度指示器
                             indicator.remove();
@@ -2223,7 +2227,7 @@
             },
             async ExtraButton(Config) { /* 下方額外擴充按鈕 */
                 DLL.Style.PostExtra(); // 導入需求樣式
-                const GetNextPage = LoadFunc.ExtraButton_Dependent();
+                const GetNextPage = loadFunc.extraButtonRequ();
                 Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
 
                     const [Prev, Next, Svg, Span, Buffer] = [
@@ -2304,13 +2308,13 @@
 
     /* ==================== 設置菜單 ==================== */
     async function $on(element, type, listener) { $(element).on(type, listener) };
-    async function MenuTrigger(callback = null) {
+    async function menuInit(callback = null) {
         const { Log, Transl } = DLL.Language(); // 菜單觸發器, 每次創建都會獲取新數據
 
-        callback && callback({ Log, Transl }); // 使用 callback 會額外回傳數據
-        Lib.regMenu({ [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl) });
-    }
-    function Create_Menu(Log, Transl) {
+        callback?.({ Log, Transl }); // 使用 callback 會額外回傳數據
+        Lib.regMenu({ [Transl("📝 設置選單")]: () => createMenu(Log, Transl) });
+    };
+    function createMenu(Log, Transl) {
         const shadowID = "shadow";
         if (Lib.$q(`#${shadowID}`)) return;
 
@@ -2602,17 +2606,17 @@
         DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
 
         // 菜單調整依賴
-        const Menu_Requ = {
-            Menu_Close() { // 關閉菜單
+        const menuRequ = {
+            menuClose() { // 關閉菜單
                 $background?.off();
                 shadow.remove();
             },
-            Menu_Save() { // 保存菜單
+            menuSave() { // 保存菜單
                 const top = $interface.css("top");
                 const left = $interface.css("left");
                 Lib.setV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
             },
-            Img_Save() {
+            imgSave() {
                 img_set = $imageSet.find("p"); // 獲取設定 DOM 參數
                 img_data.forEach((read, index) => {
                     img_input = img_set.eq(index).find("input");
@@ -2624,7 +2628,7 @@
                 });
                 Lib.setV(DLL.SaveKey.Img, save_cache); // 保存設置數據
             },
-            async ImageSettings() {
+            async imgSettings() {
                 $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
                     event.stopPropagation();
 
@@ -2636,14 +2640,14 @@
 
                         if (value === "auto") {
                             child.prop("disabled", true);
-                            DLL.Style_Pointer[child.attr("id")](value);
+                            DLL.stylePointer[child.attr("id")](value);
                         } else {
                             child.prop("disabled", false);
-                            DLL.Style_Pointer[child.attr("id")](`${child.val()}${value}`);
+                            DLL.stylePointer[child.attr("id")](`${child.val()}${value}`);
                         }
                     } else {
                         child = parent.find("select");
-                        DLL.Style_Pointer[id](`${value}${child.val()}`);
+                        DLL.stylePointer[id](`${value}${child.val()}`);
                     }
                 });
             }
@@ -2657,11 +2661,11 @@
             const value = $(this).val(); // 取得選擇
             Lib.setV(DLL.SaveKey.Lang, value);
 
-            Menu_Requ.Menu_Save();
-            Menu_Requ.Menu_Close();
+            menuRequ.menuSave();
+            menuRequ.menuClose();
 
-            MenuTrigger(Updata => {
-                Create_Menu(Updata.Log, Updata.Transl); // 重新創建
+            menuInit(Updata => {
+                createMenu(Updata.Log, Updata.Transl); // 重新創建
             });
         });
         // 監聽菜單的點擊事件
@@ -2681,7 +2685,7 @@
                         "opacity": 1
                     });
                     $readset.prop("disabled", false); // 點擊圖片設定才會解鎖讀取設置
-                    Menu_Requ.ImageSettings();
+                    menuRequ.imgSettings();
                 }
 
                 // 讀取保存設置
@@ -2704,11 +2708,11 @@
 
                 // 應用保存
             } else if (id == "application") {
-                Menu_Requ.Img_Save();
-                Menu_Requ.Menu_Save();
-                Menu_Requ.Menu_Close();
+                menuRequ.imgSave();
+                menuRequ.menuSave();
+                menuRequ.menuClose();
             } else if (id == "closure") {
-                Menu_Requ.Menu_Close();
+                menuRequ.menuClose();
             }
         });
     };
