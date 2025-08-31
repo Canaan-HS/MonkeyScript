@@ -70,6 +70,7 @@
         Preview: {
             CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
+            OriginalCard: { mode: 0, enable: true }, // 預覽卡 -> 原始圖片
             QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
@@ -484,10 +485,11 @@
                 "KeyScroll"
             ],
             Preview: [
-                "CardZoom",
                 "CardText",
+                "CardZoom",
                 "NewTabOpens",
-                "QuickPostToggle"
+                "QuickPostToggle",
+                "OriginalCard"
             ],
             Content: [
                 "LinkBeautify",
@@ -1050,11 +1052,11 @@
             async TextToLink(Config) { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
 
-                const Func = loadFunc.textToLinkRequ(Config);
+                const func = loadFunc.textToLinkRequ(Config);
 
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
-                        Func.jumpTrigger(body);
+                        func.jumpTrigger(body);
 
                         let [article, content] = [
                             body.$q("article"),
@@ -1064,12 +1066,12 @@
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
-                                Func.parseModify(span, span.$text());
+                                func.parseModify(span, span.$text());
                             }
 
                         } else if (content) {
-                            Func.getTextNodes(content).forEach(node => {
-                                Func.parseModify(node, node.$text());
+                            func.getTextNodes(content).forEach(node => {
+                                func.parseModify(node, node.$text());
                             })
                         }
                     });
@@ -1078,16 +1080,16 @@
                     Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
                         const items = Lib.$q(".card-list__items");
 
-                        Func.jumpTrigger(items);
-                        Func.getTextNodes(items).forEach(node => {
-                            Func.parseModify(node, node.$text());
+                        func.jumpTrigger(items);
+                        func.getTextNodes(items).forEach(node => {
+                            func.parseModify(node, node.$text());
                         });
                     })
                 }
             },
             async FixArtist(Config) { /* 修復藝術家名稱 */
                 DLL.Style.Global(); // 導入 Global 頁面樣式
-                const Func = loadFunc.fixArtistRequ();
+                const func = loadFunc.fixArtistRequ();
 
                 // 監聽點擊事件
                 const [newtab, active, insert] = [
@@ -1126,7 +1128,7 @@
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name); // 修改顯示名
-                                        Func.saveRecord(new Map([[target.id, change_name]])); // 保存修改名
+                                        func.saveRecord(new Map([[target.id, change_name]])); // 保存修改名
                                     }
                                     text.remove();
                                 }, { once: true, passive: true });
@@ -1163,11 +1165,11 @@
                         if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             // 特定頁面的 名稱修復
                             const artist = Lib.$q("span[itemprop='name']");
-                            artist && Func.otherFix(artist);
+                            artist && func.otherFix(artist);
                         }
 
-                        Func.dynamicFix(card_items);
-                        Lib.createElement(card_items, "fix-trigger", { style: "display: none;" }); // 避免沒觸發變更, 手動創建一個元素
+                        func.dynamicFix(card_items);
+                        card_items.$sAttr("fix-trigger", true); // 避免沒觸發變更
                     });
 
                 } else if (DLL.IsContent()) { // 是內容頁面
@@ -1175,12 +1177,12 @@
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
                     ], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
-                        Func.otherFix(artist, title, artist.href, Lib.url, "fix_cont");
+                        func.otherFix(artist, title, artist.href, Lib.url, "fix_cont");
                     });
 
                 } else { // 一般 預覽頁面
                     Lib.waitEl("span[itemprop='name']", null, { raf: true, timeout: 3 }).then(artist => {
-                        Func.otherFix(artist);
+                        func.otherFix(artist);
                     });
                 }
             },
@@ -1273,6 +1275,31 @@
 
     /* ==================== 預覽頁功能 ==================== */
     function previewFunc() {
+        const loadFunc = {
+            originalCardCache: undefined,
+            originalCardRequ() {
+                return this.originalCardCache ??= {
+                    imgReload: (img, thumbnailSrc, retry) => {
+                        if (retry > 0) {
+                            const src = img.src;
+                            img.src = "";
+                            img.src = src;
+                            img.onerror = () => {
+                                img.src = thumbnailSrc;
+
+                                const self = this.originalCardCache;
+                                setTimeout(() => {
+                                    self?.imgReload(img, thumbnailSrc, --retry);
+                                }, 2e3)
+                            };
+                        } else {
+                            img.src = thumbnailSrc;
+                        }
+                    }
+                }
+            }
+        }
+
         return {
             async NewTabOpens(Config) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
                 const [newtab, active, insert] = [
@@ -1293,10 +1320,10 @@
             },
             async QuickPostToggle(Config) { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
-                if (!DLL.IsNeko) return; // ! 暫時只支援 Neko
+                if (!DLL.IsNeko || Lib.body.$hAttr("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
                 Lib.waitEl("menu", null, { all: true, timeout: 5 }).then(menu => {
-                    DLL.IsNeko = false; // 防止重複執行
+                    Lib.body.$sAttr("QuickPostToggle", true); // 臨時性解決重複註冊問題
 
                     // 渲染
                     function Rendering({ href, className, textContent, style }) {
@@ -1617,12 +1644,11 @@
                                 fetchPage(pageLinks[targetPage - 1], abortController.signal),
                                 new Promise(resolve => {
                                     updatePagination(targetPage);
-                                    requestAnimationFrame(() => {
-                                        history.pushState(null, null, pageLinks[targetPage - 1]);
-                                        resolve();
-                                    });
+                                    resolve();
                                 })
                             ]);
+
+                            history.pushState(null, null, pageLinks[targetPage - 1]);
                         } catch (error) {
                             if (error.message !== 'Aborted') {
                                 console.error('Page fetch failed:', error);
@@ -1633,34 +1659,6 @@
                         }
                     }, { capture: true, mark: "QuickPostToggle" });
                 });
-            },
-            async CardZoom(Config) { /* 帖子預覽卡縮放效果 */
-                switch (Config.mode) {
-                    case 2:
-                        Lib.addStyle(`
-                            .post-card a:hover {
-                                width: 100%;
-                                height: 100%;
-                                z-index: 9999;
-                                border: 1px solid #fff6;
-                                transform: scale(1.2) translateY(0);
-                            }
-                            .post-card a:hover .post-card__image-container {
-                                position: relative;
-                            }
-                        `, "CardZoom_Effects_2", false);
-                    default:
-                        Lib.addStyle(`
-                            .card-list--legacy * { --card-size: 300px !important; }
-                            .post-card a {
-                                background: #000;
-                                overflow: hidden;
-                                border-radius: 8px;
-                                border: 3px solid #fff6;
-                                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                            }
-                        `, "CardZoom_Effects", false);
-                }
             },
             async CardText(Config) { /* 帖子說明文字效果 */
                 if (Lib.platform === "Mobile") return;
@@ -1703,6 +1701,62 @@
                             }
                         `, "CardText_Effects", false);
                 }
+            },
+            async CardZoom(Config) { /* 帖子預覽卡縮放效果 */
+                switch (Config.mode) {
+                    case 2:
+                        Lib.addStyle(`
+                            .post-card a:hover {
+                                width: 100%;
+                                max-height: 75vh;
+                                min-height: 100%;
+                                height: max-content;
+                                z-index: 9999;
+                                overflow: auto;
+                                background: #000;
+                                border: 1px solid #fff6;
+                                transform: scale(1.2) translateY(0);
+                            }
+                            .post-card a::-webkit-scrollbar {
+                                width: 0;
+                                height: 0;
+                            }
+                            .post-card a:hover .post-card__image-container {
+                                position: relative;
+                            }
+                        `, "CardZoom_Effects_2", false);
+                    default:
+                        Lib.addStyle(`
+                            .card-list--legacy * { --card-size: 350px !important; }
+                            .post-card a {
+                                background: #000;
+                                overflow: hidden;
+                                border-radius: 8px;
+                                border: 3px solid #fff6;
+                                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                            }
+                        `, "CardZoom_Effects", false);
+                }
+            },
+            async OriginalCard(Config) { /* 帖子預覽卡 -> 原始圖片 */
+                Lib.waitEl(".post-card__image", null, { all: true, timeoutResult: true }).then(image => {
+                    const func = loadFunc.originalCardRequ();
+
+                    if (DLL.IsNeko) {
+                        image.forEach(img => {
+                            const src = img.src;
+                            if (src) {
+                                img.loading = "lazy";
+                                img.onerror = function () {
+                                    func.imgReload(this, src, 10);
+                                };
+                                img.src = src.replace("thumbnail/", "");
+                            }
+                        })
+                    } else {
+                        // console.log(Url);
+                    }
+                })
             }
         }
     };
@@ -1943,22 +1997,23 @@
                     const hrefParse = (element) => element.href || element.$gAttr("href");
 
                     // 載入原圖 (死圖重試)
-                    function imgReload(img, retry) {
+                    function imgReload(img, oldSrc, retry) {
                         if (retry > 0) {
                             const src = img?.src;
                             if (!src) return;
 
                             img.src = "";
-                            Object.assign(img, {
-                                src: src,
-                                alt: "Loading Failed"
-                            });
+                            Object.assign(img, { src, alt: "Loading Failed" });
                             img.onload = function () { img.$delClass("Image-loading-indicator") };
                             img.onerror = function () {
+                                img.src = oldSrc;
+
                                 setTimeout(() => {
-                                    imgReload(img, --retry);
-                                }, 3000)
+                                    imgReload(img, oldSrc, --retry);
+                                }, 2e3)
                             };
+                        } else {
+                            img.src = oldSrc;
                         }
                     };
 
@@ -1991,12 +2046,13 @@
                             preact.h("img", {
                                 key: "img",
                                 src: newUrl,
+                                loading: "lazy",
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
                                     Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
                                 },
                                 onError: function () {
-                                    imgReload(Lib.$q(`#${id} img`), 10);
+                                    imgReload(Lib.$q(`#${id} img`), oldUrl, 10);
                                 }
                             })
                         )
