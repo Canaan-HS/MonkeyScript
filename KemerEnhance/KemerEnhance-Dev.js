@@ -75,7 +75,7 @@
                 mode: 0,
                 enable: true,
                 newtab_active: false,
-                newtab_insert: true,
+                newtab_insert: false,
             },
         },
         Content: {
@@ -154,6 +154,9 @@
                 Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
+                    .card-list__items a:not(article a) {
+                        cursor: default;
+                    }
                     .fancy-image__image, fix_name, fix_tag, fix_edit {
                         cursor: pointer;
                     }
@@ -604,7 +607,7 @@
                         }))
                     },
                     async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
-                        const [Newtab, Active, Insert] = [
+                        const [newtab, active, insert] = [
                             Config.newtab ?? true,
                             Config.newtab_active ?? false,
                             Config.newtab_insert ?? false,
@@ -615,9 +618,9 @@
                             if (!target || target.$hAttr("download")) return;
                             event.preventDefault();
 
-                            !Newtab
+                            !newtab
                                 ? location.assign(target.href)
-                                : GM_openInTab(target.href, { active: Active, insert: Insert });
+                                : GM_openInTab(target.href, { active, insert });
                         }, { capture: true });
                     }
                 };
@@ -815,7 +818,6 @@
                             const [webSite, infoID] = this.parseUrlInfo(url);
 
                             img.$sAttr("jump", url); // 圖片設置跳轉連結
-                            items.$dAttr("href"); // 刪除原始跳轉連結
 
                             this.fixTrigger({
                                 mainUrl: url, // 主要跳轉連結
@@ -1058,8 +1060,7 @@
                 const Func = LoadFunc.FixArtist_Dependent();
 
                 // 監聽點擊事件
-                const [Device, Newtab, Active, Insert] = [
-                    Lib.platform,
+                const [newtab, active, insert] = [
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
                     Config.newtab_insert ?? false,
@@ -1097,19 +1098,30 @@
                                 }, { once: true, passive: true });
                             }, 50);
                         }, 300);
-                    } else if (target.matches("fix_name") || target.matches("fix_tag") || target.matches("img.fancy-image__image")) {
+                    } else if (
+                        newtab && (Lib.platform !== "Mobile" || DLL.IsContent()) && (
+                            target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")
+                        )
+                        || !newtab && DLL.IsContent()
+                    ) {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
 
                         const jump = target.$gAttr("jump");
                         if (!target.parentNode.matches("fix_cont") && jump) {
-                            !Newtab || DLL.IsSearch() && Device === "Mobile"
-                                ? location.assign(jump)
-                                : GM_openInTab(jump, { active: Active, insert: Insert });
-                        } else if (jump) { // 內容頁面
-                            location.assign(jump);
+                            DLL.IsSearch()
+                                || target.matches("fix_tag")
+                                ? GM_openInTab(jump, { active, insert })
+                                : location.assign(jump);
+                        } else if (jump) {
+                            newtab && DLL.IsContent() && target.matches("fix_name")
+                                ? GM_openInTab(jump, { active, insert })
+                                : location.assign(jump);
+                        } else if (target.tagName === "IMG") {
+                            location.assign(target.closest("a").href);
                         }
                     }
-                }, { capture: true, passive: true, mark: "FixArtist" });
+                }, { capture: true, mark: "FixArtist" });
 
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.IsSearch()) {
@@ -1229,7 +1241,7 @@
     function Preview_Function() {
         return {
             async NewTabOpens(Config) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
-                const [Newtab, Active, Insert] = [
+                const [newtab, active, insert] = [
                     Config.newtab ?? true,
                     Config.newtab_active ?? false,
                     Config.newtab_insert ?? false,
@@ -1237,12 +1249,10 @@
 
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
-
-                    target && (
+                    target && ( 
                         event.preventDefault(),
-                        !Newtab
-                            ? location.assign(target.href)
-                            : GM_openInTab(target.href, { active: Active, insert: Insert })
+                        event.stopImmediatePropagation(),
+                        GM_openInTab(target.href, { active, insert })
                     );
                 }, { capture: true, mark: "NewTabOpens" });
             },
