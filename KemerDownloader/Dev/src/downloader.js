@@ -110,7 +110,7 @@ export default function Downloader(
                     .map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"))
                     .filter(Boolean);
 
-                const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a");
+                const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
 
                 const finalData = General.IncludeExtras
                     ? [...imgData, ...extrasData] // 包含所有下載內容
