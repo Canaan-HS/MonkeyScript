@@ -100,7 +100,7 @@
         const User = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/;
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
-        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/new\/?.*$/;
+        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
         const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
