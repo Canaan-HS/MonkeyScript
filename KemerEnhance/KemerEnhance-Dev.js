@@ -1750,71 +1750,76 @@
                 }
             },
             async BetterThumbnail(_) { /* 變更預覽卡縮圖 */
-                Lib.waitEl([".post-card", ".post-card__image"], null, { all: true })
-                    .then(([cards, images]) => {
-                        const func = loadFunc.betterThumbnailRequ();
+                Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
+                    if (DLL.IsNeko) {
+                        images.forEach(img => {
+                            const src = img.src;
+                            if (!src?.endsWith(".gif")) { // gif 太大
+                                func.changeSrc(img, src, src.replace("thumbnail/", ""));
+                            }
+                        })
+                    } else {
+                        const uri = new URL(Url);
+                        if (uri.searchParams.get("q") === "") {
+                            uri.searchParams.delete("q");
+                        };
 
-                        if (DLL.IsNeko) {
-                            images.forEach(img => {
-                                const src = img.src;
-                                if (!src?.endsWith(".gif")) { // gif 太大
-                                    func.changeSrc(img, src, src.replace("thumbnail/", ""));
+                        let basicUri = null;
+
+                        const func = loadFunc.betterThumbnailRequ();
+                        const imgBox = images.reduce((acc, img) => {
+                            const src = img.src;
+                            if (src) {
+                                acc[src] = img;
+                                basicUri = src;
+                            }
+                            return acc;
+                        }, {});
+
+                        if (imgBox.length === 0) return;
+
+                        // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
+                        const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
+                        fetch(api, { "Accept": "text/css" })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`Fetch failed url: ${response.url}, status: ${response.status}`)
+                                }
+                                return response.json();
+
+                            })
+                            .then(data => {
+                                const type = Lib.$type(data);
+
+                                if (type === "Object") {
+                                    data = data?.posts ?? [];
+                                };
+
+                                basicUri = basicUri.split("data/")[0] + "data";
+
+                                for (const obj of data) {
+                                    const file = obj.file.path;
+                                    const img = imgBox[basicUri + file];
+                                    const src = img?.src;
+
+                                    if (!src) continue; // 沒有的話就跳過
+                                    for (const attach of obj.attachments ?? []) {
+                                        const path = attach.path;
+                                        if (!path) continue;
+
+                                        const isImg = func.supportImg.has(path.split(".")[1]);
+                                        if (!isImg) continue;
+
+                                        func.changeSrc(img, src, basicUri + path);
+                                        break;
+                                    }
                                 }
                             })
-                        } else {
-                            const uri = new URL(Url);
-
-                            if (uri.searchParams.get("q") === "") {
-                                uri.searchParams.delete("q");
-                            };
-
-                            // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
-                            const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
-                            fetch(api, { "Accept": "text/css" })
-                                .then(response => {
-                                    if (!response.ok) {
-                                        throw new Error(`Fetch failed url: ${response.url}, status: ${response.status}`)
-                                    }
-                                    return response.json();
-
-                                })
-                                .then(data => {
-                                    const type = Lib.$type(data);
-
-                                    if (type === "Object") {
-                                        data = data?.posts ?? [];
-                                    };
-
-                                    let basicUri = images[0].src.split("data/")[0];
-                                    basicUri += "data";
-
-                                    const cardIndex = cards.reduce((acc, card, idx) => {
-                                        acc[card.$gAttr("data-id")] = idx;
-                                        return acc;
-                                    }, {});
-
-                                    for (const obj of data) {
-                                        const img = images[cardIndex[obj.id]]; // 快速定位到對應的預覽卡
-                                        const src = img?.src;
-
-                                        if (!src) continue; // 沒有的話就跳過
-                                        for (const attach of obj.attachments ?? []) {
-                                            const path = attach.path;
-                                            if (!path) continue;
-
-                                            const isImg = func.supportImg.has(path.split(".")[1]);
-                                            if (!isImg) continue;
-
-                                            func.changeSrc(img, src, basicUri + path);
-                                            break;
-                                        }
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error(error);
-                                });
-                        }
-                    })
+                            .catch(error => {
+                                console.error(error);
+                            });
+                    }
+                })
             }
         }
     };
