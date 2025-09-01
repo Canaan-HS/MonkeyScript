@@ -1639,15 +1639,11 @@
                     case 2:
                         Lib.addStyle(`
                             .post-card a:hover {
-                                overflow: auto;
-                                z-index: 99999;
-                                background: #000;
+                                width: 100%;
+                                height: 100%;
+                                z-index: 9999;
                                 border: 1px solid #fff6;
-                                transform: scale(1.6, 1.5);
-                            }
-                            .post-card a::-webkit-scrollbar {
-                                width: 0;
-                                height: 0;
+                                transform: scale(1.2) translateY(0);
                             }
                             .post-card a:hover .post-card__image-container {
                                 position: relative;
@@ -1655,14 +1651,14 @@
                         `, "CardZoom_Effects_2", false);
                     default:
                         Lib.addStyle(`
-                            .post-card { margin: .3vw; }
-                            .post-card a img { border-radius: 8px; }
+                            .card-list--legacy * { --card-size: 300px !important; }
                             .post-card a {
+                                background: #000;
+                                overflow: hidden;
                                 border-radius: 8px;
                                 border: 3px solid #fff6;
-                                transition: transform 0.4s;
+                                transition: transform 0.3s ease, box-shadow 0.3s ease;
                             }
-                            .card-list--legacy * { --card-size: 13vw; }
                         `, "CardZoom_Effects", false);
                 }
             },
@@ -1683,19 +1679,27 @@
                         `, "CardText_Effects_2", false); break;
                     default:
                         Lib.addStyle(`
-                            .post-card__header, .post-card__footer {
-                                opacity: 0 !important;
-                                z-index: 1;
-                                padding: 5px;
-                                pointer-events: none;
-                                transform: translateY(-6vh);
+                            .post-card__header {
+                              opacity: 0;
+                              z-index: 1;
+                              padding: 5px;
+                              pointer-events: none;
+                              transform: translateY(-6vh);
+                              transition: transform 0.4s, opacity 0.6s;
+                            }
+                            .post-card__footer {
+                              opacity: 0;
+                              z-index: 1;
+                              padding: 5px;
+                              pointer-events: none;
+                              transform: translateY(6vh);
+                              transition: transform 0.4s, opacity 0.6s;
                             }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1 !important;
-                                pointer-events: auto;
-                                transform: translateY(0vh);
-                                transition: transform 0.4s, opacity 0.6s;
+                              opacity: 1;
+                              pointer-events: auto;
+                              transform: translateY(0);
                             }
                         `, "CardText_Effects", false);
                 }
