@@ -1718,12 +1718,11 @@
                     case 2:
                         Lib.addStyle(`
                             .post-card a:hover {
-                                width: 100%;
-                                max-height: 65vh;
-                                min-height: 100%;
-                                height: max-content;
                                 z-index: 9999;
                                 overflow: auto;
+                                max-height: 90vh;
+                                min-height: 100%;
+                                height: max-content;
                                 background: #000;
                                 border: 1px solid #fff6;
                                 transform: scale(1.1) translateY(0);
@@ -1751,6 +1750,8 @@
             },
             async BetterThumbnail(_) { /* 變更預覽卡縮圖 */
                 Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
+                    const func = loadFunc.betterThumbnailRequ();
+
                     if (DLL.IsNeko) {
                         images.forEach(img => {
                             const src = img.src;
@@ -1765,8 +1766,6 @@
                         };
 
                         let basicUri = null;
-
-                        const func = loadFunc.betterThumbnailRequ();
                         const imgBox = images.reduce((acc, img) => {
                             const src = img.src;
                             if (src) {
@@ -1893,14 +1892,14 @@
             extraButtonCache: undefined,
             extraButtonRequ() {
                 // ! 這個函數目前只有 nekohouse 需要
-                return this.extraButtonCache ??= async function GetNextPage(url, old_main) {
+                return this.extraButtonCache ??= async function getNextPage(url, old_main) {
                     GM_xmlhttpRequest({
                         method: "GET",
                         url: url,
                         nocache: false,
                         onload: response => {
                             if (response.status !== 200) {
-                                GetNextPage(url, old_main);
+                                getNextPage(url, old_main);
                                 return;
                             };
 
@@ -1928,7 +1927,7 @@
                                 Lib.$q(".post__title, .scrape__title").scrollIntoView(); // 滾動到上方
                             }, 300);
                         },
-                        onerror: error => { GetNextPage(url, old_main) }
+                        onerror: error => { getNextPage(url, old_main) }
                     });
                 }
             }
@@ -2028,12 +2027,14 @@
 
                                     if (!video || !summary) return;
 
+                                    video.$sAttr("loop", true); // 開啟影片循環
                                     video.$sAttr("preload", "metadata"); // 預載影片元數據
 
                                     const link = linkBox[summary.$text()]; // 查找對應下載連結
                                     if (!link) return;
 
                                     move && link.parentNode.remove(); // 刪除對應下載連結
+
                                     let element = link.$copy();
                                     element.$sAttr("beautify", true); // ? LinkBeautify 的適應, 避免被隱藏
                                     element.$text(element.$text().replace("Download", "")); // 修改載入連結
@@ -2109,6 +2110,7 @@
                             preact.h("img", {
                                 key: "img",
                                 src: newUrl,
+                                loading: "lazy",
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
                                     Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
@@ -2366,9 +2368,9 @@
                 });
             },
             async ExtraButton(_) { /* 下方額外擴充按鈕 */
-                DLL.Style.PostExtra(); // 導入需求樣式
-                const GetNextPage = loadFunc.extraButtonRequ();
                 Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
+                    DLL.Style.PostExtra(); // 導入需求樣式
+                    const getNextPage = loadFunc.extraButtonRequ();
 
                     const [Prev, Next, Svg, Span, Buffer] = [
                         Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev"),
@@ -2403,7 +2405,7 @@
                     // 點擊切換下一頁按鈕
                     Lib.onE(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
-                            GetNextPage(
+                            getNextPage(
                                 Next_btn.$gAttr("jump"),
                                 Lib.$q("main")
                             );
