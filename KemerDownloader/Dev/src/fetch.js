@@ -19,8 +19,9 @@ export default function Fetch(
             this.isPost = this.URL.pathname !== "/posts"; // 用於判斷是 post 還是 posts
 
             this.queryValue = this.URL.search;
-            if (this.queryValue === "") { // 有時候會出現空的搜尋關鍵字
+            if (this.URL.searchParams.get("q") === "") { // 有時候會出現空的搜尋關鍵字
                 this.URL.searchParams.delete("q");
+                this.queryValue = this.URL.search;
                 this.sourceURL = this.URL.href;
             }
 
