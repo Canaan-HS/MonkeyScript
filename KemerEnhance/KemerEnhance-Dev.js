@@ -588,7 +588,7 @@
                         return this.urlRegex.test(str);
                     },
                     getTextNodes(root) {
-                        const nodes = [];
+                        const nodes = new Set();
                         const tree = document.createTreeWalker(
                             root,
                             NodeFilter.SHOW_TEXT,
@@ -604,9 +604,52 @@
                             }
                         );
                         while (tree.nextNode()) {
-                            nodes.push(tree.currentNode.parentElement); // 回傳父節點
+                            nodes.add(tree.currentNode.parentElement);
                         }
-                        return nodes;
+                        return [...nodes];
+                    },
+                    searchPassword(href, text) {
+                        let state = false;
+                        if (!text) return { state, href };
+
+                        const lowerText = text.toLowerCase();
+                        if (text.startsWith("#")) {
+                            state = true;
+                            href += text;
+                        }
+                        else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
+                            state = true;
+                            href += "#" + text;
+                        }
+                        else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+                            const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+                            if (key) {
+                                state = true;
+                                href += "#" + key;
+                            }
+                        }
+
+                        return {
+                            state,
+                            href: href.match(this.urlRegex)?.[0] ?? href
+                        };
+                    },
+                    getMegaPass(node, href) {
+                        let state;
+                        const nextNode = node.nextSibling;
+
+                        if (nextNode) {
+                            if (nextNode.nodeType === Node.TEXT_NODE) {
+                                ({ state, href } = this.searchPassword(href, nextNode.$text()));
+
+                                if (state) nextNode.remove(); // 清空字串
+                            } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                                ({ state, href } = this.searchPassword(href, nodeText));
+                            }
+                        }
+
+                        return href;
                     },
                     protocolParse(url) {
                         if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
@@ -615,9 +658,12 @@
                         return url;
                     },
                     async parseModify(father, content) { // 解析後轉換網址
+                        const basicHref = father?.href || "";
                         father.$iHtml(content.replace(this.urlRegex, url => {
                             const decode = decodeURIComponent(url).trim();
-                            return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                            return basicHref === decode
+                                ? father
+                                : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                         }))
                     },
                     async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
@@ -1058,7 +1104,13 @@
 
                         } else if (content) {
                             func.getTextNodes(content).forEach(node => {
-                                func.parseModify(node, node.$text());
+                                let text = node.$text();
+
+                                if (text.startsWith("https://mega.nz") && !text.includes("#")) {
+                                    text = func.getMegaPass(node, text);
+                                };
+
+                                func.parseModify(node, text);
                             })
                         }
                     });
@@ -1267,7 +1319,7 @@
                             img.src = thumbnailSrc;
                             return;
                         };
-  
+
                         const src = img.src;
                         img.onload = null;
                         img.onerror = null;
