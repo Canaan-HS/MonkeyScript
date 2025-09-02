@@ -1719,14 +1719,14 @@
                         Lib.addStyle(`
                             .post-card a:hover {
                                 width: 100%;
-                                max-height: 80vh;
+                                max-height: 65vh;
                                 min-height: 100%;
                                 height: max-content;
                                 z-index: 9999;
                                 overflow: auto;
                                 background: #000;
                                 border: 1px solid #fff6;
-                                transform: scale(1.2) translateY(0);
+                                transform: scale(1.1) translateY(0);
                             }
                             .post-card a::-webkit-scrollbar {
                                 width: 0;
