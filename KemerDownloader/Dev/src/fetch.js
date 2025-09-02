@@ -743,7 +743,7 @@ export default function Fetch(
                 if (homeJson) {
 
                     if (this.metaDict.size === 0) {
-                        let profile = { name: "Unknown" };
+                        let profile = { name: null };
 
                         if (this.isPost) {
                             this.worker.postMessage({ url: this.profileAPI });
