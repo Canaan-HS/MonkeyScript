@@ -1778,15 +1778,19 @@
                         `, "CardZoom-Effects-2", false);
                         break;
                     case 3:
+                        const [paddingBottom, rowGap, height] = DLL.IsNeko
+                            ? ["0", "0", "57"]
+                            : ["7", "5.8", "50"];
+
                         Lib.addStyle(`
-                            .card-list--legacy { padding-bottom: 7em }
+                            .card-list--legacy { padding-bottom: ${paddingBottom}em }
                             .card-list--legacy .card-list__items {
-                                row-gap: 5.8em;
+                                row-gap: ${rowGap}em;
                                 column-gap: 3em;
                             }
                             .post-card a {
                                 width: 20em;
-                                height: 50vh;
+                                height: ${height}vh;
                             }
                             .post-card__image-container img { object-fit: contain }
                         `, "CardZoom-Effects-3", false);
