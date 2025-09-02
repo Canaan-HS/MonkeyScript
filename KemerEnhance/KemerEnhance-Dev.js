@@ -26,7 +26,7 @@
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
 // @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
