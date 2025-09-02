@@ -70,7 +70,7 @@
         Preview: {
             CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            OriginalCard: { mode: 0, enable: true }, // 預覽卡 -> 原始圖片
+            OriginalCard: { mode: 0, enable: true }, // 預覽卡 -> 原始圖片 (會增加初始載入流量)
             QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
@@ -1678,26 +1678,26 @@
                     default:
                         Lib.addStyle(`
                             .post-card__header {
-                              opacity: 0;
-                              z-index: 1;
-                              padding: 5px;
-                              pointer-events: none;
-                              transform: translateY(-6vh);
-                              transition: transform 0.4s, opacity 0.6s;
+                                opacity: 0;
+                                z-index: 1;
+                                padding: 5px;
+                                pointer-events: none;
+                                transform: translateY(-6vh);
+                                transition: transform 0.4s, opacity 0.6s;
                             }
                             .post-card__footer {
-                              opacity: 0;
-                              z-index: 1;
-                              padding: 5px;
-                              pointer-events: none;
-                              transform: translateY(6vh);
-                              transition: transform 0.4s, opacity 0.6s;
+                                opacity: 0;
+                                z-index: 1;
+                                padding: 5px;
+                                pointer-events: none;
+                                transform: translateY(6vh);
+                                transition: transform 0.4s, opacity 0.6s;
                             }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                              opacity: 1;
-                              pointer-events: auto;
-                              transform: translateY(0);
+                                opacity: 1;
+                                pointer-events: auto;
+                                transform: translateY(0);
                             }
                         `, "CardText_Effects", false);
                 }
@@ -1708,7 +1708,7 @@
                         Lib.addStyle(`
                             .post-card a:hover {
                                 width: 100%;
-                                max-height: 75vh;
+                                max-height: 80vh;
                                 min-height: 100%;
                                 height: max-content;
                                 z-index: 9999;
@@ -2046,7 +2046,6 @@
                             preact.h("img", {
                                 key: "img",
                                 src: newUrl,
-                                loading: "lazy",
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
                                     Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
