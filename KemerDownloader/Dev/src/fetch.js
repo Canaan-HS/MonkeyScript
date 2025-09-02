@@ -578,13 +578,12 @@ export default function Fetch(
             Process.Lock = true;
 
             // 回傳 service, user
-            const parseInfo = (url) => {
-                url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
-                url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
-                return url.length >= 3 ? [url[0], url[2]] : url;
+            const parseInfo = (uri) => {
+                uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
+                return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
             };
 
-            const [service, user] = parseInfo(this.sourceURL);
+            const { service, user } = parseInfo(this.sourceURL);
             const pack = {
                 id,
                 user,
