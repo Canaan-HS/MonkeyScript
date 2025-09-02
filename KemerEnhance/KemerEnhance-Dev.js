@@ -70,7 +70,7 @@
         Preview: {
             CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            OriginalCard: { mode: 0, enable: true }, // 預覽卡 -> 原始圖片 (會增加初始載入流量)
+            BetterThumbnail: { mode: 0, enable: true }, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
             QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 mode: 0,
@@ -102,8 +102,8 @@
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
         const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
-        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
+        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
 
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
@@ -172,6 +172,7 @@
                         font-weight: 500;
                         max-width: 320px;
                         overflow: hidden;
+                        display: block;
                         padding: .25rem .1rem;
                         border-radius: .25rem;
                         white-space: nowrap;
@@ -489,7 +490,7 @@
                 "CardZoom",
                 "NewTabOpens",
                 "QuickPostToggle",
-                "OriginalCard"
+                "BetterThumbnail"
             ],
             Content: [
                 "LinkBeautify",
@@ -670,10 +671,9 @@
                             url = uri.href;
                             return url;
                         },
-                        parseUrlInfo(url) { // 解析網址連結
-                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/); // 匹配出三段類型, 或兩段類型的格式
-                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, "")); // 排除不必要字串
-                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        parseUrlInfo(uri) { // ! 解析網址 (測試更簡潔的匹配, 但通用性下降)
+                            uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
+                            return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
                         },
                         saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1000))(),
                         async fixRequest(url, headers = {}) { // 請求修復數據
@@ -724,8 +724,8 @@
 
                             return [oldId, oldUrl, oldName];
                         },
-                        fixNameSupport: new Set(["pixiv", "fanbox", "candfans"]),
-                        fixTagSupport: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
+                        supportFixName: new Set(["pixiv", "fanbox", "candfans"]),
+                        supportFixTag: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
                             ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
                             NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
 
@@ -750,7 +750,7 @@
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts",
                         },
-                        async fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
+                        async fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
                             nameEl.$sAttr("style", "display: none;"); // 隱藏原始名稱
 
                             const parent = nameEl.parentNode;
@@ -764,15 +764,15 @@
                                 });
 
                                 /* 創建編輯按鈕 */
-                                Lib.createElement(fix_wrapper, "fix_edit", { id: infoID, text: "Edit" });
+                                Lib.createElement(fix_wrapper, "fix_edit", { id: user, text: "Edit" });
                                 parent.insertBefore(fix_wrapper, nameEl);
                             };
 
                             /* 取得支援修復的正則 */
                             const [tag_text, support_id, support_name] = [
                                 tagEl.$text(),
-                                this.fixTagSupport.ID,
-                                this.fixTagSupport.NAME
+                                this.supportFixTag.ID,
+                                this.supportFixTag.NAME
                             ];
 
                             if (!tag_text) return;
@@ -786,24 +786,24 @@
                             tagEl.$iHtml(tag_text.replace(matchId, tag => {
                                 let supported = false;
                                 const supportFormat = appendTag
-                                    ? ( // 存在 appendTag 時 且擁有對應的 API 格式, 才使用新的 infoID 與支援格式, 否則回退到舊格式
-                                        supported = this.fixTagSupport[`${tag}${appendTag}`],
-                                        supported ? (infoID = this.parseUrlInfo(otherUrl)[1], supported) : this.fixTagSupport[tag]
+                                    ? ( // 存在 appendTag 時 且擁有對應的 API 格式, 才使用新的 user 與支援格式, 否則回退到舊格式
+                                        supported = this.supportFixTag[`${tag}${appendTag}`],
+                                        supported ? (user = this.parseUrlInfo(otherUrl).user, supported) : this.supportFixTag[tag]
                                     )
-                                    : this.fixTagSupport[tag];
+                                    : this.supportFixTag[tag];
 
-                                return `<fix_tag jump="${supportFormat.replace(mark, infoID)}">${tag}</fix_tag>`;
+                                return `<fix_tag jump="${supportFormat.replace(mark, user)}">${tag}</fix_tag>`;
                             }));
                         },
                         async fixTrigger(data) { // 觸發修復
-                            let { mainUrl, otherUrl, webSite, infoID, nameEl, tagEl, appendTag } = data;
+                            let { mainUrl, otherUrl, server, user, nameEl, tagEl, appendTag } = data;
 
-                            let recordName = this.recordCache.get(infoID); // 從緩存 使用尾部 ID 取出對應紀錄
+                            let recordName = this.recordCache.get(user); // 從緩存 使用尾部 ID 取出對應紀錄
 
                             if (recordName) {
-                                if (webSite === "candfans") {
-                                    [infoID, mainUrl, recordName] = this.candfansPageAdapt(
-                                        infoID,
+                                if (server === "candfans") {
+                                    [user, mainUrl, recordName] = this.candfansPageAdapt(
+                                        user,
                                         recordName[0],
                                         mainUrl,
                                         nameEl.$text(),
@@ -811,33 +811,33 @@
                                     )
                                 };
 
-                                this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
+                                this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, recordName, appendTag);
                             } else {
-                                if (this.fixNameSupport.has(webSite)) {
+                                if (this.supportFixName.has(server)) {
 
-                                    if (webSite === "candfans") {
-                                        const [user_code, username] = await this.getCandfansName(infoID) ?? nameEl.$text();
+                                    if (server === "candfans") {
+                                        const [user_code, username] = await this.getCandfansName(user) ?? nameEl.$text();
 
-                                        if (user_code && username) this.fixCache.set(infoID, [user_code, username]); // 都存在才添加數據
+                                        if (user_code && username) this.fixCache.set(user, [user_code, username]); // 都存在才添加數據
 
-                                        [infoID, mainUrl, recordName] = this.candfansPageAdapt(
-                                            infoID,
+                                        [user, mainUrl, recordName] = this.candfansPageAdapt(
+                                            user,
                                             user_code,
                                             mainUrl,
                                             nameEl.$text(),
                                             username
                                         )
 
-                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                        this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
                                     } else {
-                                        const username = await this.getPixivName(infoID) ?? nameEl.$text();
-                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
-                                        this.fixCache.set(infoID, username); // 添加數據
+                                        const username = await this.getPixivName(user) ?? nameEl.$text();
+                                        this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
+                                        this.fixCache.set(user, username); // 添加數據
                                     }
 
                                     this.saveWork(); // 呼叫保存工作
                                 } else {
-                                    this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
+                                    this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
                                 }
                             }
                         },
@@ -847,15 +847,15 @@
 
                             const url = items.href;
                             const img = items.$q("img");
-                            const [webSite, infoID] = this.parseUrlInfo(url);
+                            const { server, user } = this.parseUrlInfo(url);
 
                             img.$sAttr("jump", url); // 圖片設置跳轉連結
 
                             this.fixTrigger({
                                 mainUrl: url, // 主要跳轉連結
                                 otherUrl: "", // 其他替代連結
-                                webSite, // 網站 字串
-                                infoID, // 尾部 id 資訊
+                                server, // 網站 字串
+                                user, // 尾部 id 資訊
                                 nameEl: items.$q(".user-card__name"), // 名稱物件
                                 tagEl: items.$q(".user-card__service"), // 標籤物件
                                 appendTag: "", // 附加 tag 文本
@@ -865,13 +865,13 @@
                             try {
                                 const parent = artist.parentNode;
                                 const url = mainUrl ?? parent.href;
-                                const [webSite, infoID] = this.parseUrlInfo(url);
+                                const { server, user } = this.parseUrlInfo(url);
 
                                 await this.fixTrigger({
                                     mainUrl: url,
                                     otherUrl,
-                                    webSite,
-                                    infoID,
+                                    server,
+                                    user,
                                     nameEl: artist,
                                     tagEl: tag,
                                     appendTag: otherUrl ? "Post" : "" // 用於調用 Post API, 的附加標籤
@@ -900,7 +900,7 @@
         }
 
         return {
-            async SidebarCollapse(Config) { /* 收縮側邊攔 */
+            async SidebarCollapse(_) { /* 收縮側邊攔 */
                 if (Lib.platform === "Mobile") return;
 
                 Lib.addStyle(`
@@ -921,10 +921,10 @@
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
                 `, "Collapse_Effects", false);
             },
-            async DeleteNotice(Config) { /* 刪除公告通知 */
+            async DeleteNotice(_) { /* 刪除公告通知 */
                 Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 5 }).then(announcement => announcement.remove());
             },
-            async BlockAds(Config) { /* (阻止/封鎖)廣告 */
+            async BlockAds(_) { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
                 const cookieString = Lib.cookie();
@@ -983,7 +983,7 @@
                     }
                 });
             },
-            async CacheFetch(Config) { /* 緩存請求 */
+            async CacheFetch(_) { /* 緩存請求 */
                 if (DLL.IsNeko) return;
 
                 Lib.addScript(`
@@ -1186,7 +1186,7 @@
                     });
                 }
             },
-            async BackToTop(Config) { /* 翻頁後回到頂部 */
+            async BackToTop(_) { /* 翻頁後回到頂部 */
                 Lib.onEvent(Lib.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
@@ -1276,9 +1276,10 @@
     /* ==================== 預覽頁功能 ==================== */
     function previewFunc() {
         const loadFunc = {
-            originalCardCache: undefined,
-            originalCardRequ() {
-                return this.originalCardCache ??= {
+            betterThumbnailCache: undefined,
+            betterThumbnailRequ() {
+                return this.betterThumbnailCache ??= {
+                    supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
                     imgReload: (img, thumbnailSrc, retry) => {
                         if (retry > 0) {
                             const src = img.src;
@@ -1287,7 +1288,7 @@
                             img.onerror = () => {
                                 img.src = thumbnailSrc;
 
-                                const self = this.originalCardCache;
+                                const self = this.betterThumbnailCache;
                                 setTimeout(() => {
                                     self?.imgReload(img, thumbnailSrc, --retry);
                                 }, 2e3)
@@ -1295,6 +1296,16 @@
                         } else {
                             img.src = thumbnailSrc;
                         }
+                    },
+                    changeSrc: (img, thumbnailSrc, src) => {
+                        const self = this.betterThumbnailCache;
+
+                        img.loading = "lazy";
+                        img.onerror = function () {
+                            self.imgReload(this, thumbnailSrc, 10);
+                        };
+
+                        img.src = src;
                     }
                 }
             }
@@ -1318,7 +1329,7 @@
                     );
                 }, { capture: true, mark: "NewTabOpens" });
             },
-            async QuickPostToggle(Config) { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
+            async QuickPostToggle(_) { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
                 if (!DLL.IsNeko || Lib.body.$hAttr("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
@@ -1738,25 +1749,72 @@
                         `, "CardZoom_Effects", false);
                 }
             },
-            async OriginalCard(Config) { /* 帖子預覽卡 -> 原始圖片 */
-                Lib.waitEl(".post-card__image", null, { all: true, timeoutResult: true }).then(image => {
-                    const func = loadFunc.originalCardRequ();
+            async BetterThumbnail(_) { /* 變更預覽卡縮圖 */
+                Lib.waitEl([".post-card", ".post-card__image"], null, { all: true })
+                    .then(([cards, images]) => {
+                        const func = loadFunc.betterThumbnailRequ();
 
-                    if (DLL.IsNeko) {
-                        image.forEach(img => {
-                            const src = img.src;
-                            if (src) {
-                                img.loading = "lazy";
-                                img.onerror = function () {
-                                    func.imgReload(this, src, 10);
-                                };
-                                img.src = src.replace("thumbnail/", "");
-                            }
-                        })
-                    } else {
-                        // console.log(Url);
-                    }
-                })
+                        if (DLL.IsNeko) {
+                            images.forEach(img => {
+                                const src = img.src;
+                                if (!src?.endsWith(".gif")) { // gif 太大
+                                    func.changeSrc(img, src, src.replace("thumbnail/", ""));
+                                }
+                            })
+                        } else {
+                            const uri = new URL(Url);
+
+                            if (uri.searchParams.get("q") === "") {
+                                uri.searchParams.delete("q");
+                            };
+
+                            // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
+                            const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
+                            fetch(api, { "Accept": "text/css" })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error(`Fetch failed url: ${response.url}, status: ${response.status}`)
+                                    }
+                                    return response.json();
+
+                                })
+                                .then(data => {
+                                    const type = Lib.$type(data);
+
+                                    if (type === "Object") {
+                                        data = data?.posts ?? [];
+                                    };
+
+                                    let basicUri = images[0].src.split("data/")[0];
+                                    basicUri += "data";
+
+                                    const cardIndex = cards.reduce((acc, card, idx) => {
+                                        acc[card.$gAttr("data-id")] = idx;
+                                        return acc;
+                                    }, {});
+
+                                    for (const obj of data) {
+                                        const img = images[cardIndex[obj.id]]; // 快速定位到對應的預覽卡
+                                        const src = img?.src;
+
+                                        if (!src) continue; // 沒有的話就跳過
+                                        for (const attach of obj.attachments ?? []) {
+                                            const path = attach.path;
+                                            if (!path) continue;
+
+                                            const isImg = func.supportImg.has(path.split(".")[1]);
+                                            if (!isImg) continue;
+
+                                            func.changeSrc(img, src, basicUri + path);
+                                            break;
+                                        }
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error(error);
+                                });
+                        }
+                    })
             }
         }
     };
@@ -1872,7 +1930,7 @@
         }
 
         return {
-            async LinkBeautify(Config) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
+            async LinkBeautify(_) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
                 Lib.addStyle(`
                     View {
                         top: -10px;
@@ -2302,7 +2360,7 @@
                     }
                 });
             },
-            async ExtraButton(Config) { /* 下方額外擴充按鈕 */
+            async ExtraButton(_) { /* 下方額外擴充按鈕 */
                 DLL.Style.PostExtra(); // 導入需求樣式
                 const GetNextPage = loadFunc.extraButtonRequ();
                 Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
@@ -2359,7 +2417,7 @@
 
                 });
             },
-            async CommentFormat(Config) { /* 評論區 重新排版 */
+            async CommentFormat(_) { /* 評論區 重新排版 */
                 Lib.addStyle(`
                     .post__comments,
                     .scrape__comments {
