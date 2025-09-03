@@ -1043,13 +1043,13 @@
 
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
-                        func.jumpTrigger(body);
 
                         let [article, content] = [
                             body.$q("article"),
                             body.$q(".post__content, .scrape__content")
                         ];
 
+                        func.jumpTrigger(content);
                         if (article) {
                             let span;
                             for (span of article.$qa("span.choice-text")) {
