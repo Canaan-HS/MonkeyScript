@@ -21,8 +21,8 @@
 // @grant        GM_addValueChangeListener
 // @grant        GM_removeValueChangeListener
 
-// @require      https://cdn.jsdelivr.net/npm/qmsg@1.3.1/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1647211/SyntaxLite_min.js
+// @require      https://cdn.jsdelivr.net/npm/qmsg@1.4.0/dist/index.umd.min.js
+// @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
@@ -42,60 +42,56 @@
             Method: "POST", // 請求方法
             API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481", // 簽到 API
             Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
-            verifyStatus: (Name, { retcode }) => { // 驗證邏輯 Name: 任務名, { 要解構物件的值 }
-                retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed
+            verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
             Name: "HonkaiStarRail",
             API: "https://sg-public-api.hoyolab.com/event/luna/os/sign?act_id=e202303301540311",
             Page: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
-            verifyStatus: (Name, { retcode }) => {
-                retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
             Name: "HonkaiImpact3rd",
             API: "https://sg-public-api.hoyolab.com/event/mani/sign?act_id=e202110291205111",
             Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
-            verifyStatus: (Name, { retcode }) => {
-                retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         // {
         //     Name: "ZenlessZoneZero",
         //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
         //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-        //     verifyStatus: (Name, { retcode }) => {
-        //         retcode === 0 ? Qmsg.success(`${Name} 簽到成功`) : retcode === -5003 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-        //     }
+        //     verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         // },
         {
             Name: "LeveCheckIn",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/",
-            verifyStatus: (Name, { code }) => {
-                code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            verifyStatus: ({ code }) => code === 0 ? 0 : code === 1001009 ? 1 : 2
         },
         {
             Name: "LeveStageCheckIn",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
-            verifyStatus: (Name, { code }) => {
-                code === 0 ? Qmsg.success(`${Name} 簽到成功`) : code === 1001009 || code === 1002007 ? Qmsg.info(`${Name} 已經簽到`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            verifyStatus: ({ code }) => code === 0 ? 0 : code === 1001009 || code === 1002007 ? 1 : 2
         },
         {
             Name: "Android 台灣中文網",
             Method: "GET",
             API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=250db20b&zjtesttimes=1756224218&inajax=1&ajaxtarget=my_amupper",
             Page: "https://apk.tw/forum.php",
-            verifyStatus: (Name, Response) => {
-                Response?.includes("wb.gif") ? Qmsg.success(`${Name} 簽到成功`) : Qmsg.error(`${Name} 簽到失敗`)
-            }
+            verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
         }
     ];
+
+    const showStatus = {
+        0: (name) => Qmsg.success(`${name} 簽到成功`),
+        1: (name) => Qmsg.info(`${name} 已經簽到`),
+        2: (name) => {
+            Qmsg.error(`${name} 簽到失敗`);
+            Lib.delV(`${name}-CheckIn`); // 刪除簽到成功標籤
+        }
+    };
 
     // 建立簽到請求
     function createRequest({ Name, Method = "POST", API, verifyStatus }) {
@@ -111,38 +107,42 @@
 
         return {
             send: () => {
-                let CheckIn = undefined;
+                let checkIn = undefined;
 
                 try {
-                    CheckIn = Qmsg.loading(`${Name} 簽到中`);
+                    checkIn = Qmsg.loading(`${Name} 簽到中`);
                 } catch (error) { }
 
                 GM_xmlhttpRequest({
                     method: Method,
                     url: API,
                     onload: (response) => {
-                        CheckIn?.close();
+                        checkIn?.close();
 
                         if (response.status !== 200) {
-                            Qmsg.error(`${Name} 簽到失敗`);
+                            showStatus[2](Name);
                             return;
                         }
 
+                        let status = undefined;
+
                         try {
-                            verifyStatus(Name, deBug(JSON.parse(response.response)));
+                            status = verifyStatus(deBug(JSON.parse(response.response)));
                         } catch {
-                            verifyStatus(Name, deBug(response.response));
+                            status = verifyStatus(deBug(response.response));
                         }
+
+                        showStatus[status](Name);
                     },
                     onerror: (response) => {
-                        CheckIn?.close();
+                        checkIn?.close();
 
                         try {
                             deBug(JSON.parse(response.response));
                         } catch {
                             deBug(response.response);
                         } finally {
-                            Qmsg.error(`${Name} 簽到失敗`);
+                            showStatus[2](Name);
                         }
                     }
                 })
@@ -242,6 +242,8 @@
         function taskQuery(newDate = new Date()) {
             /*
                 ! 未實現
+
+                Todo (優先): 開啟新網頁時轉移輪詢頁面, 但如果突然關閉, 應該重新註冊先前頁面 
 
                 Todo: 將 RecordTime 紀錄移除, 保留 CheckInTime
                 Todo: 將 CheckInTime 的格式改成 {CheckInTime: {"時間戳": ["任務"], "時間戳2": ["任務2"]}}, 可自訂個別任務時間
