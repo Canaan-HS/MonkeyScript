@@ -319,7 +319,7 @@
                     window.close();
 
                     /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
-                } else if (true || Diff >= Self.JudgmentInterval && Progress == Record) {
+                } else if (Diff >= Self.JudgmentInterval && Progress == Record) {
                     Self.RestartLive && Restart.ran(MaxElement); // 已最大進度對象, 進行直播重啟
                     Detec.storage("Record", [Progress, Detec.getTime()]);
 
