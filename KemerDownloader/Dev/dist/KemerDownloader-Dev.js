@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.08.31-Beta
+// @version      2025.09.03-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1647210/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1653920/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -77,121 +77,9 @@
     };
     const Process2 = {
       IsNeko: Lib2.$domain.startsWith("nekohouse"),
-      ImageExts: [
-        "jpg",
-        "jpeg",
-        "png",
-        "gif",
-        "bmp",
-        "webp",
-        "tiff",
-        "tif",
-        "svg",
-        "heic",
-        "heif",
-        "raw",
-        "ico",
-        "avif",
-        "jxl",
-        "cr2",
-        "nef",
-        "arw",
-        "orf",
-        "rw2",
-        "tga",
-        "pcx",
-        "crw",
-        "cr2",
-        "cr3",
-        "dng",
-        "eps",
-        "xcf",
-        "ai",
-        "psd",
-        "psb",
-        "pef",
-        "nrw",
-        "ptx",
-        "srf",
-        "sr2",
-        "raf",
-        "rwl",
-        "3fr",
-        "fff",
-        "iiq",
-        "x3f",
-        "ari",
-        "bay",
-        "dcr",
-        "kdc",
-        "mef",
-        "mos",
-        "dng",
-        "usdz",
-        "jxr",
-        "cdr",
-        "wmf",
-        "emf",
-        "dxf",
-        "svgz",
-        "obj",
-        "fbx",
-        "stl",
-        "gltf",
-        "glb",
-        "gltf",
-        "glb",
-        "dae",
-        "blend",
-        "max",
-        "c4d",
-        "step",
-        "stp",
-        "iges"
+      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"
       ],
-      VideoExts: [
-        "mp4",
-        "avi",
-        "mkv",
-        "mov",
-        "flv",
-        "wmv",
-        "webm",
-        "mpg",
-        "mpeg",
-        "m4v",
-        "ogv",
-        "3gp",
-        "asf",
-        "ts",
-        "vob",
-        "rm",
-        "rmvb",
-        "m2ts",
-        "f4v",
-        "mts",
-        "mpe",
-        "mpv",
-        "m2v",
-        "m4a",
-        "bdmv",
-        "ifo",
-        "r3d",
-        "braw",
-        "cine",
-        "qt",
-        "f4p",
-        "swf",
-        "mng",
-        "gifv",
-        "yuv",
-        "roq",
-        "nsv",
-        "amv",
-        "svi",
-        "mod",
-        "mxf",
-        "ogg"
+      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"
       ],
       Lock: false,
       dynamicParam: Lib2.createNnetworkObserver({
@@ -452,8 +340,9 @@
         this.pathname = this.URL.pathname;
         this.isPost = this.URL.pathname !== "/posts";
         this.queryValue = this.URL.search;
-        if (this.queryValue === "") {
+        if (this.URL.searchParams.get("q") === "") {
           this.URL.searchParams.delete("q");
+          this.queryValue = this.URL.search;
           this.sourceURL = this.URL.href;
         }
         this.currentPage = 1;
@@ -864,12 +753,11 @@
           return;
         }
         Process2.Lock = true;
-        const parseInfo = (url) => {
-          url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
-          url = url.splice(1).map((url2) => url2.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
-          return url.length >= 3 ? [url[0], url[2]] : url;
+        const parseInfo = (uri) => {
+          uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
+          return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
         };
-        const [service, user] = parseInfo(this.sourceURL);
+        const { service, user } = parseInfo(this.sourceURL);
         const pack = {
           id,
           user,
@@ -988,7 +876,7 @@
           let homeJson = JSON.parse(content);
           if (homeJson) {
             if (this.metaDict.size === 0) {
-              let profile = { name: "Unknown" };
+              let profile = { name: null };
               if (this.isPost) {
                 this.worker.postMessage({ url: this.profileAPI });
                 profile = await new Promise((resolve, reject) => {
@@ -1207,7 +1095,7 @@
             fillName
           ] = Object.keys(FileName2).slice(1).map((key) => this._nameAnalysis(FileName2[key]));
           const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
-          const extrasData = Lib2.$qa(".post__attachment a:not(.fancy-link), .scrape__attachments a");
+          const extrasData = Lib2.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
           const finalData = General2.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
           for (const [index, file] of finalData.entries()) {
             const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
@@ -1412,7 +1300,7 @@
       this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
       this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
     }
-    async ButtonCreation() {
+    async _buttonCreation() {
       Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
         if (Files.length === 0) return;
         Lib.addStyle(`
@@ -1510,7 +1398,7 @@
         }
       });
     }
-    async OpenAllPages() {
+    async _openAllPages() {
       const card = Lib.$qa("article.post-card a");
       if (card.length == 0) {
         throw new Error("No links found");
@@ -1526,21 +1414,21 @@
         await Lib.sleep(General.BatchOpenDelay);
       }
     }
-    async DownloadModeSwitch() {
+    async _downloadModeSwitch() {
       Lib.local("Compression", { error: true }) ? Lib.local("Compression", { value: false }) : Lib.local("Compression", { value: true });
-      this.ButtonCreation();
+      this._buttonCreation();
     }
-    async Init() {
+    async init() {
       let FetchData;
       const self = this;
       GM_info.downloadMode = "browser";
       GM_info.isIncognito = true;
       registerMenu(Lib.$url);
-      self.Content(Lib.$url) && self.ButtonCreation();
+      self.Content(Lib.$url) && self._buttonCreation();
       async function registerMenu(Page) {
         if (self.Content(Page)) {
           Lib.regMenu({
-            [Transl("🔁 切換下載模式")]: { func: () => self.DownloadModeSwitch(), close: false, hotkey: "c" }
+            [Transl("🔁 切換下載模式")]: { func: () => self._downloadModeSwitch(), close: false, hotkey: "c" }
           }, { reset: true });
         } else if (self.Preview(Page)) {
           FetchData ??= Fetch(
@@ -1559,7 +1447,7 @@
                 Instantiate.fetchRun();
               }
             },
-            [Transl("📃 開啟當前頁面帖子")]: self.OpenAllPages
+            [Transl("📃 開啟當前頁面帖子")]: self._openAllPages
           }, { reset: true });
           if (General.Dev && !Process.IsNeko) {
             Lib.regMenu({
@@ -1575,10 +1463,10 @@
         }
       }
       Lib.onUrlChange((change) => {
-        self.Content(change.url) && self.ButtonCreation();
+        self.Content(change.url) && self._buttonCreation();
         registerMenu(change.url);
       });
     }
-  }().Init();
+  }().init();
 
 })();
