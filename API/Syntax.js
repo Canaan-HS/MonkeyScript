@@ -934,97 +934,85 @@ const Lib = (() => {
         let worker = workerCreate(`
             importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
             onmessage = function(e) {
-                const { files, level } = e.data;
-                try {
-                    const zipped = fflate.zipSync(files, { level });
-                    postMessage({ data: zipped }, [zipped.buffer]);
-                } catch (err) {
-                    postMessage({ error: err.message });
-                }
+                const { filesWithOptions } = e.data;
+                const fileNames = Object.keys(filesWithOptions);
+
+                let totalSize = 0;
+                let processedSize = 0;
+
+                // 計算總大小以用於進度回報
+                fileNames.forEach(name => {
+                    totalSize += filesWithOptions[name].data.length;
+                });
+
+                const chunks = [];
+                const zip = new fflate.Zip((err, data, final) => {
+                    if (err) {
+                        postMessage({ type: "error", error: err.message });
+                        return;
+                    }
+
+                    chunks.push(data);
+                    
+                    if (final) {
+                        let size = 0;
+                        let offset = 0;
+
+                        chunks.forEach(c => size += c.length);
+                        const zipped = new Uint8Array(size);
+                        chunks.forEach(c => {
+                            zipped.set(c, offset);
+                            offset += c.length;
+                        });
+
+                        // 將最終結果傳回
+                        postMessage({ type: "done", data: zipped }, [zipped.buffer]);
+                    }
+                });
+
+                (async () => {
+                    for (const name of fileNames) {
+                        const { data, level } = filesWithOptions[name];
+
+                        const fileStream = new fflate.ZipPassThrough(name, { level });
+                        zip.add(fileStream);
+                        fileStream.push(data, true); // true 表示這是此文件的最後一塊數據
+
+                        // 每處理完一個文件，更新進度並向主線程報告
+                        processedSize += data.length;
+                        postMessage({ type: "progress", loaded: processedSize, total: totalSize });
+                    }
+
+                    // 所有文件都已添加，結束壓縮流
+                    zip.end();
+                })().catch(err => {
+                    postMessage({ type: "error", error: err.message });
+                });
             }
         `);
 
         let files = {};
         let tasks = [];
 
-        // 預估壓縮時間
-        function estimateCompression() {
-            const IO_THRESHOLD = 50 * 1024 * 1024; // 50MB，IO密集型任務的閾值
-            const UNCOMPRESSIBLE_EXTENSIONS = new Set([
-                // 影片 (大多數視頻編碼已經是高度壓縮)
-                '.mp4', '.mov', '.avi', '.mkv', '.flv', '.wmv', '.webm',
-                '.mpg', '.mpeg', '.m4v', '.ogv', '.3gp', '.asf', '.ts',
-                '.vob', '.rm', '.rmvb', '.m2ts', '.f4v', '.mts',
+        const Uncompresslble = new Set([
+            // 影片 (大多數視頻編碼已經是高度壓縮)
+            'mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm',
+            'mpg', 'mpeg', 'm4v', 'ogv', '3gp', 'asf', 'ts',
+            'vob', 'rm', 'rmvb', 'm2ts', 'f4v', 'mts',
 
-                // 壓縮包（不會再壓縮）
-                '.zip', '.rar', '.7z', '.gz', '.bz2',
+            // 壓縮包（不會再壓縮）
+            'zip', 'rar', '7z', 'gz', 'bz2',
 
-                // 影像（JPEG、PNG 已壓縮格式）
-                '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg',
-                '.heic', '.heif', '.raw', '.ico', '.psd',
+            // 影像（JPEG、PNG 已壓縮格式）
+            '.pg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg',
+            '.eic', 'heif', 'raw', 'ico', 'psd',
 
-                // 音訊（幾乎不會再壓縮）
-                '.mp3', '.aac', '.flac', '.wav', '.ogg',
+            // 音訊（幾乎不會再壓縮）
+            'mp3', 'aac', 'flac', 'wav', 'ogg',
 
-                // 文件（PDF 有內建壓縮，有時無效）
-                '.pdf',
-            ]);
-
-
-            // 為不同任務類型設定不同的基礎速度
-            const IO_BYTES_PER_SECOND = 100 * 1024 * 1024; // 假設為 100MB/s 的內存吞吐率
-            const CPU_BYTES_PER_SECOND = 25 * 1024 * 1024; // 假設為 25MB/s 的基礎壓縮速度
-
-            let totalEstimatedTime = 0;
-            let totalSize = 0;
-
-            Object.entries(files).forEach(([name, file]) => {
-                const fileSize = file.length;
-                totalSize += fileSize;
-                const extension = ('.' + name.split('.').pop()).toLowerCase();
-
-                // 判斷任務類型
-                if (fileSize > IO_THRESHOLD && UNCOMPRESSIBLE_EXTENSIONS.has(extension)) {
-                    // I/O 密集型任務
-                    totalEstimatedTime += fileSize / IO_BYTES_PER_SECOND;
-                } else {
-                    // CPU 密集型任務
-                    let cpuTime = fileSize / CPU_BYTES_PER_SECOND;
-
-                    // 對於 CPU 任務，可以保留一些基於大小的微調
-                    const fileSizeMB = fileSize / (1024 * 1024);
-                    if (fileSizeMB > 10) {
-                        cpuTime *= (1 + Math.log10(fileSizeMB / 10) * 0.1);
-                    }
-                    totalEstimatedTime += cpuTime;
-                }
-            });
-
-            // 檔案數量的影響 (少量檔案的固定開銷)
-            const fileCount = Object.keys(files).length;
-            if (fileCount > 1) {
-                totalEstimatedTime += fileCount * 0.01; // 為每個額外檔案增加 10ms 的基礎開銷
-            }
-
-            // 總大小的影響 (輕微)
-            const totalSizeMB = totalSize / (1024 * 1024);
-            if (totalSizeMB > 100) {
-                totalEstimatedTime *= (1 + Math.log10(totalSizeMB / 100) * 0.05);
-            }
-
-            // 進度條視覺平滑化 (這部分不影響總時長預測，純粹是UI體驗)
-            const calculateCurveParameter = (totalSizeMB) => {
-                if (totalSizeMB < 50) return 5;
-                if (totalSizeMB < 500) return 4;
-                return 3;
-            };
-            const curveParameter = calculateCurveParameter(totalSizeMB);
-
-            return {
-                estimatedInMs: totalEstimatedTime * 1000,
-                progressCurve: (ratio) => 100 * (1 - Math.exp(-curveParameter * ratio)) / (1 - Math.exp(-curveParameter))
-            };
-        };
+            // 文件（PDF 有內建壓縮，有時無效）
+            'pdf',
+        ]);
 
         return {
             // 清除 worker
@@ -1051,43 +1039,40 @@ const Lib = (() => {
             async generateZip(options = {}, progressCallback) {
                 await Promise.all(tasks); // 等待所有檔案加入
 
-                const startTime = performance.now();
-
-                const updateInterval = 30; // 更新頻率
-                const estimationData = estimateCompression();
-                const totalTime = estimationData.estimatedInMs;
-
-                // 假進度模擬, 檔案越大誤差越大
-                const progressInterval = setInterval(() => {
-                    const elapsedTime = performance.now() - startTime;
-                    const ratio = Math.min(elapsedTime / totalTime, 0.99); // 限制在99%以內
-                    const fakeProgress = estimationData.progressCurve(ratio);
-
-                    if (progressCallback) progressCallback(fakeProgress);
-
-                    if (ratio >= 0.99) {
-                        clearInterval(progressInterval);
-                    }
-                }, updateInterval);
-
                 return new Promise((resolve, reject) => {
                     if (Object.keys(files).length === 0) return reject("Empty Data Error");
 
-                    worker.postMessage({
-                        files,
-                        level: options.level || 5
-                    }, Object.values(files).map(buf => buf.buffer));
+                    // 準備壓縮的數據，包含每個文件的壓縮等級
+                    const filesWithOptions = {};
+                    Object.entries(files).forEach(([name, data]) => {
+                        const extension = (name.split(".").pop()).toLowerCase();
+                        const level = Uncompresslble.has(extension)
+                            ? 0 : (options.level || 5);
+                        filesWithOptions[name] = { data, level };
+                    });
+
+                    worker.postMessage(
+                        { filesWithOptions },
+                        Object.values(filesWithOptions).map(f => f.data.buffer)
+                    );
 
                     worker.onmessage = (e) => {
-                        clearInterval(progressInterval);
+                        const msg = e.data;
 
-                        if (progressCallback) progressCallback(100);
+                        if (msg.type === "progress") {
+                            progressCallback?.((msg.loaded / msg.total) * 100);
+                        } else if (msg.type === "done") {
+                            progressCallback?.(100);
+                            files = {};
+                            tasks = [];
 
-                        files = {};
-                        tasks = [];
+                            resolve(new Blob([msg.data], { type: "application/zip" }));
+                        } else if (msg.type === "error") {
+                            files = {};
+                            tasks = [];
 
-                        const { error, data } = e.data;
-                        error ? reject(error) : resolve(new Blob([data], { type: "application/zip" }));
+                            reject(msg.error);
+                        }
                     }
                 });
             },
