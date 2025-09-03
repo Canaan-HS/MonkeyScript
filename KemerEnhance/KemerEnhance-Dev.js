@@ -274,7 +274,6 @@
             async Postview() { // 觀看帖子頁所需
                 // 讀取圖像設置
                 const set = UserSet.ImgSet();
-                const width = Lib.iW / 2;
                 Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -291,8 +290,7 @@
                     .Image-loading-indicator {
                         min-width: 50vW;
                         min-height: 50vh;
-                        max-width: ${width}px;
-                        max-height: ${width * 9 / 16}px;
+                        object-fit: contain;
                         border: 1px solid #fafafa;
                     }
                     .Image-loading-indicator-experiment {
@@ -908,7 +906,7 @@
                     .global-sidebar:hover {opacity: 1; transform: translateX(0rem);}
                     .content-wrapper.shifted {transition: 0.7s; margin-left: 0rem;}
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
-                `, "Collapse_Effects", false);
+                `, "Collapse-Effects", false);
             },
             async DeleteNotice() { /* 刪除公告通知 */
                 Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 5 }).then(announcement => announcement.remove());
@@ -1265,21 +1263,27 @@
                 return this.betterThumbnailCache ??= {
                     supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
                     imgReload: (img, thumbnailSrc, retry) => {
-                        if (retry > 0) {
-                            const src = img.src;
-                            img.src = "";
-                            img.src = src;
-                            img.onerror = () => {
-                                img.src = thumbnailSrc;
-
-                                const self = this.betterThumbnailCache;
-                                setTimeout(() => {
-                                    self?.imgReload(img, thumbnailSrc, --retry);
-                                }, 2e3)
-                            };
-                        } else {
+                        if (retry <= 0) {
                             img.src = thumbnailSrc;
-                        }
+                            return;
+                        };
+  
+                        const src = img.src;
+                        img.onload = null;
+                        img.onerror = null;
+
+                        img.src = "";
+                        img.onerror = function () {
+                            img.onload = img.onerror = null;
+                            img.src = thumbnailSrc;
+
+                            const self = this.betterThumbnailCache;
+                            setTimeout(() => {
+                                self?.imgReload(img, thumbnailSrc, --retry);
+                            }, 2e3);
+                        };
+
+                        img.src = src;
                     },
                     changeSrc: (img, thumbnailSrc, src) => {
                         const self = this.betterThumbnailCache;
@@ -1664,7 +1668,7 @@
                             a:hover .post-card__footer {
                                 opacity: 1 !important;
                             }
-                        `, "CardText_Effects_2", false);
+                        `, "CardText-Effects-2", false);
                         break;
                     default:
                         Lib.addStyle(`
@@ -1690,7 +1694,7 @@
                                 pointer-events: auto;
                                 transform: translateY(0);
                             }
-                        `, "CardText_Effects", false);
+                        `, "CardText-Effects", false);
                 }
             },
             async CardZoom({ mode }) { /* 帖子預覽卡縮放效果 */
@@ -1714,13 +1718,13 @@
                             .post-card a:hover .post-card__image-container {
                                 position: relative;
                             }
-                        `, "CardZoom_Effects_2", false);
+                        `, "CardZoom-Effects-2", false);
                         break;
                     case 3:
                         Lib.addStyle(`
                             .card-list--legacy { padding-bottom: calc(10vh + 1.5em) }
                             .card-list--legacy .card-list__items {
-                                row-gap: 5.6em;
+                                row-gap: 5.8em;
                                 column-gap: 2em;
                             }
                             .post-card a {
@@ -1728,7 +1732,7 @@
                                 height: 50vh;
                             }
                             .post-card__image-container img { object-fit: contain }
-                        `, "CardZoom_Effects_3", false);
+                        `, "CardZoom-Effects-3", false);
                 };
 
                 Lib.addStyle(`
@@ -1744,7 +1748,7 @@
                         border: 3px solid #fff6;
                         transition: transform 0.3s ease, box-shadow 0.3s ease;
                     }
-                `, "CardZoom_Effects", false);
+                `, "CardZoom-Effects", false);
             },
             async BetterThumbnail() { /* 變更預覽卡縮圖 */
                 Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
@@ -1955,7 +1959,7 @@
                     }
                     a:hover View { display: block }
                     .post__attachment-link:not([beautify]) { display: none !important; }
-                `, "Link_Effects", false);
+                `, "Link-Effects", false);
 
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                     const showBrowse = loadFunc.linkBeautifyRequ();
@@ -2007,7 +2011,7 @@
                                     width: 65% !important;
                                     border-radius: 8px !important;
                                 }
-                            `, "Video_Effects", false);
+                            `, "Video-Effects", false);
 
                             const move = mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
@@ -2063,23 +2067,32 @@
 
                     // 載入原圖 (死圖重試)
                     function imgReload(img, oldSrc, retry) {
-                        if (retry > 0) {
-                            const src = img?.src;
-                            if (!src) return;
-
-                            img.src = "";
-                            Object.assign(img, { src, alt: "Loading Failed" });
-                            img.onload = function () { img.$delClass("Image-loading-indicator") };
-                            img.onerror = function () {
-                                img.src = oldSrc;
-
-                                setTimeout(() => {
-                                    imgReload(img, oldSrc, --retry);
-                                }, 2e3)
-                            };
-                        } else {
+                        if (retry <= 0) {
                             img.src = oldSrc;
-                        }
+                            return;
+                        };
+
+                        const src = img?.src;
+                        if (!src) return;
+
+                        // 移除事件，避免循環觸發
+                        img.onload = null;
+                        img.onerror = null;
+
+                        img.src = "";
+                        img.onload = function () {
+                            img.$delClass("Image-loading-indicator");
+                        };
+                        img.onerror = function () {
+                            img.onload = img.onerror = null; // 清掉事件
+                            img.src = oldSrc;
+
+                            setTimeout(() => {
+                                imgReload(img, oldSrc, retry - 1);
+                            }, 2e3);
+                        };
+
+                        Object.assign(img, { src, alt: "Loading Failed" });
                     };
 
                     function loadFailedClick() {
@@ -2443,7 +2456,7 @@
                         word-break: break-all;
                         border: 0.125em solid var(--colour1-secondary);
                     }
-                `, "Comment_Effects", false);
+                `, "Comment-Effects", false);
             }
         }
     };
