@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.08.31-Beta
+// @version      2025.09.03-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -25,11 +25,8 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
-
 // @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -43,45 +40,43 @@
 // ==/UserScript==
 
 (async () => {
-    /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
+    /* Data type checks are removed in user configuration; providing incorrect input may cause it to break */
     const User_Config = {
         Global: {
-            BlockAds: { mode: 0, enable: true }, // 阻擋廣告
-            BackToTop: { mode: 0, enable: true }, // 翻頁後回到頂部
-            CacheFetch: { mode: 0, enable: true }, // 緩存 Fetch 請求 (僅限 JSON)
+            BlockAds: true, // 阻擋廣告
+            BackToTop: true, // 翻頁後回到頂部
+            CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
+            DeleteNotice: true, // 刪除上方公告
+            SidebarCollapse: true, // 側邊攔摺疊
             KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
-            DeleteNotice: { mode: 0, enable: true }, // 刪除上方公告
-            SidebarCollapse: { mode: 0, enable: true }, // 側邊攔摺疊
-            FixArtist: { // 修復作者名稱
-                mode: 0,
-                enable: true,
-                newtab: true, // 是否以新標籤開啟
-                newtab_active: true, // 自動切換焦點到新標籤
-                newtab_insert: true, // 新標籤插入到當前標籤的正後方
-            },
             TextToLink: { // 連結的 (文本 -> 超連結)
-                mode: 0,
+                enable: true,
+                newtab: true, // 新選項卡開啟
+                newtab_active: false, // 切換焦點到新選項卡
+                newtab_insert: true, // 選項卡插入到當前選項卡的正後方
+            },
+            FixArtist: { // 修復作者名稱
                 enable: true,
                 newtab: true,
-                newtab_active: false,
-                newtab_insert: false,
+                newtab_active: true,
+                newtab_insert: true,
             },
         },
         Preview: {
-            CardZoom: { mode: 2, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放]
+            CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放, 3 = 卡片放大 + 自動縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
+            BetterThumbnail: true, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
+            QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
-                mode: 0,
                 enable: true,
                 newtab_active: false,
                 newtab_insert: true,
             },
         },
         Content: {
-            ExtraButton: { mode: 0, enable: true }, // 額外的下方按鈕
-            LinkBeautify: { mode: 0, enable: true }, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
-            CommentFormat: { mode: 0, enable: true }, // 評論區重新排版
+            ExtraButton: true, // 額外的下方按鈕
+            LinkBeautify: true, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
+            CommentFormat: true, // 評論區重新排版
             VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點]
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
@@ -97,9 +92,9 @@
         const User = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/;
         const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
         const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
-        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/new\/?.*$/;
-        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
+        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
         const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
+        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
         const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
         const Color = {
             kemono: "#e8a17d !important",
@@ -134,7 +129,7 @@
                 element.style[property] = value;
             });
         };
-        const Style_Pointer = {
+        const stylePointer = {
             Top: value => NormalStyle(MenuRule[1], "top", value),
             Left: value => NormalStyle(MenuRule[1], "left", value),
             Width: value => ImportantStyle(ImgRule[1], "width", value),
@@ -147,6 +142,9 @@
                 Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${Color}; }
+                    .card-list__items a:not(article a) {
+                        cursor: default;
+                    }
                     .fancy-image__image, fix_name, fix_tag, fix_edit {
                         cursor: pointer;
                     }
@@ -161,19 +159,21 @@
                         font-weight: 500;
                         max-width: 320px;
                         overflow: hidden;
+                        display: block;
                         padding: .25rem .1rem;
                         border-radius: .25rem;
                         white-space: nowrap;
                         text-overflow: ellipsis;
                     }
-                    .edit_artist {
-                        position: absolute;
+                    fix_edit {
                         top: 85px;
                         right: 8%;
                         color: #fff;
                         display: none;
-                        font-size: 14px;
+                        z-index: 9999;
+                        font-size: 1.1rem;
                         font-weight: 700;
+                        position: absolute;
                         background: #666;
                         white-space: nowrap;
                         padding: .25rem .5rem;
@@ -188,14 +188,14 @@
                         line-height: 5vh;
                         text-align: center;
                     }
-                    .user-card:hover .edit_artist {
+                    .user-card:hover fix_edit {
                         display: block;
                     }
                     .user-card:hover fix_name {
                         background-color: ${Color};
                     }
                     .edit_textarea ~ fix_name,
-                    .edit_textarea ~ .edit_artist {
+                    .edit_textarea ~ fix_edit {
                         display: none !important;
                     }
 
@@ -212,7 +212,7 @@
                         border-radius: .25rem;
                         transition: background-color 0.3s ease;
                     }
-                    fix_view .edit_artist {
+                    fix_view fix_edit {
                         top: 65px;
                         right: 5%;
                         transform: translateY(-80%);
@@ -220,35 +220,49 @@
                     fix_view:hover fix_name {
                         background-color: ${Color};
                     }
-                    fix_view:hover .edit_artist {
+                    fix_view:hover fix_edit {
                         display: block;
                     }
 
                     /* 內容頁面的樣式 */
                     fix_cont {
                         display: flex;
-                        justify-content: space-around;
+                        height: 5rem;
+                        width: 15rem;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    fix_cont fix_wrapper {
+                        position: relative;
+                        display: inline-block;
+                        margin-top: 1.5rem;
                     }
                     fix_cont fix_name {
                         color: ${Color};
-                        font-size: 1.25em;
+                        font-size: 1.8rem;
                         display: inline-block;
                     }
-                    fix_cont .edit_artist {
-                        top: 200px;
-                        right: -5%;
+                    fix_cont fix_edit {
+                        top: 2.2rem;
+                        right: -4.2rem;
+                        position: absolute;
                     }
-                    fix_cont:hover fix_name {
+                    fix_cont fix_wrapper::after {
+                        content: "";
+                        position: absolute;
+                        width: 5rem;
+                        height: 100%;
+                    }
+                    fix_cont fix_wrapper:hover fix_name {
                         background-color: #fff;
                     }
-                    fix_cont:hover .edit_artist {
+                    fix_cont fix_wrapper:hover fix_edit {
                         display: block;
                     }
                 `, "Global-Effects", false);
             },
             async Postview() {
                 const set = UserSet.ImgSet();
-                const width = Lib.iW / 2;
                 Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -265,8 +279,7 @@
                     .Image-loading-indicator {
                         min-width: 50vW;
                         min-height: 50vh;
-                        max-width: ${width}px;
-                        max-height: ${width * 9 / 16}px;
+                        object-fit: contain;
                         border: 1px solid #fafafa;
                     }
                     .Image-loading-indicator-experiment {
@@ -290,10 +303,10 @@
                 Lib.storeListen(Object.values(SaveKey), call => {
                     if (call.far) {
                         if (Lib.$type(call.nv) === "String") {
-                            MenuTrigger();
+                            menuInit();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
-                                Style_Pointer[key](value);
+                                stylePointer[key](value);
                             }
                         }
                     }
@@ -430,7 +443,7 @@
             MenuRule: MenuRule,
             Color: Color,
             SaveKey: SaveKey,
-            Style_Pointer: Style_Pointer,
+            stylePointer: stylePointer,
             Link: Link,
             Posts: Posts,
             User: User,
@@ -439,58 +452,52 @@
             Content: Content,
             FavorArtist: FavorArtist,
             Announcement: Announcement,
-            Recommended: Recommended
+            Recommended: Recommended,
+            Registered: new Set()
         };
     })();
     const Enhance = (() => {
-        const Validate = (Bool, Num) => {
-            return Bool && typeof Bool === "boolean" && typeof Num === "number" ? true : false;
-        };
-        const Order = {
+        const order = {
             Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "FixArtist", "BackToTop", "KeyScroll"],
-            Preview: ["CardZoom", "CardText", "NewTabOpens", "QuickPostToggle"],
+            Preview: ["CardText", "CardZoom", "NewTabOpens", "QuickPostToggle", "BetterThumbnail"],
             Content: ["LinkBeautify", "VideoBeautify", "OriginalImage", "ExtraButton", "CommentFormat"]
         };
-        const LoadFunc = {
-            Global_Cache: undefined,
-            Preview_Cache: undefined,
-            Content_Cache: undefined,
-            Global: () => this.Global_Cache ??= Global_Function(),
-            Preview: () => this.Preview_Cache ??= Preview_Function(),
-            Content: () => this.Content_Cache ??= Content_Function()
+        const loadFunc = {
+            globalCache: undefined,
+            previewCache: undefined,
+            contentCache: undefined,
+            Global: () => this.globalCache ??= globalFunc(),
+            Preview: () => this.previewCache ??= previewFunc(),
+            Content: () => this.contentCache ??= contentFunc()
         };
-        let Ord;
-        async function Call(page, config = User_Config[page]) {
-            const func = LoadFunc[page]();
-            for (Ord of Order[page]) {
-                const {
-                    enable,
-                    mode,
-                    ...other
-                } = config[Ord] ?? {};
-                if (Validate(enable, mode)) {
-                    func[Ord]?.({
-                        mode: mode,
-                        ...other
-                    });
-                }
+        async function call(page, config = User_Config[page]) {
+            const func = loadFunc[page]();
+            for (const ord of order[page]) {
+                let userConfig = config[ord];
+                if (!userConfig) continue;
+                if (typeof userConfig !== "object") {
+                    userConfig = {
+                        enable: true
+                    };
+                } else if (!userConfig.enable) continue;
+                func[ord]?.(userConfig);
             }
         }
         return {
-            Run: async () => {
-                Call("Global");
-                if (DLL.IsAllPreview()) Call("Preview"); else if (DLL.IsContent()) {
+            async run() {
+                call("Global");
+                if (DLL.IsAllPreview()) call("Preview"); else if (DLL.IsContent()) {
                     DLL.Style.Postview();
-                    Call("Content");
-                    MenuTrigger();
+                    call("Content");
+                    menuInit();
                 }
             }
         };
     })();
-    Enhance.Run();
+    Enhance.run();
     const waitDom = new MutationObserver(() => {
         waitDom.disconnect();
-        Enhance.Run();
+        Enhance.run();
     });
     Lib.onUrlChange(change => {
         Url = change.url;
@@ -502,11 +509,15 @@
         });
         Lib.body.$sAttr("Enhance", true);
     });
-    function Global_Function() {
-        const LoadFunc = {
-            TextToLink_Cache: undefined,
-            TextToLink_Dependent: function (Config) {
-                return this.TextToLink_Cache ??= {
+    function globalFunc() {
+        const loadFunc = {
+            textToLinkCache: undefined,
+            textToLinkRequ({
+                newtab,
+                newtab_active,
+                newtab_insert
+            }) {
+                return this.textToLinkCache ??= {
                     exclusionRegex: /onfanbokkusuokibalab\.net/,
                     urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
                     exclusionTags: new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL", "METER", "PROGRESS", "OUTPUT", "TEXTAREA", "SELECT", "OPTION", "DATALIST", "FIELDSET", "LEGEND", "MAP", "AREA"]),
@@ -515,7 +526,7 @@
                         return this.urlRegex.test(str);
                     },
                     getTextNodes(root) {
-                        const nodes = [];
+                        const nodes = new Set();
                         const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                             acceptNode: node => {
                                 const parentElement = node.parentElement;
@@ -526,9 +537,54 @@
                             }
                         });
                         while (tree.nextNode()) {
-                            nodes.push(tree.currentNode.parentElement);
+                            nodes.add(tree.currentNode.parentElement);
                         }
-                        return nodes;
+                        return [...nodes];
+                    },
+                    searchPassword(href, text) {
+                        let state = false;
+                        if (!text) return {
+                            state: state,
+                            href: href
+                        };
+                        const lowerText = text.toLowerCase();
+                        if (text.startsWith("#")) {
+                            state = true;
+                            href += text;
+                        } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
+                            state = true;
+                            href += "#" + text;
+                        } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+                            const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+                            if (key) {
+                                state = true;
+                                href += "#" + key;
+                            }
+                        }
+                        return {
+                            state: state,
+                            href: href.match(this.urlRegex)?.[0] ?? href
+                        };
+                    },
+                    getMegaPass(node, href) {
+                        let state;
+                        const nextNode = node.nextSibling;
+                        if (nextNode) {
+                            if (nextNode.nodeType === Node.TEXT_NODE) {
+                                ({
+                                    state,
+                                    href
+                                } = this.searchPassword(href, nextNode.$text()));
+                                if (state) nextNode.remove();
+                            } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                                ({
+                                    state,
+                                    href
+                                } = this.searchPassword(href, nodeText));
+                            }
+                        }
+                        return href;
                     },
                     protocolParse(url) {
                         if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
@@ -537,20 +593,21 @@
                         return url;
                     },
                     async parseModify(father, content) {
+                        const basicHref = father?.href || "";
                         father.$iHtml(content.replace(this.urlRegex, url => {
                             const decode = decodeURIComponent(url).trim();
-                            return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                            return basicHref === decode ? father : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                         }));
                     },
                     async jumpTrigger(root) {
-                        const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                        const [active, insert] = [newtab_active, newtab_insert];
                         Lib.onEvent(root, "click", event => {
                             const target = event.target.closest("a:not(.fileThumb)");
                             if (!target || target.$hAttr("download")) return;
                             event.preventDefault();
-                            !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
-                                active: Active,
-                                insert: Insert
+                            !newtab ? location.assign(target.href) : GM_openInTab(target.href, {
+                                active: active,
+                                insert: insert
                             });
                         }, {
                             capture: true
@@ -559,7 +616,7 @@
                 };
             },
             fixArtistCache: undefined,
-            FixArtist_Dependent: function () {
+            fixArtistRequ() {
                 if (!this.fixArtistCache) {
                     const fixRequ = {
                         recordCache: undefined,
@@ -582,10 +639,15 @@
                             url = uri.href;
                             return url;
                         },
-                        parseUrlInfo(url) {
-                            url = url.match(/\/([^\/]+)\/([^\/]+)\/([^\/]+)$/) || url.match(/\/([^\/]+)\/([^\/]+)$/);
-                            url = url.splice(1).map(url => url.replace(/\/?(www\.|\.com|\.jp|\.net|\.adult|user\?u=)/g, ""));
-                            return url.length >= 3 ? [url[0], url[2]] : url;
+                        parseUrlInfo(uri) {
+                            uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
+                            return uri ? {
+                                uri: uri,
+                                server: uri[1],
+                                user: uri[2]
+                            } : {
+                                uri: uri
+                            };
                         },
                         saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1e3))(),
                         async fixRequest(url, headers = {}) {
@@ -632,8 +694,8 @@
                             oldName = newName ? newName : oldName;
                             return [oldId, oldUrl, oldName];
                         },
-                        fixNameSupport: new Set(["pixiv", "fanbox", "candfans"]),
-                        fixTagSupport: {
+                        supportFixName: new Set(["pixiv", "fanbox", "candfans"]),
+                        supportFixTag: {
                             ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
                             NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
                             Fantia: "https://fantia.jp/fanclubs/{id}/posts",
@@ -653,57 +715,66 @@
                             OnlyFans: "https://onlyfans.com/{name}",
                             Fansly: "https://fansly.com/{name}/posts"
                         },
-                        async fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, showText, appendTag) {
-                            const edit = Lib.createElement("fix_edit", {
-                                id: infoID,
-                                class: "edit_artist",
-                                text: "Edit"
-                            });
-                            nameEl.parentNode.insertBefore(edit, nameEl);
-                            nameEl.$oHtml(`<fix_name jump="${mainUrl}">${showText.trim()}</fix_name>`);
-                            const [tag_text, support_id, support_name] = [tagEl.$text(), this.fixTagSupport.ID, this.fixTagSupport.NAME];
+                        async fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) {
+                            nameEl.$sAttr("style", "display: none;");
+                            const parent = nameEl.parentNode;
+                            if (!parent.$q("fix_wrapper")) {
+                                const fix_wrapper = Lib.createElement("fix_wrapper");
+                                Lib.createElement(fix_wrapper, "fix_name", {
+                                    text: showText.trim(),
+                                    attr: {
+                                        jump: mainUrl
+                                    }
+                                });
+                                Lib.createElement(fix_wrapper, "fix_edit", {
+                                    id: user,
+                                    text: "Edit"
+                                });
+                                parent.insertBefore(fix_wrapper, nameEl);
+                            }
+                            const [tag_text, support_id, support_name] = [tagEl.$text(), this.supportFixTag.ID, this.supportFixTag.NAME];
                             if (!tag_text) return;
                             const [mark, matchId] = support_id.test(tag_text) ? ["{id}", support_id] : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
                             if (!mark) return;
                             tagEl.$iHtml(tag_text.replace(matchId, tag => {
                                 let supported = false;
-                                const supportFormat = appendTag ? (supported = this.fixTagSupport[`${tag}${appendTag}`],
-                                    supported ? (infoID = this.parseUrlInfo(otherUrl)[1],
-                                        supported) : this.fixTagSupport[tag]) : this.fixTagSupport[tag];
-                                return `<fix_tag jump="${supportFormat.replace(mark, infoID)}">${tag}</fix_tag>`;
+                                const supportFormat = appendTag ? (supported = this.supportFixTag[`${tag}${appendTag}`],
+                                    supported ? (user = this.parseUrlInfo(otherUrl).user,
+                                        supported) : this.supportFixTag[tag]) : this.supportFixTag[tag];
+                                return `<fix_tag jump="${supportFormat.replace(mark, user)}">${tag}</fix_tag>`;
                             }));
                         },
                         async fixTrigger(data) {
                             let {
                                 mainUrl,
                                 otherUrl,
-                                webSite,
-                                infoID,
+                                server,
+                                user,
                                 nameEl,
                                 tagEl,
                                 appendTag
                             } = data;
-                            let recordName = this.recordCache.get(infoID);
+                            let recordName = this.recordCache.get(user);
                             if (recordName) {
-                                if (webSite === "candfans") {
-                                    [infoID, mainUrl, recordName] = this.candfansPageAdapt(infoID, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
+                                if (server === "candfans") {
+                                    [user, mainUrl, recordName] = this.candfansPageAdapt(user, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
                                 }
-                                this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, recordName, appendTag);
+                                this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, recordName, appendTag);
                             } else {
-                                if (this.fixNameSupport.has(webSite)) {
-                                    if (webSite === "candfans") {
-                                        const [user_code, username] = await this.getCandfansName(infoID) ?? nameEl.$text();
-                                        if (user_code && username) this.fixCache.set(infoID, [user_code, username]);
-                                        [infoID, mainUrl, recordName] = this.candfansPageAdapt(infoID, user_code, mainUrl, nameEl.$text(), username);
-                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
+                                if (this.supportFixName.has(server)) {
+                                    if (server === "candfans") {
+                                        const [user_code, username] = await this.getCandfansName(user) ?? nameEl.$text();
+                                        if (user_code && username) this.fixCache.set(user, [user_code, username]);
+                                        [user, mainUrl, recordName] = this.candfansPageAdapt(user, user_code, mainUrl, nameEl.$text(), username);
+                                        this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
                                     } else {
-                                        const username = await this.getPixivName(infoID) ?? nameEl.$text();
-                                        this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, username, appendTag);
-                                        this.fixCache.set(infoID, username);
+                                        const username = await this.getPixivName(user) ?? nameEl.$text();
+                                        this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
+                                        this.fixCache.set(user, username);
                                     }
                                     this.saveWork();
                                 } else {
-                                    this.fixUpdateUi(mainUrl, otherUrl, infoID, nameEl, tagEl, nameEl.$text(), appendTag);
+                                    this.fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
                                 }
                             }
                         },
@@ -711,38 +782,41 @@
                             items.$sAttr("fix", true);
                             const url = items.href;
                             const img = items.$q("img");
-                            const [webSite, infoID] = this.parseUrlInfo(url);
+                            const {
+                                server,
+                                user
+                            } = this.parseUrlInfo(url);
                             img.$sAttr("jump", url);
-                            items.$dAttr("href");
                             this.fixTrigger({
                                 mainUrl: url,
                                 otherUrl: "",
-                                webSite: webSite,
-                                infoID: infoID,
+                                server: server,
+                                user: user,
                                 nameEl: items.$q(".user-card__name"),
                                 tagEl: items.$q(".user-card__service"),
                                 appendTag: ""
                             });
                         },
-                        async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "<fix_view>") {
+                        async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "fix_view") {
                             try {
                                 const parent = artist.parentNode;
                                 const url = mainUrl ?? parent.href;
-                                const [webSite, infoID] = this.parseUrlInfo(url);
+                                const {
+                                    server,
+                                    user
+                                } = this.parseUrlInfo(url);
                                 await this.fixTrigger({
                                     mainUrl: url,
                                     otherUrl: otherUrl,
-                                    webSite: webSite,
-                                    infoID: infoID,
+                                    server: server,
+                                    user: user,
                                     nameEl: artist,
                                     tagEl: tag,
                                     appendTag: otherUrl ? "Post" : ""
                                 });
-                                $(parent).replaceWith(function () {
-                                    return $(reTag, {
-                                        html: $(this).html()
-                                    });
-                                });
+                                parent.replaceWith(Lib.createElement(reTag, {
+                                    innerHTML: parent.$iHtml()
+                                }));
                             } catch { }
                         },
                         async dynamicFix(element) {
@@ -765,7 +839,7 @@
             }
         };
         return {
-            async SidebarCollapse(Config) {
+            async SidebarCollapse() {
                 if (Lib.platform === "Mobile") return;
                 Lib.addStyle(`
                     .global-sidebar {
@@ -783,15 +857,15 @@
                     .global-sidebar:hover {opacity: 1; transform: translateX(0rem);}
                     .content-wrapper.shifted {transition: 0.7s; margin-left: 0rem;}
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
-                `, "Collapse_Effects", false);
+                `, "Collapse-Effects", false);
             },
-            async DeleteNotice(Config) {
+            async DeleteNotice() {
                 Lib.waitEl("#announcement-banner", null, {
                     throttle: 50,
                     timeout: 5
                 }).then(announcement => announcement.remove());
             },
-            async BlockAds(Config) {
+            async BlockAds() {
                 if (DLL.IsNeko) return;
                 const cookieString = Lib.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
@@ -808,7 +882,7 @@
                         Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
                     }
                 }
-                if (Lib.$q("#Ad-blocking-style")) return;
+                if (DLL.Registered.has("BlockAds")) return;
                 Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style");
@@ -833,9 +907,10 @@
                         });
                     }
                 });
+                DLL.Registered.add("BlockAds");
             },
-            async CacheFetch(Config) {
-                if (DLL.IsNeko) return;
+            async CacheFetch() {
+                if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
                 Lib.addScript(`
                     const cache = new Map();
                     const originalFetch = window.fetch;
@@ -898,23 +973,31 @@
                         }
                     };
                 `, "Cache-Fetch", false);
+                DLL.Registered.add("CacheFetch");
             },
-            async TextToLink(Config) {
+            async TextToLink(config) {
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
-                const Func = LoadFunc.TextToLink_Dependent(Config);
+                const func = loadFunc.textToLinkRequ(config);
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
-                        Func.jumpTrigger(body);
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
-                            let span;
-                            for (span of article.$qa("span.choice-text")) {
-                                Func.parseModify(span, span.$text());
+                            func.jumpTrigger(content);
+                            for (const span of article.$qa("span.choice-text")) {
+                                func.parseModify(span, span.$text());
                             }
                         } else if (content) {
-                            Func.getTextNodes(content).forEach(node => {
-                                Func.parseModify(node, node.$text());
+                            func.jumpTrigger(content);
+                            func.getTextNodes(content).forEach(node => {
+                                let text = node.$text();
+                                if (text.startsWith("https://mega.nz") && !text.includes("#")) {
+                                    text = func.getMegaPass(node, text);
+                                }
+                                func.parseModify(node, text);
                             });
+                        } else {
+                            const attachments = body.$q(".post__attachments, .scrape__attachments");
+                            attachments && func.jumpTrigger(attachments);
                         }
                     });
                 } else if (DLL.IsAnnouncement()) {
@@ -922,31 +1005,38 @@
                         raf: true
                     }).then(() => {
                         const items = Lib.$q(".card-list__items");
-                        Func.jumpTrigger(items);
-                        Func.getTextNodes(items).forEach(node => {
-                            Func.parseModify(node, node.$text());
+                        func.jumpTrigger(items);
+                        func.getTextNodes(items).forEach(node => {
+                            func.parseModify(node, node.$text());
                         });
                     });
                 }
             },
-            async FixArtist(Config) {
+            async FixArtist({
+                newtab,
+                newtab_active,
+                newtab_insert
+            }) {
                 DLL.Style.Global();
-                const Func = LoadFunc.FixArtist_Dependent();
-                const [Device, Newtab, Active, Insert] = [Lib.platform, Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+                const func = loadFunc.fixArtistRequ();
+                const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
                     if (target.tagName === "TEXTAREA") {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
                     } else if (target.matches("fix_edit")) {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
-                        const display = target.nextElementSibling;
+                        Lib.$q(".edit_textarea")?.remove();
+                        const display = target.previousElementSibling;
                         const text = Lib.createElement("textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`
                         });
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.parentNode.insertBefore(text, target);
+                        display.parentNode.insertBefore(text, display);
                         text.scrollTop = 0;
                         setTimeout(() => {
                             text.focus();
@@ -955,7 +1045,7 @@
                                     const change_name = text.value.trim();
                                     if (change_name != original_name) {
                                         display.$text(change_name);
-                                        Func.saveRecord(new Map([[target.id, change_name]]));
+                                        func.saveRecord(new Map([[target.id, change_name]]));
                                     }
                                     text.remove();
                                 }, {
@@ -964,21 +1054,26 @@
                                 });
                             }, 50);
                         }, 300);
-                    } else if (target.matches("fix_name") || target.matches("fix_tag") || target.matches("img.fancy-image__image")) {
+                    } else if (newtab && (Lib.platform !== "Mobile" || DLL.IsContent()) && (target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")) || !newtab && DLL.IsContent()) {
+                        event.preventDefault();
                         event.stopImmediatePropagation();
                         const jump = target.$gAttr("jump");
                         if (!target.parentNode.matches("fix_cont") && jump) {
-                            !Newtab || DLL.IsSearch() && Device === "Mobile" ? location.assign(jump) : GM_openInTab(jump, {
-                                active: Active,
-                                insert: Insert
-                            });
+                            DLL.IsSearch() || target.matches("fix_tag") ? GM_openInTab(jump, {
+                                active: active,
+                                insert: insert
+                            }) : location.assign(jump);
                         } else if (jump) {
-                            location.assign(jump);
+                            newtab && DLL.IsContent() && target.matches("fix_name") ? GM_openInTab(jump, {
+                                active: active,
+                                insert: insert
+                            }) : location.assign(jump);
+                        } else if (target.tagName === "IMG") {
+                            location.assign(target.closest("a").href);
                         }
                     }
                 }, {
                     capture: true,
-                    passive: true,
                     mark: "FixArtist"
                 });
                 if (DLL.IsSearch()) {
@@ -988,30 +1083,28 @@
                     }).then(card_items => {
                         if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             const artist = Lib.$q("span[itemprop='name']");
-                            artist && Func.otherFix(artist);
+                            artist && func.otherFix(artist);
                         }
-                        Func.dynamicFix(card_items);
-                        Lib.createElement(card_items, "fix-trigger", {
-                            style: "display: none;"
-                        });
+                        func.dynamicFix(card_items);
+                        card_items.$sAttr("fix-trigger", true);
                     });
                 } else if (DLL.IsContent()) {
                     Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
                         raf: true,
                         timeout: 10
                     }).then(([title, artist]) => {
-                        Func.otherFix(artist, title, artist.href, Lib.url, "<fix_cont>");
+                        func.otherFix(artist, title, artist.href, Lib.url, "fix_cont");
                     });
                 } else {
                     Lib.waitEl("span[itemprop='name']", null, {
                         raf: true,
                         timeout: 3
                     }).then(artist => {
-                        Func.otherFix(artist);
+                        func.otherFix(artist);
                     });
                 }
             },
-            async BackToTop(Config) {
+            async BackToTop() {
                 Lib.onEvent(Lib.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
                 }, {
@@ -1020,8 +1113,10 @@
                     mark: "BackToTop"
                 });
             },
-            async KeyScroll(Config) {
-                if (Lib.platform === "Mobile") return;
+            async KeyScroll({
+                mode
+            }) {
+                if (Lib.platform === "Mobile" || DLL.Registered.has("KeyScroll")) return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
                     Scroll_Interval: 800
@@ -1033,7 +1128,7 @@
                 }, 600), Lib.$throttle(() => {
                     Down_scroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
                 }, 600)];
-                switch (Config.mode) {
+                switch (mode) {
                     case 2:
                         Scroll = Move => {
                             const Interval = setInterval(() => {
@@ -1089,31 +1184,71 @@
                 }, 100), {
                     capture: true
                 });
+                DLL.Registered.add("KeyScroll");
             }
         };
     }
-    function Preview_Function() {
+    function previewFunc() {
+        const loadFunc = {
+            betterThumbnailCache: undefined,
+            betterThumbnailRequ() {
+                return this.betterThumbnailCache ??= {
+                    supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
+                    imgReload: (img, thumbnailSrc, retry) => {
+                        if (retry <= 0) {
+                            img.src = thumbnailSrc;
+                            return;
+                        }
+                        const src = img.src;
+                        img.onload = null;
+                        img.onerror = null;
+                        img.src = "";
+                        img.onerror = function () {
+                            img.onload = img.onerror = null;
+                            img.src = thumbnailSrc;
+                            const self = this.betterThumbnailCache;
+                            setTimeout(() => {
+                                self?.imgReload(img, thumbnailSrc, --retry);
+                            }, 2e3);
+                        };
+                        img.src = src;
+                    },
+                    changeSrc: (img, thumbnailSrc, src) => {
+                        const self = this.betterThumbnailCache;
+                        img.loading = "lazy";
+                        img.onerror = function () {
+                            self.imgReload(this, thumbnailSrc, 10);
+                        };
+                        img.src = src;
+                    }
+                };
+            }
+        };
         return {
-            async NewTabOpens(Config) {
-                const [Newtab, Active, Insert] = [Config.newtab ?? true, Config.newtab_active ?? false, Config.newtab_insert ?? false];
+            async NewTabOpens({
+                newtab_active,
+                newtab_insert
+            }) {
+                const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
-                    target && (event.preventDefault(), !Newtab ? location.assign(target.href) : GM_openInTab(target.href, {
-                        active: Active,
-                        insert: Insert
-                    }));
+                    target && (event.preventDefault(), event.stopImmediatePropagation(),
+                        GM_openInTab(target.href, {
+                            active: active,
+                            insert: insert
+                        }));
                 }, {
                     capture: true,
                     mark: "NewTabOpens"
                 });
             },
-            async QuickPostToggle(Config) {
-                if (!DLL.IsNeko) return;
+            async QuickPostToggle() {
+                if (!DLL.IsNeko || DLL.Registered.has("QuickPostToggle")) return;
                 Lib.waitEl("menu", null, {
                     all: true,
                     timeout: 5
                 }).then(menu => {
-                    DLL.IsNeko = false;
+                    DLL.Registered.add("QuickPostToggle");
                     function Rendering({
                         href,
                         className,
@@ -1365,11 +1500,9 @@
                         try {
                             await Promise.all([fetchPage(pageLinks[targetPage - 1], abortController.signal), new Promise(resolve => {
                                 updatePagination(targetPage);
-                                requestAnimationFrame(() => {
-                                    history.pushState(null, null, pageLinks[targetPage - 1]);
-                                    resolve();
-                                });
+                                resolve();
                             })]);
+                            history.pushState(null, null, pageLinks[targetPage - 1]);
                         } catch (error) {
                             if (error.message !== "Aborted") {
                                 console.error("Page fetch failed:", error);
@@ -1384,42 +1517,11 @@
                     });
                 });
             },
-            async CardZoom(Config) {
-                switch (Config.mode) {
-                    case 2:
-                        Lib.addStyle(`
-                            .post-card a:hover {
-                                overflow: auto;
-                                z-index: 99999;
-                                background: #000;
-                                border: 1px solid #fff6;
-                                transform: scale(1.6, 1.5);
-                            }
-                            .post-card a::-webkit-scrollbar {
-                                width: 0;
-                                height: 0;
-                            }
-                            .post-card a:hover .post-card__image-container {
-                                position: relative;
-                            }
-                        `, "CardZoom_Effects_2", false);
-
-                    default:
-                        Lib.addStyle(`
-                            .post-card { margin: .3vw; }
-                            .post-card a img { border-radius: 8px; }
-                            .post-card a {
-                                border-radius: 8px;
-                                border: 3px solid #fff6;
-                                transition: transform 0.4s;
-                            }
-                            .card-list--legacy * { --card-size: 13vw; }
-                        `, "CardZoom_Effects", false);
-                }
-            },
-            async CardText(Config) {
+            async CardText({
+                mode
+            }) {
                 if (Lib.platform === "Mobile") return;
-                switch (Config.mode) {
+                switch (mode) {
                     case 2:
                         Lib.addStyle(`
                             .post-card__header, .post-card__footer {
@@ -1430,38 +1532,168 @@
                             a:hover .post-card__footer {
                                 opacity: 1 !important;
                             }
-                        `, "CardText_Effects_2", false);
+                        `, "CardText-Effects-2", false);
                         break;
 
                     default:
                         Lib.addStyle(`
-                            .post-card__header, .post-card__footer {
-                                opacity: 0 !important;
+                            .post-card__header {
+                                opacity: 0;
                                 z-index: 1;
                                 padding: 5px;
                                 pointer-events: none;
                                 transform: translateY(-6vh);
+                                transition: transform 0.4s, opacity 0.6s;
+                            }
+                            .post-card__footer {
+                                opacity: 0;
+                                z-index: 1;
+                                padding: 5px;
+                                pointer-events: none;
+                                transform: translateY(6vh);
+                                transition: transform 0.4s, opacity 0.6s;
                             }
                             a:hover .post-card__header,
                             a:hover .post-card__footer {
-                                opacity: 1 !important;
+                                opacity: 1;
                                 pointer-events: auto;
-                                transform: translateY(0vh);
-                                transition: transform 0.4s, opacity 0.6s;
+                                transform: translateY(0);
                             }
-                        `, "CardText_Effects", false);
+                        `, "CardText-Effects", false);
                 }
+            },
+            async CardZoom({
+                mode
+            }) {
+                switch (mode) {
+                    case 2:
+                        Lib.addStyle(`
+                            .post-card a:hover {
+                                z-index: 9999;
+                                overflow: auto;
+                                max-height: 90vh;
+                                min-height: 100%;
+                                height: max-content;
+                                background: #000;
+                                border: 1px solid #fff6;
+                                transform: scale(1.1) translateY(0);
+                            }
+                            .post-card a::-webkit-scrollbar {
+                                width: 0;
+                                height: 0;
+                            }
+                            .post-card a:hover .post-card__image-container {
+                                position: relative;
+                            }
+                        `, "CardZoom-Effects-2", false);
+                        break;
+
+                    case 3:
+                        const [paddingBottom, rowGap, height] = DLL.IsNeko ? ["0", "0", "57"] : ["7", "5.8", "50"];
+                        Lib.addStyle(`
+                            .card-list--legacy { padding-bottom: ${paddingBottom}em }
+                            .card-list--legacy .card-list__items {
+                                row-gap: ${rowGap}em;
+                                column-gap: 3em;
+                            }
+                            .post-card a {
+                                width: 20em;
+                                height: ${height}vh;
+                            }
+                            .post-card__image-container img { object-fit: contain }
+                        `, "CardZoom-Effects-3", false);
+                }
+                Lib.addStyle(`
+                    .card-list--legacy * {
+                        font-size: 20px !important;
+                        font-weight: 600 !important;
+                        --card-size: 350px !important;
+                    }
+                    .post-card a {
+                        background: #000;
+                        overflow: hidden;
+                        border-radius: 8px;
+                        border: 3px solid #fff6;
+                        transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    }
+                `, "CardZoom-Effects", false);
+            },
+            async BetterThumbnail() {
+                Lib.waitEl(".post-card__image", null, {
+                    raf: true,
+                    all: true,
+                    timeout: 5
+                }).then(images => {
+                    const func = loadFunc.betterThumbnailRequ();
+                    if (DLL.IsNeko) {
+                        images.forEach(img => {
+                            const src = img.src;
+                            if (!src?.endsWith(".gif")) {
+                                func.changeSrc(img, src, src.replace("thumbnail/", ""));
+                            }
+                        });
+                    } else {
+                        const uri = new URL(Url);
+                        if (uri.searchParams.get("q") === "") {
+                            uri.searchParams.delete("q");
+                        }
+                        let basicUri = null;
+                        const imgBox = images.reduce((acc, img) => {
+                            const src = img.src;
+                            if (src) {
+                                acc[src] = img;
+                                basicUri = src;
+                            }
+                            return acc;
+                        }, {});
+                        if (imgBox.length === 0) return;
+                        const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
+                        fetch(api, {
+                            headers: {
+                                Accept: "text/css"
+                            }
+                        }).then(async response => {
+                            if (!response.ok) {
+                                const text = await response.text();
+                                throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
+                            }
+                            return await response.json();
+                        }).then(data => {
+                            const type = Lib.$type(data);
+                            if (type === "Object") {
+                                data = data?.posts ?? [];
+                            }
+                            basicUri = basicUri.split("data/")[0] + "data";
+                            for (const obj of data) {
+                                const file = obj.file.path;
+                                const img = imgBox[basicUri + file];
+                                const src = img?.src;
+                                if (!src) continue;
+                                for (const attach of obj.attachments ?? []) {
+                                    const path = attach.path;
+                                    if (!path) continue;
+                                    const isImg = func.supportImg.has(path.split(".")[1]);
+                                    if (!isImg) continue;
+                                    func.changeSrc(img, src, basicUri + path);
+                                    break;
+                                }
+                            }
+                        }).catch(error => {
+                            console.error(error);
+                        });
+                    }
+                });
             }
         };
     }
-    function Content_Function() {
-        const LoadFunc = {
-            LinkBeautify_Cache: undefined,
-            LinkBeautify_Dependent() {
-                return this.LinkBeautify_Cache ??= async function showBrowse(browse) {
+    function contentFunc() {
+        const loadFunc = {
+            linkBeautifyCache: undefined,
+            linkBeautifyRequ() {
+                return this.linkBeautifyCache ??= async function showBrowse(browse) {
                     const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file");
                     browse.style.position = "relative";
-                    browse.$q(".View")?.remove();
+                    browse.$q("View")?.remove();
                     GM_xmlhttpRequest({
                         method: "GET",
                         url: url,
@@ -1473,9 +1705,7 @@
                             if (response.status !== 200) return;
                             if (DLL.IsNeko) {
                                 const main = response.responseXML.$q("main");
-                                const view = Lib.createElement("View", {
-                                    class: "View"
-                                });
+                                const view = Lib.createElement("View");
                                 const buffer = Lib.createFragment;
                                 for (const br of main.$qa("br")) {
                                     buffer.append(document.createTextNode(br.previousSibling.$text()), br);
@@ -1484,9 +1714,7 @@
                                 browse.appendChild(view);
                             } else {
                                 const responseJson = JSON.parse(response.responseText);
-                                const view = Lib.createElement("View", {
-                                    class: "View"
-                                });
+                                const view = Lib.createElement("View");
                                 const buffer = Lib.createFragment;
                                 const password = responseJson["password"];
                                 if (password) {
@@ -1505,16 +1733,16 @@
                     });
                 };
             },
-            ExtraButton_Cache: undefined,
-            ExtraButton_Dependent() {
-                return this.ExtraButton_Cache ??= async function GetNextPage(url, old_main) {
+            extraButtonCache: undefined,
+            extraButtonRequ() {
+                return this.extraButtonCache ??= async function getNextPage(url, old_main) {
                     GM_xmlhttpRequest({
                         method: "GET",
                         url: url,
                         nocache: false,
                         onload: response => {
                             if (response.status !== 200) {
-                                GetNextPage(url, old_main);
+                                getNextPage(url, old_main);
                                 return;
                             }
                             const XML = response.responseXML;
@@ -1541,16 +1769,16 @@
                             }, 300);
                         },
                         onerror: error => {
-                            GetNextPage(url, old_main);
+                            getNextPage(url, old_main);
                         }
                     });
                 };
             }
         };
         return {
-            async LinkBeautify(Config) {
+            async LinkBeautify() {
                 Lib.addStyle(`
-                    .View {
+                    View {
                         top: -10px;
                         z-index: 1;
                         padding: 10%;
@@ -1566,25 +1794,45 @@
                         border: 1px solid #737373;
                         background-color: #3b3e44;
                     }
-                    a:hover .View { display: block }
-                `, "Link_Effects", false);
+                    a:hover View { display: block }
+                    .post__attachment-link:not([beautify]) { display: none !important; }
+                `, "Link-Effects", false);
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
                     raf: true,
                     all: true,
                     timeout: 5
                 }).then(post => {
-                    const showBrowse = LoadFunc.LinkBeautify_Dependent();
+                    const showBrowse = loadFunc.linkBeautifyRequ();
                     for (const link of post) {
-                        const text = link.$text().replace("Download", "");
-                        link.$text(text);
-                        DLL.IsNeko && link.$sAttr("download", text);
+                        if (!DLL.IsNeko && link.$gAttr("beautify")) {
+                            link.remove();
+                            continue;
+                        }
+                        const text = link.$text().replace("Download ", "");
+                        if (DLL.IsNeko) {
+                            link.$text(text);
+                            link.$sAttr("download", text);
+                        } else {
+                            const newA = Lib.createElement("a", {
+                                class: link.getAttribute("class"),
+                                href: link.href,
+                                download: text,
+                                attr: {
+                                    beautify: true
+                                },
+                                text: text
+                            });
+                            link.parentNode.insertBefore(newA, link);
+                        }
                         const browse = link.nextElementSibling;
                         if (!browse) continue;
                         showBrowse(browse);
                     }
                 });
             },
-            async VideoBeautify(Config) {
+            async VideoBeautify({
+                mode
+            }) {
                 if (DLL.IsNeko) {
                     Lib.waitEl(".scrape__files video", null, {
                         raf: true,
@@ -1610,8 +1858,8 @@
                                     width: 65% !important;
                                     border-radius: 8px !important;
                                 }
-                            `, "Video_Effects", false);
-                            const move = Config.mode === 2;
+                            `, "Video-Effects", false);
+                            const move = mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
                                 return data;
@@ -1621,11 +1869,13 @@
                                     waitLoad.disconnect();
                                     let [video, summary] = [li.$q("video"), li.$q("summary")];
                                     if (!video || !summary) return;
+                                    video.$sAttr("loop", true);
                                     video.$sAttr("preload", "metadata");
                                     const link = linkBox[summary.$text()];
                                     if (!link) return;
                                     move && link.parentNode.remove();
                                     let element = link.$copy();
+                                    element.$sAttr("beautify", true);
                                     element.$text(element.$text().replace("Download", ""));
                                     summary.$text("");
                                     summary.appendChild(element);
@@ -1642,7 +1892,10 @@
                     });
                 }
             },
-            async OriginalImage(Config) {
+            async OriginalImage({
+                mode,
+                experiment
+            }) {
                 Lib.waitEl(".post__thumbnail, .scrape__thumbnail", null, {
                     raf: true,
                     all: true,
@@ -1650,24 +1903,30 @@
                 }).then(thumbnail => {
                     const LinkObj = DLL.IsNeko ? "div" : "a";
                     const hrefParse = element => element.href || element.$gAttr("href");
-                    function imgReload(img, retry) {
-                        if (retry > 0) {
-                            const src = img?.src;
-                            if (!src) return;
-                            img.src = "";
-                            Object.assign(img, {
-                                src: src,
-                                alt: "Loading Failed"
-                            });
-                            img.onload = function () {
-                                img.$delClass("Image-loading-indicator");
-                            };
-                            img.onerror = function () {
-                                setTimeout(() => {
-                                    imgReload(img, --retry);
-                                }, 3e3);
-                            };
+                    function imgReload(img, oldSrc, retry) {
+                        if (retry <= 0) {
+                            img.src = oldSrc;
+                            return;
                         }
+                        const src = img?.src;
+                        if (!src) return;
+                        img.onload = null;
+                        img.onerror = null;
+                        img.src = "";
+                        img.onload = function () {
+                            img.$delClass("Image-loading-indicator");
+                        };
+                        img.onerror = function () {
+                            img.onload = img.onerror = null;
+                            img.src = oldSrc;
+                            setTimeout(() => {
+                                imgReload(img, oldSrc, retry - 1);
+                            }, 2e3);
+                        };
+                        Object.assign(img, {
+                            src: src,
+                            alt: "Loading Failed"
+                        });
                     }
                     function loadFailedClick() {
                         Lib.onE(".post__files, .scrape__files", "click", event => {
@@ -1699,7 +1958,7 @@
                                 Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
                             },
                             onError: function () {
-                                imgReload(Lib.$q(`#${id} img`), 10);
+                                imgReload(Lib.$q(`#${id} img`), oldUrl, 10);
                             }
                         }));
                     }
@@ -1737,8 +1996,8 @@
                             totalSize: null
                         };
                     }
-                    async function imgRequest(Container, Url, Result) {
-                        const indicator = Lib.createElement(Container, "div", {
+                    async function imgRequest(container, url, result) {
+                        const indicator = Lib.createElement(container, "div", {
                             class: "progress-indicator"
                         });
                         let blob = null;
@@ -1764,7 +2023,7 @@
                                                 return await new Promise((resolve, reject) => {
                                                     GM_xmlhttpRequest({
                                                         method: "GET",
-                                                        url: Url,
+                                                        url: url,
                                                         headers: {
                                                             Range: `bytes=${start}-${end}`
                                                         },
@@ -1793,7 +2052,7 @@
                                         blob = await new Promise((resolve, reject) => {
                                             GM_xmlhttpRequest({
                                                 method: "GET",
-                                                url: Url,
+                                                url: url,
                                                 responseType: "blob",
                                                 onload: res => res.status === 200 ? resolve(res.response) : reject(res),
                                                 onerror: reject,
@@ -1813,12 +2072,12 @@
                                 }
                             }
                             if (blob && blob.size > 0) {
-                                Result(URL.createObjectURL(blob));
+                                result(URL.createObjectURL(blob));
                             } else {
-                                Result(Url);
+                                result(Url);
                             }
                         } catch (error) {
-                            Result(Url);
+                            result(Url);
                         } finally {
                             indicator.remove();
                         }
@@ -1830,7 +2089,7 @@
                                 object.$dAttr("class");
                                 const a = object.$q(LinkObj);
                                 const hrefP = hrefParse(a);
-                                if (Config.experiment) {
+                                if (experiment) {
                                     a.$q("img").$addClass("Image-loading-indicator-experiment");
                                     imgRequest(object, hrefP, href => {
                                         render(preact.h(imgRendering, {
@@ -1872,7 +2131,7 @@
                             object.$iHtml("");
                             object.appendChild(container);
                         };
-                        if (Config.experiment) {
+                        if (experiment) {
                             img.$addClass("Image-loading-indicator-experiment");
                             imgRequest(object, hrefP, href => replace_core(href, hrefP));
                         } else {
@@ -1889,7 +2148,7 @@
                                     object.$dAttr("class");
                                     const a = object.$q(LinkObj);
                                     const hrefP = hrefParse(a);
-                                    if (Config.experiment) {
+                                    if (experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
                                         imgRequest(object, hrefP, href => {
                                             render(preact.h(imgRendering, {
@@ -1911,7 +2170,7 @@
                         });
                     }
                     let observer;
-                    switch (Config.mode) {
+                    switch (mode) {
                         case 2:
                             slowAutoLoad(0);
                             break;
@@ -1929,13 +2188,13 @@
                     }
                 });
             },
-            async ExtraButton(Config) {
-                DLL.Style.PostExtra();
-                const GetNextPage = LoadFunc.ExtraButton_Dependent();
+            async ExtraButton() {
                 Lib.waitEl("h2.site-section__subheading", null, {
                     raf: true,
                     timeout: 5
                 }).then(comments => {
+                    DLL.Style.PostExtra();
+                    const getNextPage = loadFunc.extraButtonRequ();
                     const [Prev, Next, Svg, Span, Buffer] = [Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Lib.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Lib.createFragment];
                     Svg.id = "To_top";
                     Svg.$iHtml(`
@@ -1959,7 +2218,7 @@
                     });
                     Lib.onE(Next_btn, "click", () => {
                         if (DLL.IsNeko) {
-                            GetNextPage(Next_btn.$gAttr("jump"), Lib.$q("main"));
+                            getNextPage(Next_btn.$gAttr("jump"), Lib.$q("main"));
                         } else {
                             Svg.remove();
                             Span.remove();
@@ -1975,7 +2234,7 @@
                     }
                 });
             },
-            async CommentFormat(Config) {
+            async CommentFormat() {
                 Lib.addStyle(`
                     .post__comments,
                     .scrape__comments {
@@ -1994,59 +2253,96 @@
                         word-break: break-all;
                         border: 0.125em solid var(--colour1-secondary);
                     }
-                `, "Comment_Effects", false);
+                `, "Comment-Effects", false);
             }
         };
     }
-    async function $on(element, type, listener) {
-        $(element).on(type, listener);
-    }
-    async function MenuTrigger(callback = null) {
+    async function menuInit(callback = null) {
         const {
             Log,
             Transl
         } = DLL.Language();
-        callback && callback({
+        callback?.({
             Log: Log,
             Transl: Transl
         });
         Lib.regMenu({
-            [Transl("📝 設置選單")]: () => Create_Menu(Log, Transl)
+            [Transl("📝 設置選單")]: () => createMenu(Log, Transl)
         });
     }
-    function Create_Menu(Log, Transl) {
+    async function draggable(element) {
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+        const nonDraggableTags = new Set(["SELECT", "BUTTON", "INPUT", "TEXTAREA", "A"]);
+        element.style.cursor = "grab";
+        const handleMouseMove = e => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            element.style.left = `${initialLeft + dx}px`;
+            element.style.top = `${initialTop + dy}px`;
+        };
+        const handleMouseUp = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            element.style.cursor = "grab";
+            document.body.style.removeProperty("user-select");
+            Lib.offEvent(document, "mousemove");
+            Lib.offEvent(document, "mouseup");
+        };
+        const handleMouseDown = e => {
+            if (nonDraggableTags.has(e.target.tagName)) return;
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const style = window.getComputedStyle(element);
+            initialLeft = parseFloat(style.left) || 0;
+            initialTop = parseFloat(style.top) || 0;
+            element.style.cursor = "grabbing";
+            document.body.style.userSelect = "none";
+            Lib.onEvent(document, "mousemove", handleMouseMove);
+            Lib.onEvent(document, "mouseup", handleMouseUp);
+        };
+        Lib.onEvent(element, "mousedown", handleMouseDown);
+    }
+    function createMenu(Log, Transl) {
         const shadowID = "shadow";
         if (Lib.$q(`#${shadowID}`)) return;
         const imgSet = DLL.ImgSet();
-        const img_data = [imgSet.Height, imgSet.Width, imgSet.MaxWidth, imgSet.Spacing];
-        let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
+        const imgSetData = [["圖片高度", "Height", imgSet.Height], ["圖片寬度", "Width", imgSet.Width], ["圖片最大寬度", "MaxWidth", imgSet.MaxWidth], ["圖片間隔高度", "Spacing", imgSet.Spacing]];
+        let analyze, img_set, img_input, img_select, set_value, save_cache = {};
         const shadow = Lib.createElement("div", {
             id: shadowID
         });
         const shadowRoot = shadow.attachShadow({
             mode: "open"
         });
-        const UnitOptions = `
-            <select class="Image-input-settings" style="margin-left: 1rem;">
-                <option value="px" selected>px</option>
-                <option value="%">%</option>
-                <option value="rem">rem</option>
-                <option value="vh">vh</option>
-                <option value="vw">vw</option>
-                <option value="auto">auto</option>
-            </select>
+        const getImgOptions = (title, key) => `
+            <div>
+                <h2 class="narrative">${Transl(title)}：</h2>
+                <p>
+                    <input type="number" data-key="${key}" class="Image-input-settings" oninput="value = check(value)">
+                    <select data-key="${key}" class="Image-input-settings" style="margin-left: 1rem;">
+                        <option value="px" selected>px</option>
+                        <option value="%">%</option>
+                        <option value="rem">rem</option>
+                        <option value="vh">vh</option>
+                        <option value="vw">vw</option>
+                        <option value="auto">auto</option>
+                    </select>
+                </p>
+            </div>
         `;
         const menuScript = `
-            <script>
-                function check(value) {
-                   return value.toString().length > 4 || value > 1000
-                       ? 1000 : value < 0 ? "" : value;
-                }
-            </script>
+            function check(value) {
+                return value.toString().length > 4 || value > 1000
+                    ? 1000 : value < 0 ? "" : value;
+            }
         `;
         const menuSet = DLL.MenuSet();
         const menuStyle = `
-            <style>
+            <style id="menu-style">
                 .modal-background {
                     top: 0;
                     left: 0;
@@ -2070,6 +2366,15 @@
                     pointer-events: auto;
                     background-color: #2C2E3E;
                     border: 3px solid #EE2B47;
+                }
+                /* 設定介面 */
+                #image-settings-show {
+                    width: 0;
+                    height: 0;
+                    opacity: 0;
+                    padding: 10px;
+                    overflow: hidden;
+                    transition: opacity 0.8s, height 0.8s, width 0.8s;
                 }
                 /* 模態內容盒 */
                 .modal-box {
@@ -2177,14 +2482,6 @@
                     background-color: #F6F6F6;
                 }
                 .button-space { margin: 0 0.6rem; }
-                .form-hidden {
-                    width: 0;
-                    height: 0;
-                    opacity: 0;
-                    padding: 10px;
-                    overflow: hidden;
-                    transition: opacity 0.8s, height 0.8s, width 0.8s;
-                }
                 .toggle-menu {
                     width: 0;
                     height: 0;
@@ -2211,7 +2508,6 @@
             </style>
         `;
         shadowRoot.$iHtml(`
-            ${menuScript}
             ${menuStyle}
             <div class="modal-background">
                 <div class="modal-interface">
@@ -2221,12 +2517,12 @@
                                 <h2 class="menu-text">${Transl("設置菜單")}</h2>
                                 <ul>
                                     <li>
-                                        <a class="toggle-menu" href="#image-settings-show">
+                                        <a class="toggle-menu">
                                             <button class="menu-options" id="image-settings">${Transl("圖像設置")}</button>
                                         </a>
                                     <li>
                                     <li>
-                                        <a class="toggle-menu" href="#">
+                                        <a class="toggle-menu">
                                             <button class="menu-options" disabled>null</button>
                                         </a>
                                     <li>
@@ -2236,24 +2532,7 @@
                                 <table>
                                     <tr>
                                         <td class="content" id="set-content">
-                                            <div id="image-settings-show" class="form-hidden">
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片高度")}：</h2>
-                                                    <p><input type="number" id="Height" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片寬度")}：</h2>
-                                                    <p><input type="number" id="Width" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片最大寬度")}：</h2>
-                                                    <p><input type="number" id="MaxWidth" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片間隔高度")}：</h2>
-                                                    <p><input type="number" id="Spacing" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                            </div>
+                                            <div id="image-settings-show"></div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -2281,114 +2560,126 @@
                 </div>
             </div>
         `);
-        $(Lib.body).append(shadow);
-        const $language = $(shadowRoot).find("#language");
-        const $readset = $(shadowRoot).find("#readsettings");
-        const $interface = $(shadowRoot).find(".modal-interface");
-        const $background = $(shadowRoot).find(".modal-background");
-        const $imageSet = $(shadowRoot).find("#image-settings-show");
-        $language.val(Log ?? "en-US");
-        $interface.draggable({
-            cursor: "grabbing"
-        });
-        DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
-        const Menu_Requ = {
-            Menu_Close() {
-                $background?.off();
+        Lib.body.appendChild(shadow);
+        shadowRoot.appendChild(Lib.createElement("script", {
+            id: "menu-script",
+            innerHTML: menuScript
+        }));
+        const languageEl = shadowRoot.querySelector("#language");
+        const readsetEl = shadowRoot.querySelector("#readsettings");
+        const interfaceEl = shadowRoot.querySelector(".modal-interface");
+        const imageSetEl = shadowRoot.querySelector("#image-settings-show");
+        languageEl.value = Log ?? "en-US";
+        draggable(interfaceEl);
+        DLL.MenuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
+        const menuRequ = {
+            menuClose() {
                 shadow.remove();
             },
-            Menu_Save() {
-                const top = $interface.css("top");
-                const left = $interface.css("left");
+            menuSave() {
+                const styles = getComputedStyle(interfaceEl);
                 Lib.setV(DLL.SaveKey.Menu, {
-                    Top: top,
-                    Left: left
+                    Top: styles.top,
+                    Left: styles.left
                 });
             },
-            Img_Save() {
-                img_set = $imageSet.find("p");
-                img_data.forEach((read, index) => {
-                    img_input = img_set.eq(index).find("input");
-                    img_select = img_set.eq(index).find("select");
-                    if (img_select.val() == "auto") {
-                        set_value = "auto";
-                    } else if (img_input.val() == "") {
-                        set_value = read;
-                    } else {
-                        set_value = `${img_input.val()}${img_select.val()}`;
-                    }
-                    save_cache[img_input.attr("id")] = set_value;
+            imgSave() {
+                img_set = imageSetEl.querySelectorAll("p");
+                if (img_set.length === 0) return;
+                imgSetData.forEach(([title, key, set], index) => {
+                    img_input = img_set[index].querySelector("input");
+                    img_select = img_set[index].querySelector("select");
+                    const inputVal = img_input.value;
+                    const selectVal = img_select.value;
+                    set_value = selectVal === "auto" ? "auto" : inputVal === "" ? set : `${inputVal}${selectVal}`;
+                    save_cache[img_input.$gAttr("data-key")] = set_value;
                 });
                 Lib.setV(DLL.SaveKey.Img, save_cache);
             },
-            async ImageSettings() {
-                $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
-                    event.stopPropagation();
-                    const target = $(this), value = target.val(), id = target.attr("id");
-                    parent = target.closest("div");
+            async imgSettings() {
+                let running = false;
+                const handle = event => {
+                    if (running) return;
+                    running = true;
+                    const target = event.target;
+                    if (!target) {
+                        running = false;
+                        return;
+                    }
+                    const key = target.$gAttr("data-key");
+                    const value = target?.value;
                     if (isNaN(value)) {
-                        child = parent.find("input");
+                        const input = target.previousElementSibling;
                         if (value === "auto") {
-                            child.prop("disabled", true);
-                            DLL.Style_Pointer[child.attr("id")](value);
+                            input.disabled = true;
+                            DLL.stylePointer[key](value);
                         } else {
-                            child.prop("disabled", false);
-                            DLL.Style_Pointer[child.attr("id")](`${child.val()}${value}`);
+                            input.disabled = false;
+                            DLL.stylePointer[key](`${input.value}${value}`);
                         }
                     } else {
-                        child = parent.find("select");
-                        DLL.Style_Pointer[id](`${value}${child.val()}`);
+                        const select = target.nextElementSibling;
+                        DLL.stylePointer[key](`${value}${select.value}`);
                     }
-                });
+                    setTimeout(() => running = false, 100);
+                };
+                Lib.onEvent(imageSetEl, "input", handle);
+                Lib.onEvent(imageSetEl, "change", handle);
             }
         };
-        $on($language, "input change", function (event) {
-            event.stopPropagation();
-            $language.off("input change");
-            const value = $(this).val();
+        Lib.onE(languageEl, "change", event => {
+            event.stopImmediatePropagation();
+            const value = event.currentTarget.value;
             Lib.setV(DLL.SaveKey.Lang, value);
-            Menu_Requ.Menu_Save();
-            Menu_Requ.Menu_Close();
-            MenuTrigger(Updata => {
-                Create_Menu(Updata.Log, Updata.Transl);
+            menuRequ.menuSave();
+            menuRequ.menuClose();
+            menuInit(Updata => {
+                createMenu(Updata.Log, Updata.Transl);
             });
         });
-        $on($interface, "click", function (event) {
-            const id = $(event.target).attr("id");
-            if (id == "image-settings") {
-                img_set = $imageSet;
-                if (img_set.css("opacity") === "0") {
-                    img_set.find("p").each(function () {
-                        $(this).append(UnitOptions);
+        Lib.onE(interfaceEl, "click", event => {
+            const target = event.target;
+            const id = target?.id;
+            if (!id) return;
+            if (id === "image-settings") {
+                const imgsetCss = DLL.MenuRule[2].style;
+                if (imgsetCss.opacity === "0") {
+                    let dom = "";
+                    imgSetData.forEach(([title, key]) => {
+                        dom += getImgOptions(title, key) + "\n";
                     });
-                    img_set.css({
-                        height: "auto",
+                    imageSetEl.insertAdjacentHTML("beforeend", dom);
+                    Object.assign(imgsetCss, {
                         width: "auto",
-                        opacity: 1
+                        height: "auto",
+                        opacity: "1"
                     });
-                    $readset.prop("disabled", false);
-                    Menu_Requ.ImageSettings();
+                    target.disabled = true;
+                    readsetEl.disabled = false;
+                    menuRequ.imgSettings();
                 }
-            } else if (id == "readsettings") {
-                img_set = $imageSet.find("p");
-                img_data.forEach((read, index) => {
-                    img_input = img_set.eq(index).find("input");
-                    img_select = img_set.eq(index).find("select");
-                    if (read == "auto") {
-                        img_input.prop("disabled", true);
-                        img_select.val(read);
+            } else if (id === "readsettings") {
+                img_set = imageSetEl.querySelectorAll("p");
+                if (img_set.length === 0) return;
+                imgSetData.forEach(([title, key, set], index) => {
+                    img_input = img_set[index].querySelector("input");
+                    img_select = img_set[index].querySelector("select");
+                    if (set === "auto") {
+                        img_input.disabled = true;
+                        img_select.value = set;
                     } else {
-                        analyze = read.match(/^(\d+)(\D+)$/);
-                        img_input.val(analyze[1]);
-                        img_select.val(analyze[2]);
+                        analyze = set?.match(/^(\d+)(\D+)$/);
+                        if (!analyze) return;
+                        img_input.value = analyze[1];
+                        img_select.value = analyze[2];
                     }
                 });
-            } else if (id == "application") {
-                Menu_Requ.Img_Save();
-                Menu_Requ.Menu_Save();
-                Menu_Requ.Menu_Close();
-            } else if (id == "closure") {
-                Menu_Requ.Menu_Close();
+            } else if (id === "application") {
+                menuRequ.imgSave();
+                menuRequ.menuSave();
+                menuRequ.menuClose();
+            } else if (id === "closure") {
+                menuRequ.menuClose();
             }
         });
     }
