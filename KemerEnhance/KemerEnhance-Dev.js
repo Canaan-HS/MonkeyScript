@@ -457,6 +457,7 @@
                 }
             },
             ...UserSet, Style, MenuRule, Color, SaveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
+            Registered: new Set()
         };
     })();
 
@@ -982,7 +983,7 @@
                 // 舊版白名單正則轉換
                 // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
 
-                if (Lib.$q("#Ad-blocking-style")) return;
+                if (DLL.Registered.has("BlockAds")) return;
 
                 Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
@@ -1015,9 +1016,11 @@
                         })
                     }
                 });
+
+                DLL.Registered.add("BlockAds");
             },
             async CacheFetch() { /* 緩存請求 */
-                if (DLL.IsNeko) return;
+                if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
 
                 Lib.addScript(`
                     const cache = new Map();
@@ -1081,8 +1084,9 @@
                         }
                     };
                 `, "Cache-Fetch", false);
+                DLL.Registered.add("CacheFetch");
             },
-            async TextToLink(config) { /* 連結文本轉連結 */
+            async TextToLink(config) { /* 連結文本轉連結 (沒有連結文本的不會執行) */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
 
                 const func = loadFunc.textToLinkRequ(config);
@@ -1226,7 +1230,7 @@
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
             async KeyScroll({ mode }) { /* 快捷自動滾動 */
-                if (Lib.platform === "Mobile") return;
+                if (Lib.platform === "Mobile" || DLL.Registered.has("KeyScroll")) return;
 
                 // 滾動配置
                 const Scroll_Requ = {
@@ -1303,6 +1307,8 @@
                         }
                     }
                 }, 100), { capture: true });
+
+                DLL.Registered.add("KeyScroll");
             }
         }
     };
@@ -1366,10 +1372,10 @@
             },
             async QuickPostToggle() { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
-                if (!DLL.IsNeko || Lib.body.$hAttr("QuickPostToggle")) return; // ! 暫時只支援 Neko
+                if (!DLL.IsNeko || DLL.Registered.has("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
                 Lib.waitEl("menu", null, { all: true, timeout: 5 }).then(menu => {
-                    Lib.body.$sAttr("QuickPostToggle", true); // 臨時性解決重複註冊問題
+                    DLL.Registered.add("QuickPostToggle");
 
                     // 渲染
                     function Rendering({ href, className, textContent, style }) {
@@ -1774,13 +1780,13 @@
                         break;
                     case 3:
                         Lib.addStyle(`
-                            .card-list--legacy { padding-bottom: calc(10vh + 1.5em) }
+                            .card-list--legacy { padding-bottom: 7em }
                             .card-list--legacy .card-list__items {
                                 row-gap: 5.8em;
-                                column-gap: 2em;
+                                column-gap: 3em;
                             }
                             .post-card a {
-                                width: 20vw;
+                                width: 20em;
                                 height: 50vh;
                             }
                             .post-card__image-container img { object-fit: contain }
@@ -1803,7 +1809,7 @@
                 `, "CardZoom-Effects", false);
             },
             async BetterThumbnail() { /* 變更預覽卡縮圖 */
-                Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
+                Lib.waitEl(".post-card__image", null, { raf: true, all: true, timeout: 5 }).then(images => {
                     const func = loadFunc.betterThumbnailRequ();
 
                     if (DLL.IsNeko) {
@@ -1832,6 +1838,7 @@
                         if (imgBox.length === 0) return;
 
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
+                        // ! 有時會重複觸發, 不知道為啥
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
                         fetch(api, {
                             headers: { "Accept": "text/css" }
@@ -2432,7 +2439,7 @@
                     }
                 });
             },
-            async ExtraButton(_) { /* 下方額外擴充按鈕 */
+            async ExtraButton() { /* 下方額外擴充按鈕 */
                 Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
                     DLL.Style.PostExtra(); // 導入需求樣式
                     const getNextPage = loadFunc.extraButtonRequ();
@@ -2489,7 +2496,7 @@
 
                 });
             },
-            async CommentFormat(_) { /* 評論區 重新排版 */
+            async CommentFormat() { /* 評論區 重新排版 */
                 Lib.addStyle(`
                     .post__comments,
                     .scrape__comments {
