@@ -2111,7 +2111,6 @@
                             preact.h("img", {
                                 key: "img",
                                 src: newUrl,
-                                loading: "lazy",
                                 className: "Image-loading-indicator Image-style",
                                 onLoad: function () {
                                     Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
