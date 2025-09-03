@@ -43,46 +43,43 @@
 // ==/UserScript==
 
 (async () => {
-    /*! mode: 某些功能可以設置模式 (輸入數字), enable: 是否啟用該功能 (布林) !*/
+    /* Data type checks are removed in user configuration; providing incorrect input may cause it to break */
     const User_Config = {
         Global: {
-            BlockAds: { mode: 0, enable: true }, // 阻擋廣告
-            BackToTop: { mode: 0, enable: true }, // 翻頁後回到頂部
-            CacheFetch: { mode: 0, enable: true }, // 緩存 Fetch 請求 (僅限 JSON)
+            BlockAds: true, // 阻擋廣告
+            BackToTop: true, // 翻頁後回到頂部
+            CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
+            DeleteNotice: true, // 刪除上方公告
+            SidebarCollapse: true, // 側邊攔摺疊
             KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
-            DeleteNotice: { mode: 0, enable: true }, // 刪除上方公告
-            SidebarCollapse: { mode: 0, enable: true }, // 側邊攔摺疊
-            FixArtist: { // 修復作者名稱
-                mode: 0,
-                enable: true,
-                newtab: true, // 是否以新標籤開啟
-                newtab_active: true, // 自動切換焦點到新標籤
-                newtab_insert: true, // 新標籤插入到當前標籤的正後方
-            },
             TextToLink: { // 連結的 (文本 -> 超連結)
-                mode: 0,
+                enable: true,
+                newtab: true, // 新選項卡開啟
+                newtab_active: false, // 切換焦點到新選項卡
+                newtab_insert: true, // 選項卡插入到當前選項卡的正後方
+            },
+            FixArtist: { // 修復作者名稱
                 enable: true,
                 newtab: true,
-                newtab_active: false,
-                newtab_insert: false,
+                newtab_active: true,
+                newtab_insert: true,
             },
         },
         Preview: {
-            CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮放大, 3 = 卡片放大 + 自動縮放]
+            CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放, 3 = 卡片放大 + 自動縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            BetterThumbnail: { mode: 0, enable: true }, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
-            QuickPostToggle: { mode: 0, enable: true }, // 快速切換帖子 (僅支援 nekohouse)
+            BetterThumbnail: true, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
+            QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
-                mode: 0,
                 enable: true,
                 newtab_active: false,
                 newtab_insert: true,
             },
         },
         Content: {
-            ExtraButton: { mode: 0, enable: true }, // 額外的下方按鈕
-            LinkBeautify: { mode: 0, enable: true }, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
-            CommentFormat: { mode: 0, enable: true }, // 評論區重新排版
+            ExtraButton: true, // 額外的下方按鈕
+            LinkBeautify: true, // 下載連結美化, 當出現 (browse »), 滑鼠懸浮會直接顯示內容, 並移除多餘的字串
+            CommentFormat: true, // 評論區重新排版
             VideoBeautify: { mode: 1, enable: true }, // 影片美化 [mode: 1 = 複製下載節點 , 2 = 移動下載節點]
             OriginalImage: { // 自動原圖 [mode: 1 = 快速自動 , 2 = 慢速自動 , 3 = 觀察後觸發]
                 mode: 1,
@@ -467,12 +464,6 @@
 
     /* ==================== 配置解析 調用 ==================== */
     const Enhance = (() => {
-        // 配置參數驗證 (避免使用者配置錯誤)
-        const validate = (Bool, Num) => {
-            return Bool && typeof Bool === "boolean" && typeof Num === "number"
-                ? true : false;
-        };
-
         // 呼叫順序
         const order = {
             Global: [
@@ -512,16 +503,19 @@
         };
 
         // 解析配置調用對應功能
-        let ord;
         async function call(page, config = User_Config[page]) {
             const func = loadFunc[page](); // 載入對應函數
 
-            for (ord of order[page]) {
-                const { enable, mode, ...other } = config[ord] ?? {};
+            for (const ord of order[page]) {
+                let userConfig = config[ord]; // 載入對應的用戶配置
 
-                if (validate(enable, mode)) { // 這個驗證非必要, 但因為使用者可自行配置, 要避免可能的錯誤
-                    func[ord]?.({ mode, ...other }); // 將模式與, 可能有的其他選項, 作為 Config 傳遞
-                }
+                if (!userConfig) continue;
+                if (typeof userConfig !== "object") {
+                    userConfig = { enable: true };
+                } else if (!userConfig.enable) continue;
+
+                // 更輕量化的直接呼叫 (沒有驗證數據格式)
+                func[ord]?.(userConfig);
             }
         }
 
@@ -567,7 +561,7 @@
     function globalFunc() {
         const loadFunc = {
             textToLinkCache: undefined,
-            textToLinkRequ(Config) {
+            textToLinkRequ({ newtab, newtab_active, newtab_insert }) {
                 return this.textToLinkCache ??= {
                     exclusionRegex: /onfanbokkusuokibalab\.net/,
                     urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
@@ -629,12 +623,7 @@
                         }))
                     },
                     async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
-                        const [newtab, active, insert] = [
-                            Config.newtab ?? true,
-                            Config.newtab_active ?? false,
-                            Config.newtab_insert ?? false,
-                        ];
-
+                        const [active, insert] = [newtab_active, newtab_insert];
                         Lib.onEvent(root, "click", event => {
                             const target = event.target.closest("a:not(.fileThumb)");
                             if (!target || target.$hAttr("download")) return;
@@ -900,7 +889,7 @@
         }
 
         return {
-            async SidebarCollapse(_) { /* 收縮側邊攔 */
+            async SidebarCollapse() { /* 收縮側邊攔 */
                 if (Lib.platform === "Mobile") return;
 
                 Lib.addStyle(`
@@ -921,10 +910,10 @@
                     .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
                 `, "Collapse_Effects", false);
             },
-            async DeleteNotice(_) { /* 刪除公告通知 */
+            async DeleteNotice() { /* 刪除公告通知 */
                 Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 5 }).then(announcement => announcement.remove());
             },
-            async BlockAds(_) { /* (阻止/封鎖)廣告 */
+            async BlockAds() { /* (阻止/封鎖)廣告 */
                 if (DLL.IsNeko) return;
 
                 const cookieString = Lib.cookie();
@@ -983,7 +972,7 @@
                     }
                 });
             },
-            async CacheFetch(_) { /* 緩存請求 */
+            async CacheFetch() { /* 緩存請求 */
                 if (DLL.IsNeko) return;
 
                 Lib.addScript(`
@@ -1049,10 +1038,10 @@
                     };
                 `, "Cache-Fetch", false);
             },
-            async TextToLink(Config) { /* 連結文本轉連結 */
+            async TextToLink(config) { /* 連結文本轉連結 */
                 if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
 
-                const func = loadFunc.textToLinkRequ(Config);
+                const func = loadFunc.textToLinkRequ(config);
 
                 if (DLL.IsContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
@@ -1087,17 +1076,12 @@
                     })
                 }
             },
-            async FixArtist(Config) { /* 修復藝術家名稱 */
+            async FixArtist({ newtab, newtab_active, newtab_insert }) { /* 修復藝術家名稱 */
                 DLL.Style.Global(); // 導入 Global 頁面樣式
                 const func = loadFunc.fixArtistRequ();
 
                 // 監聽點擊事件
-                const [newtab, active, insert] = [
-                    Config.newtab ?? true,
-                    Config.newtab_active ?? false,
-                    Config.newtab_insert ?? false,
-                ];
-
+                const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
 
@@ -1186,12 +1170,12 @@
                     });
                 }
             },
-            async BackToTop(_) { /* 翻頁後回到頂部 */
+            async BackToTop() { /* 翻頁後回到頂部 */
                 Lib.onEvent(Lib.body, "pointerup", event => {
                     event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
                 }, { capture: true, passive: true, mark: "BackToTop" });
             },
-            async KeyScroll(Config) { /* 快捷自動滾動 */
+            async KeyScroll({ mode }) { /* 快捷自動滾動 */
                 if (Lib.platform === "Mobile") return;
 
                 // 滾動配置
@@ -1214,7 +1198,7 @@
                     }, 600)
                 ];
 
-                switch (Config.mode) {
+                switch (mode) {
                     case 2:
                         Scroll = (Move) => {
                             const Interval = setInterval(() => {
@@ -1312,14 +1296,9 @@
         }
 
         return {
-            async NewTabOpens(Config) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
-                const [newtab, active, insert] = [
-                    Config.newtab ?? true,
-                    Config.newtab_active ?? false,
-                    Config.newtab_insert ?? false,
-                ];
+            async NewTabOpens({ newtab_active, newtab_insert }) { /* 將預覽頁面 開啟帖子都變成新分頁開啟 */
+                const [active, insert] = [newtab_active, newtab_insert];
 
-                if (!newtab) return;
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target.closest("article a");
                     target && (
@@ -1329,7 +1308,7 @@
                     );
                 }, { capture: true, mark: "NewTabOpens" });
             },
-            async QuickPostToggle(_) { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
+            async QuickPostToggle() { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
                 if (!DLL.IsNeko || Lib.body.$hAttr("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
@@ -1671,10 +1650,10 @@
                     }, { capture: true, mark: "QuickPostToggle" });
                 });
             },
-            async CardText(Config) { /* 帖子說明文字效果 */
+            async CardText({ mode }) { /* 帖子說明文字效果 */
                 if (Lib.platform === "Mobile") return;
 
-                switch (Config.mode) {
+                switch (mode) {
                     case 2:
                         Lib.addStyle(`
                             .post-card__header, .post-card__footer {
@@ -1714,8 +1693,8 @@
                         `, "CardText_Effects", false);
                 }
             },
-            async CardZoom(Config) { /* 帖子預覽卡縮放效果 */
-                switch (Config.mode) {
+            async CardZoom({ mode }) { /* 帖子預覽卡縮放效果 */
+                switch (mode) {
                     case 2:
                         Lib.addStyle(`
                             .post-card a:hover {
@@ -1767,7 +1746,7 @@
                     }
                 `, "CardZoom_Effects", false);
             },
-            async BetterThumbnail(_) { /* 變更預覽卡縮圖 */
+            async BetterThumbnail() { /* 變更預覽卡縮圖 */
                 Lib.waitEl(".post-card__image", null, { all: true }).then(images => {
                     const func = loadFunc.betterThumbnailRequ();
 
@@ -1799,8 +1778,8 @@
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
                         fetch(api, {
-                                headers: { "Accept": "text/css" }
-                            })
+                            headers: { "Accept": "text/css" }
+                        })
                             .then(async response => {
                                 if (!response.ok) {
                                     const text = await response.text();
@@ -1956,7 +1935,7 @@
         }
 
         return {
-            async LinkBeautify(_) { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
+            async LinkBeautify() { /* 懸浮於 browse » 標籤時, 直接展示文件, 刪除下載連結前的 download 字樣, 並解析轉換連結 */
                 Lib.addStyle(`
                     View {
                         top: -10px;
@@ -2013,7 +1992,7 @@
                     }
                 });
             },
-            async VideoBeautify(Config) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
+            async VideoBeautify({ mode }) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
                 if (DLL.IsNeko) {
                     Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
                         video.forEach(media => media.$sAttr("preload", "metadata"));
@@ -2030,7 +2009,7 @@
                                 }
                             `, "Video_Effects", false);
 
-                            const move = Config.mode === 2;
+                            const move = mode === 2;
                             const linkBox = Object.fromEntries([...post].map(a => {
                                 const data = [a.download?.trim(), a];
 
@@ -2074,7 +2053,7 @@
                     });
                 }
             },
-            async OriginalImage(Config) { /* 自動載入原圖 */
+            async OriginalImage({ mode, experiment }) { /* 自動載入原圖 */
                 Lib.waitEl(".post__thumbnail, .scrape__thumbnail", null, { raf: true, all: true, timeout: 5 }).then(thumbnail => {
                     /**
                      * 針對 Neko 網站的支援
@@ -2287,7 +2266,7 @@
                                 const a = object.$q(LinkObj);
                                 const hrefP = hrefParse(a);
 
-                                if (Config.experiment) {
+                                if (experiment) {
                                     a.$q("img").$addClass("Image-loading-indicator-experiment");
 
                                     imgRequest(object, hrefP, href => {
@@ -2333,7 +2312,7 @@
                             object.appendChild(container);
                         };
 
-                        if (Config.experiment) { // 替換調用
+                        if (experiment) { // 替換調用
                             img.$addClass("Image-loading-indicator-experiment");
 
                             imgRequest(object, hrefP, href => replace_core(href, hrefP));
@@ -2355,7 +2334,7 @@
                                     const a = object.$q(LinkObj);
                                     const hrefP = hrefParse(a);
 
-                                    if (Config.experiment) {
+                                    if (experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
 
                                         imgRequest(object, hrefP, href => {
@@ -2371,7 +2350,7 @@
 
                     /* 模式選擇 */
                     let observer;
-                    switch (Config.mode) {
+                    switch (mode) {
                         case 2:
                             slowAutoLoad(0);
                             break;
