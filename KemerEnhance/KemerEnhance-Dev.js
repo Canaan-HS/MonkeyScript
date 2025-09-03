@@ -25,11 +25,8 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.1/jquery-ui.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
-
 // @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.26.9/preact.umd.min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -1099,14 +1096,13 @@
                             body.$q(".post__content, .scrape__content")
                         ];
 
-                        func.jumpTrigger(content);
                         if (article) {
-                            let span;
-                            for (span of article.$qa("span.choice-text")) {
+                            func.jumpTrigger(content);
+                            for (const span of article.$qa("span.choice-text")) {
                                 func.parseModify(span, span.$text());
                             }
-
                         } else if (content) {
+                            func.jumpTrigger(content);
                             func.getTextNodes(content).forEach(node => {
                                 let text = node.$text();
 
@@ -1116,6 +1112,9 @@
 
                                 func.parseModify(node, text);
                             })
+                        } else {
+                            const attachments = body.$q(".post__attachments, .scrape__attachments");
+                            attachments && func.jumpTrigger(attachments);
                         }
                     });
 
@@ -2521,12 +2520,58 @@
     };
 
     /* ==================== 設置菜單 ==================== */
-    async function $on(element, type, listener) { $(element).on(type, listener) };
     async function menuInit(callback = null) {
         const { Log, Transl } = DLL.Language(); // 菜單觸發器, 每次創建都會獲取新數據
 
         callback?.({ Log, Transl }); // 使用 callback 會額外回傳數據
         Lib.regMenu({ [Transl("📝 設置選單")]: () => createMenu(Log, Transl) });
+    };
+    async function draggable(element) {
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        const nonDraggableTags = new Set(["SELECT", "BUTTON", "INPUT", "TEXTAREA", "A"]);
+        element.style.cursor = 'grab';
+
+        // 將處理函式定義在外面，這樣 onEvent 和 offEvent 才能引用到同一個函式
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            element.style.left = `${initialLeft + dx}px`;
+            element.style.top = `${initialTop + dy}px`;
+        };
+
+        const handleMouseUp = () => {
+            if (!isDragging) return; // 增加一個判斷避免重複觸發
+            isDragging = false;
+            element.style.cursor = 'grab';
+            document.body.style.removeProperty('user-select');
+
+            Lib.offEvent(document, "mousemove");
+            Lib.offEvent(document, "mouseup");
+        };
+
+        const handleMouseDown = (e) => {
+            if (nonDraggableTags.has(e.target.tagName)) return;
+            e.preventDefault();
+
+            isDragging = true;
+
+            startX = e.clientX;
+            startY = e.clientY;
+            const style = window.getComputedStyle(element);
+            initialLeft = parseFloat(style.left) || 0;
+            initialTop = parseFloat(style.top) || 0;
+
+            element.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+
+            Lib.onEvent(document, "mousemove", handleMouseMove);
+            Lib.onEvent(document, "mouseup", handleMouseUp);
+        };
+
+        Lib.onEvent(element, "mousedown", handleMouseDown);
     };
     function createMenu(Log, Transl) {
         const shadowID = "shadow";
@@ -2534,42 +2579,49 @@
 
         // 取得圖片設置
         const imgSet = DLL.ImgSet();
-        const img_data = [ // ? 這樣寫是為了讓讀取保存設置可以按照順序 (菜單有索引問題)
-            imgSet.Height, imgSet.Width, imgSet.MaxWidth, imgSet.Spacing
+        const imgSetData = [
+            ["圖片高度", "Height", imgSet.Height],
+            ["圖片寬度", "Width", imgSet.Width],
+            ["圖片最大寬度", "MaxWidth", imgSet.MaxWidth],
+            ["圖片間隔高度", "Spacing", imgSet.Spacing]
         ];
 
-        let analyze, parent, child, img_set, img_input, img_select, set_value, save_cache = {};
+        let analyze, img_set, img_input, img_select, set_value, save_cache = {};
 
         // 創建陰影環境
         const shadow = Lib.createElement("div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
 
         // 調整選項
-        const UnitOptions = `
-            <select class="Image-input-settings" style="margin-left: 1rem;">
-                <option value="px" selected>px</option>
-                <option value="%">%</option>
-                <option value="rem">rem</option>
-                <option value="vh">vh</option>
-                <option value="vw">vw</option>
-                <option value="auto">auto</option>
-            </select>
+        const getImgOptions = (title, key) => `
+            <div>
+                <h2 class="narrative">${Transl(title)}：</h2>
+                <p>
+                    <input type="number" data-key="${key}" class="Image-input-settings" oninput="value = check(value)">
+                    <select data-key="${key}" class="Image-input-settings" style="margin-left: 1rem;">
+                        <option value="px" selected>px</option>
+                        <option value="%">%</option>
+                        <option value="rem">rem</option>
+                        <option value="vh">vh</option>
+                        <option value="vw">vw</option>
+                        <option value="auto">auto</option>
+                    </select>
+                </p>
+            </div>
         `;
 
         // 調整數值腳本
         const menuScript = `
-            <script>
-                function check(value) {
-                   return value.toString().length > 4 || value > 1000
-                       ? 1000 : value < 0 ? "" : value;
-                }
-            </script>
+            function check(value) {
+                return value.toString().length > 4 || value > 1000
+                    ? 1000 : value < 0 ? "" : value;
+            }
         `;
 
         const menuSet = DLL.MenuSet(); // 取得菜單設置
         // 菜單樣式
         const menuStyle = `
-            <style>
+            <style id="menu-style">
                 .modal-background {
                     top: 0;
                     left: 0;
@@ -2593,6 +2645,15 @@
                     pointer-events: auto;
                     background-color: #2C2E3E;
                     border: 3px solid #EE2B47;
+                }
+                /* 設定介面 */
+                #image-settings-show {
+                    width: 0;
+                    height: 0;
+                    opacity: 0;
+                    padding: 10px;
+                    overflow: hidden;
+                    transition: opacity 0.8s, height 0.8s, width 0.8s;
                 }
                 /* 模態內容盒 */
                 .modal-box {
@@ -2700,14 +2761,6 @@
                     background-color: #F6F6F6;
                 }
                 .button-space { margin: 0 0.6rem; }
-                .form-hidden {
-                    width: 0;
-                    height: 0;
-                    opacity: 0;
-                    padding: 10px;
-                    overflow: hidden;
-                    transition: opacity 0.8s, height 0.8s, width 0.8s;
-                }
                 .toggle-menu {
                     width: 0;
                     height: 0;
@@ -2736,7 +2789,6 @@
 
         // 添加菜單主樣式
         shadowRoot.$iHtml(`
-            ${menuScript}
             ${menuStyle}
             <div class="modal-background">
                 <div class="modal-interface">
@@ -2746,12 +2798,12 @@
                                 <h2 class="menu-text">${Transl("設置菜單")}</h2>
                                 <ul>
                                     <li>
-                                        <a class="toggle-menu" href="#image-settings-show">
+                                        <a class="toggle-menu">
                                             <button class="menu-options" id="image-settings">${Transl("圖像設置")}</button>
                                         </a>
                                     <li>
                                     <li>
-                                        <a class="toggle-menu" href="#">
+                                        <a class="toggle-menu">
                                             <button class="menu-options" disabled>null</button>
                                         </a>
                                     <li>
@@ -2761,24 +2813,7 @@
                                 <table>
                                     <tr>
                                         <td class="content" id="set-content">
-                                            <div id="image-settings-show" class="form-hidden">
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片高度")}：</h2>
-                                                    <p><input type="number" id="Height" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片寬度")}：</h2>
-                                                    <p><input type="number" id="Width" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片最大寬度")}：</h2>
-                                                    <p><input type="number" id="MaxWidth" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                                <div>
-                                                    <h2 class="narrative">${Transl("圖片間隔高度")}：</h2>
-                                                    <p><input type="number" id="Spacing" class="Image-input-settings" oninput="value = check(value)"></p>
-                                                </div>
-                                            </div>
+                                            <div id="image-settings-show"></div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -2808,71 +2843,97 @@
         `);
 
         // 添加到 dom, 並緩存對象
-        $(Lib.body).append(shadow);
-        const $language = $(shadowRoot).find("#language");
-        const $readset = $(shadowRoot).find("#readsettings");
-        const $interface = $(shadowRoot).find(".modal-interface");
-        const $background = $(shadowRoot).find(".modal-background");
-        const $imageSet = $(shadowRoot).find("#image-settings-show");
+        Lib.body.appendChild(shadow);
+        shadowRoot.appendChild(
+            Lib.createElement("script", { id: "menu-script", innerHTML: menuScript })
+        );
 
-        $language.val(Log ?? "en-US"); // 添加語言設置
-        $interface.draggable({ cursor: "grabbing" }); // 添加可拖動效果
-        DLL.MenuRule = $(shadowRoot).find("#Menu-Style").prop("sheet")?.cssRules;
+        const languageEl = shadowRoot.querySelector("#language");
+        const readsetEl = shadowRoot.querySelector("#readsettings");
+        const interfaceEl = shadowRoot.querySelector(".modal-interface");
+        const imageSetEl = shadowRoot.querySelector("#image-settings-show");
+
+        languageEl.value = Log ?? "en-US"; // 添加語言設置
+        draggable(interfaceEl); // 添加拖曳功能
+
+        DLL.MenuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
 
         // 菜單調整依賴
         const menuRequ = {
             menuClose() { // 關閉菜單
-                $background?.off();
                 shadow.remove();
             },
             menuSave() { // 保存菜單
-                const top = $interface.css("top");
-                const left = $interface.css("left");
-                Lib.setV(DLL.SaveKey.Menu, { Top: top, Left: left }); // 保存設置數據
+                const styles = getComputedStyle(interfaceEl);
+                Lib.setV(DLL.SaveKey.Menu, { Top: styles.top, Left: styles.left }); // 保存設置數據
             },
             imgSave() {
-                img_set = $imageSet.find("p"); // 獲取設定 DOM 參數
-                img_data.forEach((read, index) => {
-                    img_input = img_set.eq(index).find("input");
-                    img_select = img_set.eq(index).find("select");
-                    if (img_select.val() == "auto") { set_value = "auto" }
-                    else if (img_input.val() == "") { set_value = read }
-                    else { set_value = `${img_input.val()}${img_select.val()}` }
-                    save_cache[img_input.attr("id")] = set_value;
+                img_set = imageSetEl.querySelectorAll("p"); // 獲取設定 DOM 參數
+                if (img_set.length === 0) return;
+
+                imgSetData.forEach(([title, key, set], index) => {
+                    img_input = img_set[index].querySelector("input");
+                    img_select = img_set[index].querySelector("select");
+
+                    const inputVal = img_input.value;
+                    const selectVal = img_select.value;
+
+                    set_value =
+                        selectVal === "auto" ? "auto"
+                            : inputVal === "" ? set
+                                : `${inputVal}${selectVal}`
+
+                    save_cache[img_input.$gAttr("data-key")] = set_value;
                 });
+
                 Lib.setV(DLL.SaveKey.Img, save_cache); // 保存設置數據
             },
             async imgSettings() {
-                $on($(shadowRoot).find(".Image-input-settings"), "input change", function (event) {
-                    event.stopPropagation();
 
-                    const target = $(this), value = target.val(), id = target.attr("id");
-                    parent = target.closest("div");
+                let running = false;
+                const handle = (event) => {
+                    if (running) return;
+                    running = true;
 
-                    if (isNaN(value)) {
-                        child = parent.find("input");
-
-                        if (value === "auto") {
-                            child.prop("disabled", true);
-                            DLL.stylePointer[child.attr("id")](value);
-                        } else {
-                            child.prop("disabled", false);
-                            DLL.stylePointer[child.attr("id")](`${child.val()}${value}`);
-                        }
-                    } else {
-                        child = parent.find("select");
-                        DLL.stylePointer[id](`${value}${child.val()}`);
+                    const target = event.target;
+                    if (!target) {
+                        running = false;
+                        return;
                     }
-                });
+
+                    const key = target.$gAttr("data-key");
+                    const value = target?.value;
+
+                    // 是 select
+                    if (isNaN(value)) {
+                        const input = target.previousElementSibling;
+                        if (value === "auto") {
+                            input.disabled = true;
+                            DLL.stylePointer[key](value);
+                        } else {
+                            input.disabled = false;
+                            DLL.stylePointer[key](`${input.value}${value}`);
+                        }
+                    }
+                    // 是 input
+                    else {
+                        const select = target.nextElementSibling;
+                        DLL.stylePointer[key](`${value}${select.value}`);
+                    }
+
+                    setTimeout(() => running = false, 100);
+                };
+
+                Lib.onEvent(imageSetEl, "input", handle);
+                Lib.onEvent(imageSetEl, "change", handle);
             }
         };
 
         // 語言選擇
-        $on($language, "input change", function (event) {
-            event.stopPropagation();
-            $language.off("input change");
+        Lib.onE(languageEl, "change", event => {
+            event.stopImmediatePropagation();
 
-            const value = $(this).val(); // 取得選擇
+            const value = event.currentTarget.value;
             Lib.setV(DLL.SaveKey.Lang, value);
 
             menuRequ.menuSave();
@@ -2882,50 +2943,66 @@
                 createMenu(Updata.Log, Updata.Transl); // 重新創建
             });
         });
+
         // 監聽菜單的點擊事件
-        $on($interface, "click", function (event) {
-            const id = $(event.target).attr("id");
+        Lib.onE(interfaceEl, "click", event => {
+            const target = event.target;
+            const id = target?.id;
+            if (!id) return;
 
             // 菜單功能選擇
-            if (id == "image-settings") {
-                img_set = $imageSet;
-                if (img_set.css("opacity") === "0") {
-                    img_set.find("p").each(function () {
-                        $(this).append(UnitOptions);
+            if (id === "image-settings") {
+                const imgsetCss = DLL.MenuRule[2].style;
+
+                if (imgsetCss.opacity === "0") {
+                    let dom = "";
+
+                    imgSetData.forEach(([title, key]) => {
+                        dom += getImgOptions(title, key) + "\n";
+                    })
+
+                    imageSetEl.insertAdjacentHTML("beforeend", dom);
+
+                    Object.assign(imgsetCss, {
+                        width: "auto",
+                        height: "auto",
+                        opacity: "1"
                     });
-                    img_set.css({
-                        "height": "auto",
-                        "width": "auto",
-                        "opacity": 1
-                    });
-                    $readset.prop("disabled", false); // 點擊圖片設定才會解鎖讀取設置
+
+                    target.disabled = true;
+                    readsetEl.disabled = false; // 點擊圖片設定才會解鎖讀取設置
                     menuRequ.imgSettings();
                 }
+            }
+            // 讀取設置
+            else if (id === "readsettings") {
+                img_set = imageSetEl.querySelectorAll("p"); // 獲取設定 DOM 參數
+                if (img_set.length === 0) return;
 
-                // 讀取保存設置
-            } else if (id == "readsettings") {
-                img_set = $imageSet.find("p");
+                imgSetData.forEach(([title, key, set], index) => {
+                    img_input = img_set[index].querySelector("input");
+                    img_select = img_set[index].querySelector("select");
 
-                img_data.forEach((read, index) => {
-                    img_input = img_set.eq(index).find("input");
-                    img_select = img_set.eq(index).find("select");
-
-                    if (read == "auto") {
-                        img_input.prop("disabled", true);
-                        img_select.val(read);
+                    if (set === "auto") {
+                        img_input.disabled = true;
+                        img_select.value = set;
                     } else {
-                        analyze = read.match(/^(\d+)(\D+)$/);
-                        img_input.val(analyze[1]);
-                        img_select.val(analyze[2]);
-                    }
-                })
+                        analyze = set?.match(/^(\d+)(\D+)$/);
+                        if (!analyze) return;
 
-                // 應用保存
-            } else if (id == "application") {
+                        img_input.value = analyze[1];
+                        img_select.value = analyze[2];
+                    }
+                });
+            }
+            // 應用保存
+            else if (id === "application") {
                 menuRequ.imgSave();
                 menuRequ.menuSave();
                 menuRequ.menuClose();
-            } else if (id == "closure") {
+            }
+            // 關閉菜單
+            else if (id === "closure") {
                 menuRequ.menuClose();
             }
         });
