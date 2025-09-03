@@ -319,7 +319,7 @@
                     window.close();
 
                     /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
-                } else if (Diff >= Self.JudgmentInterval && Progress == Record) {
+                } else if (true || Diff >= Self.JudgmentInterval && Progress == Record) {
                     Self.RestartLive && Restart.ran(MaxElement); // 已最大進度對象, 進行直播重啟
                     Detec.storage("Record", [Progress, Detec.getTime()]);
 
@@ -368,8 +368,8 @@
                 ...Config,
                 Offline: "strong.krncnP", // 離線的直播 (離線標籤)
                 Online: "span.jAIlLI", // 正在觀看直播人數標籤 (觀看人數)
-                TagLabel: "span.hzGgmO", // 頻道 Tag 標籤
-                Container: "div.hTjsYU", // 頻道播放的容器
+                TagLabel: "div.iSVEtN", // 頻道 Tag 標籤
+                Container: "div.hfhTAL", // 頻道播放的容器
                 ContainerHandle: "div.scrollable-area", // 容器滾動句柄
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
@@ -450,7 +450,13 @@
                                 });
 
                             if (tag) {
-                                const Link = tag.closest("a");
+                                const Link = devTrace("Link", tag.closest(".fzKxJT")?.querySelector("a"));
+
+                                if (!Link) {
+                                    setTimeout(StartFind, 1500);
+                                    return;
+                                }
+
                                 Link.click();
                                 Link.click(); // 避免意外點兩次
                                 Self.RestartLiveMute && Dir.liveMute(NewWindow);
