@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.08.31
+// @version      2025.09.03
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -932,7 +932,7 @@ const Lib = (() => {
      */
     function createCompressor() {
         let worker = workerCreate(`
-            importScripts('https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js');
+            importScripts("https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js");
             onmessage = function(e) {
                 const { filesWithOptions } = e.data;
                 const fileNames = Object.keys(filesWithOptions);
@@ -940,7 +940,6 @@ const Lib = (() => {
                 let totalSize = 0;
                 let processedSize = 0;
 
-                // 計算總大小以用於進度回報
                 fileNames.forEach(name => {
                     totalSize += filesWithOptions[name].data.length;
                 });
@@ -965,7 +964,6 @@ const Lib = (() => {
                             offset += c.length;
                         });
 
-                        // 將最終結果傳回
                         postMessage({ type: "done", data: zipped }, [zipped.buffer]);
                     }
                 });
@@ -976,14 +974,12 @@ const Lib = (() => {
 
                         const fileStream = new fflate.ZipPassThrough(name, { level });
                         zip.add(fileStream);
-                        fileStream.push(data, true); // true 表示這是此文件的最後一塊數據
+                        fileStream.push(data, true);
 
-                        // 每處理完一個文件，更新進度並向主線程報告
                         processedSize += data.length;
                         postMessage({ type: "progress", loaded: processedSize, total: totalSize });
                     }
-
-                    // 所有文件都已添加，結束壓縮流
+ 
                     zip.end();
                 })().catch(err => {
                     postMessage({ type: "error", error: err.message });
