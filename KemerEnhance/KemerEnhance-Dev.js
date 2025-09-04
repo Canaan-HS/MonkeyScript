@@ -2550,7 +2550,7 @@
         let analyze, img_set, img_input, img_select, set_value, save_cache = {};
 
         // 創建陰影環境
-        const shadow = Lib.createElement("div", { id: shadowID });
+        const shadow = Lib.createElement(Lib.body, "div", { id: shadowID });
         const shadowRoot = shadow.attachShadow({ mode: "open" });
 
         // 調整選項
@@ -2751,8 +2751,9 @@
         `;
 
         // 添加菜單主樣式
-        shadowRoot.$iHtml(`
+        const menuMain =`
             ${menuStyle}
+            ${menuScript}
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -2803,11 +2804,10 @@
                     </table>
                 </div>
             </div>
-        `);
+        `;
 
-        // 添加到 dom, 並緩存對象
-        Lib.body.appendChild(shadow);
-        shadowRoot.appendChild(Lib.createDomFragment(menuScript));
+        // 添加主頁面
+        shadowRoot.appendChild(Lib.createDomFragment(menuMain));
 
         const languageEl = shadowRoot.querySelector("#language");
         const readsetEl = shadowRoot.querySelector("#readsettings");
