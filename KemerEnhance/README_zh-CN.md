@@ -30,25 +30,26 @@
 
 ## **⚙️ 额外配置（代码上方）**
 
-|     **参数**      |                        **说明**                        | **默认值** |
-| :---------------: | :----------------------------------------------------: | :--------: |
-|    `BlockAds`     |                      简单阻挡广告                      |   `true`   |
-|    `BackToTop`    |              帖子跳转翻页后，自动回到顶部              |   `true`   |
-|   `CacheFetch`    |       同分页下缓存 Fetch 数据，加快后续相同载入        |   `true`   |
-|    `KeyScroll`    |                键盘热键功能 ↑↓ 自动滚动                |   `true`   |
-|  `DeleteNotice`   |                        删除公告                        |   `true`   |
-| `SidebarCollapse` |                侧边栏折叠，鼠标靠近恢复                |   `true`   |
-|    `FixArtist`    |      以 Pixiv 名称，修改网站显示名称，可自定名称       |   `true`   |
-|   `TextToLink`    |        将文本形式的链接字符串，转换成可点击链接        |   `true`   |
-|    `CardZoom`     |                     调整预览卡大小                     |   `true`   |
-|    `CardText`     |                   调整预览卡文字效果                   |   `true`   |
-| `QuickPostToggle` |         快速切换帖子预览（目前仅限 nekohouse）         |   `true`   |
-|   `NewTabOpens`   |               将页面跳转都以新标签页打开               |   `true`   |
-|   `ExtraButton`   |      额外的下方按钮，用于快速回到顶部，与直接换页      |   `true`   |
-|  `LinkBeautify`   | 美化下载链接，并让（browse »）可用鼠标悬浮直接显示内容 |   `true`   |
-|  `CommentFormat`  |                     调整评论的排版                     |   `true`   |
-|  `VideoBeautify`  |    美化视频的样式，并将视频下载链接，显示于标题位置    |   `true`   |
-|  `OriginalImage`  |                        自动原图                        |   `true`   |
+|     **参数**      |                          **说明**                           | **默认值** |
+| :---------------: | :---------------------------------------------------------: | :--------: |
+|    `BlockAds`     |                        简单阻挡广告                         |   `true`   |
+|    `BackToTop`    |                帖子跳转翻页后，自动回到顶部                 |   `true`   |
+|   `CacheFetch`    |          同分页下缓存 Fetch 数据，加快后续相同载入          |   `true`   |
+|  `DeleteNotice`   |                          删除公告                           |   `true`   |
+| `SidebarCollapse` |                  侧边栏折叠，鼠标靠近恢复                   |   `true`   |
+|    `KeyScroll`    |                  键盘热键功能 ↑↓ 自动滚动                   |   `true`   |
+|   `TextToLink`    |           将文本形式的链接字串，转换成可点击链接            |   `true`   |
+|    `FixArtist`    | Pixiv 名称修正网站显示名称，可自定名称，与来源网站 Tag 直连 |   `true`   |
+|    `CardZoom`     |                       调整预览卡大小                        |   `true`   |
+|    `CardText`     |                     调整预览卡文字效果                      |   `true`   |
+| `BetterThumbnail` |                将预览卡图片变更为帖子内图片                 |   `true`   |
+| `QuickPostToggle` |            快速切换帖子预览 (目前仅限 nekohouse)            |   `true`   |
+|   `NewTabOpens`   |                  将页面跳转都以新分页开启                   |   `true`   |
+|   `ExtraButton`   |        额外的下方按钮，用于快速回到顶部，与直接换页         |   `true`   |
+|  `LinkBeautify`   |   美化下载链接，并让 (browse ») 可用鼠标悬浮直接显示内容    |   `true`   |
+|  `CommentFormat`  |                       调整评论的排版                        |   `true`   |
+|  `VideoBeautify`  |      美化视频的样式，并将视频下载链接，显示于标题位置       |   `true`   |
+|  `OriginalImage`  |                          自动原图                           |   `true`   |
 
 ## **📜 其他说明**
 
@@ -133,16 +134,24 @@ OriginalImage:
 
 ## **📦 版本资讯**
 
-**发布版本：2025.08.06-Beta**
+**发布版本：2025.09.03-Beta**
 
 ### **更新内容**
-1. 优化 CacheFetch 机制
-  - 减少不必要的请求快取，并改为非同步快取，减少执行延迟，提升整体效能。
-
-2. 扩充 FixArtist 功能
-  - 支援更多标签（Tag）的修复
-  - 支援 candfans 页面的艺术家名称修正
-  - 调整帖子内部 Tag 跳转网址为，该帖子本身，不支援的维持旧跳转 (实验性)
+1. **兼容性修正**  
+   - 调整以符合网站近期变更  
+2. **菜单调整**  
+   - 改为纯原生实现，移除 jQuery  
+3. **OriginalImage**  
+   - 调整加载提示样式  
+4. **CardZoom 功能**  
+   - 变更模式 1、2 样式  
+   - 新增模式 3  
+5. **BetterThumbnail（实验性）**  
+   - 新增增强缩略图功能  
+6. **FixArtist & LinkBeautify**  
+   - 优化部分实现方式，减少对原生页面结构的破坏，以覆盖方式保留原貌  
+7. **TextToLink**  
+   - 增加简单类型的 Mega 链接修复，支持自动补上密码断词（不支持复杂格式）  
 
 ### **已知问题**
 1. 有时页面加载速度慢于功能执行，可能导致部分功能失效，刷新页面通常可解决
