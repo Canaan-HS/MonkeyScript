@@ -58,10 +58,10 @@
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         // {
-        //     Name: "ZenlessZoneZero",
-        //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-        //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-        //     verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
+            // Name: "ZenlessZoneZero",
+            // API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
+            // Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
+            // verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         // },
         {
             Name: "LeveCheckIn",
@@ -253,10 +253,10 @@
                 * 可能的定義與解析: const time = "01:05:30".split(":").map(value => parseInt(value));
             */
             if (stop) return;
-            const tasks = Lib.getV(Config.TaskKey, []); // 取得任務列表
+            const enabledTaskList = Lib.getV(Config.TaskKey, []); // 取得任務列表
 
             // 料表類型錯誤, 直接複寫空陣列
-            if (!Array.isArray(tasks)) {
+            if (!Array.isArray(enabledTaskList)) {
                 Lib.setV(Config.TaskKey, []);
 
                 Lib.log(null, "錯誤的任務列表, 詢輪已被停止", {
@@ -266,7 +266,7 @@
             };
 
             // 沒有任務不執行 (並清除不需要的值)
-            if (tasks.length === 0) {
+            if (enabledTaskList.length === 0) {
                 Lib.delV(Config.TaskKey);
                 Lib.delV(Config.TimerKey);
                 Lib.delV(Config.RegisterKey);
@@ -301,7 +301,7 @@
                         });
 
                         let index = 0;
-                        const enabledTask = new Set(tasks);
+                        const enabledTask = new Set(enabledTaskList);
 
                         for (const task of taskList) {
                             if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
@@ -314,15 +314,19 @@
                         }
 
                         // ? 嘗試確保所有任務都簽到
-                        const allCheckIn = taskList.every(({ Name }) => Lib.getV(`${Name}-CheckIn`));
+                        const retryCount = Lib.getV("ReTry-Count", 0);
+                        const allCheckIn = enabledTaskList.every(name => Lib.getV(`${name}-CheckIn`));
 
-                        if (allCheckIn) {
+                        if (allCheckIn || retryCount >= 4) {
                             enabledTask.clear();
                             setTimestamp(newDate); // 更新時間戳
 
-                            taskList.forEach(({ Name }) => { // 清除簽到記錄
-                                Lib.delV(`${Name}-CheckIn`);
+                            Lib.delV("ReTry-Count");
+                            enabledTaskList.forEach(name => { // 清除簽到記錄
+                                Lib.delV(`${name}-CheckIn`);
                             })
+                        } else {
+                            Lib.setV("ReTry-Count", retryCount + 1);
                         };
                     } else displayTriggerTime(newDate, new Date(checkInDate));
 
