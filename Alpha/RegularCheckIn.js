@@ -13,6 +13,8 @@
 // @icon         https://cdn-icons-png.flaticon.com/512/10233/10233926.png
 
 // @grant        GM_info
+// @grant        GM_saveTab
+// @grant        GM_getTabs
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -33,7 +35,7 @@
         Dev: false,
         TaskKey: "RunTasks", // 任務列表 Key
         TimerKey: "TaskTimer", // 時間戳 Key
-        RegisterKey: "RegisterTime", // 註冊時間 Key
+        RegisterKey: "LeaderId", // 當前註冊 Key
     };
 
     const taskList = [
@@ -58,10 +60,10 @@
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         // {
-            // Name: "ZenlessZoneZero",
-            // API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-            // Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-            // verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
+        //     Name: "ZenlessZoneZero",
+        //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
+        //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
+        //     verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         // },
         {
             Name: "LeveCheckIn",
@@ -151,18 +153,23 @@
     };
 
     const createTask = (() => {
+        const taskId = crypto.randomUUID();
+
         let stop = false;
+        let timers = null;
         let registered = false;
 
-        let timers = null; // 任務定時器
-        let listeners = null; // 變化監聽器
+        function setTab(role = "Leader") {
+            GM_saveTab({ ID: taskId, Role: role, Name: Lib.title() });
+        };
 
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
-        async function destroyReset(recover=true) {
+        async function destroyReset(recover = true) {
             stop = true;
+            setTab("Member");
             clearTimeout(timers);
+            Lib.offEvent(window, "beforeunload");
             Lib.offEvent(document, "visibilitychange");
-            GM_removeValueChangeListener(listeners);
 
             if (!recover) return;
             // 恢復預設狀態 (允許重複註冊)
@@ -174,12 +181,29 @@
 
         // 註冊變化監聽器
         async function changeListener(name) {
-            listeners = GM_addValueChangeListener(name, function (key, old_value, new_value, remote) {
-                if (remote) { // 來自其他窗口修改
-                    destroyReset(false);
-                    console.log("舊詢輪已被停止");
+            Lib.storeListen([name], Lib.$debounce(({ nv, far }) => {
+                if (far) {
+                    if (nv !== taskId && registered) {
+                        destroyReset();
+                        console.log("舊詢輪已被停止");
+                    }
+                    else if (nv === "leave") {
+                        // ! 實驗性
+                        GM_getTabs(data => {
+                            const tabs = Object.values(data).reverse();
+                            for (const { ID, Role } of tabs) {
+                                if (Role === "Leader") continue;
+                                Lib.setV(Config.RegisterKey, ID);
+                                break;
+                            }
+                        })
+                    }
                 }
-            })
+                else if (nv === taskId) {
+                    register();
+                    console.log("詢輪已被恢復");
+                }
+            }, 10))
         };
 
         // 顯示觸發時間
@@ -242,9 +266,6 @@
         function taskQuery(newDate = new Date()) {
             /*
                 ! 未實現
-
-                Todo (優先): 開啟新網頁時轉移輪詢頁面, 但如果突然關閉, 應該重新註冊先前頁面 
-
                 Todo: 將 RecordTime 紀錄移除, 保留 CheckInTime
                 Todo: 將 CheckInTime 的格式改成 {CheckInTime: {"時間戳": ["任務"], "時間戳2": ["任務2"]}}, 可自訂個別任務時間
 
@@ -339,24 +360,28 @@
             timers = setTimeout(taskQuery, 1e4); // 10 秒詢輪
         };
 
-        return {
-            register: () => {
-                if (registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
-                registered = true;
+        // 註冊任務
+        function register() {
+            if (registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
+            registered = true;
 
-                Lib.setV(Config.RegisterKey, timeFormat(new Date())); // 紀錄註冊時間
-                changeListener(Config.RegisterKey); // 監聽註冊時間變化
-                taskQuery(); // 開始檢測
+            setTab();
+            Lib.setV(Config.RegisterKey, taskId); // 紀錄註冊時間
+            changeListener(Config.RegisterKey); // 監聽註冊時間變化
 
-                Lib.onEvent(document, "visibilitychange", () => {
-                    if (document.visibilityState === "visible") {
-                        clearTimeout(timers); // 清除舊的定時器
-                        taskQuery(); // 重新檢測
-                    }
-                });
+            taskQuery(); // 開始檢測
+            Lib.onEvent(window, "beforeunload", () => { // 離開時執行
+                Lib.setV(Config.RegisterKey, "leave");
+            });
+            Lib.onEvent(document, "visibilitychange", () => { // 切換頁面時執行
+                if (document.visibilityState === "visible") {
+                    clearTimeout(timers);
+                    taskQuery();
+                }
+            });
+        };
 
-            }
-        }
+        return { register };
     })();
 
     (() => {
