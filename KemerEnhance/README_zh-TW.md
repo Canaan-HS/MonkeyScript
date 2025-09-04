@@ -30,25 +30,26 @@
 
 ## **⚙️ 額外配置（代碼上方）**
 
-|     **參數**      |                        **說明**                        | **預設值** |
-| :---------------: | :----------------------------------------------------: | :--------: |
-|    `BlockAds`     |                      簡單阻擋廣告                      |   `true`   |
-|    `BackToTop`    |              帖子跳轉翻頁後，自動回到頂部              |   `true`   |
-|   `CacheFetch`    |       同分頁下緩存 Fetch 數據，加快後續相同載入        |   `true`   |
-|    `KeyScroll`    |                鍵盤熱鍵功能 ↑↓ 自動滾動                |   `true`   |
-|  `DeleteNotice`   |                        刪除公告                        |   `true`   |
-| `SidebarCollapse` |                側邊攔摺疊，滑鼠靠近恢復                |   `true`   |
-|    `FixArtist`    |      以 Pixiv 名稱，修改網站顯示名稱，可自定名稱       |   `true`   |
-|   `TextToLink`    |         將文本形式的連結字串，轉換成可點擊連結         |   `true`   |
-|    `CardZoom`     |                     調整預覽卡大小                     |   `true`   |
-|    `CardText`     |                   調整預覽卡文字效果                   |   `true`   |
-| `QuickPostToggle` |         快速切換帖子預覽 (目前僅限 nekohouse)          |   `true`   |
-|   `NewTabOpens`   |                將頁面跳轉都以新分頁開啟                |   `true`   |
-|   `ExtraButton`   |      額外的下方按鈕，用於快速回到頂部，與直接換頁      |   `true`   |
-|  `LinkBeautify`   | 美化下載連結，並讓 (browse ») 可用滑鼠懸浮直接顯示內容 |   `true`   |
-|  `CommentFormat`  |                     調整評論的排版                     |   `true`   |
-|  `VideoBeautify`  |    美化影片的樣式，並將影片下載連結，顯示於標題位置    |   `true`   |
-|  `OriginalImage`  |                        自動原圖                        |   `true`   |
+|     **參數**      |                          **說明**                           | **預設值** |
+| :---------------: | :---------------------------------------------------------: | :--------: |
+|    `BlockAds`     |                        簡單阻擋廣告                         |   `true`   |
+|    `BackToTop`    |                帖子跳轉翻頁後，自動回到頂部                 |   `true`   |
+|   `CacheFetch`    |          同分頁下緩存 Fetch 數據，加快後續相同載入          |   `true`   |
+|  `DeleteNotice`   |                          刪除公告                           |   `true`   |
+| `SidebarCollapse` |                  側邊攔摺疊，滑鼠靠近恢復                   |   `true`   |
+|    `KeyScroll`    |                  鍵盤熱鍵功能 ↑↓ 自動滾動                   |   `true`   |
+|   `TextToLink`    |           將文本形式的連結字串，轉換成可點擊連結            |   `true`   |
+|    `FixArtist`    | Pixiv 名稱修正網站顯示名稱，可自定名稱，與來源網站 Tag 直連 |   `true`   |
+|    `CardZoom`     |                       調整預覽卡大小                        |   `true`   |
+|    `CardText`     |                     調整預覽卡文字效果                      |   `true`   |
+| `BetterThumbnail` |                將預覽卡圖片變更為帖子內圖片                 |   `true`   |
+| `QuickPostToggle` |            快速切換帖子預覽 (目前僅限 nekohouse)            |   `true`   |
+|   `NewTabOpens`   |                  將頁面跳轉都以新分頁開啟                   |   `true`   |
+|   `ExtraButton`   |        額外的下方按鈕，用於快速回到頂部，與直接換頁         |   `true`   |
+|  `LinkBeautify`   |   美化下載連結，並讓 (browse ») 可用滑鼠懸浮直接顯示內容    |   `true`   |
+|  `CommentFormat`  |                       調整評論的排版                        |   `true`   |
+|  `VideoBeautify`  |      美化影片的樣式，並將影片下載連結，顯示於標題位置       |   `true`   |
+|  `OriginalImage`  |                          自動原圖                           |   `true`   |
 
 ## **📜 其他說明**
 
@@ -134,16 +135,24 @@ OriginalImage:
 
 ## **📦 版本資訊**
 
-**發佈版本：2025.08.06-Beta**
+**發佈版本：2025.09.03-Beta**
 
 ### **更新內容**
-1. 優化 CacheFetch 機制
-  - 減少不必要的請求快取，並改為非同步快取，減少執行延遲，提升整體效能。
-
-2. 擴充 FixArtist 功能
-  - 支援更多標籤（Tag）的修復
-  - 支援 candfans 頁面的藝術家名稱修正
-  - 調整帖子內部 Tag 跳轉網址為，該帖子本身，不支援的維持舊跳轉 (實驗性)
+1. **相容性修正**
+   - 調整以符合網站近期變更
+2. **選單調整**
+   - 改為純原生實作，移除 jQuery
+3. **OriginalImage**
+   - 調整載入提示樣式
+4. **CardZoom 功能**
+   - 變更模式 1、2 樣式
+   - 新增模式 3
+5. **BetterThumbnail（實驗性）**
+   - 新增強化縮圖功能
+6. **FixArtist & LinkBeautify**
+   - 優化部分實作方式，減少對原生頁面結構的破壞，採覆蓋方式保留原貌
+7. **TextToLink**
+   - 增加簡單類型的 Mega 連結修復，支援自動補上密碼斷詞（不支援複雜格式）
 
 ### **已知問題**
 1. 有時頁面載入速度，會慢於代碼功能載入，會導致功能失效，通常重新整理即可解決
