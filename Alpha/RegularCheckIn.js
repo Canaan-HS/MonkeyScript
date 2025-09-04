@@ -59,12 +59,15 @@
             Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
-        // {
-        //     Name: "ZenlessZoneZero",
-        //     API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
-        //     Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-        //     verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
-        // },
+        {
+            Name: "ZenlessZoneZero",
+            API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
+            Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
+            Headers: {
+                "x-rpc-signgame": "zzz",
+            },
+            verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
+        },
         {
             Name: "LeveCheckIn",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
@@ -96,7 +99,7 @@
     };
 
     // 建立簽到請求
-    function createRequest({ Name, Method = "POST", API, verifyStatus }) {
+    function createRequest({Name, Method = "POST", Headers = {}, API, verifyStatus }) {
 
         const deBug = (result) => {
             console.table(Object.assign(
@@ -118,6 +121,7 @@
                 GM_xmlhttpRequest({
                     method: Method,
                     url: API,
+                    headers: Headers,
                     onload: (response) => {
                         checkIn?.close();
 
