@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
-import config from './KemerDownloader/Dev/config.ts';
+import config from './ExDownloader/Dev/config.ts';
 
 export default defineConfig({
     build: {
