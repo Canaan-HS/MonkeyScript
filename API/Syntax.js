@@ -801,7 +801,16 @@ const Lib = (() => {
      */
     function workerCreate(code) {
         const blob = new Blob([code], { type: "application/javascript" });
-        return new Worker(URL.createObjectURL(blob));
+        const url = URL.createObjectURL(blob);
+        const worker = new Worker(url);
+
+        const terminate = worker.terminate;
+        worker.terminate = function() {
+            terminate.call(worker);
+            URL.revokeObjectURL(url);
+        };
+
+        return worker;
     };
 
     /**
@@ -987,9 +996,6 @@ const Lib = (() => {
             }
         `);
 
-        let files = {};
-        let tasks = [];
-
         const Uncompresslble = new Set([
             // 影片 (大多數視頻編碼已經是高度壓縮)
             'mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm',
@@ -1009,6 +1015,9 @@ const Lib = (() => {
             // 文件（PDF 有內建壓縮，有時無效）
             'pdf',
         ]);
+
+        let files = {};
+        let tasks = [];
 
         return {
             // 清除 worker
