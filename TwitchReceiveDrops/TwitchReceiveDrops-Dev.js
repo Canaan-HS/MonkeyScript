@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             2025.08.06
+// @version             2025.09.04-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -62,7 +62,7 @@
 
             /* 獲取當前時間 */
             this.getTime = () => {
-                const time = this.CurrentTime;
+                const time = this.currentTime;
                 const year = time.getFullYear();
                 const month = `${time.getMonth() + 1}`.padStart(2, "0");
                 const date = `${time.getDate()}`.padStart(2, "0");
@@ -196,7 +196,7 @@
             };
 
             /* 頁面刷新, 展示倒數 */
-            this.pageRefresh = async (display, interval) => {
+            this.pageRefresh = async (display, interval, finish) => {
                 if (display) { // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
                     const start = Date.now();
                     const Refresh = setInterval(() => {
@@ -208,59 +208,74 @@
                             return;
                         };
 
-                        document.title = `【 ${remaining}s 】 ${this.ProgressValue}`;
+                        document.title = `【 ${remaining}s 】 ${this.progressValue}`;
                     }, 1e3);
                 }
 
-                setTimeout(() => { location.reload() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
+                setTimeout(() => { finish?.() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
             };
 
             /* 展示進度於標籤 */
             this.showProgress = () => {
                 (new MutationObserver(() => {
-                    document.title != this.ProgressValue && (document.title = this.ProgressValue);
+                    document.title != this.progressValue && (document.title = this.progressValue);
                 })).observe(document.querySelector("title"), { childList: 1, subtree: 0 });
-                document.title = this.ProgressValue; // 觸發一次轉換
+                document.title = this.progressValue; // 觸發一次轉換
             };
 
             /* 查找過期的項目將其刪除 */
-            this.expiredCleanup = (Object, adapter, Timestamp, Callback) => {
-                const targetTime = adapter?.(Timestamp, this.CurrentTime.getFullYear()) ?? this.CurrentTime;
-                this.CurrentTime > targetTime ? (this.Config.ClearExpiration && Object.remove()) : Callback(Object);
+            this.expiredCleanup = (element, adapter, timestamp, callback) => {
+                const targetTime = adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime;
+                this.currentTime > targetTime ? (this.Config.ClearExpiration && element.remove()) : callback(element);
             };
 
+            this.progressValue; // 保存進度值字串
+            this.currentTime; // 保存當前時間
+
             /* 初始化數據 */
-            this.ProgressValue = ""; // 保存進度值字串
-            this.CurrentTime = new Date(); // 保存當前時間
             this.Config = {
                 ...Config,
-                EndLine: "div.bBnamT", // 斷開觀察者的終止線
-                AllProgress: "div.jtROCr", // 所有的掉寶進度
-                ProgressBar: "p.flIPIR span", // 掉寶進度數據
-                ActivityTime: "span.jPfhdt", // 掉寶活動的日期
+                EndLine: "p a[href='/drops/campaigns']", // 斷開觀察者的終止線
+                Campaigns: "a[href='/drops/campaigns']",
+                Inventory: "a[href='/drops/inventory']",
+                allProgress: ".inventory-max-width > div:not(:first-child)", // 所有的掉寶進度
+                ProgressBar: "[role='progressbar'] + div span", // 掉寶進度數據
+                ActivityTime: ".inventory-campaign-info span:last-child", // 掉寶活動的日期
             };
         }
 
         /* 主要運行 */
         static async ran() {
-            let Task = 0, Progress = 0, MaxElement = 0; // 任務數量, 掉寶進度, 最大進度元素
-            const Progress_Info = {}; // 保存進度的資訊
-
             const Detec = new Detection(); // Detec = 靜態函數需要將自身類實例化
             const Self = Detec.Config; // Self = 這樣只是讓語法短一點, 沒有必要性
 
-            const Display = Self.UpdateDisplay;
+            const display = Self.UpdateDisplay;
+
+            let campaigns, inventory; // 頁面按鈕
+            let task, progress, maxElement, progressInfo; // 任務數量, 掉寶進度, 最大進度元素, 保存進度的資訊
+
+            // 初始化數據
+            const initData = () => {
+                Detec.progressValue = "";
+                Detec.currentTime = new Date();
+
+                task = 0, progress = 0, maxElement = 0;
+                progressInfo = {};
+            };
+            initData();
 
             /* 主要處理函數 */
-            const process = (Token) => {
+            const process = (token) => {
+                campaigns ??= devTrace("Campaigns", document.querySelector(Self.Campaigns));
+                inventory ??= devTrace("Inventory", document.querySelector(Self.Inventory));
 
                 // 這邊寫這麼複雜是為了處理, (1: 只有一個, 2: 存在兩個以上, 3: 存在兩個以上但有些過期)
-                const AllProgress = devTrace("AllProgress", document.querySelectorAll(Self.AllProgress));
+                const allProgress = devTrace("allProgress", document.querySelectorAll(Self.allProgress));
 
-                if (AllProgress && AllProgress.length > 0) {
+                if (allProgress?.length > 0) {
                     const adapter = Detec.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
 
-                    AllProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
+                    allProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
                         const activityTime = devTrace("ActivityTime", data.querySelector(Self.ActivityTime));
 
                         Detec.expiredCleanup(
@@ -268,73 +283,88 @@
                             adapter, // 適配器
                             activityTime?.textContent, // 時間戳
                             notExpired => { // 取得未過期的物件
-                                // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 AllProgress 遍歷)
+                                // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 allProgress 遍歷)
                                 notExpired.querySelectorAll("button").forEach(draw => { draw.click() });
 
                                 const ProgressBar = devTrace("ProgressBar", notExpired.querySelectorAll(Self.ProgressBar));
 
                                 // 紀錄為第幾個任務數, 與掉寶進度
-                                Progress_Info[Task++] = [...ProgressBar].map(progress => +progress.textContent);
+                                progressInfo[task++] = [...ProgressBar].map(progress => +progress.textContent);
                             }
                         )
                     });
 
-                    const OldTask = Detec.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
-                    const NewTask = Object.fromEntries( // 獲取新任務數據
-                        Object.entries(Progress_Info).map(([key, value]) => [key, Detec.progressParse(value)])
+                    const oldTask = Detec.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
+                    const newTask = Object.fromEntries( // 獲取新任務數據
+                        Object.entries(progressInfo).map(([key, value]) => [key, Detec.progressParse(value)])
                     );
 
                     // 開始找到當前運行的任務
-                    for (const [key, value] of Object.entries(NewTask)) {
-                        const OldValue = OldTask[key] ?? value;
+                    for (const [key, value] of Object.entries(newTask)) {
+                        const OldValue = oldTask[key] ?? value;
 
                         if (value != OldValue) { // 找到第一個新值不等於舊值的
-                            MaxElement = key;
-                            Progress = value;
+                            maxElement = key;
+                            progress = value;
                             break;
-                        } else if (value > Progress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
-                            MaxElement = key;
-                            Progress = value;
+                        } else if (value > progress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
+                            maxElement = key;
+                            progress = value;
                         }
                     };
 
-                    Detec.storage("Task", NewTask); // 保存新任務狀態
+                    Detec.storage("Task", newTask); // 保存新任務狀態
                 };
 
-                // 處理進度 (寫在這裡是, AllProgress 找不到時, 也要正確試錯)
-                if (Progress > 0) {
-                    Detec.ProgressValue = `${Progress}%`; // 賦予進度值
-                    !Display && Detec.showProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 showProgress 動態處理展示
-                } else if (Token > 0) {
-                    setTimeout(() => { process(Token - 1) }, 2e3); // 試錯 (避免意外)
+                // 處理進度 (寫在這裡是, allProgress 找不到時, 也要正確試錯)
+                if (progress > 0) {
+                    Detec.progressValue = `${progress}%`; // 賦予進度值
+                    !display && Detec.showProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 showProgress 動態處理展示
+                } else if (token > 0) {
+                    setTimeout(() => { process(token - 1) }, 2e3); // 試錯 (避免意外)
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
-                const [Record, Timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
-                const Diff = ~~((Detec.CurrentTime - new Date(Timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
+                const [record, timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
+                const diff = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
-                /* 當無取得進度, 且啟用自動關閉, 且紀錄又不為 0, 判斷掉寶領取完成, 最後避免意外 Token 為 0 才觸發 */
-                if (!Progress && Self.EndAutoClose && Record != 0 && Token == 0) {
+                /* 無取得進度, 且啟用自動關閉, 且紀錄又不為 0, 判斷掉寶領取完成, 最後避免意外 token 為 0 才觸發 */
+                if (!progress && Self.EndAutoClose && record !== 0 && token === 0) {
                     window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
-
-                    /* 時間大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
-                } else if (Diff >= Self.JudgmentInterval && Progress == Record) {
-                    Self.RestartLive && Restart.ran(MaxElement); // 已最大進度對象, 進行直播重啟
-                    Detec.storage("Record", [Progress, Detec.getTime()]);
-
-                    /* 差異時間是 0 或 標題與進度值不同 = 有變化 */
-                } else if (Diff == 0 || Progress != Record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    if (Progress != 0) Detec.storage("Record", [Progress, Detec.getTime()]);
-
+                }
+                /* 差異大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
+                else if (diff >= Self.JudgmentInterval && progress === record) {
+                    Self.RestartLive && Restart.ran(maxElement); // 已最大進度對象, 進行直播重啟
+                    Detec.storage("Record", [progress, Detec.getTime()]);
+                }
+                /* 標題與進度值不同 = 有變化 */
+                else if (progress !== 0 && progress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
+                    Detec.storage("Record", [progress, Detec.getTime()]);
                 };
             };
 
-            waitEl(document, Self.EndLine, () => { // 等待頁面載入
-                process(4); // 預設能試錯 5 次
+            waitEl(document, Self.EndLine, () => { // 初始等待頁面載入
+                process(5);
                 Self.TryStayActive && stayActive(document);
             }, { timeoutResult: true });
-            Detec.pageRefresh(Display, Self.UpdateInterval); // 頁面刷新
+
+            const monitor = () => { // 後續變更監聽
+                Detec.pageRefresh(display, Self.UpdateInterval, () => {
+                    initData();
+                    campaigns?.click();
+
+                    setTimeout(() => {
+                        inventory?.click();
+                        setTimeout(() => {
+                            process(5);
+                            monitor();
+                        }, 1e3);
+                    }, 2e3);
+                })
+            };
+
+            monitor();
         }
     };
 
@@ -366,11 +396,11 @@
 
             this.Config = {
                 ...Config,
-                Offline: "strong.krncnP", // 離線的直播 (離線標籤)
-                Online: "span.jAIlLI", // 正在觀看直播人數標籤 (觀看人數)
-                TagLabel: "div.iSVEtN", // 頻道 Tag 標籤
-                Container: "div.hfhTAL", // 頻道播放的容器
-                ContainerHandle: "div.scrollable-area", // 容器滾動句柄
+                Offline: ".home-carousel-info strong", // 離線的直播 (離線標籤)
+                Online: "[data-a-target='animated-channel-viewers-count']", // 正在觀看直播人數標籤 (觀看人數)
+                Channel: ".preview-card-channel-link", // 頻道連結
+                Container: "#directory-game-main-content", // 頻道播放的容器
+                ContainerHandle: ".scrollable-area", // 容器滾動句柄
                 ActivityLink1: "[data-test-selector='DropsCampaignInProgressDescription-hint-text-parent']", // 參與活動的頻道連結
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']",
             };
@@ -441,24 +471,19 @@
                         const ContainerHandle = devTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
 
                         const StartFind = () => {
-                            const TagLabel = devTrace("TagLabel", Container.querySelectorAll(`${Self.TagLabel}:not([Drops-Processed])`));
+                            const Channel = devTrace("Channel", Container.querySelectorAll(`${Self.Channel}:not([Drops-Processed])`))
 
-                            const tag = [...TagLabel]
-                                .find(tag => {
-                                    tag.setAttribute("Drops-Processed", true);
-                                    return FindTag.test(tag.textContent);
+                            const Link = [...Channel]
+                                .find(channel => {
+                                    channel.setAttribute("Drops-Processed", true);
+                                    const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")]
+                                        .some(span => FindTag.test(span.textContent))
+                                    return haveDrops ? channel : null
                                 });
 
-                            if (tag) {
-                                const Link = devTrace("Link", tag.closest(".fzKxJT")?.querySelector("a"));
-
-                                if (!Link) {
-                                    setTimeout(StartFind, 1500);
-                                    return;
-                                }
-
+                            if (Link) {
                                 Link.click();
-                                Link.click(); // 避免意外點兩次
+                                Link.click(); // 避免意外點兩次 (直接用 dblclick MouseEvent 好像不行)
                                 Self.RestartLiveMute && Dir.liveMute(NewWindow);
                                 Self.TryStayActive && stayActive(NewWindow.document);
                                 Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
