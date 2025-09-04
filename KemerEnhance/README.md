@@ -29,25 +29,26 @@
 
 ## **⚙️ Additional Configuration (Located at the top of the code)**
 
-|   **Parameter**   |                                  **Description**                                   | **Default Value** |
-| :---------------: | :--------------------------------------------------------------------------------: | :---------------: |
-|    `BlockAds`     |                                 Simple ad blocker                                  |      `true`       |
-|    `BackToTop`    |            After page navigation, automatically scroll back to the top             |      `true`       |
-|   `CacheFetch`    |   Cache Fetch data under the same page to speed up subsequent identical loading    |      `true`       |
-|    `KeyScroll`    |                 Keyboard hotkey feature ↑↓ for automatic scrolling                 |      `true`       |
-|  `DeleteNotice`   |                                   Remove notices                                   |      `true`       |
-| `SidebarCollapse` |                 Sidebar collapses, restores when the mouse is near                 |      `true`       |
-|    `FixArtist`    |      Modify the website's display name to Pixiv name, custom names can be set      |      `true`       |
-|   `TextToLink`    |                      Convert text links into clickable links                       |      `true`       |
-|    `CardZoom`     |                            Adjust the preview card size                            |      `true`       |
-|    `CardText`     |                        Adjust the preview card text effects                        |      `true`       |
-| `QuickPostToggle` |             Quickly toggle post preview (currently only for nekohouse)             |      `true`       |
-|   `NewTabOpens`   |                        Open all page redirects in a new tab                        |      `true`       |
-|   `ExtraButton`   | Additional button at the bottom for quick return to the top and direct page change |      `true`       |
-|  `LinkBeautify`   |   Beautify download links and make (browse ») hoverable to show content directly   |      `true`       |
-|  `CommentFormat`  |                               Adjust comment layout                                |      `true`       |
-|  `VideoBeautify`  |      Beautify video styles and move the video download link to the title area      |      `true`       |
-|  `OriginalImage`  |                       Automatically show the original image                        |      `true`       |
+|   **Parameter**   |                                     **Description**                                      | **Default** |
+| :---------------: | :--------------------------------------------------------------------------------------: | :---------: |
+|    `BlockAds`     |                                    Simple ad blocking                                    |   `true`    |
+|    `BackToTop`    |                       Automatically return to top after page jump                        |   `true`    |
+|   `CacheFetch`    |        Cache Fetch data under the same tab to speed up subsequent identical loads        |   `true`    |
+|  `DeleteNotice`   |                                      Delete notice                                       |   `true`    |
+| `SidebarCollapse` |                   Sidebar collapses, restored when mouse hovers nearby                   |   `true`    |
+|    `KeyScroll`    |                             Keyboard hotkeys ↑↓ auto scroll                              |   `true`    |
+|   `TextToLink`    |                Convert plain text link strings into clickable hyperlinks                 |   `true`    |
+|    `FixArtist`    | Correct displayed name based on Pixiv name, customizable, direct link to source site Tag |   `true`    |
+|    `CardZoom`     |                                 Adjust card preview size                                 |   `true`    |
+|    `CardText`     |                             Adjust card preview text effect                              |   `true`    |
+| `BetterThumbnail` |                     Replace card preview image with image from post                      |   `true`    |
+| `QuickPostToggle` |                  Quickly switch post preview (currently only nekohouse)                  |   `true`    |
+|   `NewTabOpens`   |                                Open page jumps in new tab                                |   `true`    |
+|   `ExtraButton`   |             Additional bottom buttons for quick top return and direct paging             |   `true`    |
+|  `LinkBeautify`   |          Beautify download links, and allow (browse ») to show content on hover          |   `true`    |
+|  `CommentFormat`  |                                  Adjust comment layout                                   |   `true`    |
+|  `VideoBeautify`  |              Beautify video style, display download link at title position               |   `true`    |
+|  `OriginalImage`  |                                   Auto original image                                    |   `true`    |
 
 ## **📜 Other Notes**
 
@@ -128,16 +129,24 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version：2025.08.06-Beta**
+**Release Version：2025.09.03-Beta**
 
 ### **What's New**
-1. Optimized CacheFetch mechanism
-  - Reduced unnecessary request caching and switched to asynchronous caching to lower execution delay and improve overall performance.
-
-2. Expanded FixArtist functionality
-  - Added support for fixing more tags
-  - Added support for correcting artist names on candfans pages
-  - Adjusted internal tag jump links to point to the same post itself (experimental); unsupported cases will keep the old behavior
+1. **Compatibility Fix**  
+   - Adjustments to match recent website changes  
+2. **Menu Adjustment**  
+   - Reimplemented with pure native code, remove jQuery  
+3. **OriginalImage**  
+   - Adjusted loading indicator style  
+4. **CardZoom Feature**  
+   - Updated styles for Mode 1 and 2  
+   - Added Mode 3  
+5. **BetterThumbnail (Experimental)**  
+   - Added enhanced thumbnail feature  
+6. **FixArtist & LinkBeautify**  
+   - Optimized partial implementation to reduce damage to native page structure, using overlay to preserve original appearance  
+7. **TextToLink**  
+   - Added simple Mega link repair with automatic password fragment completion (complex formats not supported)  
 
 ### **Known Issues**
 1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
