@@ -26,7 +26,7 @@ export default `
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/495339/1616381/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
