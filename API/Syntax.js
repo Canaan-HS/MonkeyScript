@@ -799,7 +799,7 @@ const Lib = (() => {
      * @param {string} code - 運行代碼
      * @returns {Worker}    - 創建的 Worker 連結
      */
-    function workerCreate(code) {
+    function createWorker(code) {
         const blob = new Blob([code], { type: "application/javascript" });
         const url = URL.createObjectURL(blob);
         const worker = new Worker(url);
@@ -940,7 +940,7 @@ const Lib = (() => {
      * zipEngine.generateZip().then(zip => {})
      */
     function createCompressor() {
-        let worker = workerCreate(`
+        let worker = createWorker(`
             importScripts("https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js");
             onmessage = function(e) {
                 const { filesWithOptions } = e.data;
@@ -1239,7 +1239,7 @@ const Lib = (() => {
     /**
      * @description 輸出 Json 檔案
      * @param {*} data      - 可轉成 Json 格式的數據
-     * @param {string} Name - 輸出的檔名 (不用打副檔名)
+     * @param {string} name - 輸出的檔名 (不用打副檔名)
      * @param {function} success   - 選擇是否回傳輸出狀態
      *
      * @example
@@ -1389,7 +1389,7 @@ const Lib = (() => {
      *          close: true,
      *      },
      *      "菜單2": ()=> { 方法2(參數) }
-     * }, "ID");
+     * }, { name: "ID" });
      */
     const registerMenu = new Set();
     function regMenu(items, options = {}) {
@@ -1540,7 +1540,7 @@ const Lib = (() => {
             ...addCall, ...storageCall, ...storeCall,
             eventRecord, addRecord, observerRecord,
             $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
-            workerCreate, formatTemplate, createCompressor, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
+            createWorker, formatTemplate, createCompressor, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storeListen,
 
             /**
