@@ -17,6 +17,7 @@
 // @description:ru      Автоматически получает дропы Twitch, отображает прогресс во вкладке, и если дропы не завершены к концу трансляции, автоматически находит другую трансляцию с активированными дропами и продолжает фарминг. Настраиваемые параметры в коде.
 
 // @match        https://www.twitch.tv/drops/inventory
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/8214/8214044.png
 
 // @license      MPL-2.0
