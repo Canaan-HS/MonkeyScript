@@ -796,7 +796,7 @@ const Lib = (() => {
     /**
      * @description 輸出 Json 檔案
      * @param {*} data      - 可轉成 Json 格式的數據
-     * @param {string} Name - 輸出的檔名 (不用打副檔名)
+     * @param {string} name - 輸出的檔名 (不用打副檔名)
      * @param {function} success   - 選擇是否回傳輸出狀態
      *
      * @example
@@ -946,7 +946,7 @@ const Lib = (() => {
      *          close: true,
      *      },
      *      "菜單2": ()=> { 方法2(參數) }
-     * }, "ID");
+     * }, { name: "ID" });
      */
     const registerMenu = new Set();
     function regMenu(items, options = {}) {
