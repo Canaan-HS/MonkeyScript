@@ -23,6 +23,7 @@
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
 // @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
