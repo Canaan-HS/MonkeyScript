@@ -2155,32 +2155,31 @@
                         }, { capture: true, passive: true });
                     };
 
-                    /**
-                     * 渲染圖像
-                     *
-                     * @param {Object} { ID, oldUrl, newUrl }
-                     * ID 用於標示用的
-                     * oldUrl 原始連結, 當 newUrl 並非原始連結, 可以傳遞該參數保留原始數據 (預設: null)
-                     * newUrl 用於渲染圖片的新連結
-                     */
-                    function imgRendering({ id, oldUrl = null, newUrl }) {
-                        return preact.h((oldUrl ? "rc" : "div"), {
-                            id,
-                            src: oldUrl,
-                            className: "Image-link"
-                        },
-                            preact.h("img", {
-                                key: "img",
-                                src: newUrl,
-                                className: "Image-loading-indicator Image-style",
-                                onLoad: function () {
-                                    Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
-                                },
-                                onError: function () {
-                                    imgReload(Lib.$q(`#${id} img`), oldUrl, 10);
-                                }
-                            })
-                        )
+                    function imgRendering({root, index, newUrl, oldUrl=null, mode="fast"} = {}) {
+                        ++index;
+
+                        const tagName = oldUrl ? "rc" : "div";
+                        const oldSrc = oldUrl ? `src="${oldUrl}"` : "";
+                        const container = Lib.createDomFragment(`
+                            <${tagName} id="IMG-${index}" ${oldSrc}>
+                                <img src="${newUrl}" class="Image-loading-indicator Image-style">
+                            </${tagName}>
+                        `);
+
+                        const img = container.querySelector("img");
+
+                        img.onload = function () {
+                            img.$delClass("Image-loading-indicator");
+                            if (mode === "slow") slowAutoLoad(index);
+                        };
+
+                        if (mode === "fast") {
+                            img.onerror = function () {
+                                imgReload(img, 10);
+                            }
+                        };
+
+                        root.replaceWith(container);
                     };
 
                     async function getFileSize(url) {
@@ -2319,65 +2318,41 @@
 
                     async function fastAutoLoad() { // mode 1 預設 (快速自動)
                         loadFailedClick();
-                        thumbnail.forEach((object, index) => {
+                        thumbnail.forEach((root, index) => {
                             setTimeout(() => {
-                                object.$dAttr("class");
-
-                                const a = object.$q(LinkObj);
+                                const a = root.$q(LinkObj);
                                 const hrefP = hrefParse(a);
 
                                 if (experiment) {
                                     a.$q("img").$addClass("Image-loading-indicator-experiment");
-
-                                    imgRequest(object, hrefP, href => {
-                                        render(preact.h(imgRendering, { id: `IMG-${index}`, oldUrl: hrefP, newUrl: href }), object);
+                                    imgRequest(root, hrefP, href => {
+                                        imgRendering({root, index, newUrl: href, oldUrl: hrefP});
                                     });
                                 } else {
-                                    render(preact.h(imgRendering, { id: `IMG-${index}`, newUrl: hrefP }), object);
+                                    imgRendering({root, index, newUrl: hrefP});
                                 }
                             }, index * 300);
                         });
                     };
 
                     async function slowAutoLoad(index) {
-                        if (index == thumbnail.length) return;
-                        const object = thumbnail[index];
-                        object.$dAttr("class");
+                        if (index === thumbnail.length) return;
 
-                        const a = object.$q(LinkObj);
+                        const root = thumbnail[index];
+                        const a = root.$q(LinkObj);
                         const hrefP = hrefParse(a);
 
-                        const img = a.$q("img");
-
-                        const replace_core = (newUrl, oldUrl = null) => {
-
-                            const container = Lib.createElement((oldUrl ? "rc" : "div"), {
-                                id: `IMG-${index}`,
-                                class: "Image-link",
-                            });
-
-                            oldUrl && container.$sAttr("src", oldUrl); // 當存在時進行設置
-
-                            const img = Lib.createElement(container, "img", {
-                                src: newUrl,
-                                class: "Image-loading-indicator Image-style"
-                            });
-
-                            img.onload = function () {
-                                img.$delClass("Image-loading-indicator");
-                                slowAutoLoad(++index);
-                            };
-
-                            object.$iHtml(""); // 清空物件元素
-                            object.appendChild(container);
-                        };
-
                         if (experiment) { // 替換調用
-                            img.$addClass("Image-loading-indicator-experiment");
-
-                            imgRequest(object, hrefP, href => replace_core(href, hrefP));
+                            a.$q("img").$addClass("Image-loading-indicator-experiment");
+                            imgRequest(root, hrefP, href =>
+                                imgRendering({
+                                    root, index, newUrl: href, oldUrl: hrefP, mode: "slow"
+                                })
+                            );
                         } else {
-                            replace_core(hrefP);
+                            imgRendering({
+                                root, index, newUrl: hrefP, mode: "slow"
+                            });
                         }
                     };
 
@@ -2386,26 +2361,23 @@
                         return new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
-                                    const object = entry.target;
+                                    const root = entry.target;
+                                    observer.unobserve(root);
 
-                                    observer.unobserve(object);
-                                    object.$dAttr("class");
-
-                                    const a = object.$q(LinkObj);
+                                    const a = root.$q(LinkObj);
                                     const hrefP = hrefParse(a);
 
                                     if (experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
-
-                                        imgRequest(object, hrefP, href => {
-                                            render(preact.h(imgRendering, { id: object.alt, oldUrl: hrefP, newUrl: href }), object);
+                                        imgRequest(root, hrefP, href => {
+                                            imgRendering({root, index: root.dataset.index, newUrl: href, oldUrl: hrefP});
                                         });
                                     } else {
-                                        render(preact.h(imgRendering, { id: object.alt, newUrl: hrefP }), object);
+                                        imgRendering({root, index: root.dataset.index, newUrl: hrefP});
                                     }
                                 }
                             });
-                        }, { threshold: 0.3 });
+                        }, { threshold: 0.4 });
                     };
 
                     /* 模式選擇 */
@@ -2417,9 +2389,9 @@
 
                         case 3:
                             observer = observeLoad();
-                            thumbnail.forEach((object, index) => {
-                                object.alt = `IMG-${index}`;
-                                observer.observe(object);
+                            thumbnail.forEach((root, index) => {
+                                root.dataset.index = index;
+                                observer.observe(root);
                             });
                             break;
 
@@ -2996,12 +2968,4 @@
             }
         });
     };
-
-    /* ==================== 額外封裝函數 ==================== */
-
-    // 透過 $iHtml() 實現 react 的覆蓋渲染
-    function render(element, container) {
-        container.$iHtml(""); // 雖然這樣性能不是最好的, 但通用性最高
-        preact.render(element, container);
-    }
 })();
