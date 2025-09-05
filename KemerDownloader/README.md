@@ -9,8 +9,8 @@
 1. Install a browser userscript manager (such as [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))  
 2. [Install Script](https://update.greasyfork.org/scripts/472282/Kemer%20%E4%B8%8B%E8%BC%89%E5%99%A8.user.js)  
 3. Visit  
-    - [kemono](https://kemono.su/)  
-    - [coomer](https://coomer.su/)  
+    - [kemono](https://kemono.cr/)  
+    - [coomer](https://coomer.st/)  
     - [nekohouse](https://nekohouse.su/)  
 
 ---
