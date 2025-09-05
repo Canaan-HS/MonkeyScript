@@ -95,7 +95,7 @@ const Lib = (() => {
         $oHtml(value = null) {
             return value === null ? this.outerHTML : (this.outerHTML = value);
         },
-        $iAdjacent(value, position="beforeend") {
+        $iAdjacent(value, position = "beforeend") {
             if (value == null) return;
             value.nodeType === 1 // 元素
                 ? this.insertAdjacentElement(position, value)
@@ -812,7 +812,7 @@ const Lib = (() => {
         const worker = new Worker(url);
 
         const terminate = worker.terminate;
-        worker.terminate = function() {
+        worker.terminate = function () {
             terminate.call(worker);
             URL.revokeObjectURL(url);
         };
@@ -823,17 +823,19 @@ const Lib = (() => {
     /**
      * @description 解析範圍進行設置 (索引從 1 開始)
      * @param {string} scope  - 設置的索引範圍 [1, 2, 3-5, 6~10, -4, !8]
-     * @param {array} object  - 需要設置範圍的物件
-     * @returns {object}      - 回傳設置完成的物件
+     * @param {array} list   - 需要設置範圍的列表
+     * @returns {array}      - 回傳設置完成的列表
      *
      * @example
-     * object = scopeParse("", object);
+     * list = scopeParse("", list);
      */
-    function scopeParse(scope, object) {
-        if (typeof scope !== "string" || scope.trim() === "") return object;
+    function scopeParse(scope, list) {
+        if (typeof scope !== "string" || scope.trim() === "") return list;
 
-        const len = object.length;
+        const len = list.length;
+        let hasIncludes = false;
         const result = new Set(), exclude = new Set();
+
         const scopeGenerate = (start, end, save) => { // 生成一個範圍
             const judge = start <= end;
             for ( // 根據數字大小順序, 生成索引值
@@ -849,28 +851,32 @@ const Lib = (() => {
              * 1, -2, !3, 4~5, -6~7, !8-9
              */
             if (/^(!|-)?\d+(~\d+|-\d+)?$/.test(str)) {
-                const noneHead = str.slice(1); // 獲取一個從 第二個字元開始的字串
+                const noneHead = str.slice(1);
                 const isExclude = /^[!-]/.test(str);
-                const isRange = /[~-]/.test(noneHead); // 由無頭字串, 判斷內部是否含有範圍字串
+                const isRange = /[~-]/.test(noneHead);
 
                 const [save, number] = isExclude
-                    ? [exclude, noneHead] // 是排除對象, 傳遞 (排除, 去除首字元為排除符的字串)
-                    : [result, str]; // 不是排除對象, 傳遞 (結果, 原始字串)
+                    ? [exclude, noneHead]
+                    : (hasIncludes = true, [result, str]);
 
                 const [start, end] = isRange
-                    ? number.split(/-|~/) // 是範圍的已範圍符, 拆分成開始與結束
-                    : [number, number]; // 不是範圍的, 開始與結束相同
+                    ? number.split(/-|~/)
+                    : [number, number];
 
-                start == end
-                    ? save.add(+start - 1) // 單數字, 將開始與結束, 進行 -1 取得物件索引
-                    : scopeGenerate(+start - 1, +end - 1, save); // 是範圍
+                start === end
+                    ? save.add(+start - 1)
+                    : scopeGenerate(+start - 1, +end - 1, save);
             }
         };
 
-        // 使用排除過濾出剩下的索引, 並按照順序進行排序
-        const final_obj = [...result].filter(index => !exclude.has(index) && index < len && index >= 0).sort((a, b) => a - b);
-        // 回傳最終的索引物件
-        return final_obj.map(index => object[index]);
+        const baseIndices = hasIncludes
+            ? [...result] : [...list.keys()]
+
+        const finalIndices = baseIndices
+            .filter(index => !exclude.has(index) && index < len && index >= 0)
+            .sort((a, b) => a - b);
+
+        return finalIndices.map(index => list[index]);
     };
 
     /**
