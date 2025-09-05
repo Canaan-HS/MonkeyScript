@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.03-Beta
+// @version      2025.09.05-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -23,9 +23,10 @@
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1654935/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -639,12 +640,19 @@
                             url = uri.href;
                             return url;
                         },
+                        specialServer: {
+                            x: "twitter",
+                            maker_id: "dlsite"
+                        },
                         parseUrlInfo(uri) {
-                            uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
+                            uri = uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/) || uri.match(/\/([^\/]+)\/([^\/]+)$/);
+                            uri = uri.splice(1);
+                            let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+                            let user = uri[1];
+                            server = this.specialServer[server] ?? server;
                             return uri ? {
-                                uri: uri,
-                                server: uri[1],
-                                user: uri[2]
+                                server: server,
+                                user: user
                             } : {
                                 uri: uri
                             };
@@ -717,20 +725,13 @@
                         },
                         async fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) {
                             nameEl.$sAttr("style", "display: none;");
-                            const parent = nameEl.parentNode;
-                            if (!parent.$q("fix_wrapper")) {
-                                const fix_wrapper = Lib.createElement("fix_wrapper");
-                                Lib.createElement(fix_wrapper, "fix_name", {
-                                    text: showText.trim(),
-                                    attr: {
-                                        jump: mainUrl
-                                    }
-                                });
-                                Lib.createElement(fix_wrapper, "fix_edit", {
-                                    id: user,
-                                    text: "Edit"
-                                });
-                                parent.insertBefore(fix_wrapper, nameEl);
+                            if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER") {
+                                nameEl.$iAdjacent(`
+                                    <fix_wrapper>
+                                        <fix_name jump="${mainUrl}">${showText.trim()}</fix_name>
+                                        <fix_edit id="${user}">Edit</fix_edit>
+                                    </fix_wrapper>
+                                `, "beforebegin");
                             }
                             const [tag_text, support_id, support_name] = [tagEl.$text(), this.supportFixTag.ID, this.supportFixTag.NAME];
                             if (!tag_text) return;
@@ -1036,7 +1037,7 @@
                         });
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.parentNode.insertBefore(text, display);
+                        display.$iAdjacent(text, "beforebegin");
                         text.scrollTop = 0;
                         setTimeout(() => {
                             text.focus();
@@ -1714,17 +1715,13 @@
                                 browse.appendChild(view);
                             } else {
                                 const responseJson = JSON.parse(response.responseText);
-                                const view = Lib.createElement("View");
-                                const buffer = Lib.createFragment;
                                 const password = responseJson["password"];
-                                if (password) {
-                                    buffer.append(document.createTextNode(`password: ${password}`), Lib.createElement("br"));
-                                }
-                                for (const text of responseJson["file_list"]) {
-                                    buffer.append(document.createTextNode(text), Lib.createElement("br"));
-                                }
-                                view.appendChild(buffer);
-                                browse.appendChild(view);
+                                browse.$iAdjacent(`
+                                    <view>
+                                        ${password ? `password: ${password}<br>` : ""}
+                                        ${responseJson["file_list"].map(file => `${file}<br>`).join("")}
+                                    </view>
+                                `);
                             }
                         },
                         onerror: error => {
@@ -1813,16 +1810,7 @@
                             link.$text(text);
                             link.$sAttr("download", text);
                         } else {
-                            const newA = Lib.createElement("a", {
-                                class: link.getAttribute("class"),
-                                href: link.href,
-                                download: text,
-                                attr: {
-                                    beautify: true
-                                },
-                                text: text
-                            });
-                            link.parentNode.insertBefore(newA, link);
+                            link.$iAdjacent(`<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`, "beforebegin");
                         }
                         const browse = link.nextElementSibling;
                         if (!browse) continue;
@@ -1942,25 +1930,31 @@
                         });
                     }
                     function imgRendering({
-                        id,
+                        root,
+                        index,
+                        newUrl,
                         oldUrl = null,
-                        newUrl
-                    }) {
-                        return preact.h(oldUrl ? "rc" : "div", {
-                            id: id,
-                            src: oldUrl,
-                            className: "Image-link"
-                        }, preact.h("img", {
-                            key: "img",
-                            src: newUrl,
-                            className: "Image-loading-indicator Image-style",
-                            onLoad: function () {
-                                Lib.$q(`#${id} img`)?.$delClass("Image-loading-indicator");
-                            },
-                            onError: function () {
-                                imgReload(Lib.$q(`#${id} img`), oldUrl, 10);
-                            }
-                        }));
+                        mode = "fast"
+                    } = {}) {
+                        ++index;
+                        const tagName = oldUrl ? "rc" : "div";
+                        const oldSrc = oldUrl ? `src="${oldUrl}"` : "";
+                        const container = Lib.createDomFragment(`
+                            <${tagName} id="IMG-${index}" ${oldSrc}>
+                                <img src="${newUrl}" class="Image-loading-indicator Image-style">
+                            </${tagName}>
+                        `);
+                        const img = container.querySelector("img");
+                        img.onload = function () {
+                            img.$delClass("Image-loading-indicator");
+                            if (mode === "slow") slowAutoLoad(index);
+                        };
+                        if (mode === "fast") {
+                            img.onerror = function () {
+                                imgReload(img, 10);
+                            };
+                        }
+                        root.replaceWith(container);
                     }
                     async function getFileSize(url) {
                         for (let i = 0; i < 5; i++) {
@@ -2084,58 +2078,51 @@
                     }
                     async function fastAutoLoad() {
                         loadFailedClick();
-                        thumbnail.forEach((object, index) => {
+                        thumbnail.forEach((root, index) => {
                             setTimeout(() => {
-                                object.$dAttr("class");
-                                const a = object.$q(LinkObj);
+                                const a = root.$q(LinkObj);
                                 const hrefP = hrefParse(a);
                                 if (experiment) {
                                     a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                    imgRequest(object, hrefP, href => {
-                                        render(preact.h(imgRendering, {
-                                            id: `IMG-${index}`,
-                                            oldUrl: hrefP,
-                                            newUrl: href
-                                        }), object);
+                                    imgRequest(root, hrefP, href => {
+                                        imgRendering({
+                                            root: root,
+                                            index: index,
+                                            newUrl: href,
+                                            oldUrl: hrefP
+                                        });
                                     });
                                 } else {
-                                    render(preact.h(imgRendering, {
-                                        id: `IMG-${index}`,
+                                    imgRendering({
+                                        root: root,
+                                        index: index,
                                         newUrl: hrefP
-                                    }), object);
+                                    });
                                 }
                             }, index * 300);
                         });
                     }
                     async function slowAutoLoad(index) {
-                        if (index == thumbnail.length) return;
-                        const object = thumbnail[index];
-                        object.$dAttr("class");
-                        const a = object.$q(LinkObj);
+                        if (index === thumbnail.length) return;
+                        const root = thumbnail[index];
+                        const a = root.$q(LinkObj);
                         const hrefP = hrefParse(a);
-                        const img = a.$q("img");
-                        const replace_core = (newUrl, oldUrl = null) => {
-                            const container = Lib.createElement(oldUrl ? "rc" : "div", {
-                                id: `IMG-${index}`,
-                                class: "Image-link"
-                            });
-                            oldUrl && container.$sAttr("src", oldUrl);
-                            const img = Lib.createElement(container, "img", {
-                                src: newUrl,
-                                class: "Image-loading-indicator Image-style"
-                            });
-                            img.onload = function () {
-                                img.$delClass("Image-loading-indicator");
-                                slowAutoLoad(++index);
-                            };
-                            object.$iHtml("");
-                            object.appendChild(container);
-                        };
                         if (experiment) {
-                            img.$addClass("Image-loading-indicator-experiment");
-                            imgRequest(object, hrefP, href => replace_core(href, hrefP));
+                            a.$q("img").$addClass("Image-loading-indicator-experiment");
+                            imgRequest(root, hrefP, href => imgRendering({
+                                root: root,
+                                index: index,
+                                newUrl: href,
+                                oldUrl: hrefP,
+                                mode: "slow"
+                            }));
                         } else {
-                            replace_core(hrefP);
+                            imgRendering({
+                                root: root,
+                                index: index,
+                                newUrl: hrefP,
+                                mode: "slow"
+                            });
                         }
                     }
                     function observeLoad() {
@@ -2143,30 +2130,31 @@
                         return new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
-                                    const object = entry.target;
-                                    observer.unobserve(object);
-                                    object.$dAttr("class");
-                                    const a = object.$q(LinkObj);
+                                    const root = entry.target;
+                                    observer.unobserve(root);
+                                    const a = root.$q(LinkObj);
                                     const hrefP = hrefParse(a);
                                     if (experiment) {
                                         a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                        imgRequest(object, hrefP, href => {
-                                            render(preact.h(imgRendering, {
-                                                id: object.alt,
-                                                oldUrl: hrefP,
-                                                newUrl: href
-                                            }), object);
+                                        imgRequest(root, hrefP, href => {
+                                            imgRendering({
+                                                root: root,
+                                                index: root.dataset.index,
+                                                newUrl: href,
+                                                oldUrl: hrefP
+                                            });
                                         });
                                     } else {
-                                        render(preact.h(imgRendering, {
-                                            id: object.alt,
+                                        imgRendering({
+                                            root: root,
+                                            index: root.dataset.index,
                                             newUrl: hrefP
-                                        }), object);
+                                        });
                                     }
                                 }
                             });
                         }, {
-                            threshold: .3
+                            threshold: .4
                         });
                     }
                     let observer;
@@ -2177,9 +2165,9 @@
 
                         case 3:
                             observer = observeLoad();
-                            thumbnail.forEach((object, index) => {
-                                object.alt = `IMG-${index}`;
-                                observer.observe(object);
+                            thumbnail.forEach((root, index) => {
+                                root.dataset.index = index;
+                                observer.observe(root);
                             });
                             break;
 
@@ -2274,7 +2262,6 @@
         let isDragging = false;
         let startX, startY, initialLeft, initialTop;
         const nonDraggableTags = new Set(["SELECT", "BUTTON", "INPUT", "TEXTAREA", "A"]);
-        element.style.cursor = "grab";
         const handleMouseMove = e => {
             if (!isDragging) return;
             const dx = e.clientX - startX;
@@ -2285,7 +2272,7 @@
         const handleMouseUp = () => {
             if (!isDragging) return;
             isDragging = false;
-            element.style.cursor = "grab";
+            element.style.cursor = "auto";
             document.body.style.removeProperty("user-select");
             Lib.offEvent(document, "mousemove");
             Lib.offEvent(document, "mouseup");
@@ -2335,10 +2322,12 @@
             </div>
         `;
         const menuScript = `
-            function check(value) {
-                return value.toString().length > 4 || value > 1000
-                    ? 1000 : value < 0 ? "" : value;
-            }
+            <script id="menu-script">
+                function check(value) {
+                    return value.toString().length > 4 || value > 1000
+                        ? 1000 : value < 0 ? "" : value;
+                }
+            </script>
         `;
         const menuSet = DLL.MenuSet();
         const menuStyle = `
@@ -2561,10 +2550,7 @@
             </div>
         `);
         Lib.body.appendChild(shadow);
-        shadowRoot.appendChild(Lib.createElement("script", {
-            id: "menu-script",
-            innerHTML: menuScript
-        }));
+        shadowRoot.appendChild(Lib.createDomFragment(menuScript));
         const languageEl = shadowRoot.querySelector("#language");
         const readsetEl = shadowRoot.querySelector("#readsettings");
         const interfaceEl = shadowRoot.querySelector(".modal-interface");
@@ -2682,9 +2668,5 @@
                 menuRequ.menuClose();
             }
         });
-    }
-    function render(element, container) {
-        container.$iHtml("");
-        preact.render(element, container);
     }
 })();
