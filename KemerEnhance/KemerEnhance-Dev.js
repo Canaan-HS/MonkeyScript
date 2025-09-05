@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1654935/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -703,9 +703,18 @@
                             url = uri.href;
                             return url;
                         },
-                        parseUrlInfo(uri) { // ! 解析網址 (測試更簡潔的匹配, 但通用性下降)
-                            uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
-                            return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
+                        specialServer: { x: "twitter", maker_id: "dlsite" },
+                        parseUrlInfo(uri) { // 解析所有內部網址, 與作者外部網址
+                            uri =
+                                uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/)
+                                || uri.match(/\/([^\/]+)\/([^\/]+)$/);
+                            uri = uri.splice(1);
+
+                            let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+                            let user = uri[1];
+
+                            server = this.specialServer[server] ?? server;
+                            return uri ? { server, user } : { uri };
                         },
                         saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1000))(),
                         async fixRequest(url, headers = {}) { // 請求修復數據
@@ -785,19 +794,13 @@
                         async fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) { // 修復後更新 UI
                             nameEl.$sAttr("style", "display: none;"); // 隱藏原始名稱
 
-                            const parent = nameEl.parentNode;
-                            if (!parent.$q("fix_wrapper")) {
-                                const fix_wrapper = Lib.createElement("fix_wrapper");
-
-                                /* 創建名稱 */
-                                Lib.createElement(fix_wrapper, "fix_name", {
-                                    text: showText.trim(),
-                                    attr: { "jump": mainUrl }
-                                });
-
-                                /* 創建編輯按鈕 */
-                                Lib.createElement(fix_wrapper, "fix_edit", { id: user, text: "Edit" });
-                                parent.insertBefore(fix_wrapper, nameEl);
+                            if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER") {
+                                nameEl.$iAdjacent(`
+                                    <fix_wrapper>
+                                        <fix_name jump="${mainUrl}">${showText.trim()}</fix_name>
+                                        <fix_edit id="${user}">Edit</fix_edit>
+                                    </fix_wrapper>
+                                `, "beforebegin");
                             };
 
                             /* 取得支援修復的正則 */
@@ -1156,7 +1159,8 @@
 
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.parentNode.insertBefore(text, display);
+                        display.$iAdjacent(text, "beforebegin");
+                        // display.parentNode.insertBefore(text, display);
 
                         text.scrollTop = 0; // 滾動到最上方
                         setTimeout(() => {
@@ -1930,27 +1934,13 @@
                                 browse.appendChild(view);
                             } else {
                                 const responseJson = JSON.parse(response.responseText);
-                                const view = Lib.createElement("View");
-                                const buffer = Lib.createFragment;
-
-                                // 添加密碼數據
                                 const password = responseJson['password'];
-                                if (password) {
-                                    buffer.append(
-                                        document.createTextNode(`password: ${password}`),
-                                        Lib.createElement("br")
-                                    )
-                                };
-
-                                // 添加檔案數據
-                                for (const text of responseJson['file_list']) {
-                                    buffer.append(
-                                        document.createTextNode(text), Lib.createElement("br")
-                                    )
-                                };
-
-                                view.appendChild(buffer);
-                                browse.appendChild(view);
+                                browse.$iAdjacent(`
+                                    <view>
+                                        ${password ? `password: ${password}<br>` : ""}
+                                        ${responseJson['file_list'].map(file => `${file}<br>`).join("")}
+                                    </view>
+                                `)
                             }
                         },
                         onerror: error => { showBrowse(browse) }
@@ -2042,15 +2032,10 @@
                             link.$sAttr("download", text);
                         } else {
                             // ! 該站點是 React 渲染的, 直接修改會導致變更異常
-                            const newA = Lib.createElement("a", {
-                                class: link.getAttribute("class"),
-                                href: link.href,
-                                download: text,
-                                attr: { beautify: true },
-                                text
-                            });
-
-                            link.parentNode.insertBefore(newA, link);
+                            link.$iAdjacent(
+                                `<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`,
+                                "beforebegin"
+                            )
                         };
 
                         const browse = link.nextElementSibling; // 查找是否含有 browse 元素
@@ -2536,7 +2521,6 @@
         let startX, startY, initialLeft, initialTop;
 
         const nonDraggableTags = new Set(["SELECT", "BUTTON", "INPUT", "TEXTAREA", "A"]);
-        element.style.cursor = 'grab';
 
         // 將處理函式定義在外面，這樣 onEvent 和 offEvent 才能引用到同一個函式
         const handleMouseMove = (e) => {
@@ -2550,7 +2534,7 @@
         const handleMouseUp = () => {
             if (!isDragging) return; // 增加一個判斷避免重複觸發
             isDragging = false;
-            element.style.cursor = 'grab';
+            element.style.cursor = 'auto';
             document.body.style.removeProperty('user-select');
 
             Lib.offEvent(document, "mousemove");
@@ -2617,10 +2601,12 @@
 
         // 調整數值腳本
         const menuScript = `
-            function check(value) {
-                return value.toString().length > 4 || value > 1000
-                    ? 1000 : value < 0 ? "" : value;
-            }
+            <script id="menu-script">
+                function check(value) {
+                    return value.toString().length > 4 || value > 1000
+                        ? 1000 : value < 0 ? "" : value;
+                }
+            </script>
         `;
 
         const menuSet = DLL.MenuSet(); // 取得菜單設置
@@ -2849,9 +2835,7 @@
 
         // 添加到 dom, 並緩存對象
         Lib.body.appendChild(shadow);
-        shadowRoot.appendChild(
-            Lib.createElement("script", { id: "menu-script", innerHTML: menuScript })
-        );
+        shadowRoot.appendChild(Lib.createDomFragment(menuScript));
 
         const languageEl = shadowRoot.querySelector("#language");
         const readsetEl = shadowRoot.querySelector("#readsettings");
