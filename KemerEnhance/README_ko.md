@@ -9,8 +9,8 @@
 1. 브라우저 스크립트 관리 도구 설치 ([Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) 등)
 2. [스크립트 설치](https://update.greasyfork.org/scripts/472096/Kemer%20%E5%A2%9E%E5%BC%B7.user.js)
 3. 다음 사이트 방문
-   - [kemono](https://kemono.su/)
-   - [coomer](https://coomer.su/)
+   - [kemono](https://kemono.cr/)
+   - [coomer](https://coomer.st/)
    - [nekohouse](https://nekohouse.su/)
 
 ---
