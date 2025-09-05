@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025.08.31
+// @version      2025.09.05
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -94,6 +94,12 @@ const Lib = (() => {
         $oHtml(value = null) {
             return value !== null ? (this.outerHTML = value) : this.outerHTML;
         },
+        $iAdjacent(value, position="beforeend") {
+            if (value == null) return;
+            value.nodeType === 1 // 元素
+                ? this.insertAdjacentElement(position, value)
+                : this.insertAdjacentHTML(position, value);
+        },
         $sAttr(name, value) {
             this.setAttribute(name, value);
         },
@@ -156,6 +162,7 @@ const Lib = (() => {
         get lang() { return navigator.language },
         $agen: navigator.userAgent,
         get agen() { return navigator.userAgent },
+        createDomFragment: (value) => document.createRange().createContextualFragment(value),
         get createFragment() { return document.createDocumentFragment() },
         title: (value = null) => value !== null ? (document.title = value) : document.title,
         cookie: (value = null) => value !== null ? (document.cookie = value) : document.cookie,
