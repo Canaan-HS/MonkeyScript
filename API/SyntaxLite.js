@@ -83,18 +83,18 @@ const Lib = (() => {
 
     const $node = {
         $text(value = null) {
-            return value !== null ? (this.textContent = value?.trim()) : this.textContent?.trim();
+            return value === null ? this?.textContent?.trim() : (this?.textContent = value?.trim());
         },
         $copy(deep = true) {
             return this.cloneNode(deep);
         },
         $iHtml(value = null) {
-            return value !== null ? (this.innerHTML = value) : this.innerHTML;
+            return value === null ? this.innerHTML : (this.innerHTML = value);
         },
         $oHtml(value = null) {
-            return value !== null ? (this.outerHTML = value) : this.outerHTML;
+            return value === null ? this.outerHTML : (this.outerHTML = value);
         },
-        $iAdjacent(value, position="beforeend") {
+        $iAdjacent(value, position = "beforeend") {
             if (value == null) return;
             value.nodeType === 1 // 元素
                 ? this.insertAdjacentElement(position, value)
@@ -164,8 +164,8 @@ const Lib = (() => {
         get agen() { return navigator.userAgent },
         createDomFragment: (value) => document.createRange().createContextualFragment(value),
         get createFragment() { return document.createDocumentFragment() },
-        title: (value = null) => value !== null ? (document.title = value) : document.title,
-        cookie: (value = null) => value !== null ? (document.cookie = value) : document.cookie,
+        title: (value = null) => value === null ? document.title : (document.title = value),
+        cookie: (value = null) => value === null ? document.cookie : (document.cookie = value),
         createUrl: (object) => URL.createObjectURL(object),
         _on: (root, { type, listener, add }) => {
             if (typeof type === "string" && typeof listener === "function") {
@@ -813,10 +813,10 @@ const Lib = (() => {
      */
     async function outputJson(data, name, success = null) {
         try {
-            data = typeof data !== "string" ? JSON.stringify(data, null, 4) : data;
-            name = typeof name !== "string"
-                ? `Untitled-${crypto.randomUUID().slice(9, 23)}.json`
-                : name.endsWith(".json") ? name : `${name}.json`;
+            data = typeof data === "string" ? data : JSON.stringify(data, null, 4);
+            name = typeof name === "string"
+                ? name.endsWith(".json") ? name : `${name}.json`
+                : `Untitled-${crypto.randomUUID().slice(9, 23)}.json`;
 
             const Json = new Blob([data], { type: "application/json" });
             const Link = document.createElement("a");
