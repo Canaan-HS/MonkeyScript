@@ -9,8 +9,8 @@
 1. ブラウザスクリプト管理ツール（[Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)など）をインストールする
 2. [スクリプトをインストールする](https://update.greasyfork.org/scripts/472096/Kemer%20%E5%A2%9E%E5%BC%B7.user.js)
 3. 以下のサイトにアクセスする
-   - [kemono](https://kemono.su/)
-   - [coomer](https://coomer.su/)
+   - [kemono](https://kemono.cr/)
+   - [coomer](https://coomer.st/)
    - [nekohouse](https://nekohouse.su/)
 
 ---
