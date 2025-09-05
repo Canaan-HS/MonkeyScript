@@ -9,8 +9,8 @@
 1. Установите менеджер пользовательских скриптов (например, [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))
 2. [Установите скрипт](https://update.greasyfork.org/scripts/472096/Kemer%20%E5%A2%9E%E5%BC%B7.user.js)
 3. Перейдите на
-   - [kemono](https://kemono.su/)
-   - [coomer](https://coomer.su/)
+   - [kemono](https://kemono.cr/)
+   - [coomer](https://coomer.st/)
    - [nekohouse](https://nekohouse.su/)
 
 ---
