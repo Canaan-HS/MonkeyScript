@@ -83,7 +83,7 @@ const Lib = (() => {
 
     const $node = {
         $text(value = null) {
-            return value === null ? this?.textContent?.trim() : (this?.textContent = value?.trim());
+            return value === null ? this?.textContent?.trim() : (this.textContent = value?.trim() ?? "");
         },
         $copy(deep = true) {
             return this.cloneNode(deep);
