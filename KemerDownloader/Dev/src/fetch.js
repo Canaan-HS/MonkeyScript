@@ -577,13 +577,20 @@ export default function Fetch(
 
             Process.Lock = true;
 
-            // 回傳 service, user
-            const parseInfo = (uri) => {
-                uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
-                return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
+            const parseUrlInfo = (uri) => {
+                uri =
+                    uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/)
+                    || uri.match(/\/([^\/]+)\/([^\/]+)$/);
+                uri = uri.splice(1);
+
+                let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+                let user = uri[1];
+
+                server = { x: "twitter", maker_id: "dlsite" }[server] ?? server;
+                return uri ? { server, user } : { uri };
             };
 
-            const { service, user } = parseInfo(this.sourceURL);
+            const { service, user } = parseUrlInfo(this.sourceURL);
             const pack = {
                 id,
                 user,
