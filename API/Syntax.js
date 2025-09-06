@@ -446,35 +446,117 @@ const Lib = (() => {
     };
 
     /**
-     * @description 打印元素
-     * @param {*} group - 打印元素標籤盒
-     * @param {*} label - 打印的元素
-     * @param {string} type - 要打印的類型 ("log", "warn", "error", "count")
+     * @description 列印日誌訊息到控制台
+     * @param {...any} args - 要列印的一或多個訊息
      *
+     * @example
      * {
-     * dev: true, - 開發人員設置打印
-     * type="log", - 打印的類型
-     * collapsed=true - 打印後是否收起
+     *      dev: true,
+     *      group: "標籤名",
+     *      collapsed: true,
      * }
+     *
+     * log('訊息').log;
+     * log('訊息1', '訊息2', '訊息3').log;
+     * log({ id: 1, name: 'Alice' }).log; // 這種的如果當選項輸入, 會被當成一個訊息
+     * log({ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }, { group: 'User Data' }).log;
+     * log('訊息', { dev: false, group: 'API' }).warn;
+     * log({ group: 'API' }, '訊息', '訊息2', '訊息3').error;
+     * log({ group: 'User Data' }, "用戶資料：", { id: 1, name: 'Alice' }).table;
      */
     const print = {
-        log: label => console.log(label),
-        warn: label => console.warn(label),
-        trace: label => console.trace(label),
-        error: label => console.error(label),
-        count: label => console.count(label),
+        log: (...args) => console.log(...args),
+        warn: (...args) => console.warn(...args),
+        table: (...args) => console.table(...args),
+        trace: (...args) => console.trace(...args),
+        debug: (...args) => console.debug(...args),
+        error: (...args) => console.error(...args),
+        count: (label) => console.count(label),
     };
-    async function log(group = null, label = "print", { dev = true, type = "log", collapsed = true } = {}) {
-        if (!dev) return;
+    function log(...args) {
+        if (args.length === 0) return;
 
-        const Call = print[type] || print.log;
+        let options = {};
+        let messages = args;
 
-        if (group == null) Call(label);
-        else {
-            collapsed ? console.groupCollapsed(group) : console.group(group);
-            Call(label);
-            console.groupEnd();
+        const defaultOptions = { dev: true, group: null, collapsed: true };
+
+        if (args.length > 1) {
+            const firstArg = args[0];
+            const lastArg = args[args.length - 1];
+
+            const firstIsObject = firstArg.constructor === Object;
+            const lastIsObject = lastArg.constructor === Object;
+
+            const giveFirst = () => {
+                options = firstArg;
+                messages = args.slice(1);
+            };
+
+            const giveLast = () => {
+                options = lastArg;
+                messages = args.slice(0, -1);
+            };
+
+            // ! 前兩種狀況就不判斷, 是否含有 defaultOptions 的屬性了, 直接當他就是選項
+            if (lastIsObject && !firstIsObject) {
+                giveLast();
+            } else if (firstIsObject && !lastIsObject) {
+                giveFirst();
+            } else if (firstIsObject && lastIsObject) {
+                const defaultKey = new Set(Object.keys(defaultOptions));
+                const Fsimilarity = Object.keys(firstArg).filter(k => defaultKey.has(k)).length;
+                const Lsimilarity = Object.keys(lastArg).filter(k => defaultKey.has(k)).length;
+
+                if (Lsimilarity > Fsimilarity) {
+                    giveLast();
+                } else {
+                    giveFirst();
+                }
+            }
         }
+
+        const { dev, group, collapsed } = { ...defaultOptions, ...options };
+
+        if (!dev || messages.length === 0) {
+            return;
+        }
+
+        return new Proxy(
+            {},
+            {
+                get(_, method) {
+                    if (method === "count") {
+                        fnnc(messages[0]);
+                        return;
+                    }
+
+                    const fnnc = print[method] || print.log;
+                    if (group) {
+                        collapsed ? console.groupCollapsed(group) : console.group(group);
+                        fnnc(...messages);
+                        console.groupEnd();
+                    } else {
+                        fnnc(...messages);
+                    }
+                }
+            }
+        )
+    };
+
+    /**
+     * @description log 函數的工具
+     * @param {*} options - 與 log 函數同樣的選項
+     * @returns { Function }
+     * @example
+     * const log = createLog({ dev: true, group: 'API' });
+     * log('訊息').log;
+     * log('訊息2').log;
+     * log('警告訊息').warn;
+     * log('錯誤訊息').error;
+     */
+    function createLog(options = {}) {
+        return (...args) => log(...args, options);
     };
 
     /**
@@ -1552,7 +1634,7 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...storeCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
+            $type, onE, onEvent, offEvent, onUrlChange, log, createLog, $observer, waitEl, $throttle, $debounce, scopeParse,
             createWorker, formatTemplate, createCompressor, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storeListen,
 
