@@ -1023,7 +1023,7 @@
             async CacheFetch() { /* 緩存請求 */
                 if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
 
-                Lib.addScript(`
+                const script = `
                     const cache = new Map();
                     const originalFetch = window.fetch;
 
@@ -1084,7 +1084,10 @@
                             throw error;
                         }
                     };
-                `, "Cache-Fetch", false);
+                `;
+
+                eval(script); // sandbox 內部攔截
+                Lib.addScript(script, "Cache-Fetch", false); // 主頁 context 攔截
                 DLL.Registered.add("CacheFetch");
             },
             async TextToLink(config) { /* 連結文本轉連結 (沒有連結文本的不會執行) */
