@@ -1034,8 +1034,8 @@
                         const url = (typeof input === 'string') ? input : input.url;
                         const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
 
-                        // 如果不是 GET 請求，則完全不使用快取，立即返回原始請求
-                        if (method.toUpperCase() !== 'GET') {
+                        // 如果不是 GET 請求，或有 X-Bypass-CacheFetch 標頭，立即返回原始請求
+                        if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch']) {
                             return originalFetch.apply(this, args);
                         }
 
