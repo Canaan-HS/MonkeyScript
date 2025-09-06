@@ -289,10 +289,13 @@
                         min-width: 50vW;
                         min-height: 50vh;
                         object-fit: contain;
-                        border: 1px solid #fafafa;
+                        border: 2px solid #fafafa;
                     }
                     .Image-loading-indicator-experiment {
                         border: 3px solid #00ff7e;
+                    }
+                    .Image-loading-indicator[alt] {
+                        border: 2px solid #e43a3aff;
                     }
                     .Image-loading-indicator:hover {
                         cursor: pointer;
@@ -898,7 +901,7 @@
                         },
                         async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "fix_view") { // 針對其餘頁面的修復
                             try {
-                                const parent = artist.parentNode;
+                                const parent = artist.parentElement;
                                 const url = mainUrl ?? parent.href;
                                 const { server, user } = this.parseUrlInfo(url);
 
@@ -1163,7 +1166,6 @@
                         const original_name = display.$text();
                         text.value = original_name.trim();
                         display.$iAdjacent(text, "beforebegin");
-                        // display.parentNode.insertBefore(text, display);
 
                         text.scrollTop = 0; // 滾動到最上方
                         setTimeout(() => {
@@ -1189,7 +1191,7 @@
                         event.stopImmediatePropagation();
 
                         const jump = target.$gAttr("jump");
-                        if (!target.parentNode.matches("fix_cont") && jump) {
+                        if (!target.parentElement.matches("fix_cont") && jump) {
                             DLL.IsSearch()
                                 || target.matches("fix_tag")
                                 ? GM_openInTab(jump, { active, insert })
@@ -1334,10 +1336,10 @@
                         };
 
                         const src = img.src;
-                        img.onload = null;
-                        img.onerror = null;
 
-                        img.src = "";
+                        img.onload = function () {
+                            img.onload = img.onerror = null;
+                        };
                         img.onerror = function () {
                             img.onload = img.onerror = null;
                             img.src = thumbnailSrc;
@@ -1355,6 +1357,7 @@
 
                         img.loading = "lazy";
                         img.onerror = function () {
+                            img.onerror = null;
                             self.imgReload(this, thumbnailSrc, 10);
                         };
 
@@ -2089,7 +2092,7 @@
                                     const link = linkBox[summary.$text()]; // 查找對應下載連結
                                     if (!link) return;
 
-                                    move && link.parentNode.remove(); // 刪除對應下載連結
+                                    move && link.parentElement.remove(); // 刪除對應下載連結
 
                                     let element = link.$copy();
                                     element.$sAttr("beautify", true); // ? LinkBeautify 的適應, 避免被隱藏
@@ -2113,72 +2116,88 @@
                     /**
                      * 針對 Neko 網站的支援
                      */
-                    const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const hrefParse = (element) => element.href || element.$gAttr("href");
+                    const linkQuery = DLL.IsNeko ? "div" : "a";
+                    const safeGetSrc = (element) => element?.src || element?.$gAttr("src");
+                    const safeGetHref = (element) => element?.href || element?.$gAttr("href");
+
+                    function cleanMark(img) {
+                        img.onload = img.onerror = null;
+                        img.$dAttr("alt");
+                        img.$dAttr("data-tsrc");
+                        img.$dAttr("data-fsrc");
+                        img.$delClass("Image-loading-indicator");
+                    };
 
                     // 載入原圖 (死圖重試)
-                    function imgReload(img, oldSrc, retry) {
+                    function imgReload(img, retry) {
                         if (retry <= 0) {
-                            img.src = oldSrc;
+                            img.alt = "Loading Failed";
+                            img.src = img.$gAttr("data-tsrc");
                             return;
                         };
 
-                        const src = img?.src;
-                        if (!src) return;
+                        img.$dAttr("src");
 
-                        // 移除事件，避免循環觸發
-                        img.onload = null;
-                        img.onerror = null;
-
-                        img.src = "";
                         img.onload = function () {
-                            img.$delClass("Image-loading-indicator");
+                            cleanMark(img);
                         };
                         img.onerror = function () {
-                            img.onload = img.onerror = null; // 清掉事件
-                            img.src = oldSrc;
-
+                            img.onload = img.onerror = null;
                             setTimeout(() => {
-                                imgReload(img, oldSrc, retry - 1);
-                            }, 2e3);
+                                imgReload(img, retry - 1);
+                            }, 1e4);
                         };
 
-                        Object.assign(img, { src, alt: "Loading Failed" });
+                        img.alt = "Reload";
+                        img.src = img.$gAttr("data-fsrc");
                     };
 
+                    // 點擊重試
                     function loadFailedClick() {
-                        //! 監聽點擊事件 當點擊的是載入失敗的圖片才觸發 (目前也壞了, 感覺觸發不了)
                         Lib.onE(".post__files, .scrape__files", "click", event => {
-                            const target = event.target.matches(".Image-link img");
-                            if (target && target.alt == "Loading Failed") {
-                                const src = img.src;
-                                img.src = "";
-                                img.src = src;
+                            const target = event.target;
+                            const isImg = target.matches("img");
+                            if (isImg && target.alt === "Loading Failed") {
+                                target.onload = null;
+                                target.$dAttr("src");
+                                target.onload = function () { cleanMark(target) };
+                                target.src = target.$gAttr("data-fsrc");
                             }
                         }, { capture: true, passive: true });
                     };
 
-                    function imgRendering({root, index, newUrl, oldUrl=null, mode="fast"} = {}) {
+                    let token = 0;
+                    let timer = null;
+                    function imgRendering({ root, index, thumbUrl, newUrl, oldUrl, mode }) {
                         ++index;
+                        ++token;
 
                         const tagName = oldUrl ? "rc" : "div";
                         const oldSrc = oldUrl ? `src="${oldUrl}"` : "";
                         const container = Lib.createDomFragment(`
                             <${tagName} id="IMG-${index}" ${oldSrc}>
-                                <img src="${newUrl}" class="Image-loading-indicator Image-style">
+                                <img src="${newUrl}" class="Image-loading-indicator Image-style" data-tsrc="${thumbUrl}" data-fsrc="${newUrl}">
                             </${tagName}>
                         `);
 
                         const img = container.querySelector("img");
 
+                        timer = setTimeout(() => {
+                            --token;
+                        }, 1e4);
+
                         img.onload = function () {
-                            img.$delClass("Image-loading-indicator");
-                            if (mode === "slow") slowAutoLoad(index);
+                            clearTimeout(timer);
+                            --token;
+                            cleanMark(img);
+                            mode === "slow" && slowAutoLoad(index);
                         };
 
                         if (mode === "fast") {
                             img.onerror = function () {
-                                imgReload(img, 10);
+                                --token;
+                                img.onload = img.onerror = null;
+                                imgReload(img, 7);
                             }
                         };
 
@@ -2220,7 +2239,7 @@
 
                         // 5 次重試全部失敗後，靜默回傳「不支援」的狀態
                         return { supportsRange: false, totalSize: null };
-                    }
+                    };
 
                     async function imgRequest(container, url, result) {
                         // ! 實驗性分段下載 (暫時關閉)
@@ -2278,26 +2297,39 @@
 
                                 // 策略二：不支援分段，直接完整下載
                             } else {
-                                // 為完整下載內建重試邏輯
                                 for (let i = 0; i < 5; i++) {
                                     try {
                                         blob = await new Promise((resolve, reject) => {
-                                            GM_xmlhttpRequest({
-                                                method: "GET",
+                                            let timeout = null;
+
+                                            const request = GM_xmlhttpRequest({
                                                 url,
+                                                method: "GET",
                                                 responseType: "blob",
-                                                onload: res => (res.status === 200 ? resolve(res.response) : reject(res)),
+                                                onload: res => {
+                                                    clearTimeout(timeout);
+                                                    return res.status === 200 ? resolve(res.response) : reject(res)
+                                                },
                                                 onerror: reject,
-                                                ontimeout: reject,
                                                 onprogress: progress => {
+                                                    timer();
                                                     if (progress.lengthComputable) {
                                                         const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
                                                         indicator.$text(`${percent}%`);
                                                     }
                                                 }
                                             });
+
+                                            function timer() {
+                                                // GM_xmlhttpRequest 的超時不太穩定
+                                                clearTimeout(timeout);
+                                                timeout = setTimeout(() => {
+                                                    request.abort();
+                                                    reject();
+                                                }, 1.5e4)
+                                            };
                                         });
-                                        break; // 成功後跳出重試迴圈
+                                        break;
                                     } catch (error) {
                                         if (i < 4) await new Promise(res => setTimeout(res, 300));
                                     }
@@ -2319,44 +2351,49 @@
                         }
                     };
 
+                    async function imgLoad(root, index, mode = "fast") {
+                        root.$dAttr("class");
+
+                        const a = root.$q(linkQuery);
+                        const safeHref = safeGetHref(a);
+
+                        const img = root.$q("img");
+                        const safeSrc = safeGetSrc(img);
+
+                        if (!a && img) {
+                            // ? 如果中途被使用者直接點擊
+                            img.$addClass("Image-style");
+                            return;
+                        };
+
+                        if (experiment) {
+                            img.$addClass("Image-loading-indicator-experiment");
+                            imgRequest(root, safeHref, href => {
+                                imgRendering({
+                                    root: a, index, thumbUrl: safeSrc, newUrl: href, oldUrl: safeHref, mode
+                                })
+                            });
+                        } else {
+                            imgRendering({
+                                root: a, index, thumbUrl: safeSrc, newUrl: safeHref, mode
+                            })
+                        }
+                    };
+
                     async function fastAutoLoad() { // mode 1 預設 (快速自動)
                         loadFailedClick();
-                        thumbnail.forEach((root, index) => {
-                            setTimeout(() => {
-                                const a = root.$q(LinkObj);
-                                const hrefP = hrefParse(a);
-
-                                if (experiment) {
-                                    a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                    imgRequest(root, hrefP, href => {
-                                        imgRendering({root, index, newUrl: href, oldUrl: hrefP});
-                                    });
-                                } else {
-                                    imgRendering({root, index, newUrl: hrefP});
-                                }
-                            }, index * 300);
-                        });
+                        for (const [index, root] of [...thumbnail].entries()) {
+                            while (token >= 7) {
+                                await new Promise(resolve => setTimeout(resolve, 7e2));
+                            };
+                            imgLoad(root, index);
+                        }
                     };
 
                     async function slowAutoLoad(index) {
                         if (index === thumbnail.length) return;
-
                         const root = thumbnail[index];
-                        const a = root.$q(LinkObj);
-                        const hrefP = hrefParse(a);
-
-                        if (experiment) { // 替換調用
-                            a.$q("img").$addClass("Image-loading-indicator-experiment");
-                            imgRequest(root, hrefP, href =>
-                                imgRendering({
-                                    root, index, newUrl: href, oldUrl: hrefP, mode: "slow"
-                                })
-                            );
-                        } else {
-                            imgRendering({
-                                root, index, newUrl: hrefP, mode: "slow"
-                            });
-                        }
+                        imgLoad(root, index, "slow");
                     };
 
                     function observeLoad() { // mode 3 (觀察觸發)
@@ -2366,18 +2403,7 @@
                                 if (entry.isIntersecting) {
                                     const root = entry.target;
                                     observer.unobserve(root);
-
-                                    const a = root.$q(LinkObj);
-                                    const hrefP = hrefParse(a);
-
-                                    if (experiment) {
-                                        a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                        imgRequest(root, hrefP, href => {
-                                            imgRendering({root, index: root.dataset.index, newUrl: href, oldUrl: hrefP});
-                                        });
-                                    } else {
-                                        imgRendering({root, index: root.dataset.index, newUrl: hrefP});
-                                    }
+                                    imgLoad(root, root.dataset.index);
                                 }
                             });
                         }, { threshold: 0.4 });
@@ -2754,7 +2780,7 @@
         `;
 
         // 添加菜單主樣式
-        const menuMain =`
+        const menuMain = `
             ${menuStyle}
             ${menuScript}
             <div class="modal-background">
