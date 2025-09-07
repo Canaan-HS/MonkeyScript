@@ -127,28 +127,46 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ---
 
-## **📦 Version Information**
+## **💻 Developer Notes**
 
-**Release Version：2025.09.03-Beta**
+Compatibility recommendations:
 
-### **What's New**
-1. **Compatibility Fix**  
-   - Adjustments to match recent website changes  
-2. **Menu Adjustment**  
-   - Reimplemented with pure native code, remove jQuery  
-3. **OriginalImage**  
-   - Adjusted loading indicator style  
-4. **CardZoom Feature**  
-   - Updated styles for Mode 1 and 2  
-   - Added Mode 3  
-5. **BetterThumbnail (Experimental)**  
-   - Added enhanced thumbnail feature  
-6. **FixArtist & LinkBeautify**  
-   - Optimized partial implementation to reduce damage to native page structure, using overlay to preserve original appearance  
-7. **TextToLink**  
-   - Added simple Mega link repair with automatic password fragment completion (complex formats not supported)  
+- **Avoid CacheFetch cache interference**  
+  - If you need to always request the latest API data instead of cached ones, attach a custom header in your Fetch request:  
+    ```
+    X-Bypass-CacheFetch: true
+    ```
+  - When detected, the script will bypass its internal cache and send the actual request.
+
+- **Avoid LinkBeautify altering Download section**  
+  - By default, the script adds beautify attributes to the Downloads section.  
+  - If you need the raw DOM, apply an additional filter:  
+    ```css
+    :not([beautify])
+    ```
+
+- **Avoid OriginalImage rewriting Files section**  
+  - The script may replace preview images with originals, affecting DOM structure.  
+  - To reliably fetch file sources, consider:  
+    ```javascript
+    // Example
+    document.querySelector("a, rc, img")
+    ```
+  - Then check `.href || .src` to maintain compatibility.
+
+---
+
+## **📦 Version Info**
+
+**Release Version: 2025.09.07-Beta**
+
+### **Changelog**
+1. **OriginalImage**
+   - Fixed page switch issues
+   - Adjusted mode 1 logic: now batch-loads up to 7 images per cycle (excluding failed ones, experimental)
+   - Reduced auto-retry attempts for failed loads (site often won’t return original, retry is useless)
 
 ### **Known Issues**
-1. Sometimes the page loads slower than the script executes, which may cause features to fail. Refreshing the page usually resolves the issue.
+1. Sometimes page render lags behind feature load, causing functions to fail. Refreshing usually resolves it.
 
 ---
