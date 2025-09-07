@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.05-Beta
+// @version      2025.09.07-Beta
 // @author       Canaan HS
 // @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
 // @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
@@ -281,10 +281,13 @@
                         min-width: 50vW;
                         min-height: 50vh;
                         object-fit: contain;
-                        border: 1px solid #fafafa;
+                        border: 2px solid #fafafa;
                     }
                     .Image-loading-indicator-experiment {
                         border: 3px solid #00ff7e;
+                    }
+                    .Image-loading-indicator[alt] {
+                        border: 2px solid #e43a3aff;
                     }
                     .Image-loading-indicator:hover {
                         cursor: pointer;
@@ -800,7 +803,7 @@
                         },
                         async otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "fix_view") {
                             try {
-                                const parent = artist.parentNode;
+                                const parent = artist.parentElement;
                                 const url = mainUrl ?? parent.href;
                                 const {
                                     server,
@@ -912,7 +915,7 @@
             },
             async CacheFetch() {
                 if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
-                Lib.addScript(`
+                const script = `
                     const cache = new Map();
                     const originalFetch = window.fetch;
 
@@ -923,8 +926,8 @@
                         const url = (typeof input === 'string') ? input : input.url;
                         const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
 
-                        // 如果不是 GET 請求，則完全不使用快取，立即返回原始請求
-                        if (method.toUpperCase() !== 'GET') {
+                        // 如果不是 GET 請求，或有 X-Bypass-CacheFetch 標頭，立即返回原始請求
+                        if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch']) {
                             return originalFetch.apply(this, args);
                         }
 
@@ -973,7 +976,9 @@
                             throw error;
                         }
                     };
-                `, "Cache-Fetch", false);
+                `;
+                eval(script);
+                Lib.addScript(script, "Cache-Fetch", false);
                 DLL.Registered.add("CacheFetch");
             },
             async TextToLink(config) {
@@ -1059,7 +1064,7 @@
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const jump = target.$gAttr("jump");
-                        if (!target.parentNode.matches("fix_cont") && jump) {
+                        if (!target.parentElement.matches("fix_cont") && jump) {
                             DLL.IsSearch() || target.matches("fix_tag") ? GM_openInTab(jump, {
                                 active: active,
                                 insert: insert
@@ -1201,9 +1206,9 @@
                             return;
                         }
                         const src = img.src;
-                        img.onload = null;
-                        img.onerror = null;
-                        img.src = "";
+                        img.onload = function () {
+                            img.onload = img.onerror = null;
+                        };
                         img.onerror = function () {
                             img.onload = img.onerror = null;
                             img.src = thumbnailSrc;
@@ -1218,6 +1223,7 @@
                         const self = this.betterThumbnailCache;
                         img.loading = "lazy";
                         img.onerror = function () {
+                            img.onerror = null;
                             self.imgReload(this, thumbnailSrc, 10);
                         };
                         img.src = src;
@@ -1861,7 +1867,7 @@
                                     video.$sAttr("preload", "metadata");
                                     const link = linkBox[summary.$text()];
                                     if (!link) return;
-                                    move && link.parentNode.remove();
+                                    move && link.parentElement.remove();
                                     let element = link.$copy();
                                     element.$sAttr("beautify", true);
                                     element.$text(element.$text().replace("Download", ""));
@@ -1889,69 +1895,86 @@
                     all: true,
                     timeout: 5
                 }).then(thumbnail => {
-                    const LinkObj = DLL.IsNeko ? "div" : "a";
-                    const hrefParse = element => element.href || element.$gAttr("href");
-                    function imgReload(img, oldSrc, retry) {
+                    const linkQuery = DLL.IsNeko ? "div" : "a";
+                    const safeGetSrc = element => element?.src || element?.$gAttr("src");
+                    const safeGetHref = element => element?.href || element?.$gAttr("href");
+                    function cleanMark(img) {
+                        img.onload = img.onerror = null;
+                        img.$dAttr("alt");
+                        img.$dAttr("data-tsrc");
+                        img.$dAttr("data-fsrc");
+                        img.$delClass("Image-loading-indicator");
+                    }
+                    function imgReload(img, retry) {
                         if (retry <= 0) {
-                            img.src = oldSrc;
+                            img.alt = "Loading Failed";
+                            img.src = img.$gAttr("data-tsrc");
                             return;
                         }
-                        const src = img?.src;
-                        if (!src) return;
-                        img.onload = null;
-                        img.onerror = null;
-                        img.src = "";
+                        img.$dAttr("src");
                         img.onload = function () {
-                            img.$delClass("Image-loading-indicator");
+                            cleanMark(img);
                         };
                         img.onerror = function () {
                             img.onload = img.onerror = null;
-                            img.src = oldSrc;
                             setTimeout(() => {
-                                imgReload(img, oldSrc, retry - 1);
-                            }, 2e3);
+                                imgReload(img, retry - 1);
+                            }, 1e4);
                         };
-                        Object.assign(img, {
-                            src: src,
-                            alt: "Loading Failed"
-                        });
+                        img.alt = "Reload";
+                        img.src = img.$gAttr("data-fsrc");
                     }
                     function loadFailedClick() {
                         Lib.onE(".post__files, .scrape__files", "click", event => {
-                            const target = event.target.matches(".Image-link img");
-                            if (target && target.alt == "Loading Failed") {
-                                const src = img.src;
-                                img.src = "";
-                                img.src = src;
+                            const target = event.target;
+                            const isImg = target.matches("img");
+                            if (isImg && target.alt === "Loading Failed") {
+                                target.onload = null;
+                                target.$dAttr("src");
+                                target.onload = function () {
+                                    cleanMark(target);
+                                };
+                                target.src = target.$gAttr("data-fsrc");
                             }
                         }, {
                             capture: true,
                             passive: true
                         });
                     }
+                    let token = 0;
+                    let timer = null;
                     function imgRendering({
                         root,
                         index,
+                        thumbUrl,
                         newUrl,
-                        oldUrl = null,
-                        mode = "fast"
-                    } = {}) {
+                        oldUrl,
+                        mode
+                    }) {
                         ++index;
+                        ++token;
                         const tagName = oldUrl ? "rc" : "div";
                         const oldSrc = oldUrl ? `src="${oldUrl}"` : "";
                         const container = Lib.createDomFragment(`
                             <${tagName} id="IMG-${index}" ${oldSrc}>
-                                <img src="${newUrl}" class="Image-loading-indicator Image-style">
+                                <img src="${newUrl}" class="Image-loading-indicator Image-style" data-tsrc="${thumbUrl}" data-fsrc="${newUrl}">
                             </${tagName}>
                         `);
                         const img = container.querySelector("img");
+                        timer = setTimeout(() => {
+                            --token;
+                        }, 1e4);
                         img.onload = function () {
-                            img.$delClass("Image-loading-indicator");
-                            if (mode === "slow") slowAutoLoad(index);
+                            clearTimeout(timer);
+                            --token;
+                            cleanMark(img);
+                            mode === "slow" && slowAutoLoad(index);
                         };
                         if (mode === "fast") {
                             img.onerror = function () {
-                                imgReload(img, 10);
+                                --token;
+                                img.onload = img.onerror = null;
+                                imgReload(img, 7);
                             };
                         }
                         root.replaceWith(container);
@@ -2044,20 +2067,31 @@
                                 for (let i = 0; i < 5; i++) {
                                     try {
                                         blob = await new Promise((resolve, reject) => {
-                                            GM_xmlhttpRequest({
-                                                method: "GET",
+                                            let timeout = null;
+                                            const request = GM_xmlhttpRequest({
                                                 url: url,
+                                                method: "GET",
                                                 responseType: "blob",
-                                                onload: res => res.status === 200 ? resolve(res.response) : reject(res),
+                                                onload: res => {
+                                                    clearTimeout(timeout);
+                                                    return res.status === 200 ? resolve(res.response) : reject(res);
+                                                },
                                                 onerror: reject,
-                                                ontimeout: reject,
                                                 onprogress: progress => {
+                                                    timer();
                                                     if (progress.lengthComputable) {
                                                         const percent = (progress.loaded / progress.total * 100).toFixed(1);
                                                         indicator.$text(`${percent}%`);
                                                     }
                                                 }
                                             });
+                                            function timer() {
+                                                clearTimeout(timeout);
+                                                timeout = setTimeout(() => {
+                                                    request.abort();
+                                                    reject();
+                                                }, 15e3);
+                                            }
                                         });
                                         break;
                                     } catch (error) {
@@ -2076,54 +2110,51 @@
                             indicator.remove();
                         }
                     }
+                    async function imgLoad(root, index, mode = "fast") {
+                        root.$dAttr("class");
+                        const a = root.$q(linkQuery);
+                        const safeHref = safeGetHref(a);
+                        const img = root.$q("img");
+                        const safeSrc = safeGetSrc(img);
+                        if (!a && img) {
+                            img.$addClass("Image-style");
+                            return;
+                        }
+                        if (experiment) {
+                            img.$addClass("Image-loading-indicator-experiment");
+                            imgRequest(root, safeHref, href => {
+                                imgRendering({
+                                    root: a,
+                                    index: index,
+                                    thumbUrl: safeSrc,
+                                    newUrl: href,
+                                    oldUrl: safeHref,
+                                    mode: mode
+                                });
+                            });
+                        } else {
+                            imgRendering({
+                                root: a,
+                                index: index,
+                                thumbUrl: safeSrc,
+                                newUrl: safeHref,
+                                mode: mode
+                            });
+                        }
+                    }
                     async function fastAutoLoad() {
                         loadFailedClick();
-                        thumbnail.forEach((root, index) => {
-                            setTimeout(() => {
-                                const a = root.$q(LinkObj);
-                                const hrefP = hrefParse(a);
-                                if (experiment) {
-                                    a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                    imgRequest(root, hrefP, href => {
-                                        imgRendering({
-                                            root: root,
-                                            index: index,
-                                            newUrl: href,
-                                            oldUrl: hrefP
-                                        });
-                                    });
-                                } else {
-                                    imgRendering({
-                                        root: root,
-                                        index: index,
-                                        newUrl: hrefP
-                                    });
-                                }
-                            }, index * 300);
-                        });
+                        for (const [index, root] of [...thumbnail].entries()) {
+                            while (token >= 7) {
+                                await new Promise(resolve => setTimeout(resolve, 700));
+                            }
+                            imgLoad(root, index);
+                        }
                     }
                     async function slowAutoLoad(index) {
                         if (index === thumbnail.length) return;
                         const root = thumbnail[index];
-                        const a = root.$q(LinkObj);
-                        const hrefP = hrefParse(a);
-                        if (experiment) {
-                            a.$q("img").$addClass("Image-loading-indicator-experiment");
-                            imgRequest(root, hrefP, href => imgRendering({
-                                root: root,
-                                index: index,
-                                newUrl: href,
-                                oldUrl: hrefP,
-                                mode: "slow"
-                            }));
-                        } else {
-                            imgRendering({
-                                root: root,
-                                index: index,
-                                newUrl: hrefP,
-                                mode: "slow"
-                            });
-                        }
+                        imgLoad(root, index, "slow");
                     }
                     function observeLoad() {
                         loadFailedClick();
@@ -2132,25 +2163,7 @@
                                 if (entry.isIntersecting) {
                                     const root = entry.target;
                                     observer.unobserve(root);
-                                    const a = root.$q(LinkObj);
-                                    const hrefP = hrefParse(a);
-                                    if (experiment) {
-                                        a.$q("img").$addClass("Image-loading-indicator-experiment");
-                                        imgRequest(root, hrefP, href => {
-                                            imgRendering({
-                                                root: root,
-                                                index: root.dataset.index,
-                                                newUrl: href,
-                                                oldUrl: hrefP
-                                            });
-                                        });
-                                    } else {
-                                        imgRendering({
-                                            root: root,
-                                            index: root.dataset.index,
-                                            newUrl: hrefP
-                                        });
-                                    }
+                                    imgLoad(root, root.dataset.index);
                                 }
                             });
                         }, {
@@ -2299,7 +2312,7 @@
         const imgSet = DLL.ImgSet();
         const imgSetData = [["圖片高度", "Height", imgSet.Height], ["圖片寬度", "Width", imgSet.Width], ["圖片最大寬度", "MaxWidth", imgSet.MaxWidth], ["圖片間隔高度", "Spacing", imgSet.Spacing]];
         let analyze, img_set, img_input, img_select, set_value, save_cache = {};
-        const shadow = Lib.createElement("div", {
+        const shadow = Lib.createElement(Lib.body, "div", {
             id: shadowID
         });
         const shadowRoot = shadow.attachShadow({
@@ -2496,8 +2509,9 @@
                 }
             </style>
         `;
-        shadowRoot.$iHtml(`
+        const menuMain = `
             ${menuStyle}
+            ${menuScript}
             <div class="modal-background">
                 <div class="modal-interface">
                     <table class="modal-box">
@@ -2548,9 +2562,8 @@
                     </table>
                 </div>
             </div>
-        `);
-        Lib.body.appendChild(shadow);
-        shadowRoot.appendChild(Lib.createDomFragment(menuScript));
+        `;
+        shadowRoot.appendChild(Lib.createDomFragment(menuMain));
         const languageEl = shadowRoot.querySelector("#language");
         const readsetEl = shadowRoot.querySelector("#readsettings");
         const interfaceEl = shadowRoot.querySelector(".modal-interface");
