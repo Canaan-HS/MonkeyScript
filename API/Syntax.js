@@ -527,17 +527,17 @@ const Lib = (() => {
             {
                 get(_, method) {
                     if (method === "count") {
-                        fnnc(messages[0]);
+                        print.count(messages[0]);
                         return;
                     }
 
-                    const fnnc = print[method] || print.log;
+                    const call = print[method] || print.log;
                     if (group) {
                         collapsed ? console.groupCollapsed(group) : console.group(group);
-                        fnnc(...messages);
+                        call(...messages);
                         console.groupEnd();
                     } else {
-                        fnnc(...messages);
+                        call(...messages);
                     }
                 }
             }
