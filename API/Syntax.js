@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.09.08
+// @version      2025.09.09
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -483,10 +483,10 @@ const Lib = (() => {
 
         if (args.length > 1) {
             const firstArg = args[0];
-            const lastArg = args[args.length - 1];
+            const lastArg = args.at(-1);
 
-            const firstIsObject = firstArg.constructor === Object;
-            const lastIsObject = lastArg.constructor === Object;
+            const firstIsObject = firstArg?.constructor === Object;
+            const lastIsObject = lastArg?.constructor === Object;
 
             const giveFirst = () => {
                 options = firstArg;
@@ -519,26 +519,32 @@ const Lib = (() => {
         const { dev, group, collapsed } = { ...defaultOptions, ...options };
 
         if (!dev || messages.length === 0) {
-            return;
+            return new Proxy({}, { get() { } });
         }
 
+        const execute = (method) => {
+            if (method === "count") {
+                print.count(messages[0]);
+                return;
+            }
+
+            const call = print[method] || print.log;
+            if (group) {
+                collapsed ? console.groupCollapsed(group) : console.group(group);
+                call(...messages);
+                console.groupEnd();
+            } else {
+                call(...messages);
+            }
+        };
+
+        const run = setTimeout(() => execute('log', messages));
         return new Proxy(
             {},
             {
                 get(_, method) {
-                    if (method === "count") {
-                        print.count(messages[0]);
-                        return;
-                    }
-
-                    const call = print[method] || print.log;
-                    if (group) {
-                        collapsed ? console.groupCollapsed(group) : console.group(group);
-                        call(...messages);
-                        console.groupEnd();
-                    } else {
-                        call(...messages);
-                    }
+                    clearTimeout(run);
+                    execute(method, messages);
                 }
             }
         )
