@@ -24,37 +24,33 @@
 
 (async () => {
     if (Lib.platform === "Mobile") return;
-
-    Lib.cookie(`quality=1080; domain=${Lib.$domain}; path=/;`); // 強制 1080p
+    Lib.cookie(`quality=1080; domain=${Lib.$domain}; path=/;`); // 1080p
+    Lib.addStyle(`
+        body {
+            cursor: default;
+        }
+        .snapshot {
+            top: -170px;
+            left: 0;
+            width: 256px;
+            height: 144px;
+            position: absolute;
+        }
+        .plyr--video.custom--hide-controls .plyr__controls {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(100%) !important;
+        }
+        .plyr--full-ui.plyr--video .plyr__control--overlaid {
+            display: none !important;
+        }
+    `, "Hanime1-Optimize");
     Lib.waitEl([
         "#player", // 影片元素
         ".plyr--video", // 影片區塊
         ".plyr__tooltip", // 進度提示器
         "input[data-plyr='seek']" // 進度條
-    ], null).then(found => {
-        const [video, container, tip, progress] = found;
-
-        // 隱藏暫停時圖示
-        Lib.addStyle(`
-            body {
-                cursor: default;
-            }
-            .Snapshot {
-                top: -170px;
-                left: 0;
-                width: 256px;
-                height: 144px;
-                position: absolute;
-            }
-            .plyr--video.custom--hide-controls .plyr__controls {
-                opacity: 0 !important;
-                pointer-events: none !important;
-                transform: translateY(100%) !important;
-            }
-            .plyr--full-ui.plyr--video .plyr__control--overlaid {
-                display: none !important;
-            }
-        `, "Hanime1-Optimize");
+    ], null).then(([video, container, tip, progress]) => {
 
         async function autoHighestQuality() {
             const source = video.$qa("source");
@@ -200,13 +196,13 @@
 
                 // 滑鼠離開時移除圖片
                 Lib.onEvent(progress, "mouseleave", () => {
-                    Lib.$q(".Snapshot")?.remove();  // 移除舊圖片
+                    Lib.$q(".snapshot")?.remove();  // 移除舊圖片
                 }, { capture: true, passive: true });
 
                 // 快照顯示
                 const parent = tip.parentNode;
                 Lib.$observer(tip, () => {
-                    Lib.$q(".Snapshot")?.remove();  // 移除舊圖片
+                    Lib.$q(".snapshot")?.remove();  // 移除舊圖片
 
                     // 獲取指示器的時間, 並獲取對應的快照
                     const index = timeStringToSeconds(tip.textContent);
