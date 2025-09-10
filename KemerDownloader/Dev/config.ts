@@ -1,38 +1,25 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import { util } from 'vite-plugin-monkey';
 
-const Name = "KemerDownloader";
-export default {
-    entry: `./${Name}/Dev/src/main.js`,
-    fileName: `${Name}-Dev.js`,
-    outDir: `./${Name}/Dev/dist`,
-    userscript: {
-        connect: '*',
-        match: [
-            '*://kemono.cr/*',
-            '*://coomer.st/*',
-            '*://nekohouse.su/*'
-        ],
-        icon: 'https://cdn-icons-png.flaticon.com/512/2381/2381981.png',
-        namespace: 'https://greasyfork.org/users/989635',
-        'run-at': 'document-start',
-        grant: [
-            'window.close',
-            'window.onurlchange',
-            'GM_info',
-            'GM_setValue',
-            'GM_getValue',
-            'GM_download',
-            'GM_openInTab',
-            'GM_xmlhttpRequest',
-            'GM_registerMenuCommand',
-            'GM_unregisterMenuCommand'
-        ],
-        require: [
-            'https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
+import metaData from './metadata';
+import parseMeta from '../../parseMeta';
 
-            util.dataUrl(`window.Lib=Lib`)
-        ]
+const meta = metaData.trim();
+const parsed = parseMeta(meta);
+const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
+
+export default {
+    meta,
+    entry: `./${name}/Dev/src/main.js`,
+    fileName: `${name}-Dev.js`,
+    outDir: `./${name}/Dev/dist`,
+    userscript: {
+        ...parsed.basic,
+        require: [
+            ...parsed.require,
+            util.dataUrl('window.Lib=Lib')
+        ],
     },
 };
