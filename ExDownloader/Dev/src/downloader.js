@@ -1,7 +1,17 @@
 export default function Downloader(
-    GM_xmlhttpRequest, GM_download, Config, DConfig, Transl, Lib, saveAs
+    monkeyWindow, GM_xmlhttpRequest, GM_download, Config, DConfig, Transl, Lib, saveAs
 ) {
-    const zipper = Lib.createCompressor(); // 壓縮器
+    const zipper = import.meta.env.DEV
+        ? (() => {
+            const workerKey = "zipper";
+            let oldWorker = monkeyWindow[workerKey];
+            if (!oldWorker) {
+                oldWorker = monkeyWindow[workerKey] = Lib.createCompressor();
+            }
+            return oldWorker;
+        })()
+        : Lib.createCompressor();
+
     const dynamicParam = Lib.createNnetworkObserver({ // 網路監視器
         MAX_Delay: DConfig.MAX_Delay,
         MIN_CONCURRENCY: DConfig.MIN_CONCURRENCY,
