@@ -14,6 +14,9 @@ importers:
       cross-env:
         specifier: ^10.0.0
         version: 10.0.0
+      open:
+        specifier: ^10.2.0
+        version: 10.2.0
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
