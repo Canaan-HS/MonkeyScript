@@ -1,10 +1,18 @@
 interface ParsedMeta {
-  basic: Record<string, string | string[]>;
+  basic: Record<string, string | string[] | Record<string, string>>;
   require: string[];
 }
 
-// 指定要解析的 key
-const keys = ['connect', 'match', 'icon', 'namespace', 'run-at', 'require'];
+const keys = new Set([
+  'connect',
+  'match',
+  'icon',
+  'namespace',
+  'noframes',
+  'run-at',
+  'resource',
+  'require'
+]);
 
 /**
  * 解析 Userscript metadata
@@ -24,22 +32,33 @@ export default function parseMeta(metaText: string): ParsedMeta {
     if (!trimmed.startsWith('// @')) continue;
 
     // 拆分 key 和 value
-    const matchKeyValue = trimmed.match(/^\/\/\s*@(\S+)\s+(.+)$/);
+    const matchKeyValue = trimmed.match(/^\/\/\s*@(\S+)\s*(.*)$/);
     if (!matchKeyValue) continue;
 
     const key = matchKeyValue[1];
     const value = matchKeyValue[2].trim();
 
-    if (!keys.includes(key)) continue; // 忽略不在指定 key 的行
+    if (!keys.has(key)) continue;
 
-    // 處理 match 和 require 為 array
     if (key === 'require') {
+      // require: array
       result.require.push(value);
+
     } else if (key === 'match') {
-      if (!Array.isArray(result.basic[key])) result.basic[key] = [];
-      (result.basic[key] as string[]).push(value);
+      // match: array
+      if (!Array.isArray(result.basic.match)) result.basic.match = [];
+      (result.basic.match as string[]).push(value);
+
+    } else if (key === 'resource') {
+      // resource: object
+      if (typeof result.basic.resource !== 'object') result.basic.resource = {};
+      const [resName, resUrl] = value.split(/\s+/, 2);
+      if (resName && resUrl) {
+        (result.basic.resource as Record<string, string>)[resName] = resUrl;
+      }
+
     } else {
-      // 其他 key 單值處理
+      // other keys: string
       result.basic[key] = value;
     }
   }
