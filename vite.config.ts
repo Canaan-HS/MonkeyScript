@@ -17,7 +17,9 @@ export default defineConfig({
                 version: '0.0.0',
                 author: 'Canaan HS',
                 description: 'Vite Server',
-                ...config.userscript
+                ...config.userscript,
+                'run-at': config.userscript['run-at'] as
+                    'document-start' | 'document-body' | 'document-end' | 'document-idle' | 'context-menu'
             },
             build: {
                 fileName: config.fileName,
