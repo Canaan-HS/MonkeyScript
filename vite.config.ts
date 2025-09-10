@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 
-import { defineConfig } from 'vite';
+import open from 'open';
+import { defineConfig, Plugin, ViteDevServer } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
 import config from './ExDownloader/Dev/config';
@@ -20,10 +21,39 @@ const openConfig = browserName && browserPaths[browserName as keyof typeof brows
     ? { app: { name: browserPaths[browserName as keyof typeof browserPaths] } }
     : true;
 
+/* 重新啟動瀏覽器 */
+const RESTART_FLAG = 'VITE_PLUGIN_RESTARTED';
+function handleRestart(server: ViteDevServer) {
+    delete process.env[RESTART_FLAG]; // 在行動前立即清除旗標
+    server.httpServer?.once('listening', () => {
+        const url = server.resolvedUrls?.local[0];
+        if (url) {
+            open(url, typeof openConfig === 'object' ? openConfig : undefined);
+        }
+    });
+};
+const serverRestartWatcherPlugin = (): Plugin => ({
+    name: 'server-restart-watcher',
+    apply: 'serve',
+    configureServer(server: ViteDevServer) {
+        // 檢查是否為重啟後的進程
+        if (process.env[RESTART_FLAG]) {
+            handleRestart(server);
+        }
+
+        // 攔截重啟指令，為下一次重啟設置旗標
+        const originalRestart = server.restart;
+        server.restart = async function (...args: any[]) {
+            process.env[RESTART_FLAG] = 'true';
+            await originalRestart.apply(this, args);
+        };
+    },
+});
+
 /* 編譯後格式化 */
-const userscriptPolisherPlugin = () => ({
+const userscriptPolisherPlugin = (): Plugin => ({
     name: 'userscript-polisher',
-    apply: 'build' as const,
+    apply: 'build',
     async closeBundle() {
         const finalScriptPath = path.join(config.outDir, config.fileName);
 
@@ -35,7 +65,7 @@ const userscriptPolisherPlugin = () => ({
 
             const originalContent = fs.readFileSync(finalScriptPath, 'utf-8');
 
-            // --- 找到元數據區塊的結尾 ---
+            // 找到元數據區塊的結尾
             const headerEndMarker = '// ==/UserScript==';
             const headerEndIndex = originalContent.indexOf(headerEndMarker);
 
@@ -44,7 +74,7 @@ const userscriptPolisherPlugin = () => ({
                 return;
             }
 
-            // --- 逐行清理程式碼 ---
+            // 逐行清理程式碼
             const processedContent = originalContent.substring(headerEndIndex + headerEndMarker.length)
                 .split(/\r?\n/)
                 .map(line => {
@@ -59,21 +89,16 @@ const userscriptPolisherPlugin = () => ({
                 .filter(Boolean)
                 .join('\n');
 
-            // --- 組合最終的完整內容 ---
             const finalContent = config.meta + '\n\n' + processedContent;
 
-            // --- 格式化最終的完整內容 ---
+            // 格式化最終的完整內容
             let formattedContent = await prettier.format(finalContent, {
                 parser: 'babel',
             });
 
-            // --- 移除 Prettier 可能在結尾添加的多餘換行 ---
+            // 移除 Prettier 可能在結尾添加的多餘換行
             formattedContent = formattedContent.trimEnd();
-
-            // --- 寫入最終檔案 ---
             fs.writeFileSync(finalScriptPath, formattedContent, 'utf-8');
-            console.log('[process] Userscript polished successfully!');
-
         } catch (error) {
             console.error('[process] An error occurred:', error);
         }
@@ -106,6 +131,7 @@ export default defineConfig({
                 fileName: config.fileName,
             }
         }),
+        serverRestartWatcherPlugin(),
         userscriptPolisherPlugin()
     ],
 });
