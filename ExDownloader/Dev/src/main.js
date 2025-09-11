@@ -96,7 +96,7 @@ import Downloader from './downloader.js';
     async function buttonCreation() {
         Lib.waitEl("#gd2", null, { raf: true }).then(gd2 => {
 
-            DConfig.CompressMode = Lib.getV("CompressedMode", []);
+            DConfig.CompressMode = Lib.getV("CompressedMode", true);
             DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
 
             const downloadButton = Lib.createElement(gd2, "button", {
