@@ -1,21 +1,22 @@
+import metaData from './metadata';
+import parseMeta from '../../parseMeta';
+
 import { util } from 'vite-plugin-monkey';
 
-const Name = "ExDownloader";
-export default {
-    entry: `./${Name}/Dev/src/main.js`,
-    fileName: `${Name}-Dev.js`,
-    outDir: `./${Name}/Dev/dist`,
-    userscript: {
-        connect: '*',
-        match: ['*://e-hentai.org/g/*', '*://exhentai.org/g/*'],
-        icon: 'https://e-hentai.org/favicon.ico',
-        namespace: 'https://greasyfork.org/users/989635',
-        'run-at': 'document-body',
-        require: [
-            'https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
+const name = "ExDownloader";
+const meta = metaData.trim();
+const parsed = parseMeta(meta);
 
-            util.dataUrl(`window.Lib=Lib`)
+export default {
+    meta,
+    entry: `./${name}/Dev/src/main.js`,
+    fileName: `${name}-Dev.js`,
+    outDir: `./${name}/Dev/dist`,
+    userscript: {
+        ...parsed.basic,
+        require: [
+            ...parsed.require,
+            util.dataUrl('window.Lib=Lib')
         ],
     },
 };
