@@ -108,7 +108,8 @@ export default function Main() {
                     type: "click",
                     listener: () => {
                         Download ??= Downloader(
-                            monkeyWindow, GM_xmlhttpRequest, GM_download,
+                            import.meta.env.DEV ? monkeyWindow : null,
+                            GM_xmlhttpRequest, GM_download,
                             Config, DConfig, Transl, Lib, saveAs
                         )
 
