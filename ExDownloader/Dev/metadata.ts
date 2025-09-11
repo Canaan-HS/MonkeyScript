@@ -27,7 +27,7 @@ export default `
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1659705/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
