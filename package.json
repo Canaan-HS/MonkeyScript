@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:brave": "cross-env BROWSER=brave vite",
+    "dev:chrome": "cross-env BROWSER=chrome vite",
+    "dev:edge": "cross-env BROWSER=edge vite",
+    "dev:firefox": "cross-env BROWSER=firefox vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/node": "^24.3.1",
+    "cross-env": "^10.0.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.5",
     "vite-plugin-monkey": "^7.1.4"
