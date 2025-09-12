@@ -8,7 +8,6 @@ import monkey from 'vite-plugin-monkey';
 
 import config from './ExDownloader/Dev/config';
 
-/* 解析運行的瀏覽器 */
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
     chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -16,10 +15,15 @@ const browserPaths = {
     firefox: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe',
 };
 
+// 取得設置的瀏覽器
 const browserName = process.env.BROWSER;
-const openConfig = browserName && browserPaths[browserName as keyof typeof browserPaths]
-    ? { app: { name: browserPaths[browserName as keyof typeof browserPaths] } }
-    : true;
+let openConfig: boolean | { app: { name: string } } = true;
+if (browserName) {
+    const browserPath = browserPaths[browserName as keyof typeof browserPaths];
+    if (browserPath && fs.existsSync(browserPath)) {
+        openConfig = { app: { name: browserPath } };
+    }
+};
 
 /* 重新啟動瀏覽器 */
 const RESTART_FLAG = 'VITE_PLUGIN_RESTARTED';
