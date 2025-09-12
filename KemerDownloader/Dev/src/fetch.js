@@ -299,10 +299,10 @@ export default function Fetch(
 
                     // ! 這網站有一堆不同的格式, 很難寫出通用的解析方式
                     nodes = [...nodes];
-                    Lib.log("specialLinkParse DOM", domBody, { dev: General.Dev, collapsed: false });
+                    Lib.log(domBody, { dev: General.Dev, group: "specialLinkParse DOM", collapsed: false });
                     for (const [index, node] of nodes.entries()) {
                         const tag = node.tagName;
-                        Lib.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General.Dev });
+                        Lib.log({ tag, content: node.$text() }, { dev: General.Dev, group: "specialLinkParse node"});
 
                         let name = "";
                         let href = "";
@@ -403,7 +403,7 @@ export default function Fetch(
                         }
                     }
                 } catch (error) {
-                    Lib.log("Error specialLinkParse", error, { dev: General.Dev, type: "error", collapsed: false });
+                    Lib.log(error, { dev: General.Dev, group: "Error specialLinkParse", collapsed: false }).error;
                 }
 
                 return parsed;
@@ -463,7 +463,7 @@ export default function Fetch(
             };
 
             // 請求工作
-            this.worker = Lib.workerCreate(`
+            this.worker = Lib.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -498,14 +498,14 @@ export default function Fetch(
             // 設置抓取規則
             FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
 
-            Lib.log("Fetch Init", {
+            Lib.log({
                 Title: this.titleCache,
                 isPost: this.isPost,
                 QueryValue: this.queryValue,
                 ProfileAPI: this.profileAPI,
                 GenerateRules: this.infoRules,
                 ParseUrl: this.URL,
-            }, { dev: General.Dev });
+            }, { dev: General.Dev, group: "Fetch Init" });
         }
 
         /**
@@ -555,12 +555,12 @@ export default function Fetch(
                     this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
                 }
 
-                Lib.log("Fetch Run", {
+                Lib.log({
                     small, items,
                     CurrentPage: this.currentPage,
                     TotalPages: this.totalPages,
                     FinalPage: this.finalPage
-                }, { dev: General.Dev });
+                }, { dev: General.Dev, group: "Fetch Run" });
 
                 this._fetchPage(items, this.sourceURL); // 開始抓取
             } else {
@@ -598,7 +598,7 @@ export default function Fetch(
                 title: this.titleCache
             };
 
-            Lib.log("Fetch Test", pack, { dev: General.Dev, collapsed: false });
+            Lib.log(pack, { dev: General.Dev, group: "Fetch Test", collapsed: false });
 
             await this._fetchContent({
                 content: JSON.stringify([pack])
@@ -625,7 +625,7 @@ export default function Fetch(
                                 resolve(content);
                             }
                             else {
-                                Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log({ title, url, error }, { dev: General.Dev, collapsed: false }).error;
                                 await this.tooManyTryAgain(url);
                                 this.worker.postMessage({ title, url, time, delay });
                             };
@@ -658,7 +658,7 @@ export default function Fetch(
                             resolve({ url, content });
                         }
                         else {
-                            Lib.log(error, { title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                            Lib.log({ title, url, error }, { dev: General.Dev, collapsed: false }).error;
                             await this.tooManyTryAgain(url);
                             this.worker.postMessage({ title, url, time, delay });
                         };
@@ -678,7 +678,7 @@ export default function Fetch(
         async _fetchContent(homeData) {
             this.progress = 0; // 重置進度
             const { url, content } = homeData; // 解構數據
-            Lib.log("Fetch Content", homeData, { dev: General.Dev });
+            Lib.log(homeData, { dev: General.Dev, group: "Fetch Content" });
 
             // 解析處理的數據
             if (Process.IsNeko) {
@@ -725,7 +725,7 @@ export default function Fetch(
 
                         resolve();
                         Lib.title(`（${this.currentPage} - ${++taskCount}）`); // ? 如果直接使用 index, 順序會亂跳, 因為是異步執行
-                        Lib.log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                        Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
                     } else {
                         await this.tooManyTryAgain(url);
                         this.worker.postMessage({ index, title, url, time, delay });
@@ -760,7 +760,7 @@ export default function Fetch(
                                     const { url, content, error } = e.data;
                                     if (!error) resolve(JSON.parse(content));
                                     else {
-                                        Lib.log(error, url, { dev: General.Dev, type: "error", collapsed: false });
+                                        Lib.log(url, { dev: General.Dev, collapsed: false }).error;
                                         await this.tooManyTryAgain(url);
                                         this.worker.postMessage({ url });
                                     };
@@ -776,7 +776,7 @@ export default function Fetch(
                         this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
                         this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
 
-                        Lib.log("Meta Data", this.metaDict, { dev: General.Dev });
+                        Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
                     }
 
                     // ! 目前網站修改, 只支援 advancedFetch
@@ -823,13 +823,13 @@ export default function Fetch(
 
                                         resolve();
                                         Lib.title(`（${this.currentPage} - ${++this.progress}）`);
-                                        Lib.log("Request Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                                        Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
                                     } else throw new Error("Json Parse Failed");
                                 } else {
                                     throw new Error("Request Failed");
                                 }
                             } catch (error) {
-                                Lib.log(error, { index, title, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log({ index, title, url, error }, { dev: General.Dev, collapsed: false }).error;
                                 await this.tooManyTryAgain(url); // 錯誤等待
                                 this.worker.postMessage({ index, title, url, time, delay });
                             }
@@ -898,9 +898,9 @@ export default function Fetch(
                                 };
 
                                 Lib.title(`（${this.currentPage}）`);
-                                Lib.log("Parsed Successful", { index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, collapsed: false });
+                                Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group:"Parsed Successful", collapsed: false });
                             } catch (error) {
-                                Lib.log(error, { index, title: standardTitle, url }, { dev: General.Dev, type: "error", collapsed: false });
+                                Lib.log({ index, title: standardTitle, url, error }, { dev: General.Dev, collapsed: false }).error;
                                 continue;
                             }
                         };
