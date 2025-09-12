@@ -8,17 +8,26 @@ importers:
 
   .:
     devDependencies:
+      '@types/node':
+        specifier: ^24.3.1
+        version: 24.3.1
+      cross-env:
+        specifier: ^10.0.0
+        version: 10.0.0
       typescript:
         specifier: ^5.9.2
         version: 5.9.2
       vite:
         specifier: ^7.1.5
-        version: 7.1.5
+        version: 7.1.5(@types/node@24.3.1)
       vite-plugin-monkey:
         specifier: ^7.1.4
-        version: 7.1.4(postcss@8.5.6)(vite@7.1.5)
+        version: 7.1.4(postcss@8.5.6)(vite@7.1.5(@types/node@24.3.1))
 
 packages:
+
+  '@epic-web/invariant@1.0.0':
+    resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
 
   '@esbuild/aix-ppc64@0.25.9':
     resolution: {integrity: sha512-OaGtL73Jck6pBKjNIe24BnFE6agGl+6KxDtTfHhy1HmhthfKouEcOhqpSL64K4/0WCtbKFLOdzD/44cJ4k9opA==}
@@ -287,6 +296,9 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
+  '@types/node@24.3.1':
+    resolution: {integrity: sha512-3vXmQDXy+woz+gnrTvuvNrPzekOi+Ds0ReMxw0LzBiK3a+1k0kQn9f2NWk+lgD4rJehFUmYy2gMhJ2ZI+7YP9g==}
+
   acorn-walk@8.3.4:
     resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
     engines: {node: '>=0.4.0'}
@@ -308,6 +320,11 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
+
+  cross-env@10.0.0:
+    resolution: {integrity: sha512-aU8qlEK/nHYtVuN4p7UQgAwVljzMg8hB4YK5ThRqD2l/ziSnryncPNn7bMLt5cFYsKVKBh8HqLqyCoTupEUu7Q==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -477,6 +494,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  undici-types@7.10.0:
+    resolution: {integrity: sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag==}
+
   vite-plugin-monkey@7.1.4:
     resolution: {integrity: sha512-nA/uWbLT3b0uyCFBV7bsIUn+OZCpPzymDX1Nx9btKrG7in06m0txbT2SipCZPZJZyyQHPFNLrCSrWsQIFDHDlg==}
     peerDependencies:
@@ -538,6 +558,8 @@ packages:
     resolution: {integrity: sha512-AkTuIuVTET12tpsVIQo+ZU6f/qDmKuRUcjaqR+OIvm+aCBsZ95i7UVY5WJ9TMsSaZ0DA2WxoZ4acu0sPH+OKAw==}
 
 snapshots:
+
+  '@epic-web/invariant@1.0.0': {}
 
   '@esbuild/aix-ppc64@0.25.9':
     optional: true
@@ -684,6 +706,10 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
+  '@types/node@24.3.1':
+    dependencies:
+      undici-types: 7.10.0
+
   acorn-walk@8.3.4:
     dependencies:
       acorn: 8.15.0
@@ -702,6 +728,11 @@ snapshots:
       run-applescript: 7.1.0
 
   concat-map@0.0.1: {}
+
+  cross-env@10.0.0:
+    dependencies:
+      '@epic-web/invariant': 1.0.0
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:
@@ -892,7 +923,9 @@ snapshots:
 
   typescript@5.9.2: {}
 
-  vite-plugin-monkey@7.1.4(postcss@8.5.6)(vite@7.1.5):
+  undici-types@7.10.0: {}
+
+  vite-plugin-monkey@7.1.4(postcss@8.5.6)(vite@7.1.5(@types/node@24.3.1)):
     dependencies:
       acorn: 8.15.0
       acorn-walk: 8.3.4
@@ -906,11 +939,11 @@ snapshots:
       postcss-url: 10.1.3(postcss@8.5.6)
       systemjs: 6.15.1
     optionalDependencies:
-      vite: 7.1.5
+      vite: 7.1.5(@types/node@24.3.1)
     transitivePeerDependencies:
       - postcss
 
-  vite@7.1.5:
+  vite@7.1.5(@types/node@24.3.1):
     dependencies:
       esbuild: 0.25.9
       fdir: 6.5.0(picomatch@4.0.3)
@@ -919,6 +952,7 @@ snapshots:
       rollup: 4.50.1
       tinyglobby: 0.2.15
     optionalDependencies:
+      '@types/node': 24.3.1
       fsevents: 2.3.3
 
   which@2.0.2:
