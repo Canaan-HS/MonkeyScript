@@ -25,7 +25,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1659705/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -46,7 +46,7 @@
     ReTry: 10,
     Original: false,
     ResetScope: true,
-    CompleteClose: false
+    CompleteClose: false,
   };
   const DConfig = {
     Compress_Level: 9,
@@ -68,13 +68,15 @@
     CompressMode: void 0,
     KeyCache: void 0,
     GetKey: function () {
-      if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
+      if (!this.KeyCache)
+        this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
       return this.KeyCache;
-    }
+    },
   };
   const Dict = {
     Traditional: {
-      "範圍設置": "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n"
+      範圍設置:
+        "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n",
     },
     Simplified: {
       "🚮 清除數據緩存": "🚮 清除数据缓存",
@@ -82,32 +84,36 @@
       "⚙️ 下載範圍設置": "⚙️ 下载范围设置",
       "📥 強制壓縮下載": "📥 强制压缩下载",
       "⛔️ 終止下載": "⛔️ 取消下载",
-      "壓縮下載": "压缩下载",
-      "單圖下載": "单图下载",
-      "下載中鎖定": "下载中锁定",
-      "開始下載": "开始下载",
-      "獲取頁面": "获取页面中",
-      "獲取連結": "获取链接中",
-      "下載進度": "下载进度",
-      "壓縮進度": "压缩进度",
-      "壓縮完成": "压缩完成",
-      "壓縮失敗": "压缩失败",
-      "下載完成": "下载完成",
-      "清理警告": "清理提示",
-      "任務配置": "任务配置",
-      "取得結果": "获取结果",
-      "重新取得數據": "重新获取数据",
-      "確認設置範圍": "确认设置范围",
-      "剩餘重載次數": "剩余重试次数",
-      "下載失敗數據": "下载失败数据",
-      "內頁跳轉數據": "内页跳转数据",
-      "圖片連結數據": "图片链接数据",
+      壓縮下載: "压缩下载",
+      單圖下載: "单图下载",
+      下載中鎖定: "下载中锁定",
+      開始下載: "开始下载",
+      獲取頁面: "获取页面中",
+      獲取連結: "获取链接中",
+      下載進度: "下载进度",
+      壓縮進度: "压缩进度",
+      壓縮完成: "压缩完成",
+      壓縮失敗: "压缩失败",
+      下載完成: "下载完成",
+      清理警告: "清理提示",
+      任務配置: "任务配置",
+      取得結果: "获取结果",
+      重新取得數據: "重新获取数据",
+      確認設置範圍: "确认设置范围",
+      剩餘重載次數: "剩余重试次数",
+      下載失敗數據: "下载失败数据",
+      內頁跳轉數據: "内页跳转数据",
+      圖片連結數據: "图片链接数据",
       "等待失敗重試...": "等待失败重试...",
-      "請求錯誤重新加載頁面": "请求错误，请刷新页面",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "检测到图片集！\n\n是否按反向顺序下载？",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "下载数据不完整，将清除缓存。建议刷新页面后重试",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "找不到图片元素，您的 IP 可能被禁止。请刷新页面重试",
-      "範圍設置": "下载完成后自动重置\n\n单项设置：1, 2, 3\n范围设置：1~5, 6-10\n排除设置：!5, -10\n"
+      請求錯誤重新加載頁面: "请求错误，请刷新页面",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
+        "检测到图片集！\n\n是否按反向顺序下载？",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
+        "下载数据不完整，将清除缓存。建议刷新页面后重试",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
+        "找不到图片元素，您的 IP 可能被禁止。请刷新页面重试",
+      範圍設置:
+        "下载完成后自动重置\n\n单项设置：1, 2, 3\n范围设置：1~5, 6-10\n排除设置：!5, -10\n",
     },
     Japan: {
       "🚮 清除數據緩存": "🚮 データキャッシュを削除",
@@ -115,32 +121,36 @@
       "⚙️ 下載範圍設置": "⚙️ ダウンロード範囲設定",
       "📥 強制壓縮下載": "📥 強制圧縮ダウンロード",
       "⛔️ 終止下載": "⛔️ ダウンロードを中止",
-      "壓縮下載": "圧縮ダウンロード",
-      "單圖下載": "単一画像ダウンロード",
-      "下載中鎖定": "ダウンロード中ロック",
-      "開始下載": "ダウンロード開始",
-      "獲取頁面": "ページ取得中",
-      "獲取連結": "リンク取得中",
-      "下載進度": "ダウンロード進捗",
-      "壓縮進度": "圧縮進捗",
-      "壓縮完成": "圧縮完了",
-      "壓縮失敗": "圧縮失敗",
-      "下載完成": "ダウンロード完了",
-      "清理警告": "クリーンアップ警告",
-      "任務配置": "タスク設定",
-      "取得結果": "結果を取得",
-      "重新取得數據": "データを再取得",
-      "確認設置範圍": "範囲設定を確認",
-      "剩餘重載次數": "残りの再試行回数",
-      "下載失敗數據": "ダウンロード失敗データ",
-      "內頁跳轉數據": "内部ページリダイレクトデータ",
-      "圖片連結數據": "画像リンクデータ",
+      壓縮下載: "圧縮ダウンロード",
+      單圖下載: "単一画像ダウンロード",
+      下載中鎖定: "ダウンロード中ロック",
+      開始下載: "ダウンロード開始",
+      獲取頁面: "ページ取得中",
+      獲取連結: "リンク取得中",
+      下載進度: "ダウンロード進捗",
+      壓縮進度: "圧縮進捗",
+      壓縮完成: "圧縮完了",
+      壓縮失敗: "圧縮失敗",
+      下載完成: "ダウンロード完了",
+      清理警告: "クリーンアップ警告",
+      任務配置: "タスク設定",
+      取得結果: "結果を取得",
+      重新取得數據: "データを再取得",
+      確認設置範圍: "範囲設定を確認",
+      剩餘重載次數: "残りの再試行回数",
+      下載失敗數據: "ダウンロード失敗データ",
+      內頁跳轉數據: "内部ページリダイレクトデータ",
+      圖片連結數據: "画像リンクデータ",
       "等待失敗重試...": "失敗の再試行を待機中...",
-      "請求錯誤重新加載頁面": "リクエストエラー。ページを再読み込みしてください",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "画像集が検出されました！\n\n逆順でダウンロードしますか？",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "画像要素が見つかりません。IPがブロックされている可能性があります。ページを更新して再試行してください",
-      "範圍設置": "ダウンロード完了後に自動リセット\n\n単一項目: 1, 2, 3\n範囲指定: 15, 6-10\n除外設定: !5, -10\n"
+      請求錯誤重新加載頁面: "リクエストエラー。ページを再読み込みしてください",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
+        "画像集が検出されました！\n\n逆順でダウンロードしますか？",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
+        "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
+        "画像要素が見つかりません。IPがブロックされている可能性があります。ページを更新して再試行してください",
+      範圍設置:
+        "ダウンロード完了後に自動リセット\n\n単一項目: 1, 2, 3\n範囲指定: 15, 6-10\n除外設定: !5, -10\n",
     },
     Korea: {
       "🚮 清除數據緩存": "🚮 데이터 캐시 삭제",
@@ -148,32 +158,36 @@
       "⚙️ 下載範圍設置": "⚙️ 다운로드 범위 설정",
       "📥 強制壓縮下載": "📥 강제 압축 다운로드",
       "⛔️ 終止下載": "⛔️ 다운로드 중단",
-      "壓縮下載": "압축 다운로드",
-      "單圖下載": "단일 이미지 다운로드",
-      "下載中鎖定": "다운로드 중 잠금",
-      "開始下載": "다운로드 시작",
-      "獲取頁面": "페이지 가져오는 중",
-      "獲取連結": "링크 가져오는 중",
-      "下載進度": "다운로드 진행률",
-      "壓縮進度": "압축 진행률",
-      "壓縮完成": "압축 완료",
-      "壓縮失敗": "압축 실패",
-      "下載完成": "다운로드 완료",
-      "清理警告": "정리 경고",
-      "任務配置": "작업 구성",
-      "取得結果": "결과 가져오기",
-      "重新取得數據": "데이터 새로고침",
-      "確認設置範圍": "범위 설정 확인",
-      "剩餘重載次數": "남은 재시도 횟수",
-      "下載失敗數據": "다운로드 실패 데이터",
-      "內頁跳轉數據": "내부 페이지 이동 데이터",
-      "圖片連結數據": "이미지 링크 데이터",
+      壓縮下載: "압축 다운로드",
+      單圖下載: "단일 이미지 다운로드",
+      下載中鎖定: "다운로드 중 잠금",
+      開始下載: "다운로드 시작",
+      獲取頁面: "페이지 가져오는 중",
+      獲取連結: "링크 가져오는 중",
+      下載進度: "다운로드 진행률",
+      壓縮進度: "압축 진행률",
+      壓縮完成: "압축 완료",
+      壓縮失敗: "압축 실패",
+      下載完成: "다운로드 완료",
+      清理警告: "정리 경고",
+      任務配置: "작업 구성",
+      取得結果: "결과 가져오기",
+      重新取得數據: "데이터 새로고침",
+      確認設置範圍: "범위 설정 확인",
+      剩餘重載次數: "남은 재시도 횟수",
+      下載失敗數據: "다운로드 실패 데이터",
+      內頁跳轉數據: "내부 페이지 이동 데이터",
+      圖片連結數據: "이미지 링크 데이터",
       "等待失敗重試...": "실패 후 재시도 대기 중...",
-      "請求錯誤重新加載頁面": "요청 오류. 페이지를 다시 로드하세요",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "이미지 모음이 감지되었습니다!\n\n역순으로 다운로드하시겠습니까?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "다운로드 데이터가 불완전합니다. 캐시가 지워집니다. 페이지를 새로고침하고 다시 시도하세요",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "이미지 요소를 찾을 수 없습니다. IP가 차단되었을 수 있습니다. 페이지를 새로고침하고 다시 시도하세요",
-      "範圍設置": "다운로드 완료 후 자동 재설정\n\n단일 항목: 1, 2, 3\n범위 지정: 15, 6-10\n제외 설정: !5, -10\n"
+      請求錯誤重新加載頁面: "요청 오류. 페이지를 다시 로드하세요",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
+        "이미지 모음이 감지되었습니다!\n\n역순으로 다운로드하시겠습니까?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
+        "다운로드 데이터가 불완전합니다. 캐시가 지워집니다. 페이지를 새로고침하고 다시 시도하세요",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
+        "이미지 요소를 찾을 수 없습니다. IP가 차단되었을 수 있습니다. 페이지를 새로고침하고 다시 시도하세요",
+      範圍設置:
+        "다운로드 완료 후 자동 재설정\n\n단일 항목: 1, 2, 3\n범위 지정: 15, 6-10\n제외 설정: !5, -10\n",
     },
     Russia: {
       "🚮 清除數據緩存": "🚮 Очистить кэш данных",
@@ -181,32 +195,36 @@
       "⚙️ 下載範圍設置": "⚙️ Настройки диапазона загрузки",
       "📥 強制壓縮下載": "📥 Принудительная сжатая загрузка",
       "⛔️ 終止下載": "⛔️ Прервать загрузку",
-      "壓縮下載": "Сжатая загрузка",
-      "單圖下載": "Загрузка отдельных изображений",
-      "下載中鎖定": "Заблокировано во время загрузки",
-      "開始下載": "Начать загрузку",
-      "獲取頁面": "Получить страницу",
-      "獲取連結": "Получить ссылку",
-      "下載進度": "Прогресс загрузки",
-      "壓縮進度": "Прогресс сжатия",
-      "壓縮完成": "Сжатие завершено",
-      "壓縮失敗": "Ошибка сжатия",
-      "下載完成": "Загрузка завершена",
-      "清理警告": "Предупреждение об очистке",
-      "任務配置": "Конфигурация задачи",
-      "取得結果": "Получить результаты",
-      "重新取得數據": "Повторно получить данные",
-      "確認設置範圍": "Подтвердить настройки диапазона",
-      "剩餘重載次數": "Оставшиеся попытки перезагрузки",
-      "下載失敗數據": "Данные о неудачных загрузках",
-      "內頁跳轉數據": "Данные о перенаправлении внутренней страницы",
-      "圖片連結數據": "Данные о ссылках на изображения",
+      壓縮下載: "Сжатая загрузка",
+      單圖下載: "Загрузка отдельных изображений",
+      下載中鎖定: "Заблокировано во время загрузки",
+      開始下載: "Начать загрузку",
+      獲取頁面: "Получить страницу",
+      獲取連結: "Получить ссылку",
+      下載進度: "Прогресс загрузки",
+      壓縮進度: "Прогресс сжатия",
+      壓縮完成: "Сжатие завершено",
+      壓縮失敗: "Ошибка сжатия",
+      下載完成: "Загрузка завершена",
+      清理警告: "Предупреждение об очистке",
+      任務配置: "Конфигурация задачи",
+      取得結果: "Получить результаты",
+      重新取得數據: "Повторно получить данные",
+      確認設置範圍: "Подтвердить настройки диапазона",
+      剩餘重載次數: "Оставшиеся попытки перезагрузки",
+      下載失敗數據: "Данные о неудачных загрузках",
+      內頁跳轉數據: "Данные о перенаправлении внутренней страницы",
+      圖片連結數據: "Данные о ссылках на изображения",
       "等待失敗重試...": "Ожидание повторной попытки после сбоя...",
-      "請求錯誤重新加載頁面": "Ошибка запроса, перезагрузите страницу",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Обнаружена коллекция изображений !!\n\nХотите изменить порядок сортировки перед загрузкой?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Данные загрузки неполные, кэш будет очищен, рекомендуется обновить страницу и перезагрузить",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "Элементы изображения не найдены, возможно, ваш IP заблокирован, пожалуйста, обновите страницу и попробуйте снова",
-      "範圍設置": "Автоматический сброс после завершения загрузки\n\nНастройки отдельных элементов: 1. 2, 3\nНастройки диапазона: 1~5, 6-10\nНастройки исключения: !5, -10\n"
+      請求錯誤重新加載頁面: "Ошибка запроса, перезагрузите страницу",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
+        "Обнаружена коллекция изображений !!\n\nХотите изменить порядок сортировки перед загрузкой?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
+        "Данные загрузки неполные, кэш будет очищен, рекомендуется обновить страницу и перезагрузить",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
+        "Элементы изображения не найдены, возможно, ваш IP заблокирован, пожалуйста, обновите страницу и попробуйте снова",
+      範圍設置:
+        "Автоматический сброс после завершения загрузки\n\nНастройки отдельных элементов: 1. 2, 3\nНастройки диапазона: 1~5, 6-10\nНастройки исключения: !5, -10\n",
     },
     English: {
       "🚮 清除數據緩存": "🚮 Clear Data Cache",
@@ -214,47 +232,61 @@
       "⚙️ 下載範圍設置": "⚙️ Download Range Settings",
       "📥 強制壓縮下載": "📥 Force Compressed Download",
       "⛔️ 終止下載": "⛔️ Cancel Download",
-      "壓縮下載": "Compressed Download",
-      "單圖下載": "Single Image Download",
-      "下載中鎖定": "Locked During Download",
-      "開始下載": "Start Download",
-      "獲取頁面": "Fetching Page",
-      "獲取連結": "Fetching Links",
-      "下載進度": "Download Progress",
-      "壓縮進度": "Compression Progress",
-      "壓縮完成": "Compression Complete",
-      "壓縮失敗": "Compression Failed",
-      "下載完成": "Download Complete",
-      "清理警告": "Cleanup Warning",
-      "任務配置": "Task Configuration",
-      "取得結果": "Get Results",
-      "重新取得數據": "Refresh Data",
-      "確認設置範圍": "Confirm Range Settings",
-      "剩餘重載次數": "Remaining Retry Attempts",
-      "下載失敗數據": "Failed Download Data",
-      "內頁跳轉數據": "Internal Page Navigation Data",
-      "圖片連結數據": "Image Link Data",
+      壓縮下載: "Compressed Download",
+      單圖下載: "Single Image Download",
+      下載中鎖定: "Locked During Download",
+      開始下載: "Start Download",
+      獲取頁面: "Fetching Page",
+      獲取連結: "Fetching Links",
+      下載進度: "Download Progress",
+      壓縮進度: "Compression Progress",
+      壓縮完成: "Compression Complete",
+      壓縮失敗: "Compression Failed",
+      下載完成: "Download Complete",
+      清理警告: "Cleanup Warning",
+      任務配置: "Task Configuration",
+      取得結果: "Get Results",
+      重新取得數據: "Refresh Data",
+      確認設置範圍: "Confirm Range Settings",
+      剩餘重載次數: "Remaining Retry Attempts",
+      下載失敗數據: "Failed Download Data",
+      內頁跳轉數據: "Internal Page Navigation Data",
+      圖片連結數據: "Image Link Data",
       "等待失敗重試...": "Waiting for failed retry...",
-      "請求錯誤重新加載頁面": "Request error. Please reload the page.",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Image collection detected!\n\nDo you want to download in reverse order?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "Image elements not found. Your IP may be blocked. Please refresh the page and try again.",
-      "範圍設置": "Settings automatically reset after download completes.\n\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10\n"
-    }
+      請求錯誤重新加載頁面: "Request error. Please reload the page.",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
+        "Image collection detected!\n\nDo you want to download in reverse order?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
+        "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
+        "Image elements not found. Your IP may be blocked. Please refresh the page and try again.",
+      範圍設置:
+        "Settings automatically reset after download completes.\n\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10\n",
+    },
   };
-  function Downloader(GM_xmlhttpRequest2, GM_download2, Config2, DConfig2, Transl, Lib2, saveAs2) {
+  function Downloader(
+    monkeyWindow,
+    GM_xmlhttpRequest2,
+    GM_download2,
+    Config2,
+    DConfig2,
+    Transl,
+    Lib2,
+    saveAs2,
+  ) {
     const zipper = Lib2.createCompressor();
     const dynamicParam = Lib2.createNnetworkObserver({
       MAX_Delay: DConfig2.MAX_Delay,
       MIN_CONCURRENCY: DConfig2.MIN_CONCURRENCY,
       MAX_CONCURRENCY: DConfig2.MAX_CONCURRENCY,
       Good_Network_THRESHOLD: 500,
-      Poor_Network_THRESHOLD: 1500
+      Poor_Network_THRESHOLD: 1500,
     });
-    const getTotal = (page) => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
+    const getTotal = (page) =>
+      Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
     return (url, button) => {
       let comicName = null;
-      const worker = Lib2.workerCreate(`
+      const worker = Lib2.createWorker(`
             let queue = [], processing = false;
             onmessage = function(e) {
                 queue.push(e.data);
@@ -288,11 +320,15 @@
         DConfig2.Lock = false;
       }
       async function getHomeData() {
-        comicName = Lib2.nameFilter(Lib2.$q("#gj").$text() || Lib2.$q("#gn").$text());
+        comicName = Lib2.nameFilter(
+          Lib2.$q("#gj").$text() || Lib2.$q("#gn").$text(),
+        );
         const ct6 = Lib2.$q("#gdc .ct6");
         const cacheData = Lib2.session(DConfig2.GetKey());
         if (ct6) {
-          const yes = confirm(Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"));
+          const yes = confirm(
+            Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"),
+          );
           DConfig2.SortReverse = yes ? true : false;
         }
         if (cacheData) {
@@ -302,17 +338,24 @@
         const pages = getTotal(Lib2.$qa("#gdd td.gdt2"));
         worker.onmessage = (e) => {
           const { index, url: url2, html, time, delay: delay2, error } = e.data;
-          error ? worker.postMessage({
-            index,
-            url: url2,
-            time,
-            delay: dynamicParam(time, delay2, null, DConfig2.Home_ND)
-          }) : parseLink(index, Lib2.domParse(html));
+          error
+            ? worker.postMessage({
+                index,
+                url: url2,
+                time,
+                delay: dynamicParam(time, delay2, null, DConfig2.Home_ND),
+              })
+            : parseLink(index, Lib2.domParse(html));
         };
         const delay = DConfig2.Home_ID;
         worker.postMessage({ index: 0, url, time: Date.now(), delay });
         for (let index = 1; index < pages; index++) {
-          worker.postMessage({ index, url: `${url}?p=${index}`, time: Date.now(), delay });
+          worker.postMessage({
+            index,
+            url: `${url}?p=${index}`,
+            time: Date.now(),
+            delay,
+          });
         }
         let task = 0;
         let processed = new Set();
@@ -326,7 +369,6 @@
               processed.add(href);
               box.push(href);
             }
-            ;
             homeData.set(index, box);
             const display = `[${++task}/${pages}]`;
             Lib2.title(display);
@@ -336,18 +378,18 @@
               for (let index2 = 0; index2 < homeData.size; index2++) {
                 box2.push(...homeData.get(index2));
               }
-              ;
               homeData.clear();
               processed.clear();
               Lib2.log(
-                Transl("內頁跳轉數據"),
                 `${comicName}
 ${JSON.stringify(box2, null, 4)}`,
-                { dev: Config2.Dev }
+                {
+                  dev: Config2.Dev,
+                  group: Transl("內頁跳轉數據"),
+                },
               );
               getImageData(box2);
             }
-            ;
           } catch (error) {
             alert(Transl("請求錯誤重新加載頁面"));
             location.reload();
@@ -358,32 +400,39 @@ ${JSON.stringify(box2, null, 4)}`,
         const pages = homeDataList.length;
         worker.onmessage = (e) => {
           const { index, url: url2, html, time, delay, error } = e.data;
-          error ? worker.postMessage({
-            index,
-            url: url2,
-            time,
-            delay: dynamicParam(time, delay, null, DConfig2.Image_ND)
-          }) : parseLink(index, url2, Lib2.domParse(html));
+          error
+            ? worker.postMessage({
+                index,
+                url: url2,
+                time,
+                delay: dynamicParam(time, delay, null, DConfig2.Image_ND),
+              })
+            : parseLink(index, url2, Lib2.domParse(html));
         };
         for (const [index, url2] of homeDataList.entries()) {
-          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig2.Image_ID });
+          worker.postMessage({
+            index,
+            url: url2,
+            time: Date.now(),
+            delay: DConfig2.Image_ID,
+          });
         }
         let task = 0;
         const imgData = [];
         function parseLink(index, url2, page) {
           try {
             const resample = Lib2.$Q(page, "#img");
-            const original = Lib2.$Q(page, "#i6 div:last-of-type a")?.href || "#";
+            const original =
+              Lib2.$Q(page, "#i6 div:last-of-type a")?.href || "#";
             if (!resample) {
-              Lib2.log(null, {
-                page,
-                resample,
-                original
-              }, { dev: Config2.Dev, type: "error" });
+              Lib2.log({ page, resample, original }, { dev: Config2.Dev })
+                .error;
               throw new Error("Image not found");
             }
-            ;
-            const link = Config2.Original && !original.endsWith("#") ? original : resample.src || resample.href;
+            const link =
+              Config2.Original && !original.endsWith("#")
+                ? original
+                : resample.src || resample.href;
             imgData.push({ Index: index, PageUrl: url2, ImgUrl: link });
             const display = `[${++task}/${pages}]`;
             Lib2.title(display);
@@ -393,9 +442,8 @@ ${JSON.stringify(box2, null, 4)}`,
               Lib2.session(DConfig2.GetKey(), { value: imgData });
               startTask(imgData);
             }
-            ;
           } catch (error) {
-            Lib2.log(null, error, { dev: Config2.Dev, type: "error" });
+            Lib2.log(error, { dev: Config2.Dev }).error;
             task++;
           }
         }
@@ -405,14 +453,29 @@ ${JSON.stringify(box2, null, 4)}`,
           const resample = Lib2.$Q(page, "#img");
           const original = Lib2.$Q(page, "#i6 div:last-of-type a")?.href || "#";
           if (!resample) return false;
-          const link = Config2.Original && !original.endsWith("#") ? original : resample.src || resample.href;
+          const link =
+            Config2.Original && !original.endsWith("#")
+              ? original
+              : resample.src || resample.href;
           return { Index: index2, PageUrl: url3, ImgUrl: link };
         }
         let token = Config2.ReTry;
         return new Promise((resolve) => {
-          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig2.Image_ID });
+          worker.postMessage({
+            index,
+            url: url2,
+            time: Date.now(),
+            delay: DConfig2.Image_ID,
+          });
           worker.onmessage = (e) => {
-            const { index: index2, url: url3, html, time, delay, error } = e.data;
+            const {
+              index: index2,
+              url: url3,
+              html,
+              time,
+              delay,
+              error,
+            } = e.data;
             if (token <= 0) return resolve(false);
             if (error) {
               worker.postMessage({ index: index2, url: url3, time, delay });
@@ -429,22 +492,23 @@ ${JSON.stringify(box2, null, 4)}`,
       }
       function startTask(dataList) {
         Lib2.log(
-          Transl("圖片連結數據"),
           `${comicName}
 ${JSON.stringify(dataList, null, 4)}`,
-          { dev: Config2.Dev }
+          { dev: Config2.Dev, group: Transl("圖片連結數據") },
         );
         if (DConfig2.Scope) {
           dataList = Lib2.scopeParse(DConfig2.Scope, dataList);
         }
         if (DConfig2.SortReverse) {
           const size = dataList.length - 1;
-          dataList = dataList.map((data, index) => ({ ...data, Index: size - index }));
+          dataList = dataList.map((data, index) => ({
+            ...data,
+            Index: size - index,
+          }));
         }
         const dataMap = new Map(dataList.map((data) => [data.Index, data]));
         button.$text(Transl("開始下載"));
         Lib2.log(
-          Transl("任務配置"),
           {
             ReTry: Config2.ReTry,
             Original: Config2.Original,
@@ -453,9 +517,9 @@ ${JSON.stringify(dataList, null, 4)}`,
             SortReverse: DConfig2.SortReverse,
             CompressMode: DConfig2.CompressMode,
             CompressionLevel: DConfig2.Compress_Level,
-            DownloadData: dataMap
+            DownloadData: dataMap,
           },
-          { dev: Config2.Dev }
+          { dev: Config2.Dev, group: Transl("任務配置") },
         );
         DConfig2.CompressMode ? packDownload(dataMap) : singleDownload(dataMap);
       }
@@ -475,8 +539,14 @@ ${JSON.stringify(dataList, null, 4)}`,
         function force() {
           if (totalSize > 0) {
             const sortData = [...dataMap].sort((a, b) => a.Index - b.Index);
-            sortData.splice(0, 0, { ErrorPage: sortData.map(([_, value]) => value.Index + 1).join(",") });
-            Lib2.log(Transl("下載失敗數據"), JSON.stringify(sortData, null, 4), { type: "error" });
+            sortData.splice(0, 0, {
+              ErrorPage: sortData
+                .map(([_, value]) => value.Index + 1)
+                .join(","),
+            });
+            Lib2.log(JSON.stringify(sortData, null, 4), {
+              group: Transl("下載失敗數據"),
+            }).error;
           }
           enforce = true;
           init();
@@ -486,17 +556,27 @@ ${JSON.stringify(dataList, null, 4)}`,
           if (!clearCache) {
             clearCache = true;
             sessionStorage.removeItem(DConfig2.GetKey());
-            Lib2.log(Transl("清理警告"), Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
+            Lib2.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
+              group: Transl("清理警告"),
+            }).warn;
           }
         }
         function statusUpdate(time, index, iurl, blob, error = false) {
           if (enforce) return;
-          [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig2.Download_ND);
+          [$delay, $thread] = dynamicParam(
+            time,
+            $delay,
+            $thread,
+            DConfig2.Download_ND,
+          );
           const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
           button?.$text(`${Transl("下載進度")}: ${display}`);
           Lib2.title(display);
           if (!error && blob) {
-            zipper.file(`${comicName}/${Lib2.mantissa(index, fillValue, "0", iurl)}`, blob);
+            zipper.file(
+              `${comicName}/${Lib2.mantissa(index, fillValue, "0", iurl)}`,
+              blob,
+            );
             dataMap.delete(index);
           }
           if (progress === totalSize) {
@@ -525,16 +605,21 @@ ${JSON.stringify(dataList, null, 4)}`,
               responseType: "blob",
               onload: (response) => {
                 clearTimeout(timeout);
-                if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
+                if (
+                  response.finalUrl !== iurl &&
+                  `${response.status}`.startsWith("30")
+                ) {
                   request(index, response.finalUrl);
                 } else {
-                  response.status == 200 ? statusUpdate(time, index, iurl, response.response) : statusUpdate(time, index, iurl, null, true);
+                  response.status == 200
+                    ? statusUpdate(time, index, iurl, response.response)
+                    : statusUpdate(time, index, iurl, null, true);
                 }
               },
               onerror: () => {
                 clearTimeout(timeout);
                 statusUpdate(time, index, iurl, null, true);
-              }
+              },
             });
           } else {
             runClear();
@@ -551,9 +636,15 @@ ${JSON.stringify(dataList, null, 4)}`,
           for (const { Index, PageUrl, ImgUrl } of dataMap2.values()) {
             if (enforce) break;
             if (reGet) {
-              Lib2.log(`${Transl("重新取得數據")} (${reTry})`, { Uri: PageUrl }, { dev: Config2.Dev });
+              Lib2.log(PageUrl, {
+                dev: Config2.Dev,
+                group: `${Transl("重新取得數據")} (${reTry})`,
+              });
               const result = await reGetImageData(Index, PageUrl);
-              Lib2.log(`${Transl("取得結果")} (${reTry})`, { Result: result }, { dev: Config2.Dev });
+              Lib2.log(result, {
+                dev: Config2.Dev,
+                group: `${Transl("取得結果")} (${reTry})`,
+              });
               if (result) {
                 const { Index: Index2, ImgUrl: ImgUrl2 } = result;
                 request(Index2, ImgUrl2);
@@ -570,37 +661,50 @@ ${JSON.stringify(dataList, null, 4)}`,
           }
         }
         start(dataMap);
-        Lib2.regMenu({
-          [Transl("📥 強制壓縮下載")]: () => force()
-        }, { name: "Enforce" });
+        Lib2.regMenu(
+          {
+            [Transl("📥 強制壓縮下載")]: () => force(),
+          },
+          { name: "Enforce" },
+        );
       }
       async function compressFile() {
         Lib2.unMenu("Enforce-1");
-        zipper.generateZip({
-          level: DConfig2.Compress_Level
-        }, (progress) => {
-          const display = `${progress.toFixed(1)} %`;
-          Lib2.title(display);
-          button.$text(`${Transl("壓縮進度")}: ${display}`);
-        }).then((zip) => {
-          saveAs2(zip, `${comicName}.zip`);
-          Lib2.title(`✓ ${DConfig2.TitleCache}`);
-          button.$text(Transl("壓縮完成"));
-          button = null;
-          setTimeout(() => {
-            reset();
-          }, 1500);
-        }).catch((result) => {
-          Lib2.title(DConfig2.TitleCache);
-          const display = Transl("壓縮失敗");
-          button.$text(display);
-          Lib2.log(display, result, { dev: Config2.Dev, type: "error", collapsed: false });
-          setTimeout(() => {
-            button.disabled = false;
-            button.$text(DConfig2.ModeDisplay);
+        zipper
+          .generateZip(
+            {
+              level: DConfig2.Compress_Level,
+            },
+            (progress) => {
+              const display = `${progress.toFixed(1)} %`;
+              Lib2.title(display);
+              button.$text(`${Transl("壓縮進度")}: ${display}`);
+            },
+          )
+          .then((zip) => {
+            saveAs2(zip, `${comicName}.zip`);
+            Lib2.title(`✓ ${DConfig2.TitleCache}`);
+            button.$text(Transl("壓縮完成"));
             button = null;
-          }, 4500);
-        });
+            setTimeout(() => {
+              reset();
+            }, 1500);
+          })
+          .catch((result) => {
+            Lib2.title(DConfig2.TitleCache);
+            const display = Transl("壓縮失敗");
+            button.$text(display);
+            Lib2.log(result, {
+              dev: Config2.Dev,
+              group: display,
+              collapsed: false,
+            }).error;
+            setTimeout(() => {
+              button.disabled = false;
+              button.$text(DConfig2.ModeDisplay);
+              button = null;
+            }, 4500);
+          });
       }
       async function singleDownload(dataMap) {
         let totalSize = dataMap.size;
@@ -617,7 +721,9 @@ ${JSON.stringify(dataList, null, 4)}`,
           if (!clearCache) {
             clearCache = true;
             sessionStorage.removeItem(DConfig2.GetKey());
-            Lib2.log(Transl("清理警告"), Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
+            Lib2.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
+              group: Transl("清理警告"),
+            }).warn;
           }
         }
         async function request(index, purl, iurl, retry) {
@@ -629,7 +735,12 @@ ${JSON.stringify(dataList, null, 4)}`,
                 url: iurl,
                 name: `${comicName}-${Lib2.mantissa(index, fillValue, "0", iurl)}`,
                 onload: () => {
-                  [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig2.Download_ND);
+                  [$delay, $thread] = dynamicParam(
+                    time,
+                    $delay,
+                    $thread,
+                    DConfig2.Download_ND,
+                  );
                   const display = `[${++progress}/${totalSize}]`;
                   Lib2.title(display);
                   button?.$text(`${Transl("下載進度")}: ${display}`);
@@ -638,23 +749,36 @@ ${JSON.stringify(dataList, null, 4)}`,
                 },
                 onerror: () => {
                   if (retry > 0) {
-                    [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig2.Download_ND);
-                    Lib2.log(null, `[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`, { dev: Config2.Dev, type: "error" });
+                    [$delay, $thread] = dynamicParam(
+                      time,
+                      $delay,
+                      $thread,
+                      DConfig2.Download_ND,
+                    );
+                    Lib2.log(
+                      `[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`,
+                      { dev: Config2.Dev },
+                    ).error;
                     --task;
-                    setTimeout(() => {
-                      reGetImageData(index, purl).then(({ Index, PageUrl, ImgUrl }) => {
-                        request(Index, PageUrl, ImgUrl, retry - 1);
-                        reject();
-                      }).catch((err) => {
-                        runClear();
-                        reject();
-                      });
-                    }, retryDelay += 1e3);
+                    setTimeout(
+                      () => {
+                        reGetImageData(index, purl)
+                          .then(({ Index, PageUrl, ImgUrl }) => {
+                            request(Index, PageUrl, ImgUrl, retry - 1);
+                            reject();
+                          })
+                          .catch((err) => {
+                            runClear();
+                            reject();
+                          });
+                      },
+                      (retryDelay += 1e3),
+                    );
                   } else {
                     --task;
                     reject(new Error("request error"));
                   }
-                }
+                },
               });
             } else {
               runClear();
@@ -678,7 +802,7 @@ ${JSON.stringify(dataList, null, 4)}`,
       }
     };
   }
-  (async () => {
+  function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     let Transl, Download;
@@ -740,14 +864,18 @@ ${scope}`);
       if (yes) DConfig.Scope = scope;
     }
     async function downloadModeSwitch() {
-      DConfig.CompressMode ? Lib.setV("CompressedMode", false) : Lib.setV("CompressedMode", true);
-      Lib.$q("#ExDB").remove();
+      DConfig.CompressMode
+        ? Lib.setV("CompressedMode", false)
+        : Lib.setV("CompressedMode", true);
+      Lib.$q("#ExDB")?.remove();
       buttonCreation();
     }
     async function buttonCreation() {
       Lib.waitEl("#gd2", null, { raf: true }).then((gd2) => {
-        DConfig.CompressMode = Lib.getV("CompressedMode", []);
-        DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
+        DConfig.CompressMode = Lib.getV("CompressedMode", true);
+        DConfig.ModeDisplay = DConfig.CompressMode
+          ? Transl("壓縮下載")
+          : Transl("單圖下載");
         const downloadButton = Lib.createElement(gd2, "button", {
           id: "ExDB",
           class: "Download_Button",
@@ -757,21 +885,22 @@ ${scope}`);
             type: "click",
             listener: () => {
               Download ??= Downloader(
+                null,
                 GM_xmlhttpRequest,
                 GM_download,
                 Config,
                 DConfig,
                 Transl,
                 Lib,
-                saveAs
+                saveAs,
               );
               DConfig.Lock = true;
               downloadButton.disabled = true;
               downloadButton.$text(Transl("開始下載"));
               Download(Url, downloadButton);
             },
-            add: { capture: true, passive: true }
-          }
+            add: { capture: true, passive: true },
+          },
         });
       });
     }
@@ -781,27 +910,26 @@ ${scope}`);
       ({ Transl } = (() => {
         const Matcher = Lib.translMatcher(Dict);
         return {
-          Transl: (Str) => Matcher[Str] ?? Str
+          Transl: (Str) => Matcher[Str] ?? Str,
         };
       })());
       buttonCreation();
       if (Lib.session(DConfig.GetKey())) {
-        const menu = GM_registerMenuCommand(Transl("🚮 清除數據緩存"), () => {
-          sessionStorage.removeItem(DConfig.GetKey());
-          GM_unregisterMenuCommand(menu);
-        });
-        Lib.regMenu({
-          [Transl("🚮 清除數據緩存")]: () => {
-            sessionStorage.removeItem(DConfig.GetKey());
-            Lib.unMenu("ClearCache-1");
-          }
-        }, { name: "ClearCache" });
+        Lib.regMenu(
+          {
+            [Transl("🚮 清除數據緩存")]: () => {
+              sessionStorage.removeItem(DConfig.GetKey());
+              Lib.unMenu("ClearCache-1");
+            },
+          },
+          { name: "ClearCache" },
+        );
       }
       Lib.regMenu({
         [Transl("🔁 切換下載模式")]: () => downloadModeSwitch(),
-        [Transl("⚙️ 下載範圍設置")]: () => downloadRangeSetting()
+        [Transl("⚙️ 下載範圍設置")]: () => downloadRangeSetting(),
       });
     }
-  })();
-
+  }
+  Main();
 })();
