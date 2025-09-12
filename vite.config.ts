@@ -6,7 +6,6 @@ import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
 import config from './ExDownloader/Dev/config';
-import metaData from './ExDownloader/Dev/metadata';
 
 /* 解析運行的瀏覽器 */
 const browserPaths = {
@@ -22,7 +21,6 @@ const openConfig = browserName && browserPaths[browserName as keyof typeof brows
     : true;
 
 /* 編譯後格式化 */
-const meta = metaData.trim();
 const userscriptPolisherPlugin = () => ({
     name: 'userscript-polisher',
     apply: 'build' as const,
@@ -62,7 +60,7 @@ const userscriptPolisherPlugin = () => ({
                 .join('\n');
 
             // --- 組合最終的完整內容 ---
-            const finalContent = meta + '\n\n' + processedContent;
+            const finalContent = config.meta + '\n\n' + processedContent;
 
             // --- 格式化最終的完整內容 ---
             let formattedContent = await prettier.format(finalContent, {
@@ -101,7 +99,7 @@ export default defineConfig({
             },
             server: {
                 open: false,
-                prefix: 'vite-monkey-dev',
+                prefix: '_vite-monkey-dev_',
             },
             build: {
                 autoGrant: false,
