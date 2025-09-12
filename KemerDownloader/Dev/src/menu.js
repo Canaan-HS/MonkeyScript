@@ -1,39 +1,41 @@
-export default function Menu(Lib, Transl, General, FileName, FetchSet) {
+import { Lib } from "./client.js";
+import { General, FileName, FetchSet } from "./config.js";
+import Transl from "./language.js";
 
-    return class UI {
-        constructor() {
-            this.overlay = null;
-            this.shadow = Lib.createElement(document.body, "div", { id: "kemer-settings" });
-            this.shadowRoot = this.shadow.attachShadow({ mode: 'open' });
+export default class UI {
+    constructor() {
+        this.overlay = null;
+        this.shadow = Lib.createElement(document.body, "div", { id: "kemer-settings" });
+        this.shadowRoot = this.shadow.attachShadow({ mode: 'open' });
 
-            this._loadUi();
-        };
+        this._loadUi();
+    };
 
-        open() {
-            this.overlay.style.display = 'flex';
-            setTimeout(() => this.overlay.classList.add('visible'), 10);
-        };
+    open() {
+        this.overlay.style.display = 'flex';
+        setTimeout(() => this.overlay.classList.add('visible'), 10);
+    };
 
-        close() {
-            this.overlay.classList.remove('visible');
-            setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
-        };
+    close() {
+        this.overlay.classList.remove('visible');
+        setTimeout(() => { this.overlay.style.display = 'none'; }, 200);
+    };
 
-        _getStyles() {
-            const color = {
-                Primary: {
-                    "kemono": "#e8a17d",
-                    "coomer": "#99ddff",
-                    "nekohouse": "#bb91ff"
-                }[Lib.$domain.split(".")[0]],
-                Background: '#2c2c2e',
-                BackgroundLight: '#3a3a3c',
-                Border: '#545458',
-                Text: '#f5f5f7',
-                TextSecondary: '#8e8e93',
-            }
+    _getStyles() {
+        const color = {
+            Primary: {
+                "kemono": "#e8a17d",
+                "coomer": "#99ddff",
+                "nekohouse": "#bb91ff"
+            }[Lib.$domain.split(".")[0]],
+            Background: '#2c2c2e',
+            BackgroundLight: '#3a3a3c',
+            Border: '#545458',
+            Text: '#f5f5f7',
+            TextSecondary: '#8e8e93',
+        }
 
-            return `
+        return `
                 :host { --primary-color: ${color.Primary}; font-size: 16px; }
                 #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); }
                 #modal { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: ${color.Background}; color: ${color.Text}; border-radius: 14px; padding: 24px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 1px solid rgba(255, 255, 255, 0.1); transform: scale(0.95); opacity: 0; transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
@@ -76,22 +78,22 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                 pre { background-color: #1c1c1e; border: 1px solid #545458; border-radius: 8px; padding: 15px; overflow-x: auto; font-size: 0.85em; line-height: 1.4; color: #e0e0e0; }
                 code { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; }
             `
-        };
+    };
 
-        _createHTML() {
-            const createFormItems = (settings, category) => {
-                return Object.entries(settings).map(([key, value]) => {
+    _createHTML() {
+        const createFormItems = (settings, category) => {
+            return Object.entries(settings).map(([key, value]) => {
 
-                    // 跳過不需要顯示的項目
-                    if (key === "Dev" || (category === "FetchSet" && (key === "Mode" || key === "Format"))) return '';
+                // 跳過不需要顯示的項目
+                if (key === "Dev" || (category === "FetchSet" && (key === "Mode" || key === "Format"))) return '';
 
-                    const type = typeof value;
-                    const label = Transl(key);
-                    const id = `${category}-${key}`;
-                    const tooltip = `<span class="tooltip-icon" data-tooltip="${Transl("說明")}">!</span>`;
+                const type = typeof value;
+                const label = Transl(key);
+                const id = `${category}-${key}`;
+                const tooltip = `<span class="tooltip-icon" data-tooltip="${Transl("說明")}">!</span>`;
 
-                    if (category === 'FetchSet' && key === 'UseFormat') {
-                        return `
+                if (category === 'FetchSet' && key === 'UseFormat') {
+                    return `
                         <input type="checkbox" id="${id}" class="conditional-trigger" style="display: none;" ${value ? 'checked' : ''}>
                         <div class="form-row">
                             <label for="${id}">${label}${tooltip}</label>
@@ -101,9 +103,9 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                         </div>
                         ${this._createFetchConditionalItems()}
                     `;
-                    }
-                    else if (type === 'boolean') {
-                        return `
+                }
+                else if (type === 'boolean') {
+                    return `
                         <div class="form-row">
                             <label for="${id}">${label}${tooltip}</label>
                             <label class="switch">
@@ -112,8 +114,8 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                             </label>
                         </div>
                     `;
-                    } else if (key === 'FillValue') {
-                        return `
+                } else if (key === 'FillValue') {
+                    return `
                         <div class="accordion form-row-full">
                             <input type="checkbox" id="accordion-${id}" class="accordion-toggle" style="display: none;">
                             <label class="accordion-header" for="accordion-${id}">
@@ -132,20 +134,20 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                             </div>
                         </div>
                     `;
-                    } else if (type === 'string' || type === 'number') {
-                        return `
+                } else if (type === 'string' || type === 'number') {
+                    return `
                         <div class="form-row">
                             <label for="${id}">${label}${tooltip}</label>
                             <input type="text" id="${id}" value="${value}">
                         </div>
                     `;
-                    }
+                }
 
-                    return '';
-                }).join('');
-            };
+                return '';
+            }).join('');
+        };
 
-            const fileNameConfigContent = `
+        const fileNameConfigContent = `
                 \r{Time} | ${Transl("發佈時間")}
                 \r{Title} | ${Transl("標題")}
                 \r{Artist} | ${Transl("作者|繪師")}
@@ -153,7 +155,7 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                 \r{Fill} | ${Transl("只適用於檔名的填充值, 必須存在該值")}
             `;
 
-            return `
+        return `
                 <div id="overlay">
                     <div id="modal">
                         <div class="header"><h2>${Transl("Settings")}</h2></div>
@@ -171,10 +173,10 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                     </div>
                 </div>
             `
-        };
+    };
 
-        _createFetchConditionalItems() {
-            const modeHtml = `
+    _createFetchConditionalItems() {
+        const modeHtml = `
                 <div class="form-row">
                     <label for="fetch-Mode">${Transl("Mode")}<span class="tooltip-icon" data-tooltip="${Transl("模式說明")}">!</span></label>
                     <select id="fetch-Mode">
@@ -184,55 +186,54 @@ export default function Menu(Lib, Transl, General, FileName, FetchSet) {
                 </div>
             `;
 
-            const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
-            const formatButtons = formatOptions.map(opt => `
+        const formatOptions = ["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"];
+        const formatButtons = formatOptions.map(opt => `
                 <label class="multi-select-btn">
                     <input type="checkbox" name="fetch-Format" value="${opt}" ${FetchSet.Format.includes(opt) ? 'checked' : ''}>
                     <span>${Transl(opt)}</span>
                 </label>
             `).join('');
 
-            const formatHtml = `
+        const formatHtml = `
                 <div class="form-row multi-select form-row-full">
                     <label>${Transl("Format")}<span class="tooltip-icon" data-tooltip="${Transl("格式說明")}">!</span></label>
                     <div class="multi-select-group">${formatButtons}</div>
                 </div>
             `;
 
-            return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
-        };
+        return `<div id="fetch-conditional-settings">${modeHtml}${formatHtml}</div>`;
+    };
 
-        _UiSwitchEvent() {
-            this.overlay = Lib.$Q(this.shadowRoot, "#overlay");
+    _UiSwitchEvent() {
+        this.overlay = Lib.$Q(this.shadowRoot, "#overlay");
 
-            Lib.onE(this.overlay, "click", event => {
-                const target = event.target;
-                const tagName = target.tagName;
+        Lib.onE(this.overlay, "click", event => {
+            const target = event.target;
+            const tagName = target.tagName;
 
-                if (tagName === "BUTTON") {
-                    // 切換選項卡
-                    if (target.classList.contains("active")) return;
+            if (tagName === "BUTTON") {
+                // 切換選項卡
+                if (target.classList.contains("active")) return;
 
-                    Lib.$Q(this.shadowRoot, "button.active").classList.remove("active");
-                    Lib.$Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
+                Lib.$Q(this.shadowRoot, "button.active").classList.remove("active");
+                Lib.$Q(this.shadowRoot, "div.tab-content.active").classList.remove("active");
 
-                    target.classList.add("active");
-                    Lib.$Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
-                } else if (target === this.overlay) {
-                    this.close();
-                }
+                target.classList.add("active");
+                Lib.$Q(this.shadowRoot, `div#${target.dataset.tab}`).classList.add("active");
+            } else if (target === this.overlay) {
+                this.close();
+            }
 
 
-            })
-        };
+        })
+    };
 
-        _loadUi() {
-            this.shadowRoot.innerHTML = `
+    _loadUi() {
+        this.shadowRoot.innerHTML = `
                 <style>${this._getStyles()}</style>
                 ${this._createHTML()}
             `;
 
-            this._UiSwitchEvent();
-        };
-    }
+        this._UiSwitchEvent();
+    };
 }
