@@ -1,8 +1,17 @@
 export default function Downloader(
-    GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
+    monkeyWindow, GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
     General, FileName, Process, Transl, Lib, saveAs
 ) {
-    const zipper = Lib.createCompressor();
+    const zipper = monkeyWindow
+        ? (() => {
+            const workerKey = "zipper";
+            let oldWorker = monkeyWindow[workerKey];
+            if (!oldWorker) {
+                oldWorker = monkeyWindow[workerKey] = Lib.createCompressor();
+            }
+            return oldWorker;
+        })()
+        : Lib.createCompressor();
 
     return class Download {
         constructor(compressMode, modeDisplay, button) {
@@ -22,7 +31,7 @@ export default function Downloader(
             const videoExts = new Set(Process.VideoExts);
             this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
 
-            this.worker = this.compressMode ? Lib.workerCreate(`
+            this.worker = this.compressMode ? Lib.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -128,10 +137,10 @@ export default function Downloader(
 
                 if (downloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
-                Lib.log("Get Data", {
+                Lib.log({
                     FolderName: folderName,
                     DownloadData: downloadData
-                }, { dev: General.Dev, collapsed: false });
+                }, { dev: General.Dev, group: "Get Data", collapsed: false });
 
                 this.compressMode
                     ? this._packDownload(compressName, folderName, fillName, downloadData)
@@ -249,8 +258,8 @@ export default function Downloader(
             this.worker.onmessage = (e) => {
                 const { index, url, blob, error } = e.data;
                 error
-                    ? (request(index, url), Lib.log("Download Failed", url, { dev: General.Dev, type: "error", collapsed: false }))
-                    : (requestUpdate(index, url, blob), Lib.log("Download Successful", url, { dev: General.Dev, collapsed: false }));
+                    ? (request(index, url), Lib.log(url, { dev: General.Dev, group: "Download Failed", collapsed: false })).error
+                    : (requestUpdate(index, url, blob), Lib.log(url, { dev: General.Dev, group: "Download Successful", collapsed: false }));
             }
         }
 
@@ -307,7 +316,7 @@ export default function Downloader(
                         if (!showTracking[index]) { // 多一個判斷是因為, 他有可能同樣的重複呼叫多次
                             showTracking[index] = true;
 
-                            Lib.log("Download Successful", url, { dev: General.Dev, collapsed: false });
+                            Lib.log(url, { dev: General.Dev, group: "Download Successful", collapsed: false });
 
                             show = `[${++progress}/${total}]`;
                             Lib.title(show);
@@ -326,18 +335,18 @@ export default function Downloader(
                         },
                         onprogress: (progress) => {
                             /* 新版本的油猴插件, 這個回條怪怪的
-                            Lib.log("Download Progress", {
+                            Lib.log{
                                 Index: index,
                                 ImgUrl: url,
                                 Progress: `${progress.loaded}/${progress.total}`
-                            }, {dev: General.Dev, collapsed: false});
+                            }, {dev: General.Dev, group: "Download Progress", collapsed: false});
 
                             downloadTracking[index] = (progress.loaded == progress.total);
                             downloadTracking[index] && completed();
                             */
                         },
                         onerror: () => {
-                            Lib.log("Download Error", url, { dev: General.Dev, type: "error", collapsed: false });
+                            Lib.log(url, { dev: General.Dev, group: "Download Error", collapsed: false }).error;
                             setTimeout(() => {
                                 reject();
 
@@ -392,7 +401,7 @@ export default function Downloader(
 
                 const errorShow = Transl("壓縮封裝失敗");
                 this.button.$text(errorShow);
-                Lib.log(errorShow, result, { dev: General.Dev, type: "error", collapsed: false });
+                Lib.log(result, { dev: General.Dev, group: errorShow, collapsed: false }).error;
 
                 setTimeout(() => {
                     Process.Lock = false;
