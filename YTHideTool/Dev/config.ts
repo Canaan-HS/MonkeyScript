@@ -1,29 +1,25 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import { util } from 'vite-plugin-monkey';
 
-const Name = "YTHideTool";
-export default {
-    entry: `./${Name}/Dev/src/main.js`,
-    fileName: `${Name}-Dev.js`,
-    outDir: `./${Name}/Dev/dist`,
-    userscript: {
-        match: [
-            '*://www.youtube.com/*',
-        ],
-        icon: 'https://cdn-icons-png.flaticon.com/512/1383/1383260.png',
-        namespace: 'https://greasyfork.org/users/989635',
-        noframes: '',
-        'run-at': 'document-start',
-        grant: [
-            'window.onurlchange',
-            'GM_setValue',
-            'GM_getValue',
-            'GM_registerMenuCommand',
-            'GM_addValueChangeListener'
-        ],
-        require: [
-            'https://update.greasyfork.org/scripts/487608/1591150/SyntaxLite_min.js',
+import metaData from './metadata';
+import parseMeta from '../../parseMeta';
 
-            util.dataUrl(`window.Syn=Syn`)
-        ]
+const meta = metaData.trim();
+const parsed = parseMeta(meta);
+const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
+
+export default {
+    meta,
+    entry: `./${name}/Dev/src/main.js`,
+    fileName: `${name}-Dev.js`,
+    outDir: `./${name}/Dev/dist`,
+    userscript: {
+        ...parsed.basic,
+        require: [
+            ...parsed.require,
+            util.dataUrl('window.Syn=Syn')
+        ],
     },
 };
