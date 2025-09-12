@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import prettier from 'prettier';
 
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
@@ -20,30 +21,65 @@ const openConfig = browserName && browserPaths[browserName as keyof typeof brows
     ? { app: { name: browserPaths[browserName as keyof typeof browserPaths] } }
     : true;
 
-/* 替換 metadata */
+/* 編譯後格式化 */
 const meta = metaData.trim();
-const replaceMetadataPlugin = () => ({
-    name: 'replace-metadata-block',
+const userscriptPolisherPlugin = () => ({
+    name: 'userscript-polisher',
     apply: 'build' as const,
     async closeBundle() {
         const finalScriptPath = path.join(config.outDir, config.fileName);
 
         try {
             if (!fs.existsSync(finalScriptPath)) {
-                console.error(`[replace-metadata-block] Error: File not found at ${finalScriptPath}`);
+                console.error(`[process] Error: File not found at ${finalScriptPath}`);
                 return;
             }
 
             const originalContent = fs.readFileSync(finalScriptPath, 'utf-8');
-            const newContent = originalContent.replace(
-                /\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==/, meta
-            );
 
-            fs.writeFileSync(finalScriptPath, newContent, 'utf-8');
+            // --- 找到元數據區塊的結尾 ---
+            const headerEndMarker = '// ==/UserScript==';
+            const headerEndIndex = originalContent.indexOf(headerEndMarker);
+
+            if (headerEndIndex === -1) {
+                console.error('[process] Error: UserScript header end marker not found.');
+                return;
+            }
+
+            // --- 逐行清理程式碼 ---
+            const processedContent = originalContent.substring(headerEndIndex + headerEndMarker.length)
+                .split(/\r?\n/)
+                .map(line => {
+                    if (/^\s*$/.test(line)) return; // 空行
+                    if (/^\s*['"]use strict['"];?\s*$/.test(line)) return; // 'use strict';
+                    if (/^\s*var _GM_/.test(line)) return; // var _GM_
+                    if (/^\s*var _monkeyWindow/.test(line)) return; // var _monkeyWindow
+                    if (/^\s*const \{.*?\} = _monkeyWindow;/.test(line)) return; // const { ... } = _monkeyWindow
+
+                    return line.replace(/_GM_([a-zA-Z]+)/g, 'GM_$1'); // 將 _GM_ 替換為 GM_
+                })
+                .filter(Boolean)
+                .join('\n');
+
+            // --- 組合最終的完整內容 ---
+            const finalContent = meta + '\n\n' + processedContent;
+
+            // --- 格式化最終的完整內容 ---
+            let formattedContent = await prettier.format(finalContent, {
+                parser: 'babel',
+            });
+
+            // --- 移除 Prettier 可能在結尾添加的多餘換行 ---
+            formattedContent = formattedContent.trimEnd();
+
+            // --- 寫入最終檔案 ---
+            fs.writeFileSync(finalScriptPath, formattedContent, 'utf-8');
+            console.log('[process] Userscript polished successfully!');
+
         } catch (error) {
-            console.error('[replace-metadata-block] An error occurred:', error);
+            console.error('[process] An error occurred:', error);
         }
-    },
+    }
 });
 
 export default defineConfig({
@@ -72,6 +108,6 @@ export default defineConfig({
                 fileName: config.fileName,
             }
         }),
-        replaceMetadataPlugin()
+        userscriptPolisherPlugin()
     ],
 });
