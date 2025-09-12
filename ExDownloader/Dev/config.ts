@@ -1,11 +1,14 @@
-import metaData from './metadata';
-import parseMeta from '../../parseMeta';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { util } from 'vite-plugin-monkey';
 
-const name = "ExDownloader";
+import metaData from './metadata';
+import parseMeta from '../../parseMeta';
+
 const meta = metaData.trim();
 const parsed = parseMeta(meta);
+const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
 
 export default {
     meta,
