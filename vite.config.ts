@@ -6,7 +6,7 @@ import open from 'open';
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 import monkey from 'vite-plugin-monkey';
 
-import config from './ExDownloader/Dev/config';
+import config from './KemerDownloader/Dev/config';
 
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
@@ -83,21 +83,19 @@ const userscriptPolisherPlugin = (): Plugin => ({
                 .split(/\r?\n/)
                 .map(line => {
                     if (/^\s*$/.test(line)) return; // 空行
-                    if (/^\s*['"]use strict['"];?\s*$/.test(line)) return; // 'use strict';
-                    if (/^\s*var _GM_/.test(line)) return; // var _GM_
+                    if (/^\s*['"]use strict['"];?$/.test(line)) return; // 'use strict';
                     if (/^\s*var _monkeyWindow/.test(line)) return; // var _monkeyWindow
-                    if (/^\s*const \{.*?\} = _monkeyWindow;/.test(line)) return; // const { ... } = _monkeyWindow
-
-                    return line.replace(/_GM_([a-zA-Z]+)/g, 'GM_$1'); // 將 _GM_ 替換為 GM_
+                    if (/^\s*const \{.*?\}\s*=\s*_?monkeyWindow;/.test(line)) return; // const { ... } = _monkeyWindow
+                    return line
                 })
-                .filter(Boolean)
-                .join('\n');
+                .filter(Boolean).join('\n');
 
             const finalContent = config.meta + '\n\n' + processedContent;
 
             // 格式化最終的完整內容
             let formattedContent = await prettier.format(finalContent, {
                 parser: 'babel',
+                printWidth: 800,
             });
 
             // 移除 Prettier 可能在結尾添加的多餘換行
@@ -128,6 +126,7 @@ export default defineConfig({
             },
             server: {
                 open: false,
+                mountGmApi: true,
                 prefix: '_vite-monkey-dev_',
             },
             build: {
