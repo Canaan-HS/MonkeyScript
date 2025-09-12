@@ -1,8 +1,9 @@
-export default function Downloader(
-    monkeyWindow, GM_unregisterMenuCommand, GM_xmlhttpRequest, GM_download,
-    General, FileName, Process, Transl, Lib, saveAs
-) {
-    const zipper = monkeyWindow
+import { monkeyWindow, Lib, saveAs } from "./client.js";
+import { General, FileName, Process } from "./config.js";
+import Transl from "./language.js";
+
+export default function Downloader() {
+    const zipper = import.meta.env.DEV
         ? (() => {
             const workerKey = "zipper";
             let oldWorker = monkeyWindow[workerKey];
@@ -79,7 +80,7 @@ export default function Downloader(
         }
 
         /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-        downloadTrigger(sourceType) { // 下載數據, 文章標題, 作者名稱
+        trigger(sourceType) { // 下載數據, 文章標題, 作者名稱
             Lib.waitEl([
                 ".post__title, .scrape__title",
                 ".post__files, .scrape__files",
@@ -368,7 +369,7 @@ export default function Downloader(
             }
 
             await Promise.allSettled(promises);
-            GM_unregisterMenuCommand("Abort-1");
+            Lib.unMenu("Abort-1");
 
             Lib.title(`✓ ${titleCache}`);
             this.button.$text(Transl("下載完成"));
@@ -381,7 +382,8 @@ export default function Downloader(
         async _compressFile(name, title) {
             this.worker.terminate();
             this.forceCompressSignal = true;
-            GM_unregisterMenuCommand("Enforce-1");
+
+            Lib.unMenu("Enforce-1");
             zipper.generateZip({
                 level: 9
             }, (progress) => {
