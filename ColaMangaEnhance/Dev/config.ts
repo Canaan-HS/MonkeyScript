@@ -1,24 +1,25 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import { util } from 'vite-plugin-monkey';
 
-const Name = "ColaMangaEnhance";
-export default {
-    entry: `./${Name}/Dev/src/main.js`,
-    fileName: `${Name}-Dev.js`,
-    outDir: `./${Name}/Dev/dist`,
-    userscript: {
-        match: [
-            '*://www.colamanga.com/manga-*/*/*.html',
-        ],
-        icon: 'https://www.colamanga.com/favicon.png',
-        namespace: 'https://greasyfork.org/users/989635',
-        'run-at': 'document-start',
-        grant: [
-            'GM_setValue', 'GM_getValue'
-        ],
-        require: [
-            'https://update.greasyfork.org/scripts/487608/1616382/SyntaxLite_min.js',
+import metaData from './metadata';
+import parseMeta from '../../parseMeta';
 
-            util.dataUrl(`window.Syn=Syn`)
-        ]
+const meta = metaData.trim();
+const parsed = parseMeta(meta);
+const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
+
+export default {
+    meta,
+    entry: `./${name}/Dev/src/main.js`,
+    fileName: `${name}-Dev.js`,
+    outDir: `./${name}/Dev/dist`,
+    userscript: {
+        ...parsed.basic,
+        require: [
+            ...parsed.require,
+            util.dataUrl('window.Syn=Syn')
+        ],
     },
 };
