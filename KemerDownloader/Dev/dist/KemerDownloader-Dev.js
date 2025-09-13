@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1654307/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1659705/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -46,26 +46,26 @@
 
 (function () {
   function Config(Lib2) {
-    const General2 = {
+    const General = {
       Dev: false,
       IncludeExtras: false,
       CompleteClose: false,
       ConcurrentDelay: 500,
       ConcurrentQuantity: 5,
       BatchOpenDelay: 500,
-      ...Lib2.getJV("General", {})
+      ...Lib2.getJV("General", {}),
     };
-    const FileName2 = {
+    const FileName = {
       FillValue: {
         Filler: "0",
-        Amount: "Auto"
+        Amount: "Auto",
       },
       CompressName: "({Artist}) {Title}",
       FolderName: "{Title}",
       FillName: "{Title} {Fill}",
-      ...Lib2.getJV("FileName", {})
+      ...Lib2.getJV("FileName", {}),
     };
-    const FetchSet2 = {
+    const FetchSet = {
       Delay: 100,
       AdvancedFetch: true,
       ToLinkTxt: false,
@@ -73,33 +73,148 @@
       UseFormat: false,
       Mode: "FilterMode",
       Format: ["Timestamp", "TypeTag"],
-      ...Lib2.getJV("FetchSet", {})
+      ...Lib2.getJV("FetchSet", {}),
     };
-    const Process2 = {
+    const Process = {
       IsNeko: Lib2.$domain.startsWith("nekohouse"),
-      ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
-      VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"],
+      ImageExts: [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "webp",
+        "tiff",
+        "tif",
+        "svg",
+        "heic",
+        "heif",
+        "raw",
+        "ico",
+        "avif",
+        "jxl",
+        "cr2",
+        "nef",
+        "arw",
+        "orf",
+        "rw2",
+        "tga",
+        "pcx",
+        "crw",
+        "cr2",
+        "cr3",
+        "dng",
+        "eps",
+        "xcf",
+        "ai",
+        "psd",
+        "psb",
+        "pef",
+        "nrw",
+        "ptx",
+        "srf",
+        "sr2",
+        "raf",
+        "rwl",
+        "3fr",
+        "fff",
+        "iiq",
+        "x3f",
+        "ari",
+        "bay",
+        "dcr",
+        "kdc",
+        "mef",
+        "mos",
+        "dng",
+        "usdz",
+        "jxr",
+        "cdr",
+        "wmf",
+        "emf",
+        "dxf",
+        "svgz",
+        "obj",
+        "fbx",
+        "stl",
+        "gltf",
+        "glb",
+        "gltf",
+        "glb",
+        "dae",
+        "blend",
+        "max",
+        "c4d",
+        "step",
+        "stp",
+        "iges",
+      ],
+      VideoExts: [
+        "mp4",
+        "avi",
+        "mkv",
+        "mov",
+        "flv",
+        "wmv",
+        "webm",
+        "mpg",
+        "mpeg",
+        "m4v",
+        "ogv",
+        "3gp",
+        "asf",
+        "ts",
+        "vob",
+        "rm",
+        "rmvb",
+        "m2ts",
+        "f4v",
+        "mts",
+        "mpe",
+        "mpv",
+        "m2v",
+        "m4a",
+        "bdmv",
+        "ifo",
+        "r3d",
+        "braw",
+        "cine",
+        "qt",
+        "f4p",
+        "swf",
+        "mng",
+        "gifv",
+        "yuv",
+        "roq",
+        "nsv",
+        "amv",
+        "svi",
+        "mod",
+        "mxf",
+        "ogg",
+      ],
       Lock: false,
       dynamicParam: Lib2.createNnetworkObserver({
         MAX_Delay: 1500,
         MIN_CONCURRENCY: 5,
         MAX_CONCURRENCY: 10,
         Good_Network_THRESHOLD: 200,
-        Poor_Network_THRESHOLD: 400
-      })
+        Poor_Network_THRESHOLD: 400,
+      }),
     };
-    return { General: General2, FileName: FileName2, FetchSet: FetchSet2, Process: Process2 };
+    return { General, FileName, FetchSet, Process };
   }
   const Dict = {
     Traditional: {
-      "PostLink": "帖子連結",
-      "Timestamp": "發佈日期",
-      "TypeTag": "類型標籤",
-      "ImgLink": "圖片連結",
-      "VideoLink": "影片連結",
-      "DownloadLink": "下載連結",
-      "ExternalLink": "外部連結",
-      "開帖說明": "\n\n!! 直接確認將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10"
+      PostLink: "帖子連結",
+      Timestamp: "發佈日期",
+      TypeTag: "類型標籤",
+      ImgLink: "圖片連結",
+      VideoLink: "影片連結",
+      DownloadLink: "下載連結",
+      ExternalLink: "外部連結",
+      開帖說明:
+        "\n\n!! 直接確認將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10",
     },
     Simplified: {
       "🔁 切換下載模式": "🔁 切换下载模式",
@@ -107,44 +222,45 @@
       "📃 開啟當前頁面帖子": "📃 打开当前页面帖子",
       "📥 強制壓縮下載": "📥 强制压缩下载",
       "⛔️ 取消下載": "⛔️ 取消下载",
-      "壓縮下載": "压缩下载",
-      "單獨下載": "单独下载",
-      "開始下載": "开始下载",
-      "無法下載": "无法下载",
-      "下載進度": "下载进度",
-      "封裝進度": "打包进度",
-      "壓縮封裝失敗": "压缩打包失败",
-      "下載完成": "下载完成",
-      "請求進度": "请求进度",
-      "下載中鎖定": "下载中锁定",
-      "原始連結": "原始链接",
-      "圖片數量": "图片数量",
-      "影片數量": "视频数量",
-      "下載連結": "下载链接",
-      "密碼": "密码",
-      "連結": "链接",
-      "時間": "时间",
-      "來源": "来源",
-      "元數據": "元数据",
-      "PostLink": "帖子链接",
-      "Timestamp": "发布日期",
-      "TypeTag": "类型标签",
-      "ImgLink": "图片链接",
-      "VideoLink": "视频链接",
-      "DownloadLink": "下载链接",
-      "ExternalLink": "外部链接",
-      "帖子內容": "帖子内容",
-      "帖子數量": "帖子数量",
-      "建立時間": "建立时间",
-      "獲取頁面": "获取页面",
-      "未取得數據": "未获取到数据",
-      "模式切換": "模式切换",
-      "數據處理中": "数据处理中",
-      "當前處理頁數": "当前处理页数",
-      "數據處理完成": "数据处理完成",
+      壓縮下載: "压缩下载",
+      單獨下載: "单独下载",
+      開始下載: "开始下载",
+      無法下載: "无法下载",
+      下載進度: "下载进度",
+      封裝進度: "打包进度",
+      壓縮封裝失敗: "压缩打包失败",
+      下載完成: "下载完成",
+      請求進度: "请求进度",
+      下載中鎖定: "下载中锁定",
+      原始連結: "原始链接",
+      圖片數量: "图片数量",
+      影片數量: "视频数量",
+      下載連結: "下载链接",
+      密碼: "密码",
+      連結: "链接",
+      時間: "时间",
+      來源: "来源",
+      元數據: "元数据",
+      PostLink: "帖子链接",
+      Timestamp: "发布日期",
+      TypeTag: "类型标签",
+      ImgLink: "图片链接",
+      VideoLink: "视频链接",
+      DownloadLink: "下载链接",
+      ExternalLink: "外部链接",
+      帖子內容: "帖子内容",
+      帖子數量: "帖子数量",
+      建立時間: "建立时间",
+      獲取頁面: "获取页面",
+      未取得數據: "未获取到数据",
+      模式切換: "模式切换",
+      數據處理中: "数据处理中",
+      當前處理頁數: "当前处理页数",
+      數據處理完成: "数据处理完成",
       "Json 數據下載": "JSON 数据下载",
-      "當前帖子數": "当前帖子数",
-      "開帖說明": "\n\n!! 直接确认将开启当前页面的所有帖子\n请输入开启范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10"
+      當前帖子數: "当前帖子数",
+      開帖說明:
+        "\n\n!! 直接确认将开启当前页面的所有帖子\n请输入开启范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10",
     },
     Japan: {
       "🔁 切換下載模式": "🔁 ダウンロードモード切替",
@@ -152,45 +268,46 @@
       "📃 開啟當前頁面帖子": "📃 現在のページの投稿を開く",
       "📥 強制壓縮下載": "📥 強制ZIPダウンロード",
       "⛔️ 取消下載": "⛔️ ダウンロードをキャンセル",
-      "壓縮下載": "ZIPダウンロード",
-      "單獨下載": "個別ダウンロード",
-      "開始下載": "ダウンロード開始",
-      "無法下載": "ダウンロード不可",
-      "下載進度": "ダウンロード進捗",
-      "封裝進度": "パッケージ化進捗",
-      "壓縮封裝失敗": "ZIP化に失敗",
-      "下載完成": "ダウンロード完了",
-      "請求進度": "リクエスト進捗",
-      "下載中鎖定": "ダウンロード中はロック中",
-      "原始連結": "オリジナルリンク",
-      "圖片數量": "画像数",
-      "影片數量": "動画数",
-      "下載連結": "ダウンロードリンク",
-      "密碼": "パスワード",
-      "連結": "リンク",
-      "作者": "作者",
-      "時間": "日時",
-      "來源": "ソース",
-      "元數據": "メタデータ",
-      "PostLink": "投稿リンク",
-      "Timestamp": "投稿日時",
-      "TypeTag": "種類タグ",
-      "ImgLink": "画像リンク",
-      "VideoLink": "動画リンク",
-      "DownloadLink": "ダウンロードリンク",
-      "ExternalLink": "外部リンク",
-      "帖子內容": "投稿内容",
-      "帖子數量": "投稿数",
-      "建立時間": "作成日時",
-      "獲取頁面": "ページ取得",
-      "未取得數據": "データ取得失敗",
-      "模式切換": "モード切替",
-      "數據處理中": "データ処理中",
-      "當前處理頁數": "処理中のページ",
-      "數據處理完成": "データ処理完了",
+      壓縮下載: "ZIPダウンロード",
+      單獨下載: "個別ダウンロード",
+      開始下載: "ダウンロード開始",
+      無法下載: "ダウンロード不可",
+      下載進度: "ダウンロード進捗",
+      封裝進度: "パッケージ化進捗",
+      壓縮封裝失敗: "ZIP化に失敗",
+      下載完成: "ダウンロード完了",
+      請求進度: "リクエスト進捗",
+      下載中鎖定: "ダウンロード中はロック中",
+      原始連結: "オリジナルリンク",
+      圖片數量: "画像数",
+      影片數量: "動画数",
+      下載連結: "ダウンロードリンク",
+      密碼: "パスワード",
+      連結: "リンク",
+      作者: "作者",
+      時間: "日時",
+      來源: "ソース",
+      元數據: "メタデータ",
+      PostLink: "投稿リンク",
+      Timestamp: "投稿日時",
+      TypeTag: "種類タグ",
+      ImgLink: "画像リンク",
+      VideoLink: "動画リンク",
+      DownloadLink: "ダウンロードリンク",
+      ExternalLink: "外部リンク",
+      帖子內容: "投稿内容",
+      帖子數量: "投稿数",
+      建立時間: "作成日時",
+      獲取頁面: "ページ取得",
+      未取得數據: "データ取得失敗",
+      模式切換: "モード切替",
+      數據處理中: "データ処理中",
+      當前處理頁數: "処理中のページ",
+      數據處理完成: "データ処理完了",
       "Json 數據下載": "JSONデータダウンロード",
-      "當前帖子數": "現在の投稿数",
-      "開帖說明": "\n\n!! 入力せずに確定すると、現在のページの全投稿が開かれます。\n範囲を指定して開く:\n単一: 1, 2, 3\n範囲: 1~5, 6-10\n除外: !5, -10"
+      當前帖子數: "現在の投稿数",
+      開帖說明:
+        "\n\n!! 入力せずに確定すると、現在のページの全投稿が開かれます。\n範囲を指定して開く:\n単一: 1, 2, 3\n範囲: 1~5, 6-10\n除外: !5, -10",
     },
     Korea: {
       "🔁 切換下載模式": "🔁 다운로드 모드 전환",
@@ -198,45 +315,46 @@
       "📃 開啟當前頁面帖子": "📃 현재 페이지 게시물 열기",
       "📥 強制壓縮下載": "📥 강제 압축 다운로드",
       "⛔️ 取消下載": "⛔️ 다운로드 취소",
-      "壓縮下載": "압축 다운로드",
-      "單獨下載": "개별 다운로드",
-      "開始下載": "다운로드 시작",
-      "無法下載": "다운로드 불가",
-      "下載進度": "다운로드 진행률",
-      "封裝進度": "패키징 진행률",
-      "壓縮封裝失敗": "압축 실패",
-      "下載完成": "다운로드 완료",
-      "請求進度": "요청 진행률",
-      "下載中鎖定": "다운로드 중 잠금",
-      "原始連結": "원본 링크",
-      "圖片數量": "이미지 수",
-      "影片數量": "영상 수",
-      "下載連結": "다운로드 링크",
-      "密碼": "비밀번호",
-      "連結": "링크",
-      "作者": "작성자",
-      "時間": "시간",
-      "來源": "출처",
-      "元數據": "메타데이터",
-      "PostLink": "게시물 링크",
-      "Timestamp": "타임스탬프",
-      "TypeTag": "유형 태그",
-      "ImgLink": "이미지 링크",
-      "VideoLink": "영상 링크",
-      "DownloadLink": "다운로드 링크",
-      "ExternalLink": "외부 링크",
-      "帖子內容": "게시물 내용",
-      "帖子數量": "게시물 수",
-      "建立時間": "생성 시간",
-      "獲取頁面": "페이지 로딩",
-      "未取得數據": "데이터를 가져오지 못함",
-      "模式切換": "모드 전환",
-      "數據處理中": "데이터 처리 중",
-      "當前處理頁數": "처리 중인 페이지",
-      "數據處理完成": "데이터 처리 완료",
+      壓縮下載: "압축 다운로드",
+      單獨下載: "개별 다운로드",
+      開始下載: "다운로드 시작",
+      無法下載: "다운로드 불가",
+      下載進度: "다운로드 진행률",
+      封裝進度: "패키징 진행률",
+      壓縮封裝失敗: "압축 실패",
+      下載完成: "다운로드 완료",
+      請求進度: "요청 진행률",
+      下載中鎖定: "다운로드 중 잠금",
+      原始連結: "원본 링크",
+      圖片數量: "이미지 수",
+      影片數量: "영상 수",
+      下載連結: "다운로드 링크",
+      密碼: "비밀번호",
+      連結: "링크",
+      作者: "작성자",
+      時間: "시간",
+      來源: "출처",
+      元數據: "메타데이터",
+      PostLink: "게시물 링크",
+      Timestamp: "타임스탬프",
+      TypeTag: "유형 태그",
+      ImgLink: "이미지 링크",
+      VideoLink: "영상 링크",
+      DownloadLink: "다운로드 링크",
+      ExternalLink: "외부 링크",
+      帖子內容: "게시물 내용",
+      帖子數量: "게시물 수",
+      建立時間: "생성 시간",
+      獲取頁面: "페이지 로딩",
+      未取得數據: "데이터를 가져오지 못함",
+      模式切換: "모드 전환",
+      數據處理中: "데이터 처리 중",
+      當前處理頁數: "처리 중인 페이지",
+      數據處理完成: "데이터 처리 완료",
       "Json 數據下載": "JSON 데이터 다운로드",
-      "當前帖子數": "현재 게시물 수",
-      "開帖說明": "\n\n!! 입력 없이 확인 시, 현재 페이지의 모든 게시물을 엽니다.\n열람 범위 입력 (예시):\n단일: 1, 2, 3\n범위: 1~5, 6-10\n제외: !5, -10"
+      當前帖子數: "현재 게시물 수",
+      開帖說明:
+        "\n\n!! 입력 없이 확인 시, 현재 페이지의 모든 게시물을 엽니다.\n열람 범위 입력 (예시):\n단일: 1, 2, 3\n범위: 1~5, 6-10\n제외: !5, -10",
     },
     Russia: {
       "🔁 切換下載模式": "🔁 Сменить режим загрузки",
@@ -244,45 +362,46 @@
       "📃 開啟當前頁面帖子": "📃 Открыть посты на странице",
       "📥 強制壓縮下載": "📥 Принудительно скачать архивом",
       "⛔️ 取消下載": "⛔️ Отменить загрузку",
-      "壓縮下載": "Скачать архивом",
-      "單獨下載": "Одиночная загрузка",
-      "開始下載": "Начать загрузку",
-      "無法下載": "Ошибка загрузки",
-      "下載進度": "Прогресс загрузки",
-      "封裝進度": "Прогресс упаковки",
-      "壓縮封裝失敗": "Ошибка архивации",
-      "下載完成": "Загрузка завершена",
-      "請求進度": "Прогресс запроса",
-      "下載中鎖定": "Блокировка на время загрузки",
-      "原始連結": "Оригинальная ссылка",
-      "圖片數量": "Кол-во изображений",
-      "影片數量": "Кол-во видео",
-      "下載連結": "Ссылка на скачивание",
-      "密碼": "Пароль",
-      "連結": "Ссылка",
-      "作者": "Автор",
-      "時間": "Время",
-      "來源": "Источник",
-      "元數據": "Метаданные",
-      "PostLink": "Ссылка на пост",
-      "Timestamp": "Дата публикации",
-      "TypeTag": "Тег типа",
-      "ImgLink": "Ссылка на изображение",
-      "VideoLink": "Ссылка на видео",
-      "DownloadLink": "Ссылка на скачивание",
-      "ExternalLink": "Внешняя ссылка",
-      "帖子內容": "Содержимое поста",
-      "帖子數量": "Количество постов",
-      "建立時間": "Время создания",
-      "獲取頁面": "Загрузка страницы",
-      "未取得數據": "Не удалось получить данные",
-      "模式切換": "Смена режима",
-      "數據處理中": "Обработка данных",
-      "當前處理頁數": "Обрабатываемая страница",
-      "數據處理完成": "Обработка завершена",
+      壓縮下載: "Скачать архивом",
+      單獨下載: "Одиночная загрузка",
+      開始下載: "Начать загрузку",
+      無法下載: "Ошибка загрузки",
+      下載進度: "Прогресс загрузки",
+      封裝進度: "Прогресс упаковки",
+      壓縮封裝失敗: "Ошибка архивации",
+      下載完成: "Загрузка завершена",
+      請求進度: "Прогресс запроса",
+      下載中鎖定: "Блокировка на время загрузки",
+      原始連結: "Оригинальная ссылка",
+      圖片數量: "Кол-во изображений",
+      影片數量: "Кол-во видео",
+      下載連結: "Ссылка на скачивание",
+      密碼: "Пароль",
+      連結: "Ссылка",
+      作者: "Автор",
+      時間: "Время",
+      來源: "Источник",
+      元數據: "Метаданные",
+      PostLink: "Ссылка на пост",
+      Timestamp: "Дата публикации",
+      TypeTag: "Тег типа",
+      ImgLink: "Ссылка на изображение",
+      VideoLink: "Ссылка на видео",
+      DownloadLink: "Ссылка на скачивание",
+      ExternalLink: "Внешняя ссылка",
+      帖子內容: "Содержимое поста",
+      帖子數量: "Количество постов",
+      建立時間: "Время создания",
+      獲取頁面: "Загрузка страницы",
+      未取得數據: "Не удалось получить данные",
+      模式切換: "Смена режима",
+      數據處理中: "Обработка данных",
+      當前處理頁數: "Обрабатываемая страница",
+      數據處理完成: "Обработка завершена",
       "Json 數據下載": "Скачать JSON",
-      "當前帖子數": "Текущее кол-во постов",
-      "開帖說明": '\n\n!! Нажмите "ОК" без ввода, чтобы открыть все посты на странице.\nВведите диапазон для открытия:\nОдин пост: 1, 2, 3\nДиапазон: 1~5, 6-10\nИсключить: !5, -10'
+      當前帖子數: "Текущее кол-во постов",
+      開帖說明:
+        '\n\n!! Нажмите "ОК" без ввода, чтобы открыть все посты на странице.\nВведите диапазон для открытия:\nОдин пост: 1, 2, 3\nДиапазон: 1~5, 6-10\nИсключить: !5, -10',
     },
     English: {
       "🔁 切換下載模式": "🔁 Switch Download Mode",
@@ -290,41 +409,42 @@
       "📃 開啟當前頁面帖子": "📃 Open Posts on This Page",
       "📥 強制壓縮下載": "📥 Force ZIP Download",
       "⛔️ 取消下載": "⛔️ Cancel Download",
-      "壓縮下載": "Download as ZIP",
-      "單獨下載": "Download Individually",
-      "開始下載": "Start Download",
-      "無法下載": "Download Failed",
-      "下載進度": "Download Progress",
-      "封裝進度": "Packaging Progress",
-      "壓縮封裝失敗": "ZIP Packaging Failed",
-      "下載完成": "Download Complete",
-      "請求進度": "Request Progress",
-      "下載中鎖定": "Locked While Downloading",
-      "原始連結": "Original Link",
-      "圖片數量": "Image Count",
-      "影片數量": "Video Count",
-      "下載連結": "Download Link",
-      "密碼": "Password",
-      "連結": "Link",
-      "作者": "Author",
-      "時間": "Time",
-      "來源": "Source",
-      "元數據": "Metadata",
-      "帖子內容": "Post Content",
-      "帖子數量": "Number of Posts",
-      "建立時間": "Created At",
-      "獲取頁面": "Fetching Page",
-      "未取得數據": "Failed to Retrieve Data",
-      "模式切換": "Switch Mode",
-      "數據處理中": "Processing Data",
-      "當前處理頁數": "Processing Page",
-      "數據處理完成": "Processing Complete",
+      壓縮下載: "Download as ZIP",
+      單獨下載: "Download Individually",
+      開始下載: "Start Download",
+      無法下載: "Download Failed",
+      下載進度: "Download Progress",
+      封裝進度: "Packaging Progress",
+      壓縮封裝失敗: "ZIP Packaging Failed",
+      下載完成: "Download Complete",
+      請求進度: "Request Progress",
+      下載中鎖定: "Locked While Downloading",
+      原始連結: "Original Link",
+      圖片數量: "Image Count",
+      影片數量: "Video Count",
+      下載連結: "Download Link",
+      密碼: "Password",
+      連結: "Link",
+      作者: "Author",
+      時間: "Time",
+      來源: "Source",
+      元數據: "Metadata",
+      帖子內容: "Post Content",
+      帖子數量: "Number of Posts",
+      建立時間: "Created At",
+      獲取頁面: "Fetching Page",
+      未取得數據: "Failed to Retrieve Data",
+      模式切換: "Switch Mode",
+      數據處理中: "Processing Data",
+      當前處理頁數: "Processing Page",
+      數據處理完成: "Processing Complete",
       "Json 數據下載": "Download JSON Data",
-      "當前帖子數": "Current Post Count",
-      "開帖說明": "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10"
-    }
+      當前帖子數: "Current Post Count",
+      開帖說明:
+        "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10",
+    },
   };
-  function Fetch(General2, FetchSet2, Process2, Transl2, Lib2, md52) {
+  function Fetch(General, FetchSet, Process, Transl, Lib2, md52) {
     return class FetchData {
       static Try_Again_Promise = null;
       constructor() {
@@ -348,12 +468,14 @@
         this.totalPages = 0;
         this.progress = 0;
         this.onlyMode = false;
-        this.fetchDelay = FetchSet2.Delay;
-        this.toLinkTxt = FetchSet2.ToLinkTxt;
-        this.advancedFetch = FetchSet2.AdvancedFetch;
+        this.fetchDelay = FetchSet.Delay;
+        this.toLinkTxt = FetchSet.ToLinkTxt;
+        this.advancedFetch = FetchSet.AdvancedFetch;
         const apiInterface = "api/v1";
-        this.getPostURL = ({ service, user, id }) => `${this.origin}/${service}/user/${user}/post/${id}`;
-        this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+        this.getPostURL = ({ service, user, id }) =>
+          `${this.origin}/${service}/user/${user}/post/${id}`;
+        this.getPostAPI = ({ service, user, id }) =>
+          `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
         this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
         this.getNextPageURL = (urlStr) => {
           const url = new URL(urlStr);
@@ -365,53 +487,85 @@
           return `${url.origin}${url.pathname}${params}`;
         };
         const append = this.isPost ? "/posts" : "";
-        this.getPreviewAPI = (url) => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(/([?&]o=)/, `${append}$1`) : this.queryValue ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(this.queryValue, `${append}${this.queryValue}`) : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
+        this.getPreviewAPI = (url) =>
+          /[?&]o=/.test(url)
+            ? url
+                .replace(this.host, `${this.host}/${apiInterface}`)
+                .replace(/([?&]o=)/, `${append}$1`)
+            : this.queryValue
+              ? url
+                  .replace(this.host, `${this.host}/${apiInterface}`)
+                  .replace(this.queryValue, `${append}${this.queryValue}`)
+              : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
         this.getValidValue = (value) => {
           if (!value) return null;
           const type = Lib2.$type(value);
-          if (type === "Array") return value.length > 0 && value.some((item) => item !== "") ? value : null;
+          if (type === "Array")
+            return value.length > 0 && value.some((item) => item !== "")
+              ? value
+              : null;
           if (type === "Object") {
             const values = Object.values(value);
-            return values.length > 0 && values.some((item) => item !== "") ? value : null;
+            return values.length > 0 && values.some((item) => item !== "")
+              ? value
+              : null;
           }
           return value;
         };
-        this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"]);
+        this.infoRules = new Set([
+          "PostLink",
+          "Timestamp",
+          "TypeTag",
+          "ImgLink",
+          "VideoLink",
+          "DownloadLink",
+          "ExternalLink",
+        ]);
         this.fetchGenerate = (Data) => {
           return Object.keys(Data).reduce((acc, key) => {
             if (this.infoRules.has(key)) {
               const value = this.getValidValue(Data[key]);
-              value && (acc[Transl2(key)] = value);
+              value && (acc[Transl(key)] = value);
             }
             return acc;
           }, {});
         };
-        const filterExts = new Set(FetchSet2.FilterExts);
-        const videoExts = new Set(Process2.VideoExts);
-        const imageExts = new Set(Process2.ImageExts);
-        this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
-        this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
-        this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
+        const filterExts = new Set(FetchSet.FilterExts);
+        const videoExts = new Set(Process.VideoExts);
+        const imageExts = new Set(Process.ImageExts);
+        this.isVideo = (str) =>
+          videoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.isImage = (str) =>
+          imageExts.has(str.replace(/^\./, "").toLowerCase());
+        this.normalizeName = (title, index) =>
+          title.trim().replace(/\n/g, " ") ||
+          `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
+        this.normalizeTimestamp = ({ added, published }) =>
+          new Date(added || published)?.toLocaleString();
         this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
           let imgNumber = 0;
-          return data.reduce((acc, file) => {
-            const name = file.name;
-            const path = file.path;
-            const extension = Lib2.suffixName(path, "");
-            if (filterExts.has(extension)) return acc;
-            const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
-            const url = `${server}${path}`;
-            if (this.isVideo(extension)) {
-              acc.video[name] = `${url}?f=${name}`;
-            } else if (this.isImage(extension)) {
-              const name2 = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
-              acc.img[name2] = `${url}?f=${name2}`;
-            } else {
-              acc.other[name] = `${url}?f=${name}`;
-            }
-            return acc;
-          }, { img: {}, video: {}, other: {} });
+          return data.reduce(
+            (acc, file) => {
+              const name = file.name;
+              const path = file.path;
+              const extension = Lib2.suffixName(path, "");
+              if (filterExts.has(extension)) return acc;
+              const server = serverDict
+                ? `${serverDict[path]}/data`
+                : `${file.server}/data`;
+              const url = `${server}${path}`;
+              if (this.isVideo(extension)) {
+                acc.video[name] = `${url}?f=${name}`;
+              } else if (this.isImage(extension)) {
+                const name2 = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
+                acc.img[name2] = `${url}?f=${name2}`;
+              } else {
+                acc.other[name] = `${url}?f=${name}`;
+              }
+              return acc;
+            },
+            { img: {}, video: {}, other: {} },
+          );
         };
         this.deepDecodeURIComponent = (str) => {
           let prev = str;
@@ -424,43 +578,61 @@
         };
         this.nekoCategorize = (title, data) => {
           let imgNumber = 0;
-          return data.reduce((acc, file) => {
-            const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
-            if (uri) {
-              const extension = Lib2.suffixName(uri, "");
-              if (filterExts.has(extension)) return acc;
-              const url = uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`;
-              const getDownloadName = (link) => this.deepDecodeURIComponent(
-                link.download?.trim() || link.$text()
-              );
-              if (this.isVideo(extension)) {
-                acc.video[getDownloadName(file)] = url;
-              } else if (this.isImage(extension)) {
-                const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                acc.img[name] = `${url}?filename=${name}`;
-              } else {
-                const name = getDownloadName(file);
-                acc.other[name] = `${url}?filename=${name}`;
+          return data.reduce(
+            (acc, file) => {
+              const uri =
+                file.src ||
+                file.href ||
+                file.$gAttr("src") ||
+                file.$gAttr("href");
+              if (uri) {
+                const extension = Lib2.suffixName(uri, "");
+                if (filterExts.has(extension)) return acc;
+                const url = uri.startsWith("http")
+                  ? uri
+                  : `${Lib2.$origin}${uri}`;
+                const getDownloadName = (link) =>
+                  this.deepDecodeURIComponent(
+                    link.download?.trim() || link.$text(),
+                  );
+                if (this.isVideo(extension)) {
+                  acc.video[getDownloadName(file)] = url;
+                } else if (this.isImage(extension)) {
+                  const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+                  acc.img[name] = `${url}?filename=${name}`;
+                } else {
+                  const name = getDownloadName(file);
+                  acc.other[name] = `${url}?filename=${name}`;
+                }
               }
-            }
-            return acc;
-          }, { video: {}, img: {}, other: {} });
+              return acc;
+            },
+            { video: {}, img: {}, other: {} },
+          );
         };
         const allowType = new Set(["A", "P", "STRONG", "BODY"]);
         const pFilter = new Set(["mega.nz"]);
-        const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+        const urlRegex =
+          /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
         const safeInclud = (target, checkStr) => {
           if (typeof target !== "string") return false;
           return target?.includes(checkStr || "");
         };
         const protocolParse = (url) => {
-          if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+          if (
+            /^[a-zA-Z][\w+.-]*:\/\//.test(url) ||
+            /^[a-zA-Z][\w+.-]*:/.test(url)
+          )
+            return url;
           if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
           if (/^\/\//.test(url)) return "https:" + url;
           return url;
         };
         const checkProcessableLink = (link) => {
-          return link.toLowerCase().startsWith("https://mega.nz") && (!safeInclud(link, "#") || safeInclud(link, "#P!"));
+          return (
+            link.toLowerCase().startsWith("https://mega.nz") &&
+            (!safeInclud(link, "#") || safeInclud(link, "#P!"))
+          );
         };
         const searchPassword = (href, text) => {
           let pass = "";
@@ -482,8 +654,12 @@
             } else {
               href += "#" + text;
             }
-          } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
-            const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+          } else if (
+            lowerText.startsWith("pass") ||
+            lowerText.startsWith("key")
+          ) {
+            const key =
+              text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
             if (key) {
               state = true;
               if (encryptedHref) {
@@ -496,21 +672,24 @@
           return {
             pass,
             state,
-            href: href.match(urlRegex)?.[0] ?? href
+            href: href.match(urlRegex)?.[0] ?? href,
           };
         };
         this.specialLinkParse = (data) => {
           const parsed = {};
           try {
-            const domBody = Lib2.domParse(data).body;
+            const domBody = Lib2.createDomFragment(data);
             const parseAdd = (name, href, pass) => {
               if (!href) return;
               if (/\.[a-zA-Z0-9]+$/.test(href)) return;
               if (safeInclud(name, "frame embed")) name = "";
-              parsed[name && name !== href ? name : md52(href).slice(0, 16)] = pass ? {
-                [Transl2("密碼")]: pass,
-                [Transl2("連結")]: href
-              } : href;
+              parsed[name && name !== href ? name : md52(href).slice(0, 16)] =
+                pass
+                  ? {
+                      [Transl("密碼")]: pass,
+                      [Transl("連結")]: href,
+                    }
+                  : href;
             };
             let nodes = new Set();
             const tree = document.createTreeWalker(
@@ -521,24 +700,33 @@
                   const parentElement = node.parentElement;
                   const tag = parentElement.tagName;
                   if (!allowType.has(tag)) return NodeFilter.FILTER_REJECT;
-                  if (tag === "P" && parentElement.getElementsByTagName("a").length > 0) {
+                  if (
+                    tag === "P" &&
+                    parentElement.getElementsByTagName("a").length > 0
+                  ) {
                     return NodeFilter.FILTER_REJECT;
                   }
                   return NodeFilter.FILTER_ACCEPT;
-                }
-              }
+                },
+              },
             );
             while (tree.nextNode()) {
               nodes.add(tree.currentNode.parentElement);
             }
-            ;
             const allowBody = nodes.size === 1;
             const urlRecord = new Set();
             nodes = [...nodes];
-            Lib2.log("specialLinkParse DOM", domBody, { dev: General2.Dev, collapsed: false });
+            Lib2.log(domBody, {
+              dev: General.Dev,
+              group: "specialLinkParse DOM",
+              collapsed: false,
+            });
             for (const [index, node] of nodes.entries()) {
               const tag = node.tagName;
-              Lib2.log("specialLinkParse node", { tag, content: node.$text() }, { dev: General2.Dev });
+              Lib2.log(
+                { tag, content: node.$text() },
+                { dev: General.Dev, group: "specialLinkParse node" },
+              );
               let name = "";
               let href = "";
               let pass = "";
@@ -551,7 +739,10 @@
                     if (nextNode.nodeType === Node.TEXT_NODE) {
                       ({ href, pass } = searchPassword(href, nextNode.$text()));
                     } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
-                      const nodeText = [...nextNode.childNodes].find((node2) => node2.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                      const nodeText =
+                        [...nextNode.childNodes]
+                          .find((node2) => node2.nodeType === Node.TEXT_NODE)
+                          ?.$text() ?? "";
                       ({ href, pass } = searchPassword(href, nodeText));
                     }
                   } else {
@@ -582,7 +773,6 @@
                   href = parentElement.href;
                   name = node.$text();
                 }
-                ;
               } else if (tag === "BODY" && allowBody) {
                 node.$text().replace(urlRegex, (url, offset, fullText) => {
                   const before = fullText.slice(0, offset);
@@ -621,7 +811,11 @@
               }
             }
           } catch (error) {
-            Lib2.log("Error specialLinkParse", error, { dev: General2.Dev, type: "error", collapsed: false });
+            Lib2.log(error, {
+              dev: General.Dev,
+              group: "Error specialLinkParse",
+              collapsed: false,
+            }).error;
           }
           return parsed;
         };
@@ -640,10 +834,10 @@
                 const response = await fetch(url, {
                   method: "HEAD",
                   headers: {
-                    "Accept": "text/css"
+                    Accept: "text/css",
                   },
                   signal,
-                  cache: "no-store"
+                  cache: "no-store",
                 });
                 clearTimeout(timeoutId);
                 if (response.status === 429 || response.status === 503) {
@@ -668,7 +862,7 @@
           });
           return promiseLock;
         };
-        this.worker = Lib2.workerCreate(`
+        this.worker = Lib2.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -699,18 +893,22 @@
                     });
                 }
             `);
-        FetchSet2.UseFormat && this._fetchConfig(FetchSet2.Mode, FetchSet2.Format);
-        Lib2.log("Fetch Init", {
-          Title: this.titleCache,
-          isPost: this.isPost,
-          QueryValue: this.queryValue,
-          ProfileAPI: this.profileAPI,
-          GenerateRules: this.infoRules,
-          ParseUrl: this.URL
-        }, { dev: General2.Dev });
+        FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
+        Lib2.log(
+          {
+            Title: this.titleCache,
+            isPost: this.isPost,
+            QueryValue: this.queryValue,
+            ProfileAPI: this.profileAPI,
+            GenerateRules: this.infoRules,
+            ParseUrl: this.URL,
+          },
+          { dev: General.Dev, group: "Fetch Init" },
+        );
       }
       async _fetchConfig(mode = "FilterMode", userSet = []) {
-        if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
+        if (!mode || typeof mode !== "string" || !Array.isArray(userSet))
+          return;
         if (mode.toLowerCase() === "filtermode") {
           this.onlyMode = false;
           userSet.forEach((key) => this.infoRules.delete(key));
@@ -718,7 +916,7 @@
           this.onlyMode = true;
           const userFilter = new Set(userSet);
           this.infoRules = new Set(
-            [...this.infoRules].filter((key) => userFilter.has(key))
+            [...this.infoRules].filter((key) => userFilter.has(key)),
           );
         }
       }
@@ -726,23 +924,26 @@
         const small = Lib2.$q("small");
         const items = Lib2.$q(".card-list__items");
         if (items) {
-          Process2.Lock = true;
+          Process.Lock = true;
           const currentPage = +Lib2.$q(".pagination-button-current b")?.$text();
           currentPage && (this.currentPage = currentPage);
           if (small) {
             this.totalPages = +small.$text().split(" of ")[1] || 0;
             this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
           }
-          Lib2.log("Fetch Run", {
-            small,
-            items,
-            CurrentPage: this.currentPage,
-            TotalPages: this.totalPages,
-            FinalPage: this.finalPage
-          }, { dev: General2.Dev });
+          Lib2.log(
+            {
+              small,
+              items,
+              CurrentPage: this.currentPage,
+              TotalPages: this.totalPages,
+              FinalPage: this.finalPage,
+            },
+            { dev: General.Dev, group: "Fetch Run" },
+          );
           this._fetchPage(items, this.sourceURL);
         } else {
-          alert(Transl2("未取得數據"));
+          alert(Transl("未取得數據"));
         }
       }
       async fetchTest(id) {
@@ -750,37 +951,65 @@
           alert("This Page Does Not Support Test");
           return;
         }
-        Process2.Lock = true;
-        const parseInfo = (uri) => {
-          uri = uri.match(/\/([^\/]+)\/(?:user|server)\/([^\/?]+)/);
-          return uri ? { uri, server: uri[1], user: uri[2] } : { uri };
+        Process.Lock = true;
+        const parseUrlInfo = (uri) => {
+          uri =
+            uri.match(
+              /\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/,
+            ) || uri.match(/\/([^\/]+)\/([^\/]+)$/);
+          uri = uri.splice(1);
+          let server = uri[0].replace(
+            /\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g,
+            "",
+          );
+          let user2 = uri[1];
+          server = { x: "twitter", maker_id: "dlsite" }[server] ?? server;
+          return uri ? { server, user: user2 } : { uri };
         };
-        const { service, user } = parseInfo(this.sourceURL);
+        const { service, user } = parseUrlInfo(this.sourceURL);
         const pack = {
           id,
           user,
           service,
-          title: this.titleCache
+          title: this.titleCache,
         };
-        Lib2.log("Fetch Test", pack, { dev: General2.Dev, collapsed: false });
+        Lib2.log(pack, {
+          dev: General.Dev,
+          group: "Fetch Test",
+          collapsed: false,
+        });
         await this._fetchContent({
-          content: JSON.stringify([pack])
+          content: JSON.stringify([pack]),
         });
         this._reset();
       }
-
       async _fetchPage(items, url) {
-        if (Process2.IsNeko) {
+        if (Process.IsNeko) {
           if (!items) {
-            this.worker.postMessage({ title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
+            this.worker.postMessage({
+              title: this.titleCache,
+              url,
+              time: Date.now(),
+              delay: this.fetchDelay,
+            });
             const homeData = await new Promise((resolve, reject) => {
               this.worker.onmessage = async (e) => {
-                const { title, url: url2, content, time, delay, error } = e.data;
+                const {
+                  title,
+                  url: url2,
+                  content,
+                  time,
+                  delay,
+                  error,
+                } = e.data;
                 if (!error) {
-                  this.fetchDelay = Process2.dynamicParam(time, delay);
+                  this.fetchDelay = Process.dynamicParam(time, delay);
                   resolve(content);
                 } else {
-                  Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Lib2.log(
+                    { title, url: url2, error },
+                    { dev: General.Dev, collapsed: false },
+                  ).error;
                   await this.tooManyTryAgain(url2);
                   this.worker.postMessage({ title, url: url2, time, delay });
                 }
@@ -793,20 +1022,28 @@
             const content = article.map((item, index) => ({
               index,
               title: item.$q("header").$text(),
-              url: item.$q("a").href
+              url: item.$q("a").href,
             }));
             await this._fetchContent({ content });
           }
         } else {
-          this.worker.postMessage({ title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
+          this.worker.postMessage({
+            title: this.titleCache,
+            url: this.getPreviewAPI(url),
+            time: Date.now(),
+            delay: this.fetchDelay,
+          });
           const homeData = await new Promise((resolve, reject) => {
             this.worker.onmessage = async (e) => {
               const { title, url: url2, content, time, delay, error } = e.data;
               if (!error) {
-                this.fetchDelay = Process2.dynamicParam(time, delay);
+                this.fetchDelay = Process.dynamicParam(time, delay);
                 resolve({ url: url2, content });
               } else {
-                Lib2.log(error, { title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                Lib2.log(
+                  { title, url: url2, error },
+                  { dev: General.Dev, collapsed: false },
+                ).error;
                 await this.tooManyTryAgain(url2);
                 this.worker.postMessage({ title, url: url2, time, delay });
               }
@@ -815,58 +1052,93 @@
           await this._fetchContent(homeData);
         }
         this.currentPage++;
-        this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
+        this.currentPage <= this.finalPage
+          ? this._fetchPage(null, this.getNextPageURL(url))
+          : this.toLinkTxt
+            ? this._toTxt()
+            : this._toJson();
       }
       async _fetchContent(homeData) {
         this.progress = 0;
         const { url, content } = homeData;
-        Lib2.log("Fetch Content", homeData, { dev: General2.Dev });
-        if (Process2.IsNeko) {
+        Lib2.log(homeData, { dev: General.Dev, group: "Fetch Content" });
+        if (Process.IsNeko) {
           let taskCount = 0;
           const tasks = [];
           const resolvers = new Map();
           const postCount = content.length;
           if (this.metaDict.size === 0) {
-            this.metaDict.set(Transl2("作者"), Lib2.$q("span[itemprop='name'], fix_name").$text());
-            this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-            this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
-            this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
+            this.metaDict.set(
+              Transl("作者"),
+              Lib2.$q("span[itemprop='name'], fix_name").$text(),
+            );
+            this.metaDict.set(
+              Transl("帖子數量"),
+              this.totalPages > 0 ? this.totalPages : postCount,
+            );
+            this.metaDict.set(
+              Transl("建立時間"),
+              Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"),
+            );
+            this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
           }
           this.worker.onmessage = async (e) => {
-            const { index, title, url: url2, content: content2, time, delay, error } = e.data;
+            const {
+              index,
+              title,
+              url: url2,
+              content: content2,
+              time,
+              delay,
+              error,
+            } = e.data;
             if (!error) {
               const { resolve, reject } = resolvers.get(index);
-              this.fetchDelay = Process2.dynamicParam(time, delay);
+              this.fetchDelay = Process.dynamicParam(time, delay);
               const standardTitle = this.normalizeName(title, index);
               const postDom = Lib2.domParse(content2);
               const classifiedFiles = this.nekoCategorize(standardTitle, [
                 ...postDom.$qa(".fileThumb"),
-                ...postDom.$qa(".scrape__attachments a")
+                ...postDom.$qa(".scrape__attachments a"),
               ]);
               const generatedData = this.fetchGenerate({
                 PostLink: url2,
                 Timestamp: postDom.$q(".timestamp").$text(),
                 ImgLink: classifiedFiles.img,
                 VideoLink: classifiedFiles.video,
-                DownloadLink: classifiedFiles.other
-
+                DownloadLink: classifiedFiles.other,
               });
               if (Object.keys(generatedData).length !== 0) {
                 this.dataDict.set(standardTitle, generatedData);
               }
               resolve();
               Lib2.title(`（${this.currentPage} - ${++taskCount}）`);
-              Lib2.log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
+              Lib2.log(
+                { index, title: standardTitle, url: url2, data: generatedData },
+                {
+                  dev: General.Dev,
+                  group: "Request Successful",
+                  collapsed: false,
+                },
+              );
             } else {
               await this.tooManyTryAgain(url2);
               this.worker.postMessage({ index, title, url: url2, time, delay });
             }
           };
           for (const { index, title, url: url2 } of content) {
-            tasks.push(new Promise((resolve, reject) => {
-              resolvers.set(index, { resolve, reject });
-              this.worker.postMessage({ index, title, url: url2, time: Date.now(), delay: this.fetchDelay });
-            }));
+            tasks.push(
+              new Promise((resolve, reject) => {
+                resolvers.set(index, { resolve, reject });
+                this.worker.postMessage({
+                  index,
+                  title,
+                  url: url2,
+                  time: Date.now(),
+                  delay: this.fetchDelay,
+                });
+              }),
+            );
             await Lib2.sleep(this.fetchDelay);
           }
           await Promise.allSettled(tasks);
@@ -882,7 +1154,8 @@
                     const { url: url2, content: content2, error } = e.data;
                     if (!error) resolve(JSON.parse(content2));
                     else {
-                      Lib2.log(error, url2, { dev: General2.Dev, type: "error", collapsed: false });
+                      Lib2.log(url2, { dev: General.Dev, collapsed: false })
+                        .error;
                       await this.tooManyTryAgain(url2);
                       this.worker.postMessage({ url: url2 });
                     }
@@ -892,31 +1165,48 @@
                 this.finalPage = "1000";
                 profile["post_count"] = homeJson.true_count;
               }
-              this.metaDict.set(Transl2("作者"), profile.name);
-              this.metaDict.set(Transl2("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
-              this.metaDict.set(Transl2("建立時間"), Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"));
-              this.metaDict.set(Transl2("獲取頁面"), this.sourceURL);
-              Lib2.log("Meta Data", this.metaDict, { dev: General2.Dev });
+              this.metaDict.set(Transl("作者"), profile.name);
+              this.metaDict.set(
+                Transl("帖子數量"),
+                this.totalPages > 0 ? this.totalPages : profile.post_count,
+              );
+              this.metaDict.set(
+                Transl("建立時間"),
+                Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"),
+              );
+              this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+              Lib2.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
             }
             {
               const tasks = [];
               const resolvers = new Map();
               this.worker.onmessage = async (e) => {
-                const { index, title, url: url2, content: content2, time, delay, error } = e.data;
+                const {
+                  index,
+                  title,
+                  url: url2,
+                  content: content2,
+                  time,
+                  delay,
+                  error,
+                } = e.data;
                 try {
                   if (!error) {
                     const { resolve, reject } = resolvers.get(index);
-                    this.fetchDelay = Process2.dynamicParam(time, delay);
+                    this.fetchDelay = Process.dynamicParam(time, delay);
                     const contentJson = JSON.parse(content2);
                     if (contentJson) {
                       const post = contentJson.post;
                       const previews = contentJson.previews || [];
                       const attachments = contentJson.attachments || [];
-                      const standardTitle = this.normalizeName(post.title, index);
+                      const standardTitle = this.normalizeName(
+                        post.title,
+                        index,
+                      );
                       const classifiedFiles = this.kemerCategorize({
                         title: standardTitle,
                         data: [...previews, ...attachments],
-                        fillValue: Lib2.getFill(previews?.length || 1)
+                        fillValue: Lib2.getFill(previews?.length || 1),
                       });
                       const generatedData = this.fetchGenerate({
                         PostLink: this.getPostURL(post),
@@ -925,37 +1215,61 @@
                         ImgLink: classifiedFiles.img,
                         VideoLink: classifiedFiles.video,
                         DownloadLink: classifiedFiles.other,
-                        ExternalLink: this.specialLinkParse(post.content)
+                        ExternalLink: this.specialLinkParse(post.content),
                       });
                       if (Object.keys(generatedData).length !== 0) {
                         this.dataDict.set(standardTitle, generatedData);
                       }
-                      ;
                       resolve();
-                      Lib2.title(`（${this.currentPage} - ${++this.progress}）`);
-                      Lib2.log("Request Successful", { index, title: standardTitle, url: url2, data: generatedData }, { dev: General2.Dev, collapsed: false });
+                      Lib2.title(
+                        `（${this.currentPage} - ${++this.progress}）`,
+                      );
+                      Lib2.log(
+                        {
+                          index,
+                          title: standardTitle,
+                          url: url2,
+                          data: generatedData,
+                        },
+                        {
+                          dev: General.Dev,
+                          group: "Request Successful",
+                          collapsed: false,
+                        },
+                      );
                     } else throw new Error("Json Parse Failed");
                   } else {
                     throw new Error("Request Failed");
                   }
                 } catch (error2) {
-                  Lib2.log(error2, { index, title, url: url2 }, { dev: General2.Dev, type: "error", collapsed: false });
+                  Lib2.log(
+                    { index, title, url: url2, error: error2 },
+                    { dev: General.Dev, collapsed: false },
+                  ).error;
                   await this.tooManyTryAgain(url2);
-                  this.worker.postMessage({ index, title, url: url2, time, delay });
+                  this.worker.postMessage({
+                    index,
+                    title,
+                    url: url2,
+                    time,
+                    delay,
+                  });
                 }
               };
               homeJson = this.isPost ? homeJson : homeJson.posts;
               for (const [index, post] of homeJson.entries()) {
-                tasks.push(new Promise((resolve, reject) => {
-                  resolvers.set(index, { resolve, reject });
-                  this.worker.postMessage({
-                    index,
-                    title: post.title,
-                    url: this.getPostAPI(post),
-                    time: Date.now(),
-                    delay: this.fetchDelay
-                  });
-                }));
+                tasks.push(
+                  new Promise((resolve, reject) => {
+                    resolvers.set(index, { resolve, reject });
+                    this.worker.postMessage({
+                      index,
+                      title: post.title,
+                      url: this.getPostAPI(post),
+                      time: Date.now(),
+                      delay: this.fetchDelay,
+                    });
+                  }),
+                );
                 await Lib2.sleep(this.fetchDelay);
               }
               await Promise.allSettled(tasks);
@@ -969,7 +1283,7 @@
         this.metaDict = null;
         this.dataDict = null;
         this.worker.terminate();
-        Process2.Lock = false;
+        Process.Lock = false;
         Lib2.title(this.titleCache);
       }
       async _toTxt() {
@@ -977,9 +1291,9 @@
         for (const value of this.dataDict.values()) {
           const getLinks = Object.assign(
             {},
-            value[Transl2("ImgLink")],
-            value[Transl2("VideoLink")],
-            value[Transl2("DownloadLink")]
+            value[Transl("ImgLink")],
+            value[Transl("VideoLink")],
+            value[Transl("DownloadLink")],
           );
           for (const link of Object.values(getLinks)) {
             content += `${encodeURI(link)}
@@ -987,7 +1301,7 @@
           }
         }
         if (content.endsWith("\n")) content = content.slice(0, -1);
-        Lib2.outputTXT(content, this.metaDict.get(Transl2("作者")), () => {
+        Lib2.outputTXT(content, this.metaDict.get(Transl("作者")), () => {
           content = null;
           this._reset();
         });
@@ -995,17 +1309,31 @@
       async _toJson() {
         let jsonData = Object.assign(
           {},
-          { [Transl2("元數據")]: Object.fromEntries(this.metaDict) },
-          { [`${Transl2("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) }
+          { [Transl("元數據")]: Object.fromEntries(this.metaDict) },
+          {
+            [`${Transl("帖子內容")} (${this.dataDict.size})`]:
+              Object.fromEntries(this.dataDict),
+          },
         );
-        Lib2.outputJson(jsonData, this.metaDict.get(Transl2("作者")), () => {
+        Lib2.outputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
           jsonData = null;
           this._reset();
         });
       }
     };
   }
-  function Downloader(GM_unregisterMenuCommand2, GM_xmlhttpRequest2, GM_download2, General2, FileName2, Process2, Transl2, Lib2, saveAs2) {
+  function Downloader(
+    monkeyWindow,
+    GM_unregisterMenuCommand2,
+    GM_xmlhttpRequest2,
+    GM_download2,
+    General,
+    FileName,
+    Process,
+    Transl,
+    Lib2,
+    saveAs2,
+  ) {
     const zipper = Lib2.createCompressor();
     return class Download {
       constructor(compressMode, modeDisplay, button) {
@@ -1018,9 +1346,11 @@
           const cache = Lib2.title();
           return cache.startsWith("✓ ") ? cache.slice(2) : cache;
         };
-        const videoExts = new Set(Process2.VideoExts);
-        this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.worker = this.compressMode ? Lib2.workerCreate(`
+        const videoExts = new Set(Process.VideoExts);
+        this.isVideo = (str) =>
+          videoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.worker = this.compressMode
+          ? Lib2.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -1033,7 +1363,6 @@
                         processQueue();
                     } else {processing = false}
                 }
-
                 async function FetchRequest(index, url) {
                     try {
                         const response = await fetch(url);
@@ -1047,15 +1376,20 @@
                         postMessage({ index, url: url, blob: "", error: true });
                     }
                 }
-            `) : null;
+            `)
+          : null;
       }
       _nameAnalysis(format) {
         if (typeof format == "string") {
-          return format.split(/{([^}]+)}/g).filter(Boolean).map((data) => {
-            const lowerData = data.toLowerCase().trim();
-            const isWord = /^[a-zA-Z]+$/.test(lowerData);
-            return isWord ? this.namedData[lowerData]?.() ?? "None" : data;
-          }).join("");
+          return format
+            .split(/{([^}]+)}/g)
+            .filter(Boolean)
+            .map((data) => {
+              const lowerData = data.toLowerCase().trim();
+              const isWord = /^[a-zA-Z]+$/.test(lowerData);
+              return isWord ? (this.namedData[lowerData]?.() ?? "None") : data;
+            })
+            .join("");
         } else if (typeof format == "object") {
           const filler = String(format.Filler) || "0";
           const amount = parseInt(format.Amount) || "auto";
@@ -1063,62 +1397,104 @@
         } else;
       }
       downloadTrigger(sourceType) {
-        Lib2.waitEl([
-          ".post__title, .scrape__title",
-          ".post__files, .scrape__files",
-          ".post__user-name, .scrape__user-name, fix_name"
-        ], (found) => {
-          const [title, files, artist] = found;
-          Process2.Lock = true;
-          this.button.disabled = true;
-          const downloadData = new Map();
-          this.namedData = {
-            fill: () => "fill",
-            title: () => title.$q("span").$text().replaceAll("/", "／"),
-            artist: () => artist.$text(),
-            source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
-            time: () => {
-              if (Process2.IsNeko) {
-                return Lib2.$q(".timestamp").$text() || "";
+        Lib2.waitEl(
+          [
+            ".post__title, .scrape__title",
+            ".post__files, .scrape__files",
+            ".post__user-name, .scrape__user-name, fix_name",
+          ],
+          (found) => {
+            const [title, files, artist] = found;
+            Process.Lock = true;
+            this.button.disabled = true;
+            const downloadData = new Map();
+            this.namedData = {
+              fill: () => "fill",
+              title: () => title.$q("span").$text().replaceAll("/", "／"),
+              artist: () => artist.$text(),
+              source: () =>
+                new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
+              time: () => {
+                if (Process.IsNeko) {
+                  return Lib2.$q(".timestamp").$text() || "";
+                }
+                let published = Lib2.$q(".post__published").$copy();
+                Lib2.$q(".post__published");
+                published.firstElementChild.remove();
+                return published.$text().split(" ")[0];
+              },
+            };
+            const [compressName, folderName, fillName] = Object.keys(FileName)
+              .slice(1)
+              .map((key) => this._nameAnalysis(FileName[key]));
+            const imgData = [...files.children]
+              .map((child) =>
+                child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"),
+              )
+              .filter(Boolean);
+            const extrasData = Lib2.$qa(
+              ".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a",
+            );
+            const finalData = General.IncludeExtras
+              ? [...imgData, ...extrasData]
+              : sourceType === "Files"
+                ? imgData
+                : extrasData;
+            for (const [index, file] of finalData.entries()) {
+              const uri =
+                file.src ||
+                file.href ||
+                file.$gAttr("src") ||
+                file.$gAttr("href");
+              if (uri) {
+                downloadData.set(
+                  index,
+                  uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`,
+                );
               }
-              let published = Lib2.$q(".post__published").$copy();
-              Lib2.$q(".post__published");
-              published.firstElementChild.remove();
-              return published.$text().split(" ")[0];
             }
-          };
-          const [
-            compressName,
-            folderName,
-            fillName
-          ] = Object.keys(FileName2).slice(1).map((key) => this._nameAnalysis(FileName2[key]));
-          const imgData = [...files.children].map((child) => child.$q(Process2.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
-          const extrasData = Lib2.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
-          const finalData = General2.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
-          for (const [index, file] of finalData.entries()) {
-            const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
-            if (uri) {
-              downloadData.set(index, uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`);
-            }
-          }
-          if (downloadData.size == 0) General2.Dev = true;
-          Lib2.log("Get Data", {
-            FolderName: folderName,
-            DownloadData: downloadData
-          }, { dev: General2.Dev, collapsed: false });
-          this.compressMode ? this._packDownload(compressName, folderName, fillName, downloadData) : this._separDownload(fillName, downloadData);
-        }, { raf: true });
+            if (downloadData.size == 0) General.Dev = true;
+            Lib2.log(
+              {
+                FolderName: folderName,
+                DownloadData: downloadData,
+              },
+              { dev: General.Dev, group: "Get Data", collapsed: false },
+            );
+            this.compressMode
+              ? this._packDownload(
+                  compressName,
+                  folderName,
+                  fillName,
+                  downloadData,
+                )
+              : this._separDownload(fillName, downloadData);
+          },
+          { raf: true },
+        );
       }
       async _packDownload(compressName, folderName, fillName, data) {
-        let show, extension, progress = 0, total = data.size;
-        const self = this, titleCache = this.originalTitle();
-        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
+        let show,
+          extension,
+          progress = 0,
+          total = data.size;
+        const self = this,
+          titleCache = this.originalTitle();
+        const fillValue = this._nameAnalysis(FileName.FillValue),
+          filler = fillValue[1],
+          amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
         async function forceDownload() {
           self._compressFile(compressName, titleCache);
         }
-        Lib2.regMenu({
-          [Transl2("📥 強制壓縮下載")]: { func: () => forceDownload(), hotkey: "d" }
-        }, { name: "Enforce" });
+        Lib2.regMenu(
+          {
+            [Transl("📥 強制壓縮下載")]: {
+              func: () => forceDownload(),
+              hotkey: "d",
+            },
+          },
+          { name: "Enforce" },
+        );
         folderName = folderName != "" ? `${folderName}/` : "";
         function requestUpdate(index, url, blob, error = false) {
           if (self.forceCompressSignal) return;
@@ -1126,12 +1502,17 @@
             if (!error && blob instanceof Blob && blob.size > 0) {
               extension = Lib2.suffixName(url);
               const fileName = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
-              self.isVideo(extension) ? zipper.file(`${folderName}${decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`, blob) : zipper.file(`${folderName}${fileName}`, blob);
+              self.isVideo(extension)
+                ? zipper.file(
+                    `${folderName}${decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`,
+                    blob,
+                  )
+                : zipper.file(`${folderName}${fileName}`, blob);
               data.delete(index);
             }
             show = `[${++progress}/${total}]`;
             Lib2.title(show);
-            self.button.$text(`${Transl2("下載進度")} ${show}`);
+            self.button.$text(`${Transl("下載進度")} ${show}`);
             if (progress == total) {
               total = data.size;
               if (total == 0) {
@@ -1165,49 +1546,88 @@
             },
             onerror: () => {
               requestUpdate(index, url, "", true);
-            }
+            },
           });
         }
-        self.button.$text(`${Transl2("請求進度")} [${total}/${total}]`);
-        const batch = General2.ConcurrentQuantity;
-        const delay = General2.ConcurrentDelay;
+        self.button.$text(`${Transl("請求進度")} [${total}/${total}]`);
+        const batch = General.ConcurrentQuantity;
+        const delay = General.ConcurrentDelay;
         for (let i = 0; i < total; i += batch) {
-          setTimeout(() => {
-            for (let j = i; j < i + batch && j < total; j++) {
-              this.worker.postMessage({ index: j, url: data.get(j) });
-            }
-          }, i / batch * delay);
+          setTimeout(
+            () => {
+              for (let j = i; j < i + batch && j < total; j++) {
+                this.worker.postMessage({ index: j, url: data.get(j) });
+              }
+            },
+            (i / batch) * delay,
+          );
         }
         this.worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
-          error ? (request(index, url), Lib2.log("Download Failed", url, { dev: General2.Dev, type: "error", collapsed: false })) : (requestUpdate(index, url, blob), Lib2.log("Download Successful", url, { dev: General2.Dev, collapsed: false }));
+          error
+            ? (request(index, url),
+              Lib2.log(url, {
+                dev: General.Dev,
+                group: "Download Failed",
+                collapsed: false,
+              })).error
+            : (requestUpdate(index, url, blob),
+              Lib2.log(url, {
+                dev: General.Dev,
+                group: "Download Successful",
+                collapsed: false,
+              }));
         };
       }
       async _separDownload(fillName, data) {
-        let show, url, fileName, extension, token = 5, stop = false, progress = 0;
-        const self = this, process = [], promises = [], total = data.size, showTracking = {}, titleCache = this.originalTitle();
-        const fillValue = this._nameAnalysis(FileName2.FillValue), filler = fillValue[1], amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
+        let show,
+          url,
+          fileName,
+          extension,
+          token = 5,
+          stop = false,
+          progress = 0;
+        const self = this,
+          process = [],
+          promises = [],
+          total = data.size,
+          showTracking = {},
+          titleCache = this.originalTitle();
+        const fillValue = this._nameAnalysis(FileName.FillValue),
+          filler = fillValue[1],
+          amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
         async function _stop() {
           stop = true;
           process.forEach((pc) => pc.abort());
         }
-        Lib2.regMenu({
-          [Transl2("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" }
-        }, { name: "Abort" });
+        Lib2.regMenu(
+          {
+            [Transl("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" },
+          },
+          { name: "Abort" },
+        );
         async function request(index) {
           if (stop) return;
           url = data.get(index);
           extension = Lib2.suffixName(url);
-          const FileName3 = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
-          fileName = self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName3 : FileName3;
+          const FileName2 = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
+          fileName = self.isVideo(extension)
+            ? decodeURIComponent(url).split("?f=")[1] ||
+              Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
+              FileName2
+            : FileName2;
           return new Promise((resolve, reject) => {
             const completed = () => {
               if (!showTracking[index]) {
                 showTracking[index] = true;
-                Lib2.log("Download Successful", url, { dev: General2.Dev, collapsed: false });
+                Lib2.log(url, {
+                  dev: General.Dev,
+                  group: "Download Successful",
+                  collapsed: false,
+                });
                 show = `[${++progress}/${total}]`;
                 Lib2.title(show);
-                self.button.$text(`${Transl2("下載進度")} ${show}`);
+                self.button.$text(`${Transl("下載進度")} ${show}`);
                 resolve();
               }
             };
@@ -1218,29 +1638,32 @@
               onload: () => {
                 completed();
               },
-              onprogress: (progress2) => {
-              },
+              onprogress: (progress2) => {},
               onerror: () => {
-                Lib2.log("Download Error", url, { dev: General2.Dev, type: "error", collapsed: false });
+                Lib2.log(url, {
+                  dev: General.Dev,
+                  group: "Download Error",
+                  collapsed: false,
+                }).error;
                 setTimeout(() => {
                   reject();
                   token--;
                   if (token <= 0) return;
                   request(index);
                 }, 1500);
-              }
+              },
             });
             process.push(download);
           });
         }
         for (let i = 0; i < total; i++) {
           promises.push(request(i));
-          await Lib2.sleep(General2.ConcurrentDelay);
+          await Lib2.sleep(General.ConcurrentDelay);
         }
         await Promise.allSettled(promises);
         GM_unregisterMenuCommand2("Abort-1");
         Lib2.title(`✓ ${titleCache}`);
-        this.button.$text(Transl2("下載完成"));
+        this.button.$text(Transl("下載完成"));
         setTimeout(() => {
           this._resetButton();
         }, 3e3);
@@ -1249,34 +1672,44 @@
         this.worker.terminate();
         this.forceCompressSignal = true;
         GM_unregisterMenuCommand2("Enforce-1");
-        zipper.generateZip({
-          level: 9
-        }, (progress) => {
-          const display = `${progress.toFixed(1)} %`;
-          Lib2.title(display);
-          this.button.$text(`${Transl2("封裝進度")}: ${display}`);
-        }).then((zip) => {
-          saveAs2(zip, `${name}.zip`);
-          Lib2.title(`✓ ${title}`);
-          this.button.$text(Transl2("下載完成"));
-          setTimeout(() => {
-            this._resetButton();
-          }, 3e3);
-        }).catch((result) => {
-          Lib2.title(title);
-          const errorShow = Transl2("壓縮封裝失敗");
-          this.button.$text(errorShow);
-          Lib2.log(errorShow, result, { dev: General2.Dev, type: "error", collapsed: false });
-          setTimeout(() => {
-            Process2.Lock = false;
-            this.button.disabled = false;
-            this.button.$text(this.modeDisplay);
-          }, 6e3);
-        });
+        zipper
+          .generateZip(
+            {
+              level: 9,
+            },
+            (progress) => {
+              const display = `${progress.toFixed(1)} %`;
+              Lib2.title(display);
+              this.button.$text(`${Transl("封裝進度")}: ${display}`);
+            },
+          )
+          .then((zip) => {
+            saveAs2(zip, `${name}.zip`);
+            Lib2.title(`✓ ${title}`);
+            this.button.$text(Transl("下載完成"));
+            setTimeout(() => {
+              this._resetButton();
+            }, 3e3);
+          })
+          .catch((result) => {
+            Lib2.title(title);
+            const errorShow = Transl("壓縮封裝失敗");
+            this.button.$text(errorShow);
+            Lib2.log(result, {
+              dev: General.Dev,
+              group: errorShow,
+              collapsed: false,
+            }).error;
+            setTimeout(() => {
+              Process.Lock = false;
+              this.button.disabled = false;
+              this.button.$text(this.modeDisplay);
+            }, 6e3);
+          });
       }
       async _resetButton() {
-        General2.CompleteClose && window.close();
-        Process2.Lock = false;
+        General.CompleteClose && window.close();
+        Process.Lock = false;
         Lib2.$qa(".Download_Button[disabled]").forEach((button) => {
           button.disabled = false;
           button.$text(`✓ ${this.modeDisplay}`);
@@ -1284,24 +1717,48 @@
       }
     };
   }
-  const { General, FileName, FetchSet, Process } = Config(Lib);
-  const { Transl } = (() => {
-    const Matcher = Lib.translMatcher(Dict);
-    return {
-      Transl: (Str) => Matcher[Str] ?? Str
-    };
-  })();
-  new class Main {
-    constructor() {
-      this.Menu = null;
-      this.Download = null;
-      this.Content = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
-      this.Preview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
+  function Main() {
+    const { General, FileName, FetchSet, Process } = Config(Lib);
+    const { Transl } = (() => {
+      const Matcher = Lib.translMatcher(Dict);
+      return {
+        Transl: (Str) => Matcher[Str] ?? Str,
+      };
+    })();
+    const isContent = (URL2) =>
+      /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
+    const isPreview = (URL2) =>
+      /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) ||
+      /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) ||
+      /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
+    let Download;
+    async function openAllPages() {
+      const card = Lib.$qa("article.post-card a");
+      if (card.length == 0) {
+        throw new Error("No links found");
+      }
+      let scope = prompt(
+        `(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`,
+      );
+      if (scope == null) return;
+      scope = scope === "" ? "1-50" : scope;
+      for (const link of Lib.scopeParse(scope, card)) {
+        GM_openInTab(link.href, {
+          insert: false,
+          setParent: false,
+        });
+        await Lib.sleep(General.BatchOpenDelay);
+      }
     }
-    async _buttonCreation() {
-      Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
+    async function buttonCreation() {
+      Lib.waitEl(".post__body h2, .scrape__body h2", null, {
+        raf: true,
+        all: true,
+        timeout: 10,
+      }).then((Files) => {
         if (Files.length === 0) return;
-        Lib.addStyle(`
+        Lib.addStyle(
+          `
                 #Button-Container {
                     padding: 1rem;
                     font-size: 40% !important;
@@ -1332,9 +1789,14 @@
                     background-color: hsl(0, 0%, 45%);
                     cursor: Synault;
                 }
-            `, "Download-button-style", false);
+            `,
+          "Download-button-style",
+          false,
+        );
         try {
-          Lib.$qa("[id^='Button-Container-']").forEach((button) => button.remove());
+          Lib.$qa("[id^='Button-Container-']").forEach((button) =>
+            button.remove(),
+          );
           const Pointer = [...Files].filter((file) => {
             const text = file.$text();
             if (text === "Downloads" || text === "Files") {
@@ -1345,8 +1807,11 @@
           });
           if (Pointer.length === 0) return;
           const CompressMode = Lib.local("Compression", { error: true });
-          const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單獨下載");
-          this.Download ??= Downloader(
+          const ModeDisplay = CompressMode
+            ? Transl("壓縮下載")
+            : Transl("單獨下載");
+          Download ??= Downloader(
+            false ? _monkeyWindow : null,
             GM_unregisterMenuCommand,
             GM_xmlhttpRequest,
             GM_download,
@@ -1355,7 +1820,7 @@
             Process,
             Transl,
             Lib,
-            saveAs
+            saveAs,
           );
           Pointer.forEach((pointer, index) => {
             Lib.createElement(pointer, "span", {
@@ -1370,24 +1835,31 @@
                       target.disabled = true;
                       return;
                     }
-                    ;
                     let Instantiate = null;
-                    Instantiate = new this.Download(CompressMode, ModeDisplay, target);
+                    Instantiate = new Download(
+                      CompressMode,
+                      ModeDisplay,
+                      target,
+                    );
                     Instantiate.downloadTrigger(target.closest("h2").id);
                   } else if (target.closest("svg")) {
                     alert("Currently Invalid");
                   }
                 },
-                add: { capture: true, passive: true }
+                add: { capture: true, passive: true },
               },
               innerHTML: `
                             <svg class="Setting_Button" xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
                             <button class="Download_Button" ${Process.Lock ? "disabled" : ""}>${Process.Lock ? Transl("下載中鎖定") : ModeDisplay}</button>
-                        `
+                        `,
             });
           });
         } catch (error) {
-          Lib.log("Button Creation Failed", error, { dev: General.Dev, type: "error", collapsed: false });
+          Lib.log(error, {
+            dev: General.Dev,
+            group: "Button Creation Failed",
+            collapsed: false,
+          }).error;
           const Button = Lib.$q("#Button-Container button");
           if (Button) {
             Button.disabled = true;
@@ -1396,75 +1868,66 @@
         }
       });
     }
-    async _openAllPages() {
-      const card = Lib.$qa("article.post-card a");
-      if (card.length == 0) {
-        throw new Error("No links found");
-      }
-      let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
-      if (scope == null) return;
-      scope = scope === "" ? "1-50" : scope;
-      for (const link of Lib.scopeParse(scope, card)) {
-        GM_openInTab(link.href, {
-          insert: false,
-          setParent: false
-        });
-        await Lib.sleep(General.BatchOpenDelay);
-      }
+    async function _downloadModeSwitch() {
+      Lib.local("Compression", { error: true })
+        ? Lib.local("Compression", { value: false })
+        : Lib.local("Compression", { value: true });
+      buttonCreation();
     }
-    async _downloadModeSwitch() {
-      Lib.local("Compression", { error: true }) ? Lib.local("Compression", { value: false }) : Lib.local("Compression", { value: true });
-      this._buttonCreation();
-    }
-    async init() {
+    (async () => {
       let FetchData;
-      const self = this;
       GM_info.downloadMode = "browser";
       GM_info.isIncognito = true;
       registerMenu(Lib.$url);
-      self.Content(Lib.$url) && self._buttonCreation();
+      isContent(Lib.$url) && buttonCreation();
       async function registerMenu(Page) {
-        if (self.Content(Page)) {
-          Lib.regMenu({
-            [Transl("🔁 切換下載模式")]: { func: () => self._downloadModeSwitch(), close: false, hotkey: "c" }
-          }, { reset: true });
-        } else if (self.Preview(Page)) {
-          FetchData ??= Fetch(
-            General,
-            FetchSet,
-            Process,
-            Transl,
-            Lib,
-            md5
-          );
-          Lib.regMenu({
-            [Transl("📑 獲取帖子數據")]: () => {
-              if (!Process.Lock) {
-                let Instantiate = null;
-                Instantiate = new FetchData();
-                Instantiate.fetchRun();
-              }
+        if (isContent(Page)) {
+          Lib.regMenu(
+            {
+              [Transl("🔁 切換下載模式")]: {
+                func: () => _downloadModeSwitch(),
+                close: false,
+                hotkey: "c",
+              },
             },
-            [Transl("📃 開啟當前頁面帖子")]: self._openAllPages
-          }, { reset: true });
+            { reset: true },
+          );
+        } else if (isPreview(Page)) {
+          FetchData ??= Fetch(General, FetchSet, Process, Transl, Lib, md5);
+          Lib.regMenu(
+            {
+              [Transl("📑 獲取帖子數據")]: () => {
+                if (!Process.Lock) {
+                  let Instantiate = null;
+                  Instantiate = new FetchData();
+                  Instantiate.fetchRun();
+                }
+              },
+              [Transl("📃 開啟當前頁面帖子")]: openAllPages,
+            },
+            { reset: true },
+          );
           if (General.Dev && !Process.IsNeko) {
-            Lib.regMenu({
-              "🛠️ 開發者獲取": () => {
-                const ID = prompt("輸入請求的 ID");
-                if (ID == null || ID === "") return;
-                let Instantiate = null;
-                Instantiate = new FetchData();
-                Instantiate.fetchTest(ID);
-              }
-            }, { index: 3 });
+            Lib.regMenu(
+              {
+                "🛠️ 開發者獲取": () => {
+                  const ID = prompt("輸入請求的 ID");
+                  if (ID == null || ID === "") return;
+                  let Instantiate = null;
+                  Instantiate = new FetchData();
+                  Instantiate.fetchTest(ID);
+                },
+              },
+              { index: 3 },
+            );
           }
         }
       }
       Lib.onUrlChange((change) => {
-        self.Content(change.url) && self._buttonCreation();
+        isContent(change.url) && buttonCreation();
         registerMenu(change.url);
       });
-    }
-  }().init();
-
+    })();
+  }
+  Main();
 })();
