@@ -1,7 +1,9 @@
-export default function Downloader(
-    monkeyWindow, GM_xmlhttpRequest, GM_download, Config, DConfig, Transl, Lib, saveAs
-) {
-    const zipper = monkeyWindow
+import { monkeyWindow, Lib, saveAs } from './client.js';
+import { Config, DConfig } from './config.js';
+import Transl from './language.js';
+
+export default function Downloader() {
+    const zipper = import.meta.env.DEV
         ? (() => {
             const workerKey = "zipper";
             let oldWorker = monkeyWindow[workerKey];
