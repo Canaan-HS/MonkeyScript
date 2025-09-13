@@ -8,13 +8,16 @@ import parseMeta from '../../parseMeta';
 
 const meta = metaData.trim();
 const parsed = parseMeta(meta);
-const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
+
+const appName = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'));
 
 export default {
     meta,
-    entry: `./${name}/Dev/src/entry/bootstrap.js`,
-    fileName: `${name}-Dev.js`,
-    outDir: `./${name}/Dev/dist`,
+    entry: `./${appName}/Dev/src/entry/bootstrap.js`,
+    devFileName: `${appName}.js`,
+    devOutDir: `./${appName}/Dev/dist`,
+    releaseFileName: `${appName}.js`,
+    releaseOutDir: `./${appName}/Release`,
     userscript: {
         ...parsed.basic,
         require: [
