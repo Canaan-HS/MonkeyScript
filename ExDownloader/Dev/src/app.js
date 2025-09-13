@@ -1,24 +1,14 @@
-import {
-    monkeyWindow,
-    GM_setValue,
-    GM_getValue,
-    GM_download,
-    GM_xmlhttpRequest,
-    GM_registerMenuCommand,
-    GM_unregisterMenuCommand,
-} from 'vite-plugin-monkey/dist/client';
+import { Lib } from './client.js';
+import { DConfig } from './config.js';
 
-const { Lib, saveAs } = monkeyWindow;
-import { Config, DConfig } from './config.js';
-
-import Dict from './language.js';
+import Transl from './language.js';
 import Downloader from './downloader.js';
 
 export default function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
 
-    let Transl, Download;
+    let Download;
     let Url = Lib.url.split("?p=")[0]; // 獲取網址
 
     /* 初始化按鈕樣式 */
@@ -84,6 +74,11 @@ export default function Main() {
 
     /* 下載模式切換 */
     async function downloadModeSwitch() {
+        if (DConfig.Lock) {
+            alert(Transl("下載中鎖定"));
+            return;
+        };
+
         DConfig.CompressMode
             ? Lib.setV("CompressedMode", false)
             : Lib.setV("CompressedMode", true);
@@ -102,16 +97,11 @@ export default function Main() {
             const downloadButton = Lib.createElement(gd2, "button", {
                 id: "ExDB",
                 class: "Download_Button",
-                disabled: DConfig.Lock ? true : false,
-                text: DConfig.Lock ? Transl("下載中鎖定") : DConfig.ModeDisplay,
+                text: DConfig.ModeDisplay,
                 on: {
                     type: "click",
                     listener: () => {
-                        Download ??= Downloader(
-                            import.meta.env.DEV ? monkeyWindow : null,
-                            GM_xmlhttpRequest, GM_download,
-                            Config, DConfig, Transl, Lib, saveAs
-                        )
+                        Download ??= Downloader()
 
                         DConfig.Lock = true;
                         downloadButton.disabled = true;
@@ -130,13 +120,6 @@ export default function Main() {
 
         initStyle();
         DConfig.TitleCache = Lib.title();
-
-        ({ Transl } = (() => {
-            const Matcher = Lib.translMatcher(Dict);
-            return {
-                Transl: (Str) => Matcher[Str] ?? Str,
-            }
-        })());
 
         buttonCreation();
 
