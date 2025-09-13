@@ -3,10 +3,10 @@ import path from 'path';
 import prettier from 'prettier';
 
 import open from 'open';
-import { defineConfig, Plugin, ViteDevServer } from 'vite';
 import monkey from 'vite-plugin-monkey';
+import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
-import config from './KemerDownloader/Dev/config';
+import config from './ExDownloader/Dev/config'; // ? 引入特定腳本開發配置
 
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
