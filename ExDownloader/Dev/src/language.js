@@ -1,4 +1,6 @@
-export default {
+import { Lib } from "./client.js";
+
+const dict = {
     Traditional: {
         "範圍設置": "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n",
     },
@@ -168,3 +170,12 @@ export default {
         "範圍設置": "Settings automatically reset after download completes.\n\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10\n",
     }
 };
+
+const { Transl } = (() => { // 取得對應語言翻譯
+    const Matcher = Lib.translMatcher(dict);
+    return {
+        Transl: (Str) => Matcher[Str] ?? Str,
+    }
+})();
+
+export default Transl;
