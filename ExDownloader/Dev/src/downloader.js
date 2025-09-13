@@ -1,7 +1,7 @@
 export default function Downloader(
     monkeyWindow, GM_xmlhttpRequest, GM_download, Config, DConfig, Transl, Lib, saveAs
 ) {
-    const zipper = import.meta.env.DEV
+    const zipper = monkeyWindow
         ? (() => {
             const workerKey = "zipper";
             let oldWorker = monkeyWindow[workerKey];
@@ -27,7 +27,7 @@ export default function Downloader(
         let comicName = null;
 
         /* 後台請求工作 */
-        const worker = Lib.workerCreate(`
+        const worker = Lib.createWorker(`
             let queue = [], processing = false;
             onmessage = function(e) {
                 queue.push(e.data);
@@ -141,9 +141,10 @@ export default function Downloader(
                         homeData.clear();
                         processed.clear();
 
-                        Lib.log(
-                            Transl("內頁跳轉數據"),
-                            `${comicName}\n${JSON.stringify(box, null, 4)}`, { dev: Config.Dev }
+                        Lib.log(`${comicName}\n${JSON.stringify(box, null, 4)}`, {
+                            dev: Config.Dev,
+                            group: Transl("內頁跳轉數據")
+                        }
                         );
 
                         getImageData(box); // 處理圖片數據
@@ -185,10 +186,7 @@ export default function Downloader(
                     const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
 
                     if (!resample) { // 處理找不到圖片的錯誤
-                        Lib.log(null, {
-                            page, resample, original
-                        }, { dev: Config.Dev, type: "error" });
-
+                        Lib.log({ page, resample, original }, { dev: Config.Dev }).error;
                         throw new Error("Image not found");
                     };
 
@@ -209,7 +207,7 @@ export default function Downloader(
                         startTask(imgData);
                     };
                 } catch (error) { // 錯誤的直接跳過
-                    Lib.log(null, error, { dev: Config.Dev, type: "error" });
+                    Lib.log(error, { dev: Config.Dev }).error;
                     task++;
                 }
             };
@@ -257,8 +255,8 @@ export default function Downloader(
         /* 任務啟動器 (配置處理) */
         function startTask(dataList) {
             Lib.log(
-                Transl("圖片連結數據"),
-                `${comicName}\n${JSON.stringify(dataList, null, 4)}`, { dev: Config.Dev }
+                `${comicName}\n${JSON.stringify(dataList, null, 4)}`,
+                { dev: Config.Dev, group: Transl("圖片連結數據") }
             );
 
             // 範圍設置
@@ -276,7 +274,6 @@ export default function Downloader(
             button.$text(Transl("開始下載"));
 
             Lib.log(
-                Transl("任務配置"),
                 {
                     ReTry: Config.ReTry,
                     Original: Config.Original,
@@ -287,7 +284,7 @@ export default function Downloader(
                     CompressionLevel: DConfig.Compress_Level,
                     DownloadData: dataMap
                 },
-                { dev: Config.Dev }
+                { dev: Config.Dev, group: Transl("任務配置") }
             );
 
             DConfig.CompressMode
@@ -320,7 +317,7 @@ export default function Downloader(
                 if (totalSize > 0) { // 如果總數 > 0, 代表有下載失敗的數據
                     const sortData = [...dataMap].sort((a, b) => a.Index - b.Index); // 排序
                     sortData.splice(0, 0, { ErrorPage: sortData.map(([_, value]) => value.Index + 1).join(",") });
-                    Lib.log(Transl("下載失敗數據"), JSON.stringify(sortData, null, 4), { type: "error" });
+                    Lib.log(JSON.stringify(sortData, null, 4), { group: Transl("下載失敗數據") }).error;
                 };
 
                 enforce = true; // 強制下載 (實驗性)
@@ -333,7 +330,7 @@ export default function Downloader(
                 if (!clearCache) {
                     clearCache = true;
                     sessionStorage.removeItem(DConfig.GetKey()); // 清除緩存
-                    Lib.log(Transl("清理警告"), Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
+                    Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
                 }
             };
 
@@ -418,9 +415,9 @@ export default function Downloader(
                     if (enforce) break;
 
                     if (reGet) {
-                        Lib.log(`${Transl("重新取得數據")} (${reTry})`, { Uri: PageUrl }, { dev: Config.Dev });
+                        Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
                         const result = await reGetImageData(Index, PageUrl);
-                        Lib.log(`${Transl("取得結果")} (${reTry})`, { Result: result }, { dev: Config.Dev });
+                        Lib.log(result, { dev: Config.Dev, group: `${Transl("取得結果")} (${reTry})` });
 
                         if (result) {
                             const { Index, ImgUrl } = result;
@@ -470,7 +467,7 @@ export default function Downloader(
 
                 const display = Transl("壓縮失敗");
                 button.$text(display);
-                Lib.log(display, result, { dev: Config.Dev, type: "error", collapsed: false });
+                Lib.log(result, { dev: Config.Dev, group: display, collapsed: false }).error;
 
                 setTimeout(() => {
                     button.disabled = false;
@@ -498,7 +495,7 @@ export default function Downloader(
                 if (!clearCache) {
                     clearCache = true;
                     sessionStorage.removeItem(DConfig.GetKey()); // 清除緩存
-                    Lib.log(Transl("清理警告"), Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { type: "warn" });
+                    Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
                 }
             };
 
@@ -525,7 +522,7 @@ export default function Downloader(
                             onerror: () => {
                                 if (retry > 0) {
                                     [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
-                                    Lib.log(null, `[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`, { dev: Config.Dev, type: "error" });
+                                    Lib.log(`[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`, { dev: Config.Dev }).error;
 
                                     --task;
                                     setTimeout(() => {
@@ -574,4 +571,4 @@ export default function Downloader(
             }, 3000);
         };
     }
-}
+};
