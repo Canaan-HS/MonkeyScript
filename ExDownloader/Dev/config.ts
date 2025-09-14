@@ -14,9 +14,9 @@ const appName = path.basename(path.resolve(fileURLToPath(import.meta.url), '../.
 export default {
     meta,
     entry: `./${appName}/Dev/src/entry/bootstrap.js`,
-    devFileName: `${appName}.js`,
+    devFileName: `${appName}.user.js`,
     devOutDir: `./${appName}/Dev/dist`,
-    releaseFileName: `${appName}.js`,
+    releaseFileName: `${appName}.user.js`,
     releaseOutDir: `./${appName}/Release`,
     userscript: {
         ...parsed.basic,
