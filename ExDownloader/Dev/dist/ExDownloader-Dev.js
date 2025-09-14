@@ -68,15 +68,13 @@
     CompressMode: void 0,
     KeyCache: void 0,
     GetKey: function () {
-      if (!this.KeyCache)
-        this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
+      if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
       return this.KeyCache;
     },
   };
-  const Dict = {
+  const dict = {
     Traditional: {
-      範圍設置:
-        "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n",
+      範圍設置: "下載完成後自動重置\n\n單項設置: 1. 2, 3\n範圍設置: 1~5, 6-10\n排除設置: !5, -10\n",
     },
     Simplified: {
       "🚮 清除數據緩存": "🚮 清除数据缓存",
@@ -106,14 +104,10 @@
       圖片連結數據: "图片链接数据",
       "等待失敗重試...": "等待失败重试...",
       請求錯誤重新加載頁面: "请求错误，请刷新页面",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
-        "检测到图片集！\n\n是否按反向顺序下载？",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
-        "下载数据不完整，将清除缓存。建议刷新页面后重试",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
-        "找不到图片元素，您的 IP 可能被禁止。请刷新页面重试",
-      範圍設置:
-        "下载完成后自动重置\n\n单项设置：1, 2, 3\n范围设置：1~5, 6-10\n排除设置：!5, -10\n",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "检测到图片集！\n\n是否按反向顺序下载？",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "下载数据不完整，将清除缓存。建议刷新页面后重试",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "找不到图片元素，您的 IP 可能被禁止。请刷新页面重试",
+      範圍設置: "下载完成后自动重置\n\n单项设置：1, 2, 3\n范围设置：1~5, 6-10\n排除设置：!5, -10\n",
     },
     Japan: {
       "🚮 清除數據緩存": "🚮 データキャッシュを削除",
@@ -143,14 +137,10 @@
       圖片連結數據: "画像リンクデータ",
       "等待失敗重試...": "失敗の再試行を待機中...",
       請求錯誤重新加載頁面: "リクエストエラー。ページを再読み込みしてください",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
-        "画像集が検出されました！\n\n逆順でダウンロードしますか？",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
-        "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
-        "画像要素が見つかりません。IPがブロックされている可能性があります。ページを更新して再試行してください",
-      範圍設置:
-        "ダウンロード完了後に自動リセット\n\n単一項目: 1, 2, 3\n範囲指定: 15, 6-10\n除外設定: !5, -10\n",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "画像集が検出されました！\n\n逆順でダウンロードしますか？",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "ダウンロードデータが不完全です。キャッシュがクリアされます。ページを更新して再度お試しください",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "画像要素が見つかりません。IPがブロックされている可能性があります。ページを更新して再試行してください",
+      範圍設置: "ダウンロード完了後に自動リセット\n\n単一項目: 1, 2, 3\n範囲指定: 15, 6-10\n除外設定: !5, -10\n",
     },
     Korea: {
       "🚮 清除數據緩存": "🚮 데이터 캐시 삭제",
@@ -180,14 +170,10 @@
       圖片連結數據: "이미지 링크 데이터",
       "等待失敗重試...": "실패 후 재시도 대기 중...",
       請求錯誤重新加載頁面: "요청 오류. 페이지를 다시 로드하세요",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
-        "이미지 모음이 감지되었습니다!\n\n역순으로 다운로드하시겠습니까?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
-        "다운로드 데이터가 불완전합니다. 캐시가 지워집니다. 페이지를 새로고침하고 다시 시도하세요",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
-        "이미지 요소를 찾을 수 없습니다. IP가 차단되었을 수 있습니다. 페이지를 새로고침하고 다시 시도하세요",
-      範圍設置:
-        "다운로드 완료 후 자동 재설정\n\n단일 항목: 1, 2, 3\n범위 지정: 15, 6-10\n제외 설정: !5, -10\n",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "이미지 모음이 감지되었습니다!\n\n역순으로 다운로드하시겠습니까?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "다운로드 데이터가 불완전합니다. 캐시가 지워집니다. 페이지를 새로고침하고 다시 시도하세요",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "이미지 요소를 찾을 수 없습니다. IP가 차단되었을 수 있습니다. 페이지를 새로고침하고 다시 시도하세요",
+      範圍設置: "다운로드 완료 후 자동 재설정\n\n단일 항목: 1, 2, 3\n범위 지정: 15, 6-10\n제외 설정: !5, -10\n",
     },
     Russia: {
       "🚮 清除數據緩存": "🚮 Очистить кэш данных",
@@ -217,14 +203,10 @@
       圖片連結數據: "Данные о ссылках на изображения",
       "等待失敗重試...": "Ожидание повторной попытки после сбоя...",
       請求錯誤重新加載頁面: "Ошибка запроса, перезагрузите страницу",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
-        "Обнаружена коллекция изображений !!\n\nХотите изменить порядок сортировки перед загрузкой?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
-        "Данные загрузки неполные, кэш будет очищен, рекомендуется обновить страницу и перезагрузить",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
-        "Элементы изображения не найдены, возможно, ваш IP заблокирован, пожалуйста, обновите страницу и попробуйте снова",
-      範圍設置:
-        "Автоматический сброс после завершения загрузки\n\nНастройки отдельных элементов: 1. 2, 3\nНастройки диапазона: 1~5, 6-10\nНастройки исключения: !5, -10\n",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Обнаружена коллекция изображений !!\n\nХотите изменить порядок сортировки перед загрузкой?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Данные загрузки неполные, кэш будет очищен, рекомендуется обновить страницу и перезагрузить",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "Элементы изображения не найдены, возможно, ваш IP заблокирован, пожалуйста, обновите страницу и попробуйте снова",
+      範圍設置: "Автоматический сброс после завершения загрузки\n\nНастройки отдельных элементов: 1. 2, 3\nНастройки диапазона: 1~5, 6-10\nНастройки исключения: !5, -10\n",
     },
     English: {
       "🚮 清除數據緩存": "🚮 Clear Data Cache",
@@ -254,39 +236,31 @@
       圖片連結數據: "Image Link Data",
       "等待失敗重試...": "Waiting for failed retry...",
       請求錯誤重新加載頁面: "Request error. Please reload the page.",
-      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?":
-        "Image collection detected!\n\nDo you want to download in reverse order?",
-      "下載數據不完整將清除緩存, 建議刷新頁面後重載":
-        "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
-      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試":
-        "Image elements not found. Your IP may be blocked. Please refresh the page and try again.",
-      範圍設置:
-        "Settings automatically reset after download completes.\n\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10\n",
+      "檢測到圖片集 !!\n\n是否反轉排序後下載 ?": "Image collection detected!\n\nDo you want to download in reverse order?",
+      "下載數據不完整將清除緩存, 建議刷新頁面後重載": "Incomplete download data. Cache will be cleared. We recommend refreshing the page and trying again.",
+      "找不到圖片元素, 你的 IP 可能被禁止了, 請刷新頁面重試": "Image elements not found. Your IP may be blocked. Please refresh the page and try again.",
+      範圍設置: "Settings automatically reset after download completes.\n\nSingle items: 1, 2, 3\nRanges: 1~5, 6-10\nExclusions: !5, -10\n",
     },
   };
-  function Downloader(
-    monkeyWindow,
-    GM_xmlhttpRequest2,
-    GM_download2,
-    Config2,
-    DConfig2,
-    Transl,
-    Lib2,
-    saveAs2,
-  ) {
-    const zipper = Lib2.createCompressor();
-    const dynamicParam = Lib2.createNnetworkObserver({
-      MAX_Delay: DConfig2.MAX_Delay,
-      MIN_CONCURRENCY: DConfig2.MIN_CONCURRENCY,
-      MAX_CONCURRENCY: DConfig2.MAX_CONCURRENCY,
+  const { Transl } = (() => {
+    const Matcher = Lib.translMatcher(dict);
+    return {
+      Transl: (Str) => Matcher[Str] ?? Str,
+    };
+  })();
+  function Downloader() {
+    const zipper = Lib.createCompressor();
+    const dynamicParam = Lib.createNnetworkObserver({
+      MAX_Delay: DConfig.MAX_Delay,
+      MIN_CONCURRENCY: DConfig.MIN_CONCURRENCY,
+      MAX_CONCURRENCY: DConfig.MAX_CONCURRENCY,
       Good_Network_THRESHOLD: 500,
       Poor_Network_THRESHOLD: 1500,
     });
-    const getTotal = (page) =>
-      Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
+    const getTotal = (page) => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
     return (url, button) => {
       let comicName = null;
-      const worker = Lib2.createWorker(`
+      const worker = Lib.createWorker(`
             let queue = [], processing = false;
             onmessage = function(e) {
                 queue.push(e.data);
@@ -311,31 +285,26 @@
         `);
       getHomeData();
       async function reset() {
-        Config2.CompleteClose && window.close();
-        Config2.ResetScope && (DConfig2.Scope = false);
+        DConfig.Scope = false;
         worker.terminate();
-        button = Lib2.$q("#ExDB");
+        button = Lib.$q("#ExDB");
         button.disabled = false;
-        button.$text(`✓ ${DConfig2.ModeDisplay}`);
-        DConfig2.Lock = false;
+        button.$text(`✓ ${DConfig.ModeDisplay}`);
+        DConfig.Lock = false;
       }
       async function getHomeData() {
-        comicName = Lib2.nameFilter(
-          Lib2.$q("#gj").$text() || Lib2.$q("#gn").$text(),
-        );
-        const ct6 = Lib2.$q("#gdc .ct6");
-        const cacheData = Lib2.session(DConfig2.GetKey());
+        comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text());
+        const ct6 = Lib.$q("#gdc .ct6");
+        const cacheData = Lib.session(DConfig.GetKey());
         if (ct6) {
-          const yes = confirm(
-            Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"),
-          );
-          DConfig2.SortReverse = yes ? true : false;
+          const yes = confirm(Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"));
+          DConfig.SortReverse = yes ? true : false;
         }
         if (cacheData) {
           startTask(cacheData);
           return;
         }
-        const pages = getTotal(Lib2.$qa("#gdd td.gdt2"));
+        const pages = getTotal(Lib.$qa("#gdd td.gdt2"));
         worker.onmessage = (e) => {
           const { index, url: url2, html, time, delay: delay2, error } = e.data;
           error
@@ -343,19 +312,14 @@
                 index,
                 url: url2,
                 time,
-                delay: dynamicParam(time, delay2, null, DConfig2.Home_ND),
+                delay: dynamicParam(time, delay2, null, DConfig.Home_ND),
               })
-            : parseLink(index, Lib2.domParse(html));
+            : parseLink(index, Lib.domParse(html));
         };
-        const delay = DConfig2.Home_ID;
+        const delay = DConfig.Home_ID;
         worker.postMessage({ index: 0, url, time: Date.now(), delay });
         for (let index = 1; index < pages; index++) {
-          worker.postMessage({
-            index,
-            url: `${url}?p=${index}`,
-            time: Date.now(),
-            delay,
-          });
+          worker.postMessage({ index, url: `${url}?p=${index}`, time: Date.now(), delay });
         }
         let task = 0;
         let processed = new Set();
@@ -371,7 +335,7 @@
             }
             homeData.set(index, box);
             const display = `[${++task}/${pages}]`;
-            Lib2.title(display);
+            Lib.title(display);
             button.$text(`${Transl("獲取頁面")}: ${display}`);
             if (task === pages) {
               const box2 = [];
@@ -380,11 +344,11 @@
               }
               homeData.clear();
               processed.clear();
-              Lib2.log(
+              Lib.log(
                 `${comicName}
 ${JSON.stringify(box2, null, 4)}`,
                 {
-                  dev: Config2.Dev,
+                  dev: Config.Dev,
                   group: Transl("內頁跳轉數據"),
                 },
               );
@@ -405,82 +369,57 @@ ${JSON.stringify(box2, null, 4)}`,
                 index,
                 url: url2,
                 time,
-                delay: dynamicParam(time, delay, null, DConfig2.Image_ND),
+                delay: dynamicParam(time, delay, null, DConfig.Image_ND),
               })
-            : parseLink(index, url2, Lib2.domParse(html));
+            : parseLink(index, url2, Lib.domParse(html));
         };
         for (const [index, url2] of homeDataList.entries()) {
-          worker.postMessage({
-            index,
-            url: url2,
-            time: Date.now(),
-            delay: DConfig2.Image_ID,
-          });
+          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig.Image_ID });
         }
         let task = 0;
         const imgData = [];
         function parseLink(index, url2, page) {
           try {
-            const resample = Lib2.$Q(page, "#img");
-            const original =
-              Lib2.$Q(page, "#i6 div:last-of-type a")?.href || "#";
+            const resample = Lib.$Q(page, "#img");
+            const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
             if (!resample) {
-              Lib2.log({ page, resample, original }, { dev: Config2.Dev })
-                .error;
+              Lib.log({ page, resample, original }, { dev: Config.Dev }).error;
               throw new Error("Image not found");
             }
-            const link =
-              Config2.Original && !original.endsWith("#")
-                ? original
-                : resample.src || resample.href;
+            const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
             imgData.push({ Index: index, PageUrl: url2, ImgUrl: link });
             const display = `[${++task}/${pages}]`;
-            Lib2.title(display);
+            Lib.title(display);
             button.$text(`${Transl("獲取連結")}: ${display}`);
             if (task === pages) {
               imgData.sort((a, b) => a.Index - b.Index);
-              Lib2.session(DConfig2.GetKey(), { value: imgData });
+              Lib.session(DConfig.GetKey(), { value: imgData });
               startTask(imgData);
             }
           } catch (error) {
-            Lib2.log(error, { dev: Config2.Dev }).error;
+            Lib.log(error, { dev: Config.Dev }).error;
             task++;
           }
         }
       }
       function reGetImageData(index, url2) {
         function parseLink(index2, url3, page) {
-          const resample = Lib2.$Q(page, "#img");
-          const original = Lib2.$Q(page, "#i6 div:last-of-type a")?.href || "#";
+          const resample = Lib.$Q(page, "#img");
+          Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
           if (!resample) return false;
-          const link =
-            Config2.Original && !original.endsWith("#")
-              ? original
-              : resample.src || resample.href;
+          const link = resample.src || resample.href;
           return { Index: index2, PageUrl: url3, ImgUrl: link };
         }
-        let token = Config2.ReTry;
+        let token = Config.ReTry;
         return new Promise((resolve) => {
-          worker.postMessage({
-            index,
-            url: url2,
-            time: Date.now(),
-            delay: DConfig2.Image_ID,
-          });
+          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig.Image_ID });
           worker.onmessage = (e) => {
-            const {
-              index: index2,
-              url: url3,
-              html,
-              time,
-              delay,
-              error,
-            } = e.data;
+            const { index: index2, url: url3, html, time, delay, error } = e.data;
             if (token <= 0) return resolve(false);
             if (error) {
               worker.postMessage({ index: index2, url: url3, time, delay });
             } else {
-              const result = parseLink(index2, url3, Lib2.domParse(html));
+              const result = parseLink(index2, url3, Lib.domParse(html));
               if (result) resolve(result);
               else {
                 worker.postMessage({ index: index2, url: url3, time, delay });
@@ -491,62 +430,53 @@ ${JSON.stringify(box2, null, 4)}`,
         });
       }
       function startTask(dataList) {
-        Lib2.log(
+        Lib.log(
           `${comicName}
 ${JSON.stringify(dataList, null, 4)}`,
-          { dev: Config2.Dev, group: Transl("圖片連結數據") },
+          { dev: Config.Dev, group: Transl("圖片連結數據") },
         );
-        if (DConfig2.Scope) {
-          dataList = Lib2.scopeParse(DConfig2.Scope, dataList);
+        if (DConfig.Scope) {
+          dataList = Lib.scopeParse(DConfig.Scope, dataList);
         }
-        if (DConfig2.SortReverse) {
+        if (DConfig.SortReverse) {
           const size = dataList.length - 1;
-          dataList = dataList.map((data, index) => ({
-            ...data,
-            Index: size - index,
-          }));
+          dataList = dataList.map((data, index) => ({ ...data, Index: size - index }));
         }
         const dataMap = new Map(dataList.map((data) => [data.Index, data]));
         button.$text(Transl("開始下載"));
-        Lib2.log(
+        Lib.log(
           {
-            ReTry: Config2.ReTry,
-            Original: Config2.Original,
-            ResetScope: Config2.ResetScope,
-            CompleteClose: Config2.CompleteClose,
-            SortReverse: DConfig2.SortReverse,
-            CompressMode: DConfig2.CompressMode,
-            CompressionLevel: DConfig2.Compress_Level,
+            ReTry: Config.ReTry,
+            Original: Config.Original,
+            ResetScope: Config.ResetScope,
+            CompleteClose: Config.CompleteClose,
+            SortReverse: DConfig.SortReverse,
+            CompressMode: DConfig.CompressMode,
+            CompressionLevel: DConfig.Compress_Level,
             DownloadData: dataMap,
           },
-          { dev: Config2.Dev, group: Transl("任務配置") },
+          { dev: Config.Dev, group: Transl("任務配置") },
         );
-        DConfig2.CompressMode ? packDownload(dataMap) : singleDownload(dataMap);
+        DConfig.CompressMode ? packDownload(dataMap) : singleDownload(dataMap);
       }
       async function packDownload(dataMap) {
         let totalSize = dataMap.size;
-        const fillValue = Lib2.getFill(totalSize);
+        const fillValue = Lib.getFill(totalSize);
         let enforce = false;
         let clearCache = false;
-        let reTry = Config2.ReTry;
+        let reTry = Config.ReTry;
         let task, progress, $thread, $delay;
         function init() {
           task = 0;
           progress = 0;
-          $delay = DConfig2.Download_ID;
-          $thread = DConfig2.Download_IT;
+          $delay = DConfig.Download_ID;
+          $thread = DConfig.Download_IT;
         }
         function force() {
           if (totalSize > 0) {
             const sortData = [...dataMap].sort((a, b) => a.Index - b.Index);
-            sortData.splice(0, 0, {
-              ErrorPage: sortData
-                .map(([_, value]) => value.Index + 1)
-                .join(","),
-            });
-            Lib2.log(JSON.stringify(sortData, null, 4), {
-              group: Transl("下載失敗數據"),
-            }).error;
+            sortData.splice(0, 0, { ErrorPage: sortData.map(([_, value]) => value.Index + 1).join(",") });
+            Lib.log(JSON.stringify(sortData, null, 4), { group: Transl("下載失敗數據") }).error;
           }
           enforce = true;
           init();
@@ -555,35 +485,25 @@ ${JSON.stringify(dataList, null, 4)}`,
         function runClear() {
           if (!clearCache) {
             clearCache = true;
-            sessionStorage.removeItem(DConfig2.GetKey());
-            Lib2.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
-              group: Transl("清理警告"),
-            }).warn;
+            sessionStorage.removeItem(DConfig.GetKey());
+            Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
         function statusUpdate(time, index, iurl, blob, error = false) {
           if (enforce) return;
-          [$delay, $thread] = dynamicParam(
-            time,
-            $delay,
-            $thread,
-            DConfig2.Download_ND,
-          );
+          [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
           const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
           button?.$text(`${Transl("下載進度")}: ${display}`);
-          Lib2.title(display);
+          Lib.title(display);
           if (!error && blob) {
-            zipper.file(
-              `${comicName}/${Lib2.mantissa(index, fillValue, "0", iurl)}`,
-              blob,
-            );
+            zipper.file(`${comicName}/${Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
             dataMap.delete(index);
           }
           if (progress === totalSize) {
             totalSize = dataMap.size;
             if (totalSize > 0 && reTry-- > 0) {
               const display2 = Transl("等待失敗重試...");
-              Lib2.title(display2);
+              Lib.title(display2);
               button.$text(display2);
               setTimeout(() => {
                 start(dataMap, true);
@@ -598,22 +518,17 @@ ${JSON.stringify(dataList, null, 4)}`,
           let timeout = null;
           const time = Date.now();
           if (typeof iurl !== "undefined") {
-            GM_xmlhttpRequest2({
+            GM_xmlhttpRequest({
               url: iurl,
               timeout: 15e3,
               method: "GET",
               responseType: "blob",
               onload: (response) => {
                 clearTimeout(timeout);
-                if (
-                  response.finalUrl !== iurl &&
-                  `${response.status}`.startsWith("30")
-                ) {
+                if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
                   request(index, response.finalUrl);
                 } else {
-                  response.status == 200
-                    ? statusUpdate(time, index, iurl, response.response)
-                    : statusUpdate(time, index, iurl, null, true);
+                  response.status == 200 ? statusUpdate(time, index, iurl, response.response) : statusUpdate(time, index, iurl, null, true);
                 }
               },
               onerror: () => {
@@ -636,15 +551,9 @@ ${JSON.stringify(dataList, null, 4)}`,
           for (const { Index, PageUrl, ImgUrl } of dataMap2.values()) {
             if (enforce) break;
             if (reGet) {
-              Lib2.log(PageUrl, {
-                dev: Config2.Dev,
-                group: `${Transl("重新取得數據")} (${reTry})`,
-              });
+              Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
               const result = await reGetImageData(Index, PageUrl);
-              Lib2.log(result, {
-                dev: Config2.Dev,
-                group: `${Transl("取得結果")} (${reTry})`,
-              });
+              Lib.log(result, { dev: Config.Dev, group: `${Transl("取得結果")} (${reTry})` });
               if (result) {
                 const { Index: Index2, ImgUrl: ImgUrl2 } = result;
                 request(Index2, ImgUrl2);
@@ -654,14 +563,14 @@ ${JSON.stringify(dataList, null, 4)}`,
               }
             } else {
               while (task >= $thread) {
-                await Lib2.sleep($delay);
+                await Lib.sleep($delay);
               }
               request(Index, ImgUrl);
             }
           }
         }
         start(dataMap);
-        Lib2.regMenu(
+        Lib.regMenu(
           {
             [Transl("📥 強制壓縮下載")]: () => force(),
           },
@@ -669,21 +578,21 @@ ${JSON.stringify(dataList, null, 4)}`,
         );
       }
       async function compressFile() {
-        Lib2.unMenu("Enforce-1");
+        Lib.unMenu("Enforce-1");
         zipper
           .generateZip(
             {
-              level: DConfig2.Compress_Level,
+              level: DConfig.Compress_Level,
             },
             (progress) => {
               const display = `${progress.toFixed(1)} %`;
-              Lib2.title(display);
+              Lib.title(display);
               button.$text(`${Transl("壓縮進度")}: ${display}`);
             },
           )
           .then((zip) => {
-            saveAs2(zip, `${comicName}.zip`);
-            Lib2.title(`✓ ${DConfig2.TitleCache}`);
+            saveAs(zip, `${comicName}.zip`);
+            Lib.title(`✓ ${DConfig.TitleCache}`);
             button.$text(Transl("壓縮完成"));
             button = null;
             setTimeout(() => {
@@ -691,39 +600,33 @@ ${JSON.stringify(dataList, null, 4)}`,
             }, 1500);
           })
           .catch((result) => {
-            Lib2.title(DConfig2.TitleCache);
+            Lib.title(DConfig.TitleCache);
             const display = Transl("壓縮失敗");
             button.$text(display);
-            Lib2.log(result, {
-              dev: Config2.Dev,
-              group: display,
-              collapsed: false,
-            }).error;
+            Lib.log(result, { dev: Config.Dev, group: display, collapsed: false }).error;
             setTimeout(() => {
               button.disabled = false;
-              button.$text(DConfig2.ModeDisplay);
+              button.$text(DConfig.ModeDisplay);
               button = null;
             }, 4500);
           });
       }
       async function singleDownload(dataMap) {
         let totalSize = dataMap.size;
-        const fillValue = Lib2.getFill(totalSize);
+        const fillValue = Lib.getFill(totalSize);
         const taskPromises = [];
         let task = 0;
         let progress = 0;
         let retryDelay = 1e3;
         let clearCache = false;
-        let reTry = Config2.ReTry;
-        let $delay = DConfig2.Download_ID;
-        let $thread = DConfig2.Download_IT;
+        let reTry = Config.ReTry;
+        let $delay = DConfig.Download_ID;
+        let $thread = DConfig.Download_IT;
         function runClear() {
           if (!clearCache) {
             clearCache = true;
-            sessionStorage.removeItem(DConfig2.GetKey());
-            Lib2.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
-              group: Transl("清理警告"),
-            }).warn;
+            sessionStorage.removeItem(DConfig.GetKey());
+            Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
         async function request(index, purl, iurl, retry) {
@@ -731,34 +634,21 @@ ${JSON.stringify(dataList, null, 4)}`,
             if (typeof iurl !== "undefined") {
               const time = Date.now();
               ++task;
-              GM_download2({
+              GM_download({
                 url: iurl,
-                name: `${comicName}-${Lib2.mantissa(index, fillValue, "0", iurl)}`,
+                name: `${comicName}-${Lib.mantissa(index, fillValue, "0", iurl)}`,
                 onload: () => {
-                  [$delay, $thread] = dynamicParam(
-                    time,
-                    $delay,
-                    $thread,
-                    DConfig2.Download_ND,
-                  );
+                  [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                   const display = `[${++progress}/${totalSize}]`;
-                  Lib2.title(display);
+                  Lib.title(display);
                   button?.$text(`${Transl("下載進度")}: ${display}`);
                   --task;
                   resolve();
                 },
                 onerror: () => {
                   if (retry > 0) {
-                    [$delay, $thread] = dynamicParam(
-                      time,
-                      $delay,
-                      $thread,
-                      DConfig2.Download_ND,
-                    );
-                    Lib2.log(
-                      `[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`,
-                      { dev: Config2.Dev },
-                    ).error;
+                    [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
+                    Lib.log(`[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`, { dev: Config.Dev }).error;
                     --task;
                     setTimeout(
                       () => {
@@ -788,7 +678,7 @@ ${JSON.stringify(dataList, null, 4)}`,
         }
         for (const { Index, PageUrl, ImgUrl } of dataMap.values()) {
           while (task >= $thread) {
-            await Lib2.sleep($delay);
+            await Lib.sleep($delay);
           }
           taskPromises.push(request(Index, PageUrl, ImgUrl, reTry));
         }
@@ -796,7 +686,7 @@ ${JSON.stringify(dataList, null, 4)}`,
         button.$text(Transl("下載完成"));
         button = null;
         setTimeout(() => {
-          Lib2.title(`✓ ${DConfig2.TitleCache}`);
+          Lib.title(`✓ ${DConfig.TitleCache}`);
           reset();
         }, 3e3);
       }
@@ -805,7 +695,7 @@ ${JSON.stringify(dataList, null, 4)}`,
   function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
-    let Transl, Download;
+    let Download;
     let Url = Lib.url.split("?p=")[0];
     async function initStyle() {
       const position = `
@@ -864,36 +754,26 @@ ${scope}`);
       if (yes) DConfig.Scope = scope;
     }
     async function downloadModeSwitch() {
-      DConfig.CompressMode
-        ? Lib.setV("CompressedMode", false)
-        : Lib.setV("CompressedMode", true);
+      if (DConfig.Lock) {
+        alert(Transl("下載中鎖定"));
+        return;
+      }
+      DConfig.CompressMode ? Lib.setV("CompressedMode", false) : Lib.setV("CompressedMode", true);
       Lib.$q("#ExDB")?.remove();
       buttonCreation();
     }
     async function buttonCreation() {
       Lib.waitEl("#gd2", null, { raf: true }).then((gd2) => {
         DConfig.CompressMode = Lib.getV("CompressedMode", true);
-        DConfig.ModeDisplay = DConfig.CompressMode
-          ? Transl("壓縮下載")
-          : Transl("單圖下載");
+        DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
         const downloadButton = Lib.createElement(gd2, "button", {
           id: "ExDB",
           class: "Download_Button",
-          disabled: DConfig.Lock ? true : false,
-          text: DConfig.Lock ? Transl("下載中鎖定") : DConfig.ModeDisplay,
+          text: DConfig.ModeDisplay,
           on: {
             type: "click",
             listener: () => {
-              Download ??= Downloader(
-                null,
-                GM_xmlhttpRequest,
-                GM_download,
-                Config,
-                DConfig,
-                Transl,
-                Lib,
-                saveAs,
-              );
+              Download ??= Downloader();
               DConfig.Lock = true;
               downloadButton.disabled = true;
               downloadButton.$text(Transl("開始下載"));
@@ -907,12 +787,6 @@ ${scope}`);
     if (eRegex.test(Url) || exRegex.test(Url)) {
       initStyle();
       DConfig.TitleCache = Lib.title();
-      ({ Transl } = (() => {
-        const Matcher = Lib.translMatcher(Dict);
-        return {
-          Transl: (Str) => Matcher[Str] ?? Str,
-        };
-      })());
       buttonCreation();
       if (Lib.session(DConfig.GetKey())) {
         Lib.regMenu(
