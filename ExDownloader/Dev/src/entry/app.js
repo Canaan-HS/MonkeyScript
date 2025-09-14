@@ -139,7 +139,7 @@ export default function Main() {
 
     };
 
-    if (import.meta.env.DEV) {
+    if (import.meta.hot) {
         return function () {
             Lib.title(DConfig.TitleCache);
             Lib.$q("#ExDB")?.remove();
