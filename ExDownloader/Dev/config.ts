@@ -12,7 +12,7 @@ const name = path.basename(path.resolve(fileURLToPath(import.meta.url), '../../'
 
 export default {
     meta,
-    entry: `./${name}/Dev/src/bootstrap.js`,
+    entry: `./${name}/Dev/src/entry/bootstrap.js`,
     fileName: `${name}-Dev.js`,
     outDir: `./${name}/Dev/dist`,
     userscript: {
