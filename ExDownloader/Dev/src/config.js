@@ -1,5 +1,5 @@
 /* 使用者配置 */
-export const Config = {
+const Config = {
     Dev: true,            // 開發模式 (會顯示除錯訊息)
     ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
     Original: false,      // 是否下載原圖
@@ -8,7 +8,7 @@ export const Config = {
 };
 
 /* 下載配置 (不清楚不要修改) */
-export const DConfig = {
+const DConfig = {
     Compress_Level: 9,      // 壓縮的等級
     MIN_CONCURRENCY: 5,  // 最小併發數
     MAX_CONCURRENCY: 16, // 最大併發數
@@ -36,3 +36,5 @@ export const DConfig = {
         return this.KeyCache;
     }
 };
+
+export { Config, DConfig };
