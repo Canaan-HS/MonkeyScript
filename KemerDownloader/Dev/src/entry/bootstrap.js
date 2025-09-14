@@ -1,6 +1,6 @@
 import Main from './app.js';
 
-import.meta.env.DEV
+import.meta.hot
     ? (() => {
         let currentCleanup = null;
         function run(mainFunc) {
