@@ -16,21 +16,21 @@ const Lib = (() => {
         get sY() { return window.scrollY },
         get iW() { return window.innerWidth },
         get iH() { return window.innerHeight },
-        _cache: undefined,
         get platform() {
-            if (!this._cache) {
-                if (navigator.userAgentData?.mobile !== undefined) {
-                    this._cache = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
-                } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
-                    this._cache = "Mobile";
-                } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                    this._cache = "Mobile";
-                } else {
-                    this._cache = "Desktop";
-                }
+            let value;
+
+            if (navigator.userAgentData?.mobile !== undefined) {
+                value = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+            } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
+                value = "Mobile";
+            } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                value = "Mobile";
+            } else {
+                value = "Desktop";
             }
 
-            return this._cache;
+            value && Object.defineProperty(this, "platform", { value, writable: false });
+            return value;
         }
     };
 
@@ -147,8 +147,16 @@ const Lib = (() => {
         $qa: document.$qa.bind(document),
         $Qa: (root, select) => selector(root, select, true),
         html: document.documentElement,
-        head: document.head ?? selector(document, "head", false),
-        body: document.body ?? selector(document, "body", false),
+        get head() {
+            const value = document.head;
+            value && Object.defineProperty(this, "head", { value, writable: false });
+            return value;
+        },
+        get body() {
+            const value = document.body;
+            value && Object.defineProperty(this, "body", { value, writable: false });
+            return value;
+        },
         img: document.images,
         link: document.links,
         script: document.scripts,
@@ -588,11 +596,9 @@ const Lib = (() => {
             element = document.createElement(type);
             element.id = id;
 
-            // ? 應對新版瀏覽器, 奇怪的 Bug (暫時處理方式)
             const head = sugar.head;
             if (head) head.appendChild(element);
             else waitEl("head").then(head => {
-                sugar.head = head;
                 head.appendChild(element);
             })
         };
