@@ -45,166 +45,49 @@
 // ==/UserScript==
 
 (function () {
-  function Config(Lib2) {
-    const General = {
-      Dev: false,
-      IncludeExtras: false,
-      CompleteClose: false,
-      ConcurrentDelay: 500,
-      ConcurrentQuantity: 5,
-      BatchOpenDelay: 500,
-      ...Lib2.getJV("General", {}),
-    };
-    const FileName = {
-      FillValue: {
-        Filler: "0",
-        Amount: "Auto",
-      },
-      CompressName: "({Artist}) {Title}",
-      FolderName: "{Title}",
-      FillName: "{Title} {Fill}",
-      ...Lib2.getJV("FileName", {}),
-    };
-    const FetchSet = {
-      Delay: 100,
-      AdvancedFetch: true,
-      ToLinkTxt: false,
-      FilterExts: [],
-      UseFormat: false,
-      Mode: "FilterMode",
-      Format: ["Timestamp", "TypeTag"],
-      ...Lib2.getJV("FetchSet", {}),
-    };
-    const Process = {
-      IsNeko: Lib2.$domain.startsWith("nekohouse"),
-      ImageExts: [
-        "jpg",
-        "jpeg",
-        "png",
-        "gif",
-        "bmp",
-        "webp",
-        "tiff",
-        "tif",
-        "svg",
-        "heic",
-        "heif",
-        "raw",
-        "ico",
-        "avif",
-        "jxl",
-        "cr2",
-        "nef",
-        "arw",
-        "orf",
-        "rw2",
-        "tga",
-        "pcx",
-        "crw",
-        "cr2",
-        "cr3",
-        "dng",
-        "eps",
-        "xcf",
-        "ai",
-        "psd",
-        "psb",
-        "pef",
-        "nrw",
-        "ptx",
-        "srf",
-        "sr2",
-        "raf",
-        "rwl",
-        "3fr",
-        "fff",
-        "iiq",
-        "x3f",
-        "ari",
-        "bay",
-        "dcr",
-        "kdc",
-        "mef",
-        "mos",
-        "dng",
-        "usdz",
-        "jxr",
-        "cdr",
-        "wmf",
-        "emf",
-        "dxf",
-        "svgz",
-        "obj",
-        "fbx",
-        "stl",
-        "gltf",
-        "glb",
-        "gltf",
-        "glb",
-        "dae",
-        "blend",
-        "max",
-        "c4d",
-        "step",
-        "stp",
-        "iges",
-      ],
-      VideoExts: [
-        "mp4",
-        "avi",
-        "mkv",
-        "mov",
-        "flv",
-        "wmv",
-        "webm",
-        "mpg",
-        "mpeg",
-        "m4v",
-        "ogv",
-        "3gp",
-        "asf",
-        "ts",
-        "vob",
-        "rm",
-        "rmvb",
-        "m2ts",
-        "f4v",
-        "mts",
-        "mpe",
-        "mpv",
-        "m2v",
-        "m4a",
-        "bdmv",
-        "ifo",
-        "r3d",
-        "braw",
-        "cine",
-        "qt",
-        "f4p",
-        "swf",
-        "mng",
-        "gifv",
-        "yuv",
-        "roq",
-        "nsv",
-        "amv",
-        "svi",
-        "mod",
-        "mxf",
-        "ogg",
-      ],
-      Lock: false,
-      dynamicParam: Lib2.createNnetworkObserver({
-        MAX_Delay: 1500,
-        MIN_CONCURRENCY: 5,
-        MAX_CONCURRENCY: 10,
-        Good_Network_THRESHOLD: 200,
-        Poor_Network_THRESHOLD: 400,
-      }),
-    };
-    return { General, FileName, FetchSet, Process };
-  }
-  const Dict = {
+  const General = {
+    Dev: false,
+    IncludeExtras: false,
+    CompleteClose: false,
+    ConcurrentDelay: 500,
+    ConcurrentQuantity: 5,
+    BatchOpenDelay: 500,
+    ...Lib.getJV("General", {}),
+  };
+  const FileName = {
+    FillValue: {
+      Filler: "0",
+      Amount: "Auto",
+    },
+    CompressName: "({Artist}) {Title}",
+    FolderName: "{Title}",
+    FillName: "{Title} {Fill}",
+    ...Lib.getJV("FileName", {}),
+  };
+  const FetchSet = {
+    Delay: 100,
+    AdvancedFetch: true,
+    ToLinkTxt: false,
+    FilterExts: [],
+    UseFormat: false,
+    Mode: "FilterMode",
+    Format: ["Timestamp", "TypeTag"],
+    ...Lib.getJV("FetchSet", {}),
+  };
+  const Process = {
+    IsNeko: Lib.$domain.startsWith("nekohouse"),
+    ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
+    VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"],
+    Lock: false,
+    dynamicParam: Lib.createNnetworkObserver({
+      MAX_Delay: 1500,
+      MIN_CONCURRENCY: 5,
+      MAX_CONCURRENCY: 10,
+      Good_Network_THRESHOLD: 200,
+      Poor_Network_THRESHOLD: 400,
+    }),
+  };
+  const dict = {
     Traditional: {
       PostLink: "帖子連結",
       Timestamp: "發佈日期",
@@ -213,8 +96,7 @@
       VideoLink: "影片連結",
       DownloadLink: "下載連結",
       ExternalLink: "外部連結",
-      開帖說明:
-        "\n\n!! 直接確認將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10",
+      開帖說明: "\n\n!! 直接確認將會開啟當前頁面所有帖子\n輸入開啟範圍(說明) =>\n單個: 1, 2, 3\n範圍: 1~5, 6-10\n排除: !5, -10",
     },
     Simplified: {
       "🔁 切換下載模式": "🔁 切换下载模式",
@@ -259,8 +141,7 @@
       數據處理完成: "数据处理完成",
       "Json 數據下載": "JSON 数据下载",
       當前帖子數: "当前帖子数",
-      開帖說明:
-        "\n\n!! 直接确认将开启当前页面的所有帖子\n请输入开启范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10",
+      開帖說明: "\n\n!! 直接确认将开启当前页面的所有帖子\n请输入开启范围：\n单个项目：1, 2, 3\n范围指定：1~5, 6-10\n排除项目：!5, -10",
     },
     Japan: {
       "🔁 切換下載模式": "🔁 ダウンロードモード切替",
@@ -306,8 +187,7 @@
       數據處理完成: "データ処理完了",
       "Json 數據下載": "JSONデータダウンロード",
       當前帖子數: "現在の投稿数",
-      開帖說明:
-        "\n\n!! 入力せずに確定すると、現在のページの全投稿が開かれます。\n範囲を指定して開く:\n単一: 1, 2, 3\n範囲: 1~5, 6-10\n除外: !5, -10",
+      開帖說明: "\n\n!! 入力せずに確定すると、現在のページの全投稿が開かれます。\n範囲を指定して開く:\n単一: 1, 2, 3\n範囲: 1~5, 6-10\n除外: !5, -10",
     },
     Korea: {
       "🔁 切換下載模式": "🔁 다운로드 모드 전환",
@@ -353,8 +233,7 @@
       數據處理完成: "데이터 처리 완료",
       "Json 數據下載": "JSON 데이터 다운로드",
       當前帖子數: "현재 게시물 수",
-      開帖說明:
-        "\n\n!! 입력 없이 확인 시, 현재 페이지의 모든 게시물을 엽니다.\n열람 범위 입력 (예시):\n단일: 1, 2, 3\n범위: 1~5, 6-10\n제외: !5, -10",
+      開帖說明: "\n\n!! 입력 없이 확인 시, 현재 페이지의 모든 게시물을 엽니다.\n열람 범위 입력 (예시):\n단일: 1, 2, 3\n범위: 1~5, 6-10\n제외: !5, -10",
     },
     Russia: {
       "🔁 切換下載模式": "🔁 Сменить режим загрузки",
@@ -400,8 +279,7 @@
       數據處理完成: "Обработка завершена",
       "Json 數據下載": "Скачать JSON",
       當前帖子數: "Текущее кол-во постов",
-      開帖說明:
-        '\n\n!! Нажмите "ОК" без ввода, чтобы открыть все посты на странице.\nВведите диапазон для открытия:\nОдин пост: 1, 2, 3\nДиапазон: 1~5, 6-10\nИсключить: !5, -10',
+      開帖說明: '\n\n!! Нажмите "ОК" без ввода, чтобы открыть все посты на странице.\nВведите диапазон для открытия:\nОдин пост: 1, 2, 3\nДиапазон: 1~5, 6-10\nИсключить: !5, -10',
     },
     English: {
       "🔁 切換下載模式": "🔁 Switch Download Mode",
@@ -440,429 +318,359 @@
       數據處理完成: "Processing Complete",
       "Json 數據下載": "Download JSON Data",
       當前帖子數: "Current Post Count",
-      開帖說明:
-        "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10",
+      開帖說明: "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10",
     },
   };
-  function Fetch(General, FetchSet, Process, Transl, Lib2, md52) {
-    return class FetchData {
-      static Try_Again_Promise = null;
-      constructor() {
-        this.metaDict = new Map();
-        this.dataDict = new Map();
-        this.sourceURL = Lib2.url;
-        this.titleCache = Lib2.title();
-        this.URL = new URL(this.sourceURL);
-        this.host = this.URL.host;
-        this.origin = this.URL.origin;
-        this.pathname = this.URL.pathname;
-        this.isPost = this.URL.pathname !== "/posts";
+  const { Transl } = (() => {
+    const Matcher = Lib.translMatcher(dict);
+    return {
+      Transl: (Str) => Matcher[Str] ?? Str,
+    };
+  })();
+  class FetchData {
+    static Try_Again_Promise = null;
+    constructor() {
+      this.metaDict = new Map();
+      this.dataDict = new Map();
+      this.sourceURL = Lib.url;
+      this.titleCache = Lib.title();
+      this.URL = new URL(this.sourceURL);
+      this.host = this.URL.host;
+      this.origin = this.URL.origin;
+      this.pathname = this.URL.pathname;
+      this.isPost = this.URL.pathname !== "/posts";
+      this.queryValue = this.URL.search;
+      if (this.URL.searchParams.get("q") === "") {
+        this.URL.searchParams.delete("q");
         this.queryValue = this.URL.search;
-        if (this.URL.searchParams.get("q") === "") {
-          this.URL.searchParams.delete("q");
-          this.queryValue = this.URL.search;
-          this.sourceURL = this.URL.href;
+        this.sourceURL = this.URL.href;
+      }
+      this.currentPage = 1;
+      this.finalPage = 1;
+      this.totalPages = 0;
+      this.progress = 0;
+      this.onlyMode = false;
+      this.fetchDelay = FetchSet.Delay;
+      this.toLinkTxt = FetchSet.ToLinkTxt;
+      this.advancedFetch = FetchSet.AdvancedFetch;
+      const apiInterface = "api/v1";
+      this.getPostURL = ({ service, user, id }) => `${this.origin}/${service}/user/${user}/post/${id}`;
+      this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+      this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
+      this.getNextPageURL = (urlStr) => {
+        const url = new URL(urlStr);
+        const search = url.searchParams;
+        const q = search.get("q");
+        let o = search.get("o");
+        o = o ? +o + 50 : 50;
+        const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
+        return `${url.origin}${url.pathname}${params}`;
+      };
+      const append = this.isPost ? "/posts" : "";
+      this.getPreviewAPI = (url) => (/[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(/([?&]o=)/, `${append}$1`) : this.queryValue ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(this.queryValue, `${append}${this.queryValue}`) : url.replace(this.host, `${this.host}/${apiInterface}`) + append);
+      this.getValidValue = (value) => {
+        if (!value) return null;
+        const type = Lib.$type(value);
+        if (type === "Array") return value.length > 0 && value.some((item) => item !== "") ? value : null;
+        if (type === "Object") {
+          const values = Object.values(value);
+          return values.length > 0 && values.some((item) => item !== "") ? value : null;
         }
-        this.currentPage = 1;
-        this.finalPage = 1;
-        this.totalPages = 0;
-        this.progress = 0;
-        this.onlyMode = false;
-        this.fetchDelay = FetchSet.Delay;
-        this.toLinkTxt = FetchSet.ToLinkTxt;
-        this.advancedFetch = FetchSet.AdvancedFetch;
-        const apiInterface = "api/v1";
-        this.getPostURL = ({ service, user, id }) =>
-          `${this.origin}/${service}/user/${user}/post/${id}`;
-        this.getPostAPI = ({ service, user, id }) =>
-          `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
-        this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
-        this.getNextPageURL = (urlStr) => {
-          const url = new URL(urlStr);
-          const search = url.searchParams;
-          const q = search.get("q");
-          let o = search.get("o");
-          o = o ? +o + 50 : 50;
-          const params = q ? `?o=${o}&q=${q}` : `?o=${o}`;
-          return `${url.origin}${url.pathname}${params}`;
-        };
-        const append = this.isPost ? "/posts" : "";
-        this.getPreviewAPI = (url) =>
-          /[?&]o=/.test(url)
-            ? url
-                .replace(this.host, `${this.host}/${apiInterface}`)
-                .replace(/([?&]o=)/, `${append}$1`)
-            : this.queryValue
-              ? url
-                  .replace(this.host, `${this.host}/${apiInterface}`)
-                  .replace(this.queryValue, `${append}${this.queryValue}`)
-              : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
-        this.getValidValue = (value) => {
-          if (!value) return null;
-          const type = Lib2.$type(value);
-          if (type === "Array")
-            return value.length > 0 && value.some((item) => item !== "")
-              ? value
-              : null;
-          if (type === "Object") {
-            const values = Object.values(value);
-            return values.length > 0 && values.some((item) => item !== "")
-              ? value
-              : null;
+        return value;
+      };
+      this.infoRules = new Set(["PostLink", "Timestamp", "TypeTag", "ImgLink", "VideoLink", "DownloadLink", "ExternalLink"]);
+      this.fetchGenerate = (Data) => {
+        return Object.keys(Data).reduce((acc, key) => {
+          if (this.infoRules.has(key)) {
+            const value = this.getValidValue(Data[key]);
+            value && (acc[Transl(key)] = value);
           }
-          return value;
-        };
-        this.infoRules = new Set([
-          "PostLink",
-          "Timestamp",
-          "TypeTag",
-          "ImgLink",
-          "VideoLink",
-          "DownloadLink",
-          "ExternalLink",
-        ]);
-        this.fetchGenerate = (Data) => {
-          return Object.keys(Data).reduce((acc, key) => {
-            if (this.infoRules.has(key)) {
-              const value = this.getValidValue(Data[key]);
-              value && (acc[Transl(key)] = value);
+          return acc;
+        }, {});
+      };
+      const filterExts = new Set(FetchSet.FilterExts);
+      const videoExts = new Set(Process.VideoExts);
+      const imageExts = new Set(Process.ImageExts);
+      this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
+      this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
+      this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
+      this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
+      this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
+        let imgNumber = 0;
+        return data.reduce(
+          (acc, file) => {
+            const name = file.name;
+            const path = file.path;
+            const extension = Lib.suffixName(path, "");
+            if (filterExts.has(extension)) return acc;
+            const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
+            const url = `${server}${path}`;
+            if (this.isVideo(extension)) {
+              acc.video[name] = `${url}?f=${name}`;
+            } else if (this.isImage(extension)) {
+              const name2 = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
+              acc.img[name2] = `${url}?f=${name2}`;
+            } else {
+              acc.other[name] = `${url}?f=${name}`;
             }
             return acc;
-          }, {});
-        };
-        const filterExts = new Set(FetchSet.FilterExts);
-        const videoExts = new Set(Process.VideoExts);
-        const imageExts = new Set(Process.ImageExts);
-        this.isVideo = (str) =>
-          videoExts.has(str.replace(/^\./, "").toLowerCase());
-        this.isImage = (str) =>
-          imageExts.has(str.replace(/^\./, "").toLowerCase());
-        this.normalizeName = (title, index) =>
-          title.trim().replace(/\n/g, " ") ||
-          `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
-        this.normalizeTimestamp = ({ added, published }) =>
-          new Date(added || published)?.toLocaleString();
-        this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
-          let imgNumber = 0;
-          return data.reduce(
-            (acc, file) => {
-              const name = file.name;
-              const path = file.path;
-              const extension = Lib2.suffixName(path, "");
+          },
+          { img: {}, video: {}, other: {} },
+        );
+      };
+      this.deepDecodeURIComponent = (str) => {
+        let prev = str;
+        let curr = decodeURIComponent(prev);
+        while (curr !== prev) {
+          prev = curr;
+          curr = decodeURIComponent(prev);
+        }
+        return curr;
+      };
+      this.nekoCategorize = (title, data) => {
+        let imgNumber = 0;
+        return data.reduce(
+          (acc, file) => {
+            const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
+            if (uri) {
+              const extension = Lib.suffixName(uri, "");
               if (filterExts.has(extension)) return acc;
-              const server = serverDict
-                ? `${serverDict[path]}/data`
-                : `${file.server}/data`;
-              const url = `${server}${path}`;
+              const url = uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`;
+              const getDownloadName = (link) => this.deepDecodeURIComponent(link.download?.trim() || link.$text());
               if (this.isVideo(extension)) {
-                acc.video[name] = `${url}?f=${name}`;
+                acc.video[getDownloadName(file)] = url;
               } else if (this.isImage(extension)) {
-                const name2 = `${title}_${String(++imgNumber).padStart(fillValue, "0")}.${extension}`;
-                acc.img[name2] = `${url}?f=${name2}`;
+                const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
+                acc.img[name] = `${url}?filename=${name}`;
               } else {
-                acc.other[name] = `${url}?f=${name}`;
+                const name = getDownloadName(file);
+                acc.other[name] = `${url}?filename=${name}`;
               }
-              return acc;
-            },
-            { img: {}, video: {}, other: {} },
-          );
-        };
-        this.deepDecodeURIComponent = (str) => {
-          let prev = str;
-          let curr = decodeURIComponent(prev);
-          while (curr !== prev) {
-            prev = curr;
-            curr = decodeURIComponent(prev);
+            }
+            return acc;
+          },
+          { video: {}, img: {}, other: {} },
+        );
+      };
+      const allowType = new Set(["A", "P", "STRONG", "BODY"]);
+      const pFilter = new Set(["mega.nz"]);
+      const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+      const safeInclud = (target, checkStr) => {
+        if (typeof target !== "string") return false;
+        return target?.includes(checkStr || "");
+      };
+      const protocolParse = (url) => {
+        if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
+        if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
+        if (/^\/\//.test(url)) return "https:" + url;
+        return url;
+      };
+      const checkProcessableLink = (link) => {
+        return link.toLowerCase().startsWith("https://mega.nz") && (!safeInclud(link, "#") || safeInclud(link, "#P!"));
+      };
+      const searchPassword = (href, text) => {
+        let pass = "";
+        let state = false;
+        if (!text) return { pass, state, href };
+        const lowerText = text.toLowerCase();
+        const encryptedHref = safeInclud(href, "#P!");
+        if (text.startsWith("#")) {
+          state = true;
+          if (encryptedHref) {
+            pass = text.slice(1);
+          } else {
+            href += text;
           }
-          return curr;
+        } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
+          state = true;
+          if (encryptedHref) {
+            pass = text;
+          } else {
+            href += "#" + text;
+          }
+        } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+          const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+          if (key) {
+            state = true;
+            if (encryptedHref) {
+              pass = key;
+            } else {
+              href += "#" + key;
+            }
+          }
+        }
+        return {
+          pass,
+          state,
+          href: href.match(urlRegex)?.[0] ?? href,
         };
-        this.nekoCategorize = (title, data) => {
-          let imgNumber = 0;
-          return data.reduce(
-            (acc, file) => {
-              const uri =
-                file.src ||
-                file.href ||
-                file.$gAttr("src") ||
-                file.$gAttr("href");
-              if (uri) {
-                const extension = Lib2.suffixName(uri, "");
-                if (filterExts.has(extension)) return acc;
-                const url = uri.startsWith("http")
-                  ? uri
-                  : `${Lib2.$origin}${uri}`;
-                const getDownloadName = (link) =>
-                  this.deepDecodeURIComponent(
-                    link.download?.trim() || link.$text(),
-                  );
-                if (this.isVideo(extension)) {
-                  acc.video[getDownloadName(file)] = url;
-                } else if (this.isImage(extension)) {
-                  const name = `${title}_${String(++imgNumber).padStart(2, "0")}.${extension}`;
-                  acc.img[name] = `${url}?filename=${name}`;
-                } else {
-                  const name = getDownloadName(file);
-                  acc.other[name] = `${url}?filename=${name}`;
+      };
+      this.specialLinkParse = (data) => {
+        const parsed = {};
+        try {
+          const domBody = Lib.domParse(data).body;
+          const parseAdd = (name, href, pass) => {
+            if (!href) return;
+            if (/\.[a-zA-Z0-9]+$/.test(href)) return;
+            if (safeInclud(name, "frame embed")) name = "";
+            parsed[name && name !== href ? name : md5(href).slice(0, 16)] = pass
+              ? {
+                  [Transl("密碼")]: pass,
+                  [Transl("連結")]: href,
                 }
-              }
-              return acc;
-            },
-            { video: {}, img: {}, other: {} },
-          );
-        };
-        const allowType = new Set(["A", "P", "STRONG", "BODY"]);
-        const pFilter = new Set(["mega.nz"]);
-        const urlRegex =
-          /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
-        const safeInclud = (target, checkStr) => {
-          if (typeof target !== "string") return false;
-          return target?.includes(checkStr || "");
-        };
-        const protocolParse = (url) => {
-          if (
-            /^[a-zA-Z][\w+.-]*:\/\//.test(url) ||
-            /^[a-zA-Z][\w+.-]*:/.test(url)
-          )
-            return url;
-          if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
-          if (/^\/\//.test(url)) return "https:" + url;
-          return url;
-        };
-        const checkProcessableLink = (link) => {
-          return (
-            link.toLowerCase().startsWith("https://mega.nz") &&
-            (!safeInclud(link, "#") || safeInclud(link, "#P!"))
-          );
-        };
-        const searchPassword = (href, text) => {
-          let pass = "";
-          let state = false;
-          if (!text) return { pass, state, href };
-          const lowerText = text.toLowerCase();
-          const encryptedHref = safeInclud(href, "#P!");
-          if (text.startsWith("#")) {
-            state = true;
-            if (encryptedHref) {
-              pass = text.slice(1);
-            } else {
-              href += text;
-            }
-          } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
-            state = true;
-            if (encryptedHref) {
-              pass = text;
-            } else {
-              href += "#" + text;
-            }
-          } else if (
-            lowerText.startsWith("pass") ||
-            lowerText.startsWith("key")
-          ) {
-            const key =
-              text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-            if (key) {
-              state = true;
-              if (encryptedHref) {
-                pass = key;
-              } else {
-                href += "#" + key;
-              }
-            }
-          }
-          return {
-            pass,
-            state,
-            href: href.match(urlRegex)?.[0] ?? href,
+              : href;
           };
-        };
-        this.specialLinkParse = (data) => {
-          const parsed = {};
-          try {
-            const domBody = Lib2.createDomFragment(data);
-            const parseAdd = (name, href, pass) => {
-              if (!href) return;
-              if (/\.[a-zA-Z0-9]+$/.test(href)) return;
-              if (safeInclud(name, "frame embed")) name = "";
-              parsed[name && name !== href ? name : md52(href).slice(0, 16)] =
-                pass
-                  ? {
-                      [Transl("密碼")]: pass,
-                      [Transl("連結")]: href,
-                    }
-                  : href;
-            };
-            let nodes = new Set();
-            const tree = document.createTreeWalker(
-              domBody,
-              NodeFilter.SHOW_TEXT,
-              {
-                acceptNode: (node) => {
-                  const parentElement = node.parentElement;
-                  const tag = parentElement.tagName;
-                  if (!allowType.has(tag)) return NodeFilter.FILTER_REJECT;
-                  if (
-                    tag === "P" &&
-                    parentElement.getElementsByTagName("a").length > 0
-                  ) {
-                    return NodeFilter.FILTER_REJECT;
+          let nodes = new Set();
+          const tree = document.createTreeWalker(domBody, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+              const parentElement = node.parentElement;
+              const tag = parentElement.tagName;
+              if (!allowType.has(tag)) return NodeFilter.FILTER_REJECT;
+              if (tag === "P" && parentElement.getElementsByTagName("a").length > 0) {
+                return NodeFilter.FILTER_REJECT;
+              }
+              return NodeFilter.FILTER_ACCEPT;
+            },
+          });
+          while (tree.nextNode()) {
+            nodes.add(tree.currentNode.parentElement);
+          }
+          const allowBody = nodes.size === 1;
+          const urlRecord = new Set();
+          nodes = [...nodes];
+          Lib.log(domBody, { dev: General.Dev, group: "specialLinkParse DOM", collapsed: false });
+          for (const [index, node] of nodes.entries()) {
+            const tag = node.tagName;
+            Lib.log({ tag, content: node.$text() }, { dev: General.Dev, group: "specialLinkParse node" });
+            let name = "";
+            let href = "";
+            let pass = "";
+            let endAdd = true;
+            if (tag === "A") {
+              href = node.href;
+              if (checkProcessableLink(href)) {
+                const nextNode = node.nextSibling;
+                if (nextNode) {
+                  if (nextNode.nodeType === Node.TEXT_NODE) {
+                    ({ href, pass } = searchPassword(href, nextNode.$text()));
+                  } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                    const nodeText = [...nextNode.childNodes].find((node2) => node2.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                    ({ href, pass } = searchPassword(href, nodeText));
                   }
-                  return NodeFilter.FILTER_ACCEPT;
-                },
-              },
-            );
-            while (tree.nextNode()) {
-              nodes.add(tree.currentNode.parentElement);
-            }
-            const allowBody = nodes.size === 1;
-            const urlRecord = new Set();
-            nodes = [...nodes];
-            Lib2.log(domBody, {
-              dev: General.Dev,
-              group: "specialLinkParse DOM",
-              collapsed: false,
-            });
-            for (const [index, node] of nodes.entries()) {
-              const tag = node.tagName;
-              Lib2.log(
-                { tag, content: node.$text() },
-                { dev: General.Dev, group: "specialLinkParse node" },
-              );
-              let name = "";
-              let href = "";
-              let pass = "";
-              let endAdd = true;
-              if (tag === "A") {
-                href = node.href;
-                if (checkProcessableLink(href)) {
-                  const nextNode = node.nextSibling;
-                  if (nextNode) {
-                    if (nextNode.nodeType === Node.TEXT_NODE) {
-                      ({ href, pass } = searchPassword(href, nextNode.$text()));
-                    } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
-                      const nodeText =
-                        [...nextNode.childNodes]
-                          .find((node2) => node2.nodeType === Node.TEXT_NODE)
-                          ?.$text() ?? "";
-                      ({ href, pass } = searchPassword(href, nodeText));
-                    }
-                  } else {
-                    for (let i = index + 1; i < nodes.length; i++) {
-                      const newData = searchPassword(href, nodes[i].$text());
-                      if (newData.state) {
-                        ({ href, pass } = newData);
-                        break;
-                      }
-                    }
-                  }
-                }
-                const previousNode = node.previousSibling;
-                if (previousNode?.nodeType === Node.ELEMENT_NODE) {
-                  name = previousNode.$text().replace(":", "");
                 } else {
-                  const text = node.$text();
-                  name = !safeInclud(href, text) ? text : "";
-                }
-              } else if (tag === "P") {
-                const url = node.$text().match(urlRegex);
-                if (url && !pFilter.has(url[0])) {
-                  href = protocolParse(url[0]);
-                }
-              } else if (tag === "STRONG") {
-                const parentElement = node.parentElement;
-                if (parentElement.tagName === "A") {
-                  href = parentElement.href;
-                  name = node.$text();
-                }
-              } else if (tag === "BODY" && allowBody) {
-                node.$text().replace(urlRegex, (url, offset, fullText) => {
-                  const before = fullText.slice(0, offset);
-                  const linesBefore = before.split(/\r?\n/);
-                  let currentLine = linesBefore[linesBefore.length - 1].trim();
-                  if (currentLine.length > 0) {
-                    name = currentLine;
-                  } else {
-                    if (linesBefore.length > 1) {
-                      name = linesBefore[linesBefore.length - 2].trim();
+                  for (let i = index + 1; i < nodes.length; i++) {
+                    const newData = searchPassword(href, nodes[i].$text());
+                    if (newData.state) {
+                      ({ href, pass } = newData);
+                      break;
                     }
                   }
-                  if (name.match(urlRegex)) {
-                    name = "";
+                }
+              }
+              const previousNode = node.previousSibling;
+              if (previousNode?.nodeType === Node.ELEMENT_NODE) {
+                name = previousNode.$text().replace(":", "");
+              } else {
+                const text = node.$text();
+                name = !safeInclud(href, text) ? text : "";
+              }
+            } else if (tag === "P") {
+              const url = node.$text().match(urlRegex);
+              if (url && !pFilter.has(url[0])) {
+                href = protocolParse(url[0]);
+              }
+            } else if (tag === "STRONG") {
+              const parentElement = node.parentElement;
+              if (parentElement.tagName === "A") {
+                href = parentElement.href;
+                name = node.$text();
+              }
+            } else if (tag === "BODY" && allowBody) {
+              node.$text().replace(urlRegex, (url, offset, fullText) => {
+                const before = fullText.slice(0, offset);
+                const linesBefore = before.split(/\r?\n/);
+                let currentLine = linesBefore[linesBefore.length - 1].trim();
+                if (currentLine.length > 0) {
+                  name = currentLine;
+                } else {
+                  if (linesBefore.length > 1) {
+                    name = linesBefore[linesBefore.length - 2].trim();
                   }
-                  if (checkProcessableLink(url)) {
-                    const after = fullText.slice(offset + url.length);
-                    const linesAfter = after.split(/\r?\n/);
-                    for (const line of linesAfter) {
-                      const trimmed = line.trim();
-                      if (!trimmed) continue;
-                      const newData = searchPassword(url, trimmed);
-                      if (newData.state) {
-                        ({ href, pass } = newData);
-                        break;
-                      }
+                }
+                if (name.match(urlRegex)) {
+                  name = "";
+                }
+                if (checkProcessableLink(url)) {
+                  const after = fullText.slice(offset + url.length);
+                  const linesAfter = after.split(/\r?\n/);
+                  for (const line of linesAfter) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    const newData = searchPassword(url, trimmed);
+                    if (newData.state) {
+                      ({ href, pass } = newData);
+                      break;
                     }
                   }
-                  parseAdd(name, protocolParse(url), pass);
-                });
-                endAdd = false;
-              }
-              if (endAdd && !urlRecord.has(href)) {
-                urlRecord.add(href);
-                parseAdd(name, href, pass);
-              }
+                }
+                parseAdd(name, protocolParse(url), pass);
+              });
+              endAdd = false;
             }
-          } catch (error) {
-            Lib2.log(error, {
-              dev: General.Dev,
-              group: "Error specialLinkParse",
-              collapsed: false,
-            }).error;
+            if (endAdd && !urlRecord.has(href)) {
+              urlRecord.add(href);
+              parseAdd(name, href, pass);
+            }
           }
-          return parsed;
-        };
-        this.tooManyTryAgain = function (url) {
-          if (FetchData.Try_Again_Promise) {
-            return FetchData.Try_Again_Promise;
-          }
-          const promiseLock = new Promise(async (resolve, reject) => {
-            const sleepTime = 5e3;
-            const timeout = 2e5;
-            const checkRequest = async () => {
-              const controller = new AbortController();
-              const signal = controller.signal;
-              const timeoutId = setTimeout(() => controller.abort(), timeout);
-              try {
-                const response = await fetch(url, {
-                  method: "HEAD",
-                  headers: {
-                    Accept: "text/css",
-                  },
-                  signal,
-                  cache: "no-store",
-                });
-                clearTimeout(timeoutId);
-                if (response.status === 429 || response.status === 503) {
-                  await Lib2.sleep(sleepTime);
-                  await checkRequest();
-                } else if (response.status === 200) {
-                  resolve(response);
-                }
-              } catch (err) {
-                clearTimeout(timeoutId);
-                await Lib2.sleep(sleepTime);
+        } catch (error) {
+          Lib.log(error, { dev: General.Dev, group: "Error specialLinkParse", collapsed: false }).error;
+        }
+        return parsed;
+      };
+      this.tooManyTryAgain = function (url) {
+        if (FetchData.Try_Again_Promise) {
+          return FetchData.Try_Again_Promise;
+        }
+        const promiseLock = new Promise(async (resolve, reject) => {
+          const sleepTime = 5e3;
+          const timeout = 2e5;
+          const checkRequest = async () => {
+            const controller = new AbortController();
+            const signal = controller.signal;
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            try {
+              const response = await fetch(url, {
+                method: "HEAD",
+                headers: {
+                  Accept: "text/css",
+                },
+                signal,
+                cache: "no-store",
+              });
+              clearTimeout(timeoutId);
+              if (response.status === 429 || response.status === 503) {
+                await Lib.sleep(sleepTime);
                 await checkRequest();
+              } else if (response.status === 200) {
+                resolve(response);
               }
-            };
-            await checkRequest();
-          });
-          FetchData.Try_Again_Promise = promiseLock;
-          promiseLock.finally(() => {
-            if (FetchData.Try_Again_Promise === promiseLock) {
-              FetchData.Try_Again_Promise = null;
+            } catch (err) {
+              clearTimeout(timeoutId);
+              await Lib.sleep(sleepTime);
+              await checkRequest();
             }
-          });
-          return promiseLock;
-        };
-        this.worker = Lib2.createWorker(`
+          };
+          await checkRequest();
+        });
+        FetchData.Try_Again_Promise = promiseLock;
+        promiseLock.finally(() => {
+          if (FetchData.Try_Again_Promise === promiseLock) {
+            FetchData.Try_Again_Promise = null;
+          }
+        });
+        return promiseLock;
+      };
+      this.worker = Lib.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -893,448 +701,310 @@
                     });
                 }
             `);
-        FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
-        Lib2.log(
-          {
-            Title: this.titleCache,
-            isPost: this.isPost,
-            QueryValue: this.queryValue,
-            ProfileAPI: this.profileAPI,
-            GenerateRules: this.infoRules,
-            ParseUrl: this.URL,
-          },
-          { dev: General.Dev, group: "Fetch Init" },
-        );
+      FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
+      Lib.log(
+        {
+          Title: this.titleCache,
+          isPost: this.isPost,
+          QueryValue: this.queryValue,
+          ProfileAPI: this.profileAPI,
+          GenerateRules: this.infoRules,
+          ParseUrl: this.URL,
+        },
+        { dev: General.Dev, group: "Fetch Init" },
+      );
+    }
+    async _fetchConfig(mode = "FilterMode", userSet = []) {
+      if (!mode || typeof mode !== "string" || !Array.isArray(userSet)) return;
+      if (mode.toLowerCase() === "filtermode") {
+        this.onlyMode = false;
+        userSet.forEach((key) => this.infoRules.delete(key));
+      } else if (mode.toLowerCase() === "onlymode") {
+        this.onlyMode = true;
+        const userFilter = new Set(userSet);
+        this.infoRules = new Set([...this.infoRules].filter((key) => userFilter.has(key)));
       }
-      async _fetchConfig(mode = "FilterMode", userSet = []) {
-        if (!mode || typeof mode !== "string" || !Array.isArray(userSet))
-          return;
-        if (mode.toLowerCase() === "filtermode") {
-          this.onlyMode = false;
-          userSet.forEach((key) => this.infoRules.delete(key));
-        } else if (mode.toLowerCase() === "onlymode") {
-          this.onlyMode = true;
-          const userFilter = new Set(userSet);
-          this.infoRules = new Set(
-            [...this.infoRules].filter((key) => userFilter.has(key)),
-          );
-        }
-      }
-      async fetchRun() {
-        const small = Lib2.$q("small");
-        const items = Lib2.$q(".card-list__items");
-        if (items) {
-          Process.Lock = true;
-          const currentPage = +Lib2.$q(".pagination-button-current b")?.$text();
-          currentPage && (this.currentPage = currentPage);
-          if (small) {
-            this.totalPages = +small.$text().split(" of ")[1] || 0;
-            this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
-          }
-          Lib2.log(
-            {
-              small,
-              items,
-              CurrentPage: this.currentPage,
-              TotalPages: this.totalPages,
-              FinalPage: this.finalPage,
-            },
-            { dev: General.Dev, group: "Fetch Run" },
-          );
-          this._fetchPage(items, this.sourceURL);
-        } else {
-          alert(Transl("未取得數據"));
-        }
-      }
-      async fetchTest(id) {
-        if (!this.isPost) {
-          alert("This Page Does Not Support Test");
-          return;
-        }
+    }
+    async fetchRun() {
+      const small = Lib.$q("small");
+      const items = Lib.$q(".card-list__items");
+      if (items) {
         Process.Lock = true;
-        const parseUrlInfo = (uri) => {
-          uri =
-            uri.match(
-              /\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/,
-            ) || uri.match(/\/([^\/]+)\/([^\/]+)$/);
-          uri = uri.splice(1);
-          let server = uri[0].replace(
-            /\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g,
-            "",
-          );
-          let user2 = uri[1];
-          server = { x: "twitter", maker_id: "dlsite" }[server] ?? server;
-          return uri ? { server, user: user2 } : { uri };
-        };
-        const { service, user } = parseUrlInfo(this.sourceURL);
-        const pack = {
-          id,
-          user,
-          service,
-          title: this.titleCache,
-        };
-        Lib2.log(pack, {
-          dev: General.Dev,
-          group: "Fetch Test",
-          collapsed: false,
-        });
-        await this._fetchContent({
-          content: JSON.stringify([pack]),
-        });
-        this._reset();
+        const currentPage = +Lib.$q(".pagination-button-current b")?.$text();
+        currentPage && (this.currentPage = currentPage);
+        if (small) {
+          this.totalPages = +small.$text().split(" of ")[1] || 0;
+          this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
+        }
+        Lib.log(
+          {
+            small,
+            items,
+            CurrentPage: this.currentPage,
+            TotalPages: this.totalPages,
+            FinalPage: this.finalPage,
+          },
+          { dev: General.Dev, group: "Fetch Run" },
+        );
+        this._fetchPage(items, this.sourceURL);
+      } else {
+        alert(Transl("未取得數據"));
       }
-      async _fetchPage(items, url) {
-        if (Process.IsNeko) {
-          if (!items) {
-            this.worker.postMessage({
-              title: this.titleCache,
-              url,
-              time: Date.now(),
-              delay: this.fetchDelay,
-            });
-            const homeData = await new Promise((resolve, reject) => {
-              this.worker.onmessage = async (e) => {
-                const {
-                  title,
-                  url: url2,
-                  content,
-                  time,
-                  delay,
-                  error,
-                } = e.data;
-                if (!error) {
-                  this.fetchDelay = Process.dynamicParam(time, delay);
-                  resolve(content);
-                } else {
-                  Lib2.log(
-                    { title, url: url2, error },
-                    { dev: General.Dev, collapsed: false },
-                  ).error;
-                  await this.tooManyTryAgain(url2);
-                  this.worker.postMessage({ title, url: url2, time, delay });
-                }
-              };
-            });
-            items = Lib2.domParse(homeData)?.$q(".card-list__items");
-          }
-          if (items) {
-            const article = items.$qa("article");
-            const content = article.map((item, index) => ({
-              index,
-              title: item.$q("header").$text(),
-              url: item.$q("a").href,
-            }));
-            await this._fetchContent({ content });
-          }
-        } else {
-          this.worker.postMessage({
-            title: this.titleCache,
-            url: this.getPreviewAPI(url),
-            time: Date.now(),
-            delay: this.fetchDelay,
-          });
+    }
+    async fetchTest(id) {
+      if (!this.isPost) {
+        alert("This Page Does Not Support Test");
+        return;
+      }
+      Process.Lock = true;
+      const parseUrlInfo = (uri) => {
+        uri = uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/) || uri.match(/\/([^\/]+)\/([^\/]+)$/);
+        uri = uri.splice(1);
+        let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+        let user2 = uri[1];
+        server = { x: "twitter", maker_id: "dlsite" }[server] ?? server;
+        return uri ? { server, user: user2 } : { uri };
+      };
+      const { service, user } = parseUrlInfo(this.sourceURL);
+      const pack = {
+        id,
+        user,
+        service,
+        title: this.titleCache,
+      };
+      Lib.log(pack, { dev: General.Dev, group: "Fetch Test", collapsed: false });
+      await this._fetchContent({
+        content: JSON.stringify([pack]),
+      });
+      this._reset();
+    }
+    async _fetchPage(items, url) {
+      if (Process.IsNeko) {
+        if (!items) {
+          this.worker.postMessage({ title: this.titleCache, url, time: Date.now(), delay: this.fetchDelay });
           const homeData = await new Promise((resolve, reject) => {
             this.worker.onmessage = async (e) => {
               const { title, url: url2, content, time, delay, error } = e.data;
               if (!error) {
                 this.fetchDelay = Process.dynamicParam(time, delay);
-                resolve({ url: url2, content });
+                resolve(content);
               } else {
-                Lib2.log(
-                  { title, url: url2, error },
-                  { dev: General.Dev, collapsed: false },
-                ).error;
+                Lib.log({ title, url: url2, error }, { dev: General.Dev, collapsed: false }).error;
                 await this.tooManyTryAgain(url2);
                 this.worker.postMessage({ title, url: url2, time, delay });
               }
             };
           });
-          await this._fetchContent(homeData);
+          items = Lib.domParse(homeData)?.$q(".card-list__items");
         }
-        this.currentPage++;
-        this.currentPage <= this.finalPage
-          ? this._fetchPage(null, this.getNextPageURL(url))
-          : this.toLinkTxt
-            ? this._toTxt()
-            : this._toJson();
-      }
-      async _fetchContent(homeData) {
-        this.progress = 0;
-        const { url, content } = homeData;
-        Lib2.log(homeData, { dev: General.Dev, group: "Fetch Content" });
-        if (Process.IsNeko) {
-          let taskCount = 0;
-          const tasks = [];
-          const resolvers = new Map();
-          const postCount = content.length;
-          if (this.metaDict.size === 0) {
-            this.metaDict.set(
-              Transl("作者"),
-              Lib2.$q("span[itemprop='name'], fix_name").$text(),
-            );
-            this.metaDict.set(
-              Transl("帖子數量"),
-              this.totalPages > 0 ? this.totalPages : postCount,
-            );
-            this.metaDict.set(
-              Transl("建立時間"),
-              Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"),
-            );
-            this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-          }
+        if (items) {
+          const article = items.$qa("article");
+          const content = article.map((item, index) => ({
+            index,
+            title: item.$q("header").$text(),
+            url: item.$q("a").href,
+          }));
+          await this._fetchContent({ content });
+        }
+      } else {
+        this.worker.postMessage({ title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
+        const homeData = await new Promise((resolve, reject) => {
           this.worker.onmessage = async (e) => {
-            const {
-              index,
-              title,
-              url: url2,
-              content: content2,
-              time,
-              delay,
-              error,
-            } = e.data;
+            const { title, url: url2, content, time, delay, error } = e.data;
             if (!error) {
-              const { resolve, reject } = resolvers.get(index);
               this.fetchDelay = Process.dynamicParam(time, delay);
-              const standardTitle = this.normalizeName(title, index);
-              const postDom = Lib2.domParse(content2);
-              const classifiedFiles = this.nekoCategorize(standardTitle, [
-                ...postDom.$qa(".fileThumb"),
-                ...postDom.$qa(".scrape__attachments a"),
-              ]);
-              const generatedData = this.fetchGenerate({
-                PostLink: url2,
-                Timestamp: postDom.$q(".timestamp").$text(),
-                ImgLink: classifiedFiles.img,
-                VideoLink: classifiedFiles.video,
-                DownloadLink: classifiedFiles.other,
-              });
-              if (Object.keys(generatedData).length !== 0) {
-                this.dataDict.set(standardTitle, generatedData);
-              }
-              resolve();
-              Lib2.title(`（${this.currentPage} - ${++taskCount}）`);
-              Lib2.log(
-                { index, title: standardTitle, url: url2, data: generatedData },
-                {
-                  dev: General.Dev,
-                  group: "Request Successful",
-                  collapsed: false,
-                },
-              );
+              resolve({ url: url2, content });
             } else {
+              Lib.log({ title, url: url2, error }, { dev: General.Dev, collapsed: false }).error;
               await this.tooManyTryAgain(url2);
-              this.worker.postMessage({ index, title, url: url2, time, delay });
+              this.worker.postMessage({ title, url: url2, time, delay });
             }
           };
-          for (const { index, title, url: url2 } of content) {
-            tasks.push(
-              new Promise((resolve, reject) => {
-                resolvers.set(index, { resolve, reject });
-                this.worker.postMessage({
-                  index,
-                  title,
-                  url: url2,
-                  time: Date.now(),
-                  delay: this.fetchDelay,
-                });
-              }),
-            );
-            await Lib2.sleep(this.fetchDelay);
-          }
-          await Promise.allSettled(tasks);
-        } else {
-          let homeJson = JSON.parse(content);
-          if (homeJson) {
-            if (this.metaDict.size === 0) {
-              let profile = { name: null };
-              if (this.isPost) {
-                this.worker.postMessage({ url: this.profileAPI });
-                profile = await new Promise((resolve, reject) => {
-                  this.worker.onmessage = async (e) => {
-                    const { url: url2, content: content2, error } = e.data;
-                    if (!error) resolve(JSON.parse(content2));
-                    else {
-                      Lib2.log(url2, { dev: General.Dev, collapsed: false })
-                        .error;
-                      await this.tooManyTryAgain(url2);
-                      this.worker.postMessage({ url: url2 });
-                    }
-                  };
-                });
-              } else {
-                this.finalPage = "1000";
-                profile["post_count"] = homeJson.true_count;
-              }
-              this.metaDict.set(Transl("作者"), profile.name);
-              this.metaDict.set(
-                Transl("帖子數量"),
-                this.totalPages > 0 ? this.totalPages : profile.post_count,
-              );
-              this.metaDict.set(
-                Transl("建立時間"),
-                Lib2.getDate("{year}-{month}-{date} {hour}:{minute}"),
-              );
-              this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-              Lib2.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+        });
+        await this._fetchContent(homeData);
+      }
+      this.currentPage++;
+      this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
+    }
+    async _fetchContent(homeData) {
+      this.progress = 0;
+      const { url, content } = homeData;
+      Lib.log(homeData, { dev: General.Dev, group: "Fetch Content" });
+      if (Process.IsNeko) {
+        let taskCount = 0;
+        const tasks = [];
+        const resolvers = new Map();
+        const postCount = content.length;
+        if (this.metaDict.size === 0) {
+          this.metaDict.set(Transl("作者"), Lib.$q("span[itemprop='name'], fix_name").$text());
+          this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
+          this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
+          this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+        }
+        this.worker.onmessage = async (e) => {
+          const { index, title, url: url2, content: content2, time, delay, error } = e.data;
+          if (!error) {
+            const { resolve, reject } = resolvers.get(index);
+            this.fetchDelay = Process.dynamicParam(time, delay);
+            const standardTitle = this.normalizeName(title, index);
+            const postDom = Lib.domParse(content2);
+            const classifiedFiles = this.nekoCategorize(standardTitle, [...postDom.$qa(".fileThumb"), ...postDom.$qa(".scrape__attachments a")]);
+            const generatedData = this.fetchGenerate({
+              PostLink: url2,
+              Timestamp: postDom.$q(".timestamp").$text(),
+              ImgLink: classifiedFiles.img,
+              VideoLink: classifiedFiles.video,
+              DownloadLink: classifiedFiles.other,
+            });
+            if (Object.keys(generatedData).length !== 0) {
+              this.dataDict.set(standardTitle, generatedData);
             }
-            {
-              const tasks = [];
-              const resolvers = new Map();
-              this.worker.onmessage = async (e) => {
-                const {
-                  index,
-                  title,
-                  url: url2,
-                  content: content2,
-                  time,
-                  delay,
-                  error,
-                } = e.data;
-                try {
-                  if (!error) {
-                    const { resolve, reject } = resolvers.get(index);
-                    this.fetchDelay = Process.dynamicParam(time, delay);
-                    const contentJson = JSON.parse(content2);
-                    if (contentJson) {
-                      const post = contentJson.post;
-                      const previews = contentJson.previews || [];
-                      const attachments = contentJson.attachments || [];
-                      const standardTitle = this.normalizeName(
-                        post.title,
-                        index,
-                      );
-                      const classifiedFiles = this.kemerCategorize({
-                        title: standardTitle,
-                        data: [...previews, ...attachments],
-                        fillValue: Lib2.getFill(previews?.length || 1),
-                      });
-                      const generatedData = this.fetchGenerate({
-                        PostLink: this.getPostURL(post),
-                        Timestamp: this.normalizeTimestamp(post),
-                        TypeTag: post.tags,
-                        ImgLink: classifiedFiles.img,
-                        VideoLink: classifiedFiles.video,
-                        DownloadLink: classifiedFiles.other,
-                        ExternalLink: this.specialLinkParse(post.content),
-                      });
-                      if (Object.keys(generatedData).length !== 0) {
-                        this.dataDict.set(standardTitle, generatedData);
-                      }
-                      resolve();
-                      Lib2.title(
-                        `（${this.currentPage} - ${++this.progress}）`,
-                      );
-                      Lib2.log(
-                        {
-                          index,
-                          title: standardTitle,
-                          url: url2,
-                          data: generatedData,
-                        },
-                        {
-                          dev: General.Dev,
-                          group: "Request Successful",
-                          collapsed: false,
-                        },
-                      );
-                    } else throw new Error("Json Parse Failed");
-                  } else {
-                    throw new Error("Request Failed");
+            resolve();
+            Lib.title(`（${this.currentPage} - ${++taskCount}）`);
+            Lib.log({ index, title: standardTitle, url: url2, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
+          } else {
+            await this.tooManyTryAgain(url2);
+            this.worker.postMessage({ index, title, url: url2, time, delay });
+          }
+        };
+        for (const { index, title, url: url2 } of content) {
+          tasks.push(
+            new Promise((resolve, reject) => {
+              resolvers.set(index, { resolve, reject });
+              this.worker.postMessage({ index, title, url: url2, time: Date.now(), delay: this.fetchDelay });
+            }),
+          );
+          await Lib.sleep(this.fetchDelay);
+        }
+        await Promise.allSettled(tasks);
+      } else {
+        let homeJson = JSON.parse(content);
+        if (homeJson) {
+          if (this.metaDict.size === 0) {
+            let profile = { name: null };
+            if (this.isPost) {
+              this.worker.postMessage({ url: this.profileAPI });
+              profile = await new Promise((resolve, reject) => {
+                this.worker.onmessage = async (e) => {
+                  const { url: url2, content: content2, error } = e.data;
+                  if (!error) resolve(JSON.parse(content2));
+                  else {
+                    Lib.log(url2, { dev: General.Dev, collapsed: false }).error;
+                    await this.tooManyTryAgain(url2);
+                    this.worker.postMessage({ url: url2 });
                   }
-                } catch (error2) {
-                  Lib2.log(
-                    { index, title, url: url2, error: error2 },
-                    { dev: General.Dev, collapsed: false },
-                  ).error;
-                  await this.tooManyTryAgain(url2);
+                };
+              });
+            } else {
+              this.finalPage = "1000";
+              profile["post_count"] = homeJson.true_count;
+            }
+            this.metaDict.set(Transl("作者"), profile.name);
+            this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
+            this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
+            this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+            Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+          }
+          {
+            const tasks = [];
+            const resolvers = new Map();
+            this.worker.onmessage = async (e) => {
+              const { index, title, url: url2, content: content2, time, delay, error } = e.data;
+              try {
+                if (!error) {
+                  const { resolve, reject } = resolvers.get(index);
+                  this.fetchDelay = Process.dynamicParam(time, delay);
+                  const contentJson = JSON.parse(content2);
+                  if (contentJson) {
+                    const post = contentJson.post;
+                    const previews = contentJson.previews || [];
+                    const attachments = contentJson.attachments || [];
+                    const standardTitle = this.normalizeName(post.title, index);
+                    const classifiedFiles = this.kemerCategorize({
+                      title: standardTitle,
+                      data: [...previews, ...attachments],
+                      fillValue: Lib.getFill(previews?.length || 1),
+                    });
+                    const generatedData = this.fetchGenerate({
+                      PostLink: this.getPostURL(post),
+                      Timestamp: this.normalizeTimestamp(post),
+                      TypeTag: post.tags,
+                      ImgLink: classifiedFiles.img,
+                      VideoLink: classifiedFiles.video,
+                      DownloadLink: classifiedFiles.other,
+                      ExternalLink: this.specialLinkParse(post.content),
+                    });
+                    if (Object.keys(generatedData).length !== 0) {
+                      this.dataDict.set(standardTitle, generatedData);
+                    }
+                    resolve();
+                    Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+                    Lib.log({ index, title: standardTitle, url: url2, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
+                  } else throw new Error("Json Parse Failed");
+                } else {
+                  throw new Error("Request Failed");
+                }
+              } catch (error2) {
+                Lib.log({ index, title, url: url2, error: error2 }, { dev: General.Dev, collapsed: false }).error;
+                await this.tooManyTryAgain(url2);
+                this.worker.postMessage({ index, title, url: url2, time, delay });
+              }
+            };
+            homeJson = this.isPost ? homeJson : homeJson.posts;
+            for (const [index, post] of homeJson.entries()) {
+              tasks.push(
+                new Promise((resolve, reject) => {
+                  resolvers.set(index, { resolve, reject });
                   this.worker.postMessage({
                     index,
-                    title,
-                    url: url2,
-                    time,
-                    delay,
+                    title: post.title,
+                    url: this.getPostAPI(post),
+                    time: Date.now(),
+                    delay: this.fetchDelay,
                   });
-                }
-              };
-              homeJson = this.isPost ? homeJson : homeJson.posts;
-              for (const [index, post] of homeJson.entries()) {
-                tasks.push(
-                  new Promise((resolve, reject) => {
-                    resolvers.set(index, { resolve, reject });
-                    this.worker.postMessage({
-                      index,
-                      title: post.title,
-                      url: this.getPostAPI(post),
-                      time: Date.now(),
-                      delay: this.fetchDelay,
-                    });
-                  }),
-                );
-                await Lib2.sleep(this.fetchDelay);
-              }
-              await Promise.allSettled(tasks);
+                }),
+              );
+              await Lib.sleep(this.fetchDelay);
             }
-            await Lib2.sleep(this.fetchDelay);
+            await Promise.allSettled(tasks);
           }
+          await Lib.sleep(this.fetchDelay);
         }
-        return true;
       }
-      async _reset() {
-        this.metaDict = null;
-        this.dataDict = null;
-        this.worker.terminate();
-        Process.Lock = false;
-        Lib2.title(this.titleCache);
-      }
-      async _toTxt() {
-        let content = "";
-        for (const value of this.dataDict.values()) {
-          const getLinks = Object.assign(
-            {},
-            value[Transl("ImgLink")],
-            value[Transl("VideoLink")],
-            value[Transl("DownloadLink")],
-          );
-          for (const link of Object.values(getLinks)) {
-            content += `${encodeURI(link)}
+      return true;
+    }
+    async _reset() {
+      this.metaDict = null;
+      this.dataDict = null;
+      this.worker.terminate();
+      Process.Lock = false;
+      Lib.title(this.titleCache);
+    }
+    async _toTxt() {
+      let content = "";
+      for (const value of this.dataDict.values()) {
+        const getLinks = Object.assign({}, value[Transl("ImgLink")], value[Transl("VideoLink")], value[Transl("DownloadLink")]);
+        for (const link of Object.values(getLinks)) {
+          content += `${encodeURI(link)}
 `;
-          }
         }
-        if (content.endsWith("\n")) content = content.slice(0, -1);
-        Lib2.outputTXT(content, this.metaDict.get(Transl("作者")), () => {
-          content = null;
-          this._reset();
-        });
       }
-      async _toJson() {
-        let jsonData = Object.assign(
-          {},
-          { [Transl("元數據")]: Object.fromEntries(this.metaDict) },
-          {
-            [`${Transl("帖子內容")} (${this.dataDict.size})`]:
-              Object.fromEntries(this.dataDict),
-          },
-        );
-        Lib2.outputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
-          jsonData = null;
-          this._reset();
-        });
-      }
-    };
+      if (content.endsWith("\n")) content = content.slice(0, -1);
+      Lib.outputTXT(content, this.metaDict.get(Transl("作者")), () => {
+        content = null;
+        this._reset();
+      });
+    }
+    async _toJson() {
+      let jsonData = Object.assign({}, { [Transl("元數據")]: Object.fromEntries(this.metaDict) }, { [`${Transl("帖子內容")} (${this.dataDict.size})`]: Object.fromEntries(this.dataDict) });
+      Lib.outputJson(jsonData, this.metaDict.get(Transl("作者")), () => {
+        jsonData = null;
+        this._reset();
+      });
+    }
   }
-  function Downloader(
-    monkeyWindow,
-    GM_unregisterMenuCommand2,
-    GM_xmlhttpRequest2,
-    GM_download2,
-    General,
-    FileName,
-    Process,
-    Transl,
-    Lib2,
-    saveAs2,
-  ) {
-    const zipper = Lib2.createCompressor();
+  function Downloader() {
+    const zipper = Lib.createCompressor();
     return class Download {
       constructor(compressMode, modeDisplay, button) {
         this.button = button;
@@ -1343,14 +1013,13 @@
         this.namedData = null;
         this.forceCompressSignal = false;
         this.originalTitle = () => {
-          const cache = Lib2.title();
+          const cache = Lib.title();
           return cache.startsWith("✓ ") ? cache.slice(2) : cache;
         };
         const videoExts = new Set(Process.VideoExts);
-        this.isVideo = (str) =>
-          videoExts.has(str.replace(/^\./, "").toLowerCase());
+        this.isVideo = (str) => videoExts.has(str.replace(/^\./, "").toLowerCase());
         this.worker = this.compressMode
-          ? Lib2.createWorker(`
+          ? Lib.createWorker(`
                 let queue = [], processing=false;
                 onmessage = function(e) {
                     queue.push(e.data);
@@ -1396,13 +1065,9 @@
           return [amount, filler];
         } else;
       }
-      downloadTrigger(sourceType) {
-        Lib2.waitEl(
-          [
-            ".post__title, .scrape__title",
-            ".post__files, .scrape__files",
-            ".post__user-name, .scrape__user-name, fix_name",
-          ],
+      trigger(sourceType) {
+        Lib.waitEl(
+          [".post__title, .scrape__title", ".post__files, .scrape__files", ".post__user-name, .scrape__user-name, fix_name"],
           (found) => {
             const [title, files, artist] = found;
             Process.Lock = true;
@@ -1412,14 +1077,13 @@
               fill: () => "fill",
               title: () => title.$q("span").$text().replaceAll("/", "／"),
               artist: () => artist.$text(),
-              source: () =>
-                new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
+              source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
               time: () => {
                 if (Process.IsNeko) {
-                  return Lib2.$q(".timestamp").$text() || "";
+                  return Lib.$q(".timestamp").$text() || "";
                 }
-                let published = Lib2.$q(".post__published").$copy();
-                Lib2.$q(".post__published");
+                let published = Lib.$q(".post__published").$copy();
+                Lib.$q(".post__published");
                 published.firstElementChild.remove();
                 return published.$text().split(" ")[0];
               },
@@ -1427,48 +1091,24 @@
             const [compressName, folderName, fillName] = Object.keys(FileName)
               .slice(1)
               .map((key) => this._nameAnalysis(FileName[key]));
-            const imgData = [...files.children]
-              .map((child) =>
-                child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img"),
-              )
-              .filter(Boolean);
-            const extrasData = Lib2.$qa(
-              ".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a",
-            );
-            const finalData = General.IncludeExtras
-              ? [...imgData, ...extrasData]
-              : sourceType === "Files"
-                ? imgData
-                : extrasData;
+            const imgData = [...files.children].map((child) => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
+            const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
+            const finalData = General.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
             for (const [index, file] of finalData.entries()) {
-              const uri =
-                file.src ||
-                file.href ||
-                file.$gAttr("src") ||
-                file.$gAttr("href");
+              const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
               if (uri) {
-                downloadData.set(
-                  index,
-                  uri.startsWith("http") ? uri : `${Lib2.$origin}${uri}`,
-                );
+                downloadData.set(index, uri.startsWith("http") ? uri : `${Lib.$origin}${uri}`);
               }
             }
             if (downloadData.size == 0) General.Dev = true;
-            Lib2.log(
+            Lib.log(
               {
                 FolderName: folderName,
                 DownloadData: downloadData,
               },
               { dev: General.Dev, group: "Get Data", collapsed: false },
             );
-            this.compressMode
-              ? this._packDownload(
-                  compressName,
-                  folderName,
-                  fillName,
-                  downloadData,
-                )
-              : this._separDownload(fillName, downloadData);
+            this.compressMode ? this._packDownload(compressName, folderName, fillName, downloadData) : this._separDownload(fillName, downloadData);
           },
           { raf: true },
         );
@@ -1482,16 +1122,13 @@
           titleCache = this.originalTitle();
         const fillValue = this._nameAnalysis(FileName.FillValue),
           filler = fillValue[1],
-          amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
+          amount = fillValue[0] == "auto" ? Lib.getFill(total) : fillValue[0];
         async function forceDownload() {
           self._compressFile(compressName, titleCache);
         }
-        Lib2.regMenu(
+        Lib.regMenu(
           {
-            [Transl("📥 強制壓縮下載")]: {
-              func: () => forceDownload(),
-              hotkey: "d",
-            },
+            [Transl("📥 強制壓縮下載")]: { func: () => forceDownload(), hotkey: "d" },
           },
           { name: "Enforce" },
         );
@@ -1500,18 +1137,13 @@
           if (self.forceCompressSignal) return;
           requestAnimationFrame(() => {
             if (!error && blob instanceof Blob && blob.size > 0) {
-              extension = Lib2.suffixName(url);
-              const fileName = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
-              self.isVideo(extension)
-                ? zipper.file(
-                    `${folderName}${decodeURIComponent(url).split("?f=")[1] || Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`,
-                    blob,
-                  )
-                : zipper.file(`${folderName}${fileName}`, blob);
+              extension = Lib.suffixName(url);
+              const fileName = `${fillName.replace("fill", Lib.mantissa(index, amount, filler))}.${extension}`;
+              self.isVideo(extension) ? zipper.file(`${folderName}${decodeURIComponent(url).split("?f=")[1] || Lib.$q(`a[href*="${new URL(url).pathname}"]`).$text() || fileName}`, blob) : zipper.file(`${folderName}${fileName}`, blob);
               data.delete(index);
             }
             show = `[${++progress}/${total}]`;
-            Lib2.title(show);
+            Lib.title(show);
             self.button.$text(`${Transl("下載進度")} ${show}`);
             if (progress == total) {
               total = data.size;
@@ -1520,7 +1152,7 @@
               } else {
                 show = "Wait for failed re download";
                 progress = 0;
-                Lib2.title(show);
+                Lib.title(show);
                 self.button.$text(show);
                 setTimeout(() => {
                   for (const [index2, url2] of data.entries()) {
@@ -1533,7 +1165,7 @@
         }
         async function request(index, url) {
           if (self.forceCompressSignal) return;
-          GM_xmlhttpRequest2({
+          GM_xmlhttpRequest({
             url,
             method: "GET",
             responseType: "blob",
@@ -1564,19 +1196,7 @@
         }
         this.worker.onmessage = (e) => {
           const { index, url, blob, error } = e.data;
-          error
-            ? (request(index, url),
-              Lib2.log(url, {
-                dev: General.Dev,
-                group: "Download Failed",
-                collapsed: false,
-              })).error
-            : (requestUpdate(index, url, blob),
-              Lib2.log(url, {
-                dev: General.Dev,
-                group: "Download Successful",
-                collapsed: false,
-              }));
+          error ? (request(index, url), Lib.log(url, { dev: General.Dev, group: "Download Failed", collapsed: false })).error : (requestUpdate(index, url, blob), Lib.log(url, { dev: General.Dev, group: "Download Successful", collapsed: false }));
         };
       }
       async _separDownload(fillName, data) {
@@ -1595,12 +1215,12 @@
           titleCache = this.originalTitle();
         const fillValue = this._nameAnalysis(FileName.FillValue),
           filler = fillValue[1],
-          amount = fillValue[0] == "auto" ? Lib2.getFill(total) : fillValue[0];
+          amount = fillValue[0] == "auto" ? Lib.getFill(total) : fillValue[0];
         async function _stop() {
           stop = true;
           process.forEach((pc) => pc.abort());
         }
-        Lib2.regMenu(
+        Lib.regMenu(
           {
             [Transl("⛔️ 取消下載")]: { func: () => _stop(), hotkey: "s" },
           },
@@ -1609,29 +1229,21 @@
         async function request(index) {
           if (stop) return;
           url = data.get(index);
-          extension = Lib2.suffixName(url);
-          const FileName2 = `${fillName.replace("fill", Lib2.mantissa(index, amount, filler))}.${extension}`;
-          fileName = self.isVideo(extension)
-            ? decodeURIComponent(url).split("?f=")[1] ||
-              Lib2.$q(`a[href*="${new URL(url).pathname}"]`).$text() ||
-              FileName2
-            : FileName2;
+          extension = Lib.suffixName(url);
+          const FileName2 = `${fillName.replace("fill", Lib.mantissa(index, amount, filler))}.${extension}`;
+          fileName = self.isVideo(extension) ? decodeURIComponent(url).split("?f=")[1] || Lib.$q(`a[href*="${new URL(url).pathname}"]`).$text() || FileName2 : FileName2;
           return new Promise((resolve, reject) => {
             const completed = () => {
               if (!showTracking[index]) {
                 showTracking[index] = true;
-                Lib2.log(url, {
-                  dev: General.Dev,
-                  group: "Download Successful",
-                  collapsed: false,
-                });
+                Lib.log(url, { dev: General.Dev, group: "Download Successful", collapsed: false });
                 show = `[${++progress}/${total}]`;
-                Lib2.title(show);
+                Lib.title(show);
                 self.button.$text(`${Transl("下載進度")} ${show}`);
                 resolve();
               }
             };
-            const download = GM_download2({
+            const download = GM_download({
               url,
               name: fileName,
               conflictAction: "overwrite",
@@ -1640,11 +1252,7 @@
               },
               onprogress: (progress2) => {},
               onerror: () => {
-                Lib2.log(url, {
-                  dev: General.Dev,
-                  group: "Download Error",
-                  collapsed: false,
-                }).error;
+                Lib.log(url, { dev: General.Dev, group: "Download Error", collapsed: false }).error;
                 setTimeout(() => {
                   reject();
                   token--;
@@ -1658,11 +1266,11 @@
         }
         for (let i = 0; i < total; i++) {
           promises.push(request(i));
-          await Lib2.sleep(General.ConcurrentDelay);
+          await Lib.sleep(General.ConcurrentDelay);
         }
         await Promise.allSettled(promises);
-        GM_unregisterMenuCommand2("Abort-1");
-        Lib2.title(`✓ ${titleCache}`);
+        Lib.unMenu("Abort-1");
+        Lib.title(`✓ ${titleCache}`);
         this.button.$text(Transl("下載完成"));
         setTimeout(() => {
           this._resetButton();
@@ -1671,7 +1279,7 @@
       async _compressFile(name, title) {
         this.worker.terminate();
         this.forceCompressSignal = true;
-        GM_unregisterMenuCommand2("Enforce-1");
+        Lib.unMenu("Enforce-1");
         zipper
           .generateZip(
             {
@@ -1679,27 +1287,23 @@
             },
             (progress) => {
               const display = `${progress.toFixed(1)} %`;
-              Lib2.title(display);
+              Lib.title(display);
               this.button.$text(`${Transl("封裝進度")}: ${display}`);
             },
           )
           .then((zip) => {
-            saveAs2(zip, `${name}.zip`);
-            Lib2.title(`✓ ${title}`);
+            saveAs(zip, `${name}.zip`);
+            Lib.title(`✓ ${title}`);
             this.button.$text(Transl("下載完成"));
             setTimeout(() => {
               this._resetButton();
             }, 3e3);
           })
           .catch((result) => {
-            Lib2.title(title);
+            Lib.title(title);
             const errorShow = Transl("壓縮封裝失敗");
             this.button.$text(errorShow);
-            Lib2.log(result, {
-              dev: General.Dev,
-              group: errorShow,
-              collapsed: false,
-            }).error;
+            Lib.log(result, { dev: General.Dev, group: errorShow, collapsed: false }).error;
             setTimeout(() => {
               Process.Lock = false;
               this.button.disabled = false;
@@ -1710,7 +1314,7 @@
       async _resetButton() {
         General.CompleteClose && window.close();
         Process.Lock = false;
-        Lib2.$qa(".Download_Button[disabled]").forEach((button) => {
+        Lib.$qa(".Download_Button[disabled]").forEach((button) => {
           button.disabled = false;
           button.$text(`✓ ${this.modeDisplay}`);
         });
@@ -1718,28 +1322,15 @@
     };
   }
   function Main() {
-    const { General, FileName, FetchSet, Process } = Config(Lib);
-    const { Transl } = (() => {
-      const Matcher = Lib.translMatcher(Dict);
-      return {
-        Transl: (Str) => Matcher[Str] ?? Str,
-      };
-    })();
-    const isContent = (URL2) =>
-      /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
-    const isPreview = (URL2) =>
-      /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) ||
-      /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) ||
-      /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
-    let Download;
+    const isContent = (URL2) => /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/.test(URL2);
+    const isPreview = (URL2) => /^(https?:\/\/)?(www\.)?.+\/posts\/?(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/.test(URL2) || /^(https?:\/\/)?(www\.)?.+\/dms\/?(\?.*)?$/.test(URL2);
+    let download;
     async function openAllPages() {
       const card = Lib.$qa("article.post-card a");
       if (card.length == 0) {
         throw new Error("No links found");
       }
-      let scope = prompt(
-        `(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`,
-      );
+      let scope = prompt(`(${Transl("當前帖子數")}: ${card.length})${Transl("開帖說明")}`);
       if (scope == null) return;
       scope = scope === "" ? "1-50" : scope;
       for (const link of Lib.scopeParse(scope, card)) {
@@ -1751,11 +1342,7 @@
       }
     }
     async function buttonCreation() {
-      Lib.waitEl(".post__body h2, .scrape__body h2", null, {
-        raf: true,
-        all: true,
-        timeout: 10,
-      }).then((Files) => {
+      Lib.waitEl(".post__body h2, .scrape__body h2", null, { raf: true, all: true, timeout: 10 }).then((Files) => {
         if (Files.length === 0) return;
         Lib.addStyle(
           `
@@ -1794,9 +1381,7 @@
           false,
         );
         try {
-          Lib.$qa("[id^='Button-Container-']").forEach((button) =>
-            button.remove(),
-          );
+          Lib.$qa("[id^='Button-Container-']").forEach((button) => button.remove());
           const Pointer = [...Files].filter((file) => {
             const text = file.$text();
             if (text === "Downloads" || text === "Files") {
@@ -1807,21 +1392,8 @@
           });
           if (Pointer.length === 0) return;
           const CompressMode = Lib.local("Compression", { error: true });
-          const ModeDisplay = CompressMode
-            ? Transl("壓縮下載")
-            : Transl("單獨下載");
-          Download ??= Downloader(
-            false ? _monkeyWindow : null,
-            GM_unregisterMenuCommand,
-            GM_xmlhttpRequest,
-            GM_download,
-            General,
-            FileName,
-            Process,
-            Transl,
-            Lib,
-            saveAs,
-          );
+          const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單獨下載");
+          download ??= Downloader();
           Pointer.forEach((pointer, index) => {
             Lib.createElement(pointer, "span", {
               id: `Button-Container-${index}`,
@@ -1830,18 +1402,7 @@
                 listener: (event) => {
                   const target = event.target;
                   if (target.tagName === "BUTTON") {
-                    if (Process.Lock) {
-                      target.$text(Transl("下載中鎖定"));
-                      target.disabled = true;
-                      return;
-                    }
-                    let Instantiate = null;
-                    Instantiate = new Download(
-                      CompressMode,
-                      ModeDisplay,
-                      target,
-                    );
-                    Instantiate.downloadTrigger(target.closest("h2").id);
+                    new download(CompressMode, ModeDisplay, target).trigger(target.closest("h2").id);
                   } else if (target.closest("svg")) {
                     alert("Currently Invalid");
                   }
@@ -1850,16 +1411,12 @@
               },
               innerHTML: `
                             <svg class="Setting_Button" xmlns="http://www.w3.org/2000/svg" height="1.3rem" viewBox="0 0 512 512"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/></svg>
-                            <button class="Download_Button" ${Process.Lock ? "disabled" : ""}>${Process.Lock ? Transl("下載中鎖定") : ModeDisplay}</button>
+                            <button class="Download_Button">${ModeDisplay}</button>
                         `,
             });
           });
         } catch (error) {
-          Lib.log(error, {
-            dev: General.Dev,
-            group: "Button Creation Failed",
-            collapsed: false,
-          }).error;
+          Lib.log(error, { dev: General.Dev, group: "Button Creation Failed", collapsed: false }).error;
           const Button = Lib.$q("#Button-Container button");
           if (Button) {
             Button.disabled = true;
@@ -1868,66 +1425,54 @@
         }
       });
     }
-    async function _downloadModeSwitch() {
-      Lib.local("Compression", { error: true })
-        ? Lib.local("Compression", { value: false })
-        : Lib.local("Compression", { value: true });
+    async function downloadModeSwitch() {
+      if (Process.Lock) {
+        alert(Transl("下載中鎖定"));
+        return;
+      }
+      Lib.local("Compression", { error: true }) ? Lib.local("Compression", { value: false }) : Lib.local("Compression", { value: true });
       buttonCreation();
     }
-    (async () => {
-      let FetchData;
-      GM_info.downloadMode = "browser";
-      GM_info.isIncognito = true;
-      registerMenu(Lib.$url);
-      isContent(Lib.$url) && buttonCreation();
-      async function registerMenu(Page) {
-        if (isContent(Page)) {
+    async function registerMenu(Page) {
+      if (isContent(Page)) {
+        Lib.regMenu(
+          {
+            [Transl("🔁 切換下載模式")]: { func: () => downloadModeSwitch(), close: false, hotkey: "c" },
+          },
+          { reset: true },
+        );
+      } else if (isPreview(Page)) {
+        Lib.regMenu(
+          {
+            [Transl("📑 獲取帖子數據")]: () => {
+              if (!Process.Lock) {
+                new FetchData().fetchRun();
+              }
+            },
+            [Transl("📃 開啟當前頁面帖子")]: openAllPages,
+          },
+          { reset: true },
+        );
+        if (General.Dev && !Process.IsNeko) {
           Lib.regMenu(
             {
-              [Transl("🔁 切換下載模式")]: {
-                func: () => _downloadModeSwitch(),
-                close: false,
-                hotkey: "c",
+              "🛠️ 開發者獲取": () => {
+                const id = prompt("輸入請求的 ID");
+                if (id == null || id === "") return;
+                new FetchData().fetchTest(id);
               },
             },
-            { reset: true },
+            { index: 3 },
           );
-        } else if (isPreview(Page)) {
-          FetchData ??= Fetch(General, FetchSet, Process, Transl, Lib, md5);
-          Lib.regMenu(
-            {
-              [Transl("📑 獲取帖子數據")]: () => {
-                if (!Process.Lock) {
-                  let Instantiate = null;
-                  Instantiate = new FetchData();
-                  Instantiate.fetchRun();
-                }
-              },
-              [Transl("📃 開啟當前頁面帖子")]: openAllPages,
-            },
-            { reset: true },
-          );
-          if (General.Dev && !Process.IsNeko) {
-            Lib.regMenu(
-              {
-                "🛠️ 開發者獲取": () => {
-                  const ID = prompt("輸入請求的 ID");
-                  if (ID == null || ID === "") return;
-                  let Instantiate = null;
-                  Instantiate = new FetchData();
-                  Instantiate.fetchTest(ID);
-                },
-              },
-              { index: 3 },
-            );
-          }
         }
       }
-      Lib.onUrlChange((change) => {
-        isContent(change.url) && buttonCreation();
-        registerMenu(change.url);
-      });
-    })();
+    }
+    isContent(Lib.$url) && buttonCreation();
+    registerMenu(Lib.$url);
+    Lib.onUrlChange((change) => {
+      isContent(change.url) && buttonCreation();
+      registerMenu(change.url);
+    });
   }
   Main();
 })();
