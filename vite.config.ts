@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+
+import { minify } from 'uglify-js';
 import prettier from 'prettier';
 
 import open from 'open';
@@ -55,11 +57,14 @@ const serverRestartWatcherPlugin = (): Plugin => ({
 });
 
 /* 編譯後格式化 */
+const isRelease = process.env.RELEASE === 'true';
 const userscriptPolisherPlugin = (): Plugin => ({
     name: 'userscript-polisher',
     apply: 'build',
     async closeBundle() {
-        const finalScriptPath = path.join(config.outDir, config.fileName);
+        const finalScriptPath = isRelease
+            ? path.join(config.releaseOutDir, config.releaseFileName)
+            : path.join(config.devOutDir, config.devFileName);
 
         try {
             if (!fs.existsSync(finalScriptPath)) {
@@ -90,17 +95,25 @@ const userscriptPolisherPlugin = (): Plugin => ({
                 })
                 .filter(Boolean).join('\n');
 
-            const finalContent = config.meta + '\n\n' + processedContent;
-
             // 格式化最終的完整內容
-            let formattedContent = await prettier.format(finalContent, {
-                parser: 'babel',
-                printWidth: 800,
-            });
+            const formattedCode: string = (
+                isRelease
+                    ? minify(processedContent, {
+                        mangle: false,
+                        compress: false,
+                        output: {
+                            beautify: true,
+                            indent_level: 4,
+                        }
+                    }).code
+                    : await prettier.format(processedContent, {
+                        parser: 'babel',
+                        printWidth: 800,
+                    })
+            ).trimEnd();
 
-            // 移除 Prettier 可能在結尾添加的多餘換行
-            formattedContent = formattedContent.trimEnd();
-            fs.writeFileSync(finalScriptPath, formattedContent, 'utf-8');
+            const finalContent = config.meta + '\n\n' + formattedCode;
+            fs.writeFileSync(finalScriptPath, finalContent, 'utf-8');
         } catch (error) {
             console.error('[process] An error occurred:', error);
         }
@@ -109,7 +122,8 @@ const userscriptPolisherPlugin = (): Plugin => ({
 
 export default defineConfig({
     build: {
-        outDir: config.outDir,
+        outDir: isRelease ? config.releaseOutDir : config.devOutDir,
+        emptyOutDir: false,
     },
     server: {
         host: '0.0.0.0',
@@ -131,7 +145,7 @@ export default defineConfig({
             },
             build: {
                 autoGrant: false,
-                fileName: config.fileName,
+                fileName: isRelease ? config.releaseFileName : config.devFileName,
             }
         }),
         serverRestartWatcherPlugin(),
