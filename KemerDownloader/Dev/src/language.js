@@ -1,4 +1,6 @@
-export default {
+import { Lib } from "./client.js";
+
+const dict = {
     Traditional: {
         "PostLink": "帖子連結",
         "Timestamp": "發佈日期",
@@ -232,3 +234,12 @@ export default {
         "開帖說明": "\n\n!! Confirming without input will open all posts on the current page.\nEnter range to open (e.g.):\nSingle: 1, 2, 3\nRange: 1~5, 6-10\nExclude: !5, -10"
     }
 };
+
+const { Transl } = (() => { // 取得對應語言翻譯
+    const Matcher = Lib.translMatcher(dict);
+    return {
+        Transl: (Str) => Matcher[Str] ?? Str,
+    }
+})();
+
+export default Transl;
