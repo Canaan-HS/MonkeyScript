@@ -81,14 +81,14 @@ function PageTurn() {
         (() => {
             /* 檢測翻頁 */
 
-            let Img, Observer, Quantity = 0;
+            let img, Observer, quantity = 0;
             const observerNext = new IntersectionObserver(observed => { // 觀察器
                 observed.forEach(entry => {
                     const rect = entry.boundingClientRect;
                     const isPastTarget = rect.bottom < 0;
                     const isIntersecting = entry.isIntersecting;
 
-                    if ((isIntersecting || isPastTarget) && Tools.detectionValue(Img)) {
+                    if ((isIntersecting || isPastTarget) && Tools.detectionValue(img)) {
                         observerNext.disconnect();
                         Observer.disconnect();
                         TurnPage();
@@ -98,29 +98,31 @@ function PageTurn() {
             if (import.meta.hot) monkeyWindow.Next = observerNext;
 
             setTimeout(() => {
-                Img = Param.MangaList.$qa("img"); // 取得當前狀態
+                img = Param.MangaList.$qa("img"); // 取得當前狀態
 
-                if (Img.length <= 5) { // 總長度 <= 5 直接觸發換頁
+                if (img.length <= 5) { // 總長度 <= 5 直接觸發換頁
                     TurnPage();
                     return;
                 };
 
-                // 首次添加觀察
-                observerNext.observe(
-                    Tools.lastObject(Tools.visibleObjects(Img))
-                );
+                // ! 不能保證最終一定能觀察成功
+                const lastImg = Tools.lastObject(Tools.visibleObjects(img));
+                lastImg instanceof Element && observerNext.observe(lastImg); // 首次添加觀察
 
                 // 後續根據變化, 修改觀察對象
                 Lib.$observer(Param.MangaList, () => {
-                    const Visible = Tools.visibleObjects(Img);
-                    const VL = Visible.length;
+                    const visible = Tools.visibleObjects(img);
+                    const vlen = visible.length;
 
-                    if (VL > Quantity) { // 判斷值測試
-                        Quantity = VL;
-                        observerNext.disconnect();
-                        observerNext.observe(
-                            Tools.lastObject(Visible) // 修改新的觀察對象
-                        )
+                    if (vlen > quantity) { // 判斷值測試
+                        quantity = vlen;
+                        // 修改新的觀察對象
+
+                        const lastImg = Tools.lastObject(visible);
+                        if (lastImg instanceof Element) {
+                            observerNext.disconnect();
+                            observerNext.observe(lastImg);
+                        }
                     }
 
                 }, { debounce: 100 }, observer => {
