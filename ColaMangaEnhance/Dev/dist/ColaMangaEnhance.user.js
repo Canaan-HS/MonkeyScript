@@ -3,7 +3,7 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      0.0.12-Beta1
+// @version      2025.09.15-Beta
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -32,7 +32,7 @@
     },
     AutoTurnPage: {
       Enable: true,
-      Mode: 1,
+      Mode: 3,
     },
     RegisterHotkey: {
       Enable: true,
@@ -76,11 +76,11 @@
     const storage = (key, value = null) => {
       return value != null ? Lib.session(key, { value }) : Lib.session(key);
     };
-    const TopDetected = Lib.$throttle(() => {
+    const topDetected = Lib.$throttle(() => {
       Param.Up_scroll = Lib.sY == 0 ? (storage("scroll", false), false) : true;
     }, 1e3);
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
-    const BottomDetected = Lib.$throttle(() => {
+    const bottomDetected = Lib.$throttle(() => {
       Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1e3);
     return {
@@ -115,11 +115,11 @@
         requestAnimationFrame(() => {
           if (Param.Up_scroll && move < 0) {
             window.scrollBy(0, move);
-            TopDetected();
+            topDetected();
             this.autoScroll(move);
           } else if (Param.Down_scroll && move > 0) {
             window.scrollBy(0, move);
-            BottomDetected();
+            bottomDetected();
             this.autoScroll(move);
           }
         });
