@@ -1518,8 +1518,8 @@
 
                     // 初始化按鈕緩存 - 一次性建立映射關係
                     function initializeButtonCache() {
-                        const menu1Buttons = [...menu[0].$qa("a")];
-                        const menu2Buttons = [...menu[1].$qa("a")];
+                        const menu1Buttons = menu[0].$qa("a");
+                        const menu2Buttons = menu[1].$qa("a");
 
                         const navOffset = hasScrolling ? 2 : 1;
 
