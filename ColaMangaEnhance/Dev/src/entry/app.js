@@ -204,9 +204,9 @@ export default function Main() {
                 Config.BGColor.Enable && Style.backgroundStyle();
                 Config.AutoTurnPage.Enable && PageTurn.auto();
                 Config.RegisterHotkey.Enable && hotkeySwitch();
-            } else Lib.log("InitLoad Error");
+            } else Lib.log("InitLoad Error").error;
         });
-    } catch (error) { Lib.log(error) }
+    } catch (error) { Lib.log(error).error }
 
     if (import.meta.hot) {
         return function () {
