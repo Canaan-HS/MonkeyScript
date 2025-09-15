@@ -98,7 +98,7 @@ function Tools() {
         /* 篩選出可見的圖片 */
         visibleObjects: (object) => object.filter(img => img.height > 0 || img.src),
         /* 取得物件的倒數第二 */
-        lastObject: (object) => object.at(-2),
+        lastObject: (object) => object.length > 1 ? object.at(-2) ?? object.at(-1) : object[0],
         /* 總圖片數的 50 % */
         detectionValue(object) {
             return this.visibleObjects(object).length >= Math.floor(object.length * .5)
