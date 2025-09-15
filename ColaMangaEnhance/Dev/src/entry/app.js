@@ -163,7 +163,7 @@ export default function Main() {
     /* 初始化取得數據 */
     async function initLoad(callback) {
         Lib.waitEl(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
-            { raf: import.meta.hot, throttle: 30, timeout: 10, visibility: Param.IsMainPage, timeoutResult: true })
+            { raf: import.meta.hot, throttle: 30, timeout: 20, visibility: Param.IsMainPage, timeoutResult: true })
             .then(([Body, Title, HeadPager, Readend, Manga]) => {
                 Param.Body = Body;
 
