@@ -12,16 +12,16 @@ function Tools() {
     };
 
     /* 檢測到頂 */
-    const TopDetected = Lib.$throttle(() => {
+    const topDetected = Lib.$throttle(() => {
         Param.Up_scroll = Lib.sY == 0 ? (storage("scroll", false), false) : true;
     }, 1000);
 
     /* 檢測到底 */
     // ! 臨時寫法, 當翻頁模式為 1 且開啟保持滾動時, 跳過檢測
-    const Skip = Config.AutoTurnPage.Mode === 1 && Config.RegisterHotkey.Function.KeepScroll;
+    const skip = Config.AutoTurnPage.Mode === 1 && Config.RegisterHotkey.Function.KeepScroll;
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
-    const BottomDetected = Lib.$throttle(() => {
-        if (Skip) return;
+    const bottomDetected = Lib.$throttle(() => {
+        if (skip) return;
         Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1000);
 
@@ -72,11 +72,11 @@ function Tools() {
             requestAnimationFrame(() => {
                 if (Param.Up_scroll && move < 0) {
                     window.scrollBy(0, move);
-                    TopDetected();
+                    topDetected();
                     this.autoScroll(move);
                 } else if (Param.Down_scroll && move > 0) {
                     window.scrollBy(0, move);
-                    BottomDetected();
+                    bottomDetected();
                     this.autoScroll(move);
                 }
             })
