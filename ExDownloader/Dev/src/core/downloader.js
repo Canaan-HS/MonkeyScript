@@ -3,7 +3,7 @@ import { Config, DConfig } from './config.js';
 import Transl from '../shared/language.js';
 
 export default function Downloader() {
-    const zipper = import.meta.env.DEV
+    const zipper = import.meta.hot
         ? (() => {
             const workerKey = "zipper";
             let oldWorker = monkeyWindow[workerKey];
