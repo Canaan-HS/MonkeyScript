@@ -58,7 +58,7 @@ import PageTurn from '../core/pageturn.js';
     const iframe = `iframe:not(#${Control.IdList.Iframe})`;
     const AdCleanup = () => {
         Lib.$qa(iframe).forEach(ad => ad.remove());
-        document.body.$qa("script").forEach(ad => ad.remove());
+        document.body?.$qa("script").forEach(ad => ad.remove());
         requestIdleCallback(AdCleanup, { timeout: 300 });
     };
 
