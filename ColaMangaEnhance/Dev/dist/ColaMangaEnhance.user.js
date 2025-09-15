@@ -136,7 +136,7 @@
         return Param.IsFinalPage;
       },
       visibleObjects: (object) => object.filter((img) => img.height > 0 || img.src),
-      lastObject: (object) => object.at(-2),
+      lastObject: (object) => (object.length > 1 ? (object.at(-2) ?? object.at(-1)) : object[0]),
       detectionValue(object) {
         return this.visibleObjects(object).length >= Math.floor(object.length * 0.5);
       },
@@ -254,16 +254,16 @@
       }
       const iframe = Lib.createElement("iframe", { id: Control.IdList.Iframe, src: Param.NextLink });
       (() => {
-        let Img,
+        let img,
           Observer,
-          Quantity = 0;
+          quantity = 0;
         const observerNext = new IntersectionObserver(
           (observed) => {
             observed.forEach((entry) => {
               const rect = entry.boundingClientRect;
               const isPastTarget = rect.bottom < 0;
               const isIntersecting = entry.isIntersecting;
-              if ((isIntersecting || isPastTarget) && Tools$1.detectionValue(Img)) {
+              if ((isIntersecting || isPastTarget) && Tools$1.detectionValue(img)) {
                 observerNext.disconnect();
                 Observer.disconnect();
                 TurnPage();
@@ -273,21 +273,25 @@
           { threshold: 0.1, rootMargin: "0px 0px 100px 0px" },
         );
         setTimeout(() => {
-          Img = Param.MangaList.$qa("img");
-          if (Img.length <= 5) {
+          img = Param.MangaList.$qa("img");
+          if (img.length <= 5) {
             TurnPage();
             return;
           }
-          observerNext.observe(Tools$1.lastObject(Tools$1.visibleObjects(Img)));
+          const lastImg = Tools$1.lastObject(Tools$1.visibleObjects(img));
+          lastImg instanceof Element && observerNext.observe(lastImg);
           Lib.$observer(
             Param.MangaList,
             () => {
-              const Visible = Tools$1.visibleObjects(Img);
-              const VL = Visible.length;
-              if (VL > Quantity) {
-                Quantity = VL;
-                observerNext.disconnect();
-                observerNext.observe(Tools$1.lastObject(Visible));
+              const visible = Tools$1.visibleObjects(img);
+              const vlen = visible.length;
+              if (vlen > quantity) {
+                quantity = vlen;
+                const lastImg2 = Tools$1.lastObject(visible);
+                if (lastImg2 instanceof Element) {
+                  observerNext.disconnect();
+                  observerNext.observe(lastImg2);
+                }
               }
             },
             { debounce: 100 },
