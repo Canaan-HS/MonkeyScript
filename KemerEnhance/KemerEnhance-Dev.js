@@ -45,7 +45,6 @@
     const User_Config = {
         Global: {
             BlockAds: true, // 阻擋廣告
-            BackToTop: true, // 翻頁後回到頂部
             CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
             DeleteNotice: true, // 刪除上方公告
             SidebarCollapse: true, // 側邊攔摺疊
@@ -473,7 +472,6 @@
                 "DeleteNotice",
                 "TextToLink",
                 "FixArtist",
-                "BackToTop",
                 "KeyScroll"
             ],
             Preview: [
@@ -497,9 +495,9 @@
             globalCache: undefined,
             previewCache: undefined,
             contentCache: undefined,
-            Global: () => this.globalCache ??= globalFunc(),
-            Preview: () => this.previewCache ??= previewFunc(),
-            Content: () => this.contentCache ??= contentFunc(),
+            Global() { return this.globalCache ??= globalFunc() },
+            Preview() { return this.previewCache ??= previewFunc() },
+            Content() { return this.contentCache ??= contentFunc() },
         };
 
         // 解析配置調用對應功能
@@ -517,7 +515,7 @@
                 // 更輕量化的直接呼叫 (沒有驗證數據格式)
                 func[ord]?.(userConfig);
             }
-        }
+        };
 
         return {
             async run() {
@@ -1233,11 +1231,6 @@
                     });
                 }
             },
-            async BackToTop() { /* 翻頁後回到頂部 */
-                Lib.onEvent(Lib.body, "pointerup", event => {
-                    event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
-                }, { capture: true, passive: true, mark: "BackToTop" });
-            },
             async KeyScroll({ mode }) { /* 快捷自動滾動 */
                 if (Lib.platform === "Mobile" || DLL.Registered.has("KeyScroll")) return;
 
@@ -1710,6 +1703,7 @@
                                 })
                             ]);
 
+                            target.closest("#paginator-bottom") && menu[0].scrollIntoView();
                             history.pushState(null, null, pageLinks[targetPage - 1]);
                         } catch (error) {
                             if (error.message !== 'Aborted') {
