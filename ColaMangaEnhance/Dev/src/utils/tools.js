@@ -1,0 +1,109 @@
+import { Lib } from '../services/client.js';
+import { Config, Control, Param } from '../core/config.js';
+
+function Tools() {
+    const idWhiteList = new Set(Object.values(Control.IdList));
+
+    /* 存取會話數據 */
+    const storage = (key, value = null) => {
+        return value != null
+            ? Lib.session(key, { value: value })
+            : Lib.session(key);
+    };
+
+    /* 檢測到頂 */
+    const TopDetected = Lib.$throttle(() => {
+        Param.Up_scroll = Lib.sY == 0 ? (storage("scroll", false), false) : true;
+    }, 1000);
+
+    /* 檢測到底 */
+    // ! 臨時寫法, 當翻頁模式為 1 且開啟保持滾動時, 跳過檢測
+    const Skip = Config.AutoTurnPage.Mode === 1 && Config.RegisterHotkey.Function.KeepScroll;
+    const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
+    const BottomDetected = Lib.$throttle(() => {
+        if (Skip) return;
+        Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
+    }, 1000);
+
+    return {
+        storage,
+
+        /* 獲取設置 */
+        getSet: () => {
+            // 目前只有取得樣式
+            return Lib.getV("Style", {
+                "BG_Color": "#595959",
+                "Img_Bw": "auto",
+                "Img_Mw": "100%"
+            });
+        },
+
+        /* 取得釋放節點 */
+        getNodes(Root) {
+            const nodes = [];
+
+            function task(root) {
+                const tree = document.createTreeWalker(
+                    root,
+                    NodeFilter.SHOW_ELEMENT,
+                    {
+                        acceptNode: (node) => {
+                            if (idWhiteList.has(node.id)) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                    }
+                );
+
+                while (tree.nextNode()) {
+                    nodes.push(tree.currentNode);
+                }
+            };
+
+            task(Root.head);
+            task(Root.body);
+
+            return nodes;
+        },
+
+        /* 自動滾動 */
+        autoScroll(move) {
+            requestAnimationFrame(() => {
+                if (Param.Up_scroll && move < 0) {
+                    window.scrollBy(0, move);
+                    TopDetected();
+                    this.autoScroll(move);
+                } else if (Param.Down_scroll && move > 0) {
+                    window.scrollBy(0, move);
+                    BottomDetected();
+                    this.autoScroll(move);
+                }
+            })
+        },
+        /* 手動滾動 */
+        manualScroll(move) {
+            window.scrollBy({
+                left: 0,
+                top: move,
+                behavior: "smooth"
+            });
+        },
+
+        /* 檢測是否是最後一頁 (當是最後一頁, 就允許繼續處發翻頁跳轉) */
+        isFinalPage(link) {
+            Param.IsFinalPage = link.startsWith("javascript");
+            return Param.IsFinalPage;
+        },
+        /* 篩選出可見的圖片 */
+        visibleObjects: (object) => object.filter(img => img.height > 0 || img.src),
+        /* 取得物件的倒數第二 */
+        lastObject: (object) => object.at(-2),
+        /* 總圖片數的 50 % */
+        detectionValue(object) {
+            return this.visibleObjects(object).length >= Math.floor(object.length * .5)
+        },
+    }
+};
+
+export default Tools();
