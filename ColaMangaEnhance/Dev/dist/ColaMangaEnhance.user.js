@@ -16,7 +16,7 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @require      https://update.greasyfork.org/scripts/487608/1659706/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -462,7 +462,7 @@
     const iframe = `iframe:not(#${Control.IdList.Iframe})`;
     const AdCleanup = () => {
       Lib.$qa(iframe).forEach((ad) => ad.remove());
-      document.body?.$qa("script").forEach((ad) => ad.remove());
+      Lib.body?.$qa("script").forEach((ad) => ad.remove());
       requestIdleCallback(AdCleanup, { timeout: 300 });
     };
     AdCleanup();
