@@ -582,10 +582,10 @@
           Config.BGColor.Enable && Style$1.backgroundStyle();
           Config.AutoTurnPage.Enable && PageTurn$1.auto();
           Config.RegisterHotkey.Enable && hotkeySwitch();
-        } else Lib.log("InitLoad Error");
+        } else Lib.log("InitLoad Error").error;
       });
     } catch (error) {
-      Lib.log(error);
+      Lib.log(error).error;
     }
   }
   Main();
