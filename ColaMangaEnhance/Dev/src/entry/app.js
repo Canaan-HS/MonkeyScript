@@ -159,11 +159,11 @@ async function hotkeySwitch() {
     }
 };
 
-export default function Main() {
+export default function Main(raf = import.meta.hot) {
     /* 初始化取得數據 */
     async function initLoad(callback) {
         Lib.waitEl(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null,
-            { raf: import.meta.hot, throttle: 30, timeout: 20, visibility: Param.IsMainPage, timeoutResult: true })
+            { raf, throttle: 30, timeout: 10, visibility: Param.IsMainPage, timeoutResult: true })
             .then(([Body, Title, HeadPager, Readend, Manga]) => {
                 Param.Body = Body;
 
@@ -204,7 +204,10 @@ export default function Main() {
                 Config.BGColor.Enable && Style.backgroundStyle();
                 Config.AutoTurnPage.Enable && PageTurn.auto();
                 Config.RegisterHotkey.Enable && hotkeySwitch();
-            } else Lib.log("InitLoad Error").error;
+            } else {
+                Lib.log("InitLoad Error").error;
+                setTimeout(() => Main(true), 2e3); // 2 秒後重新執行
+            }
         });
     } catch (error) { Lib.log(error).error }
 
