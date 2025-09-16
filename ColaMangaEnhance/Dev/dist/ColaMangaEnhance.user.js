@@ -3,7 +3,7 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      2025.09.16-Beta
+// @version      2025.09.16-Beta1
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -557,9 +557,9 @@
       );
     }
   }
-  function Main() {
+  function Main(raf = void 0) {
     async function initLoad(callback) {
-      Lib.waitEl(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null, { raf: void 0, throttle: 30, timeout: 20, visibility: Param.IsMainPage, timeoutResult: true }).then(([Body, Title, HeadPager, Readend, Manga]) => {
+      Lib.waitEl(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null, { raf, throttle: 30, timeout: 10, visibility: Param.IsMainPage, timeoutResult: true }).then(([Body, Title, HeadPager, Readend, Manga]) => {
         Param.Body = Body;
         const HomeLink = Title.$qa("a");
         Param.ContentsPage = HomeLink[0].href;
@@ -586,7 +586,10 @@
           Config.BGColor.Enable && Style$1.backgroundStyle();
           Config.AutoTurnPage.Enable && PageTurn$1.auto();
           Config.RegisterHotkey.Enable && hotkeySwitch();
-        } else Lib.log("InitLoad Error").error;
+        } else {
+          Lib.log("InitLoad Error").error;
+          setTimeout(() => Main(true), 2e3);
+        }
       });
     } catch (error) {
       Lib.log(error).error;
