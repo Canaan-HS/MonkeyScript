@@ -1,3 +1,5 @@
+import { Lib } from '../services/client.js';
+
 /* 臨時的自定義 (當 Enable = false 時, 其餘的設置將無效) */
 const Config = {
     BGColor: {
@@ -48,6 +50,7 @@ const Param = {
     Up_scroll: false, // 向上滾動判斷值
     Down_scroll: false, // 向下滾動判斷值
     IsFinalPage: false, // 最終頁判斷值
+    IsMangaPage: Lib.$url.endsWith("html"), // 判斷是否是漫畫頁面
     IsMainPage: (window.self === window.parent) // 判斷是否是 iframe
 };
 
