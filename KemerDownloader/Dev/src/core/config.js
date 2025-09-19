@@ -7,7 +7,7 @@ const General = {
     ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
     ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
     BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
-    ...Lib.getJV("General", {}),
+    ...Lib.getJV("General__REMOVE_ON_BUILD__", {}),
 };
 
 /** ---------------------
@@ -33,7 +33,7 @@ const FileName = {
     CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
     FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
     FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
-    ...Lib.getJV("FileName", {}),
+    ...Lib.getJV("FileName__REMOVE_ON_BUILD__", {}),
 };
 
 /** ---------------------
@@ -62,7 +62,7 @@ const FetchSet = {
     UseFormat: false, // 這裡為 false 下面兩項就不生效
     Mode: "FilterMode",
     Format: ["Timestamp", "TypeTag"],
-    ...Lib.getJV("FetchSet", {}),
+    ...Lib.getJV("FetchSet__REMOVE_ON_BUILD__", {}),
 };
 
 // 不要修改
@@ -92,6 +92,7 @@ const Process = {
         Good_Network_THRESHOLD: 200,
         Poor_Network_THRESHOLD: 400,
     }),
+    ...Lib.getJV("__REMOVE_ON_BUILD__", {}),
 };
 
 export { General, FileName, FetchSet, Process };
