@@ -283,9 +283,9 @@
             }
         `);
       getHomeData();
-      async function reset(completeClose = Config.CompleteClose, resetScope = Config.ResetScope) {
-        completeClose && window.close();
-        resetScope && (DConfig.Scope = void 0);
+      async function reset() {
+        Config.CompleteClose && window.close();
+        Config.ResetScope && (DConfig.Scope = void 0);
         worker.terminate();
         button = Lib.$q("#ExDB");
         button.disabled = false;
@@ -405,9 +405,9 @@ ${JSON.stringify(box2, null, 4)}`,
       function reGetImageData(index, url2) {
         function parseLink(index2, url3, page) {
           const resample = Lib.$Q(page, "#img");
-          Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
+          const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
           if (!resample) return false;
-          const link = resample.src || resample.href;
+          const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
           return { Index: index2, PageUrl: url3, ImgUrl: link };
         }
         let token = Config.ReTry;
