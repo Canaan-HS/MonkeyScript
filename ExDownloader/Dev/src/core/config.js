@@ -32,8 +32,7 @@ const DConfig = {
 
     KeyCache: undefined, // 緩存鍵
     GetKey: function () {
-        if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
-        return this.KeyCache;
+        return this.KeyCache ??= `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
     }
 };
 
