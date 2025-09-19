@@ -1,5 +1,5 @@
 import { Lib } from '../services/client.js';
-import { Config, Control, Param } from '../core/config.js';
+import { Control, Param } from '../core/config.js';
 
 
 const Tools = (() => {
@@ -18,11 +18,9 @@ const Tools = (() => {
     }, 1000);
 
     /* 檢測到底 */
-    // ! 臨時寫法, 當翻頁模式為 1 且開啟保持滾動時, 跳過檢測
-    const skip = Config.AutoTurnPage.Mode === 1 && Config.RegisterHotkey.Function.KeepScroll;
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
     const bottomDetected = Lib.$throttle(() => {
-        if (skip) return;
+        if (Param.DetectSkip) return;
         Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1000);
 
