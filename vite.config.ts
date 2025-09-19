@@ -8,7 +8,7 @@ import open from 'open';
 import monkey from 'vite-plugin-monkey';
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
-import config from './ExDownloader/Dev/config'; // ? 引入特定腳本開發配置
+import config from './ColaMangaEnhance/Dev/config'; // ? 引入特定腳本開發配置
 
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
@@ -28,9 +28,9 @@ if (browserName) {
 };
 
 /* 重新啟動瀏覽器 */
-const RESTART_FLAG = 'VITE_PLUGIN_RESTARTED';
+const restartFlag = 'VITE_PLUGIN_RESTARTED';
 function handleRestart(server: ViteDevServer) {
-    delete process.env[RESTART_FLAG]; // 在行動前立即清除旗標
+    delete process.env[restartFlag]; // 在行動前立即清除旗標
     server.httpServer?.once('listening', () => {
         const url = server.resolvedUrls?.local[0];
         if (url) {
@@ -43,14 +43,14 @@ const serverRestartWatcherPlugin = (): Plugin => ({
     apply: 'serve',
     configureServer(server: ViteDevServer) {
         // 檢查是否為重啟後的進程
-        if (process.env[RESTART_FLAG]) {
+        if (process.env[restartFlag]) {
             handleRestart(server);
         }
 
         // 攔截重啟指令，為下一次重啟設置旗標
         const originalRestart = server.restart;
         server.restart = async function (...args: any[]) {
-            process.env[RESTART_FLAG] = 'true';
+            process.env[restartFlag] = 'true';
             await originalRestart.apply(this, args);
         };
     },
