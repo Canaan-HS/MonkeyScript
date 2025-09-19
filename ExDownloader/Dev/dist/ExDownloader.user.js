@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      2025.09.05-Beta
+// @version      2025.09.20-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -25,7 +25,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1659705/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1661431/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -68,8 +68,7 @@
     CompressMode: void 0,
     KeyCache: void 0,
     GetKey: function () {
-      if (!this.KeyCache) this.KeyCache = `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
-      return this.KeyCache;
+      return (this.KeyCache ??= `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`);
     },
   };
   const dict = {
@@ -284,8 +283,9 @@
             }
         `);
       getHomeData();
-      async function reset() {
-        DConfig.Scope = false;
+      async function reset(completeClose = Config.CompleteClose, resetScope = Config.ResetScope) {
+        completeClose && window.close();
+        resetScope && (DConfig.Scope = void 0);
         worker.terminate();
         button = Lib.$q("#ExDB");
         button.disabled = false;
