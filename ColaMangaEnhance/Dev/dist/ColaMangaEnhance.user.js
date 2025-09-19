@@ -72,9 +72,10 @@
     IsFinalPage: false,
     IsMangaPage: Lib.$url.endsWith("html"),
     IsMainPage: window.self === window.parent,
+    DetectSkip: Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1,
   };
   (async () => {
-    if (!Param.IsMainPage) return;
+    if (!Param.IsMangaPage) return;
     Lib.addStyle(
       `
         html {pointer-events: none !important;}
@@ -115,6 +116,7 @@
     }, 1e3);
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
     const bottomDetected = Lib.$throttle(() => {
+      if (Param.DetectSkip) return;
       Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1e3);
     return {
@@ -221,16 +223,15 @@
       async menuStyle() {},
     };
   })();
-  const Hotkey = async () => {
-    const { TurnPage, AutoScroll, KeepScroll } = Config.RegisterHotkey.Function;
+  const Hotkey = async ({ TurnPage, AutoScroll, KeepScroll, ManualScroll } = Config.RegisterHotkey.Function) => {
     let jumpState = false;
     if (Lib.platform === "Desktop") {
-      if (Param.IsMainPage && KeepScroll && AutoScroll && true) {
+      if (Param.IsMainPage && KeepScroll && AutoScroll && !ManualScroll) {
         Param.Down_scroll = Tools.storage("scroll");
         Param.Down_scroll && Tools.autoScroll(Control.ScrollPixels);
       }
       const UP_ScrollSpeed = -2;
-      const CanScroll = AutoScroll;
+      const CanScroll = AutoScroll || ManualScroll;
       Lib.onEvent(
         window,
         "keydown",
@@ -247,7 +248,9 @@
           } else if (key === "ArrowUp" && CanScroll) {
             event.stopImmediatePropagation();
             event.preventDefault();
-            {
+            if (ManualScroll) {
+              Tools.manualScroll(-Lib.iH);
+            } else {
               if (Param.Up_scroll) {
                 Param.Up_scroll = false;
               } else if (!Param.Up_scroll || Param.Down_scroll) {
@@ -259,7 +262,9 @@
           } else if (key === "ArrowDown" && CanScroll) {
             event.stopImmediatePropagation();
             event.preventDefault();
-            {
+            if (ManualScroll) {
+              Tools.manualScroll(Lib.iH);
+            } else {
               if (Param.Down_scroll) {
                 Param.Down_scroll = false;
                 Tools.storage("scroll", false);
@@ -307,9 +312,8 @@
       );
     }
   };
-  const PageTurn = async () => {
-    const mode = Config.AutoTurnPage.Mode;
-    async function unlimited(optimized = mode === 3) {
+  const PageTurn = async (turnMode = Config.AutoTurnPage.Mode, optimized = Config.AutoTurnPage.Mode === 3) => {
+    async function unlimited() {
       Lib.addStyle(
         `
             .mh_wrap, .mh_readend, .mh_footpager,
@@ -529,7 +533,7 @@
         }
       }
     }
-    switch (mode) {
+    switch (turnMode) {
       case 2:
       case 3:
         unlimited();
