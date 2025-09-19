@@ -52,7 +52,6 @@
     ConcurrentDelay: 500,
     ConcurrentQuantity: 5,
     BatchOpenDelay: 500,
-    ...Lib.getJV("General", {}),
   };
   const FileName = {
     FillValue: {
@@ -62,7 +61,6 @@
     CompressName: "({Artist}) {Title}",
     FolderName: "{Title}",
     FillName: "{Title} {Fill}",
-    ...Lib.getJV("FileName", {}),
   };
   const FetchSet = {
     Delay: 100,
@@ -72,7 +70,6 @@
     UseFormat: false,
     Mode: "FilterMode",
     Format: ["Timestamp", "TypeTag"],
-    ...Lib.getJV("FetchSet", {}),
   };
   const Process = {
     IsNeko: Lib.$domain.startsWith("nekohouse"),
