@@ -1,5 +1,5 @@
 import { Lib } from '../services/client.js';
-import { Control, Param } from '../core/config.js';
+import { Config, Control, Param } from '../core/config.js';
 
 
 const Tools = (() => {
@@ -19,8 +19,9 @@ const Tools = (() => {
 
     /* 檢測到底 */
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
+    const detectSkip = Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1;
     const bottomDetected = Lib.$throttle(() => {
-        if (Param.DetectSkip) return;
+        if (detectSkip) return;
         Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1000);
 
