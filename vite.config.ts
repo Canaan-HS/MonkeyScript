@@ -28,7 +28,7 @@ if (browserName) {
 };
 
 /* 重新啟動瀏覽器 */
-const restartFlag = 'VITE_PLUGIN_RESTARTED';
+const restartFlag = '__SERVER_RESTARTED__';
 function handleRestart(server: ViteDevServer) {
     delete process.env[restartFlag]; // 在行動前立即清除旗標
     server.httpServer?.once('listening', () => {
@@ -99,7 +99,7 @@ const userscriptPolisherPlugin = (): Plugin => ({
 
                     /* 自訂標記處理 */
                     if (trimmed.includes('__REMOVE_ON_BUILD__')) return false;
-                    if (trimmed.includes(removeMarker)) return false;
+                    // if (trimmed.includes(removeMarker)) return false; // ? 暫時沒用到
 
                     return true;
                 }).join('\n');
