@@ -56,12 +56,9 @@ export default function Downloader() {
         getHomeData(); // 開始查找工作
 
         /* 重置所有狀態 */
-        async function reset(
-            completeClose = Config.CompleteClose,
-            resetScope = Config.ResetScope
-        ) {
-            completeClose && window.close();
-            resetScope && (DConfig.Scope = undefined);
+        async function reset() {
+            Config.CompleteClose && window.close();
+            Config.ResetScope && (DConfig.Scope = undefined);
 
             worker.terminate(); // 清理後台請求工作
 
