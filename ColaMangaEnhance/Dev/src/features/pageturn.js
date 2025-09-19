@@ -2,10 +2,9 @@ import { monkeyWindow, Lib } from '../services/client.js';
 import { Config, Control, Param } from '../core/config.js';
 import Tools from '../utils/tools.js';
 
-export default async (
-    turnMode = Config.AutoTurnPage.Mode,
-    optimized = Config.AutoTurnPage.Mode === 3
-) => {
+export default async () => {
+    const turnMode = Config.AutoTurnPage.Mode;
+    const optimized = turnMode === 3;
 
     /* 無盡 翻頁 */
     async function unlimited() {
