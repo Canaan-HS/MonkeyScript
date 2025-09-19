@@ -2,12 +2,13 @@ import { monkeyWindow, Lib } from '../services/client.js';
 import { Config, Control, Param } from '../core/config.js';
 import Tools from '../utils/tools.js';
 
-export default async () => {
-
-    const mode = Config.AutoTurnPage.Mode;
+export default async (
+    turnMode = Config.AutoTurnPage.Mode,
+    optimized = Config.AutoTurnPage.Mode === 3
+) => {
 
     /* 無盡 翻頁 */
-    async function unlimited(optimized = mode === 3) { // 判斷是否為優化模式 (寫在這裡避免編譯時直接移除該判斷)
+    async function unlimited() {
 
         // 修改樣式 (隱藏某些元素 增加沉浸體驗)
         Lib.addStyle(`
@@ -256,7 +257,7 @@ export default async () => {
         }
     };
 
-    switch (mode) {
+    switch (turnMode) {
         case 2: case 3:
             unlimited();
             break;
