@@ -18,7 +18,8 @@ const Config = {
             KeepScroll: true, // 換頁繼續滾動
             ManualScroll: false, // 手動滾動啟用時, 將會變成點擊一次, 根據視點翻一頁 且 自動滾動會無效
         }
-    }
+    },
+    ...Lib.getV("__REMOVE_ON_BUILD__", {}),
 };
 
 const Control = {
@@ -36,7 +37,8 @@ const Control = {
     IdList: { // Id 表
         Title: "CME_Title", Iframe: "CME_Iframe", Block: "CME_Block-Ads", Menu: "CME_Menu-Style",
         Image: "CME_Image-Style", Scroll: "CME_Scroll-Hidden", ChildS: "CME_Child-Scroll-Hidden"
-    }
+    },
+    ...Lib.getV("__REMOVE_ON_BUILD__", {}),
 };
 
 const Param = {
@@ -53,8 +55,7 @@ const Param = {
     IsFinalPage: false, // 最終頁判斷值
     IsMangaPage: Lib.$url.endsWith("html"), // 判斷是否是漫畫頁面
     IsMainPage: (window.self === window.parent), // 判斷是否是 iframe
-    /* 避免被 Vite 編譯直接移除 */
-    DetectSkip: Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1, // 判斷是否需要跳過檢測
+    ...Lib.getV("__REMOVE_ON_BUILD__", {}),
 };
 
 export { Config, Control, Param };
