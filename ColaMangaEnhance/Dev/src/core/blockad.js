@@ -3,7 +3,7 @@ import { Control, Param } from '../core/config.js';
 
 /* 阻擋廣告 (目前無效) */
 export default (async () => {
-    if (!Param.IsMainPage) return;
+    if (!Param.IsMangaPage) return;
 
     Lib.addStyle(`
         html {pointer-events: none !important;}
