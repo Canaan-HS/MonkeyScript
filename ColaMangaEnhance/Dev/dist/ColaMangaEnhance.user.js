@@ -3,13 +3,14 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      2025.09.16-Beta1
+// @version      2025.09.19-Beta
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-CN 隐藏广告内容，提昇浏览体验。自定义背景颜色，调整图片大小。当图片载入失败时，自动重新载入图片。提供快捷键功能：[← 上一页]、[下一页 →]、[↑ 自动上滚动]、[↓ 自动下滚动]。当用户滚动到页面底部时，自动跳转到下一页。
 // @description:en    Hide advertisement content, enhance browsing experience. Customize background color, adjust image size. Automatically reload images when they fail to load. Provide shortcut key functionalities: [← Previous Page], [Next Page →], [↑ Auto Scroll Up], [↓ Auto Scroll Down]. Automatically jump to the next page when users scroll to the bottom of the page.
 
+// @match        *://www.colamanga.com/manga-*/
 // @match        *://www.colamanga.com/manga-*/*/*.html
 // @icon         https://www.colamanga.com/favicon.png
 
@@ -69,9 +70,42 @@
     Up_scroll: false,
     Down_scroll: false,
     IsFinalPage: false,
+    IsMangaPage: Lib.$url.endsWith("html"),
     IsMainPage: window.self === window.parent,
   };
-  function Tools() {
+  (async () => {
+    if (!Param.IsMainPage) return;
+    Lib.addStyle(
+      `
+        html {pointer-events: none !important;}
+        div[style*='position'] {display: none !important;}
+        .mh_wrap a,
+        .mh_readend a,
+        span.mh_btn:not(.contact),
+        #${Control.IdList.Iframe} {
+            pointer-events: auto !important;
+        }
+    `,
+      Control.IdList.Block,
+    );
+    const OriginListener = EventTarget.prototype.addEventListener;
+    const Block = Control.BlockListener;
+    EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
+      apply(target, thisArg, args) {
+        const [type, listener, options] = args;
+        if (Block.has(type)) return;
+        return target.apply(thisArg, args);
+      },
+    });
+    const iframe = `iframe:not(#${Control.IdList.Iframe})`;
+    const AdCleanup = () => {
+      Lib.$qa(iframe).forEach((ad) => ad.remove());
+      Lib.body?.$qa("script").forEach((ad) => ad.remove());
+      requestIdleCallback(AdCleanup, { timeout: 300 });
+    };
+    AdCleanup();
+  })();
+  const Tools = (() => {
     const idWhiteList = new Set(Object.values(Control.IdList));
     const storage = (key, value = null) => {
       return value != null ? Lib.session(key, { value }) : Lib.session(key);
@@ -141,10 +175,9 @@
         return this.visibleObjects(object).length >= Math.floor(object.length * 0.5);
       },
     };
-  }
-  const Tools$1 = Tools();
-  function Style() {
-    const $Set = Tools$1.getSet();
+  })();
+  const Style = (() => {
+    const $Set = Tools.getSet();
     return {
       async backgroundStyle(Color = Config.BGColor.Color) {
         Param.Body.style.cssText = `
@@ -187,10 +220,96 @@
       },
       async menuStyle() {},
     };
-  }
-  const Style$1 = Style();
-  function PageTurn() {
-    async function unlimited(Optimized) {
+  })();
+  const Hotkey = async () => {
+    const { TurnPage, AutoScroll, KeepScroll } = Config.RegisterHotkey.Function;
+    let jumpState = false;
+    if (Lib.platform === "Desktop") {
+      if (Param.IsMainPage && KeepScroll && AutoScroll && true) {
+        Param.Down_scroll = Tools.storage("scroll");
+        Param.Down_scroll && Tools.autoScroll(Control.ScrollPixels);
+      }
+      const UP_ScrollSpeed = -2;
+      const CanScroll = AutoScroll;
+      Lib.onEvent(
+        window,
+        "keydown",
+        (event) => {
+          const key = event.key;
+          if (key === "ArrowLeft" && TurnPage && !jumpState) {
+            event.stopImmediatePropagation();
+            jumpState = !Tools.isFinalPage(Param.PreviousLink);
+            location.assign(Param.PreviousLink);
+          } else if (key === "ArrowRight" && TurnPage && !jumpState) {
+            event.stopImmediatePropagation();
+            jumpState = !Tools.isFinalPage(Param.NextLink);
+            location.assign(Param.NextLink);
+          } else if (key === "ArrowUp" && CanScroll) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            {
+              if (Param.Up_scroll) {
+                Param.Up_scroll = false;
+              } else if (!Param.Up_scroll || Param.Down_scroll) {
+                Param.Down_scroll = false;
+                Param.Up_scroll = true;
+                Tools.autoScroll(UP_ScrollSpeed);
+              }
+            }
+          } else if (key === "ArrowDown" && CanScroll) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            {
+              if (Param.Down_scroll) {
+                Param.Down_scroll = false;
+                Tools.storage("scroll", false);
+              } else if (Param.Up_scroll || !Param.Down_scroll) {
+                Param.Up_scroll = false;
+                Param.Down_scroll = true;
+                Tools.storage("scroll", true);
+                Tools.autoScroll(Control.ScrollPixels);
+              }
+            }
+          }
+        },
+        { capture: true },
+      );
+    } else if (Lib.platform === "Mobile") {
+      let startX, startY, moveX, moveY;
+      const sidelineX = Lib.iW * 0.3;
+      const sidelineY = (Lib.iH / 4) * 0.3;
+      Lib.onEvent(
+        window,
+        "touchstart",
+        (event) => {
+          startX = event.touches[0].clientX;
+          startY = event.touches[0].clientY;
+        },
+        { passive: true },
+      );
+      Lib.onEvent(
+        window,
+        "touchmove",
+        Lib.$debounce((event) => {
+          moveY = event.touches[0].clientY - startY;
+          if (Math.abs(moveY) < sidelineY) {
+            moveX = event.touches[0].clientX - startX;
+            if (moveX > sidelineX && !jumpState) {
+              jumpState = !Tools.isFinalPage(Param.PreviousLink);
+              location.assign(Param.PreviousLink);
+            } else if (moveX < -sidelineX && !jumpState) {
+              jumpState = !Tools.isFinalPage(Param.NextLink);
+              location.assign(Param.NextLink);
+            }
+          }
+        }, 60),
+        { passive: true },
+      );
+    }
+  };
+  const PageTurn = async () => {
+    const mode = Config.AutoTurnPage.Mode;
+    async function unlimited(optimized = mode === 3) {
       Lib.addStyle(
         `
             .mh_wrap, .mh_readend, .mh_footpager,
@@ -263,7 +382,7 @@
               const rect = entry.boundingClientRect;
               const isPastTarget = rect.bottom < 0;
               const isIntersecting = entry.isIntersecting;
-              if ((isIntersecting || isPastTarget) && Tools$1.detectionValue(img)) {
+              if ((isIntersecting || isPastTarget) && Tools.detectionValue(img)) {
                 observerNext.disconnect();
                 Observer.disconnect();
                 TurnPage();
@@ -278,16 +397,16 @@
             TurnPage();
             return;
           }
-          const lastImg = Tools$1.lastObject(Tools$1.visibleObjects(img));
+          const lastImg = Tools.lastObject(Tools.visibleObjects(img));
           lastImg instanceof Element && observerNext.observe(lastImg);
           Lib.$observer(
             Param.MangaList,
             () => {
-              const visible = Tools$1.visibleObjects(img);
+              const visible = Tools.visibleObjects(img);
               const vlen = visible.length;
               if (vlen > quantity) {
                 quantity = vlen;
-                const lastImg2 = Tools$1.lastObject(visible);
+                const lastImg2 = Tools.lastObject(visible);
                 if (lastImg2 instanceof Element) {
                   observerNext.disconnect();
                   observerNext.observe(lastImg2);
@@ -321,8 +440,8 @@
             CurrentHeight = NewHeight;
           }
         });
-        if (Tools$1.isFinalPage(Param.NextLink)) {
-          if (Optimized) {
+        if (Tools.isFinalPage(Param.NextLink)) {
+          if (optimized) {
             window.parent.postMessage(
               [
                 {
@@ -381,7 +500,7 @@
               { threshold: 0 },
             );
             AllImg.forEach(async (img) => UrlUpdate.observe(img));
-            if (Optimized) {
+            if (optimized) {
               Lib.$q("title").id = Control.IdList.Title;
               const adapt = Lib.platform === "Desktop" ? 0.5 : 0.7;
               const ReleaseMemory = new IntersectionObserver(
@@ -392,7 +511,7 @@
                       const ratio = Math.min(adapt, (Lib.iH * adapt) / targetImg.clientHeight);
                       if (entry.intersectionRatio >= ratio) {
                         ReleaseMemory.disconnect();
-                        Tools$1.getNodes(document).forEach((node) => {
+                        Tools.getNodes(document).forEach((node) => {
                           node.remove();
                         });
                         targetImg.scrollIntoView();
@@ -410,155 +529,33 @@
         }
       }
     }
-    return {
-      async auto(Mode = Config.AutoTurnPage.Mode) {
-        switch (Mode) {
-          case 2:
-          case 3:
-            unlimited(Mode === 3);
-            break;
-          default:
-            setTimeout(() => {
-              const img = Param.MangaList.$qa("img");
-              if (!Tools$1.isFinalPage(Param.NextLink)) {
-                const observerNext = new IntersectionObserver(
-                  (observed) => {
-                    observed.forEach((entry) => {
-                      if (entry.isIntersecting && Tools$1.detectionValue(img)) {
-                        observerNext.disconnect();
-                        location.assign(Param.NextLink);
-                      }
-                    });
-                  },
-                  { threshold: 0.5 },
-                );
-                observerNext.observe(Param.BottomStrip);
-              }
-            }, Control.WaitPicture);
-        }
-      },
-    };
-  }
-  const PageTurn$1 = PageTurn();
-  (async function blockAds() {
-    Lib.addStyle(
-      `
-        html {pointer-events: none !important;}
-        div[style*='position'] {display: none !important;}
-        .mh_wrap a,
-        .mh_readend a,
-        span.mh_btn:not(.contact),
-        #${Control.IdList.Iframe} {
-            pointer-events: auto !important;
-        }
-    `,
-      Control.IdList.Block,
-    );
-    const OriginListener = EventTarget.prototype.addEventListener;
-    const Block = Control.BlockListener;
-    EventTarget.prototype.addEventListener = new Proxy(OriginListener, {
-      apply(target, thisArg, args) {
-        const [type, listener, options] = args;
-        if (Block.has(type)) return;
-        return target.apply(thisArg, args);
-      },
-    });
-    const iframe = `iframe:not(#${Control.IdList.Iframe})`;
-    const AdCleanup = () => {
-      Lib.$qa(iframe).forEach((ad) => ad.remove());
-      Lib.body?.$qa("script").forEach((ad) => ad.remove());
-      requestIdleCallback(AdCleanup, { timeout: 300 });
-    };
-    AdCleanup();
-  })();
-  async function hotkeySwitch() {
-    const { TurnPage, AutoScroll, KeepScroll } = Config.RegisterHotkey.Function;
-    let jumpState = false;
-    if (Lib.platform === "Desktop") {
-      if (Param.IsMainPage && KeepScroll && AutoScroll && true) {
-        Param.Down_scroll = Tools$1.storage("scroll");
-        Param.Down_scroll && Tools$1.autoScroll(Control.ScrollPixels);
-      }
-      const UP_ScrollSpeed = -2;
-      const CanScroll = AutoScroll;
-      Lib.onEvent(
-        window,
-        "keydown",
-        (event) => {
-          const key = event.key;
-          if (key === "ArrowLeft" && TurnPage && !jumpState) {
-            event.stopImmediatePropagation();
-            jumpState = !Tools$1.isFinalPage(Param.PreviousLink);
-            location.assign(Param.PreviousLink);
-          } else if (key === "ArrowRight" && TurnPage && !jumpState) {
-            event.stopImmediatePropagation();
-            jumpState = !Tools$1.isFinalPage(Param.NextLink);
-            location.assign(Param.NextLink);
-          } else if (key === "ArrowUp" && CanScroll) {
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            {
-              if (Param.Up_scroll) {
-                Param.Up_scroll = false;
-              } else if (!Param.Up_scroll || Param.Down_scroll) {
-                Param.Down_scroll = false;
-                Param.Up_scroll = true;
-                Tools$1.autoScroll(UP_ScrollSpeed);
-              }
-            }
-          } else if (key === "ArrowDown" && CanScroll) {
-            event.stopImmediatePropagation();
-            event.preventDefault();
-            {
-              if (Param.Down_scroll) {
-                Param.Down_scroll = false;
-                Tools$1.storage("scroll", false);
-              } else if (Param.Up_scroll || !Param.Down_scroll) {
-                Param.Up_scroll = false;
-                Param.Down_scroll = true;
-                Tools$1.storage("scroll", true);
-                Tools$1.autoScroll(Control.ScrollPixels);
-              }
-            }
+    switch (mode) {
+      case 2:
+      case 3:
+        unlimited();
+        break;
+      default:
+        setTimeout(() => {
+          const img = Param.MangaList.$qa("img");
+          if (!Tools.isFinalPage(Param.NextLink)) {
+            const observerNext = new IntersectionObserver(
+              (observed) => {
+                observed.forEach((entry) => {
+                  if (entry.isIntersecting && Tools.detectionValue(img)) {
+                    observerNext.disconnect();
+                    location.assign(Param.NextLink);
+                  }
+                });
+              },
+              { threshold: 0.5 },
+            );
+            observerNext.observe(Param.BottomStrip);
           }
-        },
-        { capture: true },
-      );
-    } else if (Lib.platform === "Mobile") {
-      let startX, startY, moveX, moveY;
-      const sidelineX = Lib.iW * 0.3;
-      const sidelineY = (Lib.iH / 4) * 0.3;
-      Lib.onEvent(
-        window,
-        "touchstart",
-        (event) => {
-          startX = event.touches[0].clientX;
-          startY = event.touches[0].clientY;
-        },
-        { passive: true },
-      );
-      Lib.onEvent(
-        window,
-        "touchmove",
-        Lib.$debounce((event) => {
-          moveY = event.touches[0].clientY - startY;
-          if (Math.abs(moveY) < sidelineY) {
-            moveX = event.touches[0].clientX - startX;
-            if (moveX > sidelineX && !jumpState) {
-              jumpState = !Tools$1.isFinalPage(Param.PreviousLink);
-              location.assign(Param.PreviousLink);
-            } else if (moveX < -sidelineX && !jumpState) {
-              jumpState = !Tools$1.isFinalPage(Param.NextLink);
-              location.assign(Param.NextLink);
-            }
-          }
-        }, 60),
-        { passive: true },
-      );
+        }, Control.WaitPicture);
     }
-  }
+  };
   function Main(raf = void 0) {
-    async function initLoad(callback) {
+    async function mangaPageInit(callback) {
       Lib.waitEl(["body", "div.mh_readtitle", "div.mh_headpager", "div.mh_readend", "#mangalist"], null, { raf, throttle: 30, timeout: 10, visibility: Param.IsMainPage, timeoutResult: true }).then(([Body, Title, HeadPager, Readend, Manga]) => {
         Param.Body = Body;
         const HomeLink = Title.$qa("a");
@@ -579,18 +576,30 @@
         else callback(false);
       });
     }
+    async function contentsPageInit() {
+      Lib.waitEl(
+        [".all_data_list", ".website-display-all"],
+        ([list, display]) => {
+          if (list.style.height === "auto") return;
+          display.click();
+        },
+        { raf },
+      );
+    }
     try {
-      initLoad((state) => {
-        if (state) {
-          Style$1.pictureStyle();
-          Config.BGColor.Enable && Style$1.backgroundStyle();
-          Config.AutoTurnPage.Enable && PageTurn$1.auto();
-          Config.RegisterHotkey.Enable && hotkeySwitch();
-        } else {
-          Lib.log("InitLoad Error").error;
-          setTimeout(() => Main(true), 2e3);
-        }
-      });
+      if (Param.IsMangaPage) {
+        mangaPageInit((state) => {
+          if (state) {
+            Style.pictureStyle();
+            Config.BGColor.Enable && Style.backgroundStyle();
+            Config.AutoTurnPage.Enable && PageTurn();
+            Config.RegisterHotkey.Enable && Hotkey();
+          } else {
+            Lib.log("Manga Page Init Error").error;
+            setTimeout(() => Main(true), 2e3);
+          }
+        });
+      } else contentsPageInit();
     } catch (error) {
       Lib.log(error).error;
     }
