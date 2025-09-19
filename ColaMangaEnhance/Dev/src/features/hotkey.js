@@ -4,10 +4,11 @@ import { Config, Control, Param } from '../core/config.js';
 import Tools from '../utils/tools.js';
 
 /* 快捷切換上下頁 和 自動滾動 */
-export default async ({ TurnPage, AutoScroll, KeepScroll, ManualScroll } = Config.RegisterHotkey.Function) => {
+export default async () => {
 
     let jumpState = false; // 如果不是最後一頁, 觸發時他將會被設置為 true, 反之始終為 false (是 false 才能觸發跳轉, 一個跳轉的防抖機制)
     if (Lib.platform === "Desktop") {
+        const { TurnPage, AutoScroll, KeepScroll, ManualScroll } = Config.RegisterHotkey.Function;
 
         // 是主頁, 啟用保持滾動 & 啟用翻頁自動滾動, 且沒有開啟手動滾動
         if (Param.IsMainPage && KeepScroll && AutoScroll && !ManualScroll) {
