@@ -1,7 +1,8 @@
 import { Lib } from '../services/client.js';
 import { Config, Control, Param } from '../core/config.js';
 
-function Tools() {
+
+const Tools = (() => {
     const idWhiteList = new Set(Object.values(Control.IdList));
 
     /* 存取會話數據 */
@@ -104,6 +105,6 @@ function Tools() {
             return this.visibleObjects(object).length >= Math.floor(object.length * .5)
         },
     }
-};
+})();
 
-export default Tools();
+export default Tools;
