@@ -72,7 +72,6 @@
     IsFinalPage: false,
     IsMangaPage: Lib.$url.endsWith("html"),
     IsMainPage: window.self === window.parent,
-    DetectSkip: Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1,
   };
   (async () => {
     if (!Param.IsMangaPage) return;
@@ -115,8 +114,9 @@
       Param.Up_scroll = Lib.sY == 0 ? (storage("scroll", false), false) : true;
     }, 1e3);
     const isTheBottom = () => Lib.sY + Lib.iH >= document.documentElement.scrollHeight;
+    const detectSkip = Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1;
     const bottomDetected = Lib.$throttle(() => {
-      if (Param.DetectSkip) return;
+      if (detectSkip) return;
       Param.Down_scroll = isTheBottom() ? (storage("scroll", false), false) : true;
     }, 1e3);
     return {
@@ -223,14 +223,15 @@
       async menuStyle() {},
     };
   })();
-  const Hotkey = async ({ TurnPage, AutoScroll, KeepScroll, ManualScroll } = Config.RegisterHotkey.Function) => {
+  const Hotkey = async () => {
     let jumpState = false;
     if (Lib.platform === "Desktop") {
+      const { TurnPage, AutoScroll, KeepScroll, ManualScroll } = Config.RegisterHotkey.Function;
       if (Param.IsMainPage && KeepScroll && AutoScroll && !ManualScroll) {
         Param.Down_scroll = Tools.storage("scroll");
         Param.Down_scroll && Tools.autoScroll(Control.ScrollPixels);
       }
-      const UP_ScrollSpeed = -2;
+      const UP_ScrollSpeed = -Control.ScrollPixels;
       const CanScroll = AutoScroll || ManualScroll;
       Lib.onEvent(
         window,
@@ -312,7 +313,9 @@
       );
     }
   };
-  const PageTurn = async (turnMode = Config.AutoTurnPage.Mode, optimized = Config.AutoTurnPage.Mode === 3) => {
+  const PageTurn = async () => {
+    const turnMode = Config.AutoTurnPage.Mode;
+    const optimized = turnMode === 3;
     async function unlimited() {
       Lib.addStyle(
         `
