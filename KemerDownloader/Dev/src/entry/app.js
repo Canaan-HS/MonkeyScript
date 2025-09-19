@@ -2,7 +2,7 @@ import { General, Process } from "../core/config.js";
 import { Lib } from "../services/client.js";
 
 import UI from './menu.js';
-import FetchData from '../core/fetch.js';
+import FetchData from '../features/fetch.js';
 import Downloader from '../core/downloader.js';
 
 import Transl from "../shared/language.js";
