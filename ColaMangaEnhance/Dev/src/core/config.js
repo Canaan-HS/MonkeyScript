@@ -40,6 +40,7 @@ const Control = {
 };
 
 const Param = {
+    /* 用於跨模塊傳遞 */
     Body: null, // body 緩存
     ContentsPage: null, // 返回目錄連結 緩存
     HomePage: null, // 返回首頁連結 緩存
@@ -51,7 +52,9 @@ const Param = {
     Down_scroll: false, // 向下滾動判斷值
     IsFinalPage: false, // 最終頁判斷值
     IsMangaPage: Lib.$url.endsWith("html"), // 判斷是否是漫畫頁面
-    IsMainPage: (window.self === window.parent) // 判斷是否是 iframe
+    IsMainPage: (window.self === window.parent), // 判斷是否是 iframe
+    /* 避免被 Vite 編譯直接移除 */
+    DetectSkip: Config.RegisterHotkey.Function.KeepScroll && Config.AutoTurnPage.Mode === 1, // 判斷是否需要跳過檢測
 };
 
 export { Config, Control, Param };
