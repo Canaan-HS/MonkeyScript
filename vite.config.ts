@@ -8,7 +8,7 @@ import open from 'open';
 import monkey from 'vite-plugin-monkey';
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
-import config from './ColaMangaEnhance/Dev/config'; // ? 引入特定腳本開發配置
+import config from './ExDownloader/Dev/config'; // ? 引入特定腳本開發配置
 
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
@@ -58,6 +58,7 @@ const serverRestartWatcherPlugin = (): Plugin => ({
 
 /* 編譯後格式化 */
 const isRelease = process.env.RELEASE === 'true';
+const removeMarker = isRelease ? '__REMOVE_ON_RELEASE_BUILD__' : '__REMOVE_ON_DEV_BUILD__';
 const userscriptPolisherPlugin = (): Plugin => ({
     name: 'userscript-polisher',
     apply: 'build',
@@ -84,16 +85,24 @@ const userscriptPolisherPlugin = (): Plugin => ({
             }
 
             // 逐行清理程式碼
-            const processedContent = originalContent.substring(headerEndIndex + headerEndMarker.length)
+            const processedContent = originalContent
+                .substring(headerEndIndex + headerEndMarker.length)
                 .split(/\r?\n/)
-                .map(line => {
-                    if (/^\s*$/.test(line)) return; // 空行
-                    if (/^\s*['"]use strict['"];?$/.test(line)) return; // 'use strict';
-                    if (/^\s*var _monkeyWindow/.test(line)) return; // var _monkeyWindow
-                    if (/^\s*const \{.*?\}\s*=\s*_?monkeyWindow;/.test(line)) return; // const { ... } = _monkeyWindow
-                    return line
-                })
-                .filter(Boolean).join('\n');
+                .filter(line => {
+                    const trimmed = line.trim();
+
+                    /* vite-plugin-monkey 編譯處理 */
+                    if (trimmed === '') return false; // 空行
+                    if (/^['"]use strict['"];?$/.test(trimmed)) return false; // 'use strict';
+                    if (/^var _monkeyWindow/.test(trimmed)) return false; // var _monkeyWindow
+                    if (/^const \{.*?\}\s*=\s*_?monkeyWindow;/.test(trimmed)) return false; // const { ... } = _monkeyWindow
+
+                    /* 自訂標記處理 */
+                    if (trimmed.includes('__REMOVE_ON_BUILD__')) return false;
+                    if (trimmed.includes(removeMarker)) return false;
+
+                    return true;
+                }).join('\n');
 
             // 格式化最終的完整內容
             const formattedCode: string = (
