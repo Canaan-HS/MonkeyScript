@@ -3,7 +3,7 @@
 // @name:zh-TW   ColaManga 瀏覽增強
 // @name:zh-CN   ColaManga 浏览增强
 // @name:en      ColaManga Browsing Enhance
-// @version      2025.09.19-Beta
+// @version      2025.09.20-Beta
 // @author       Canaan HS
 // @description       隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
 // @description:zh-TW 隱藏廣告內容，提昇瀏覽體驗。自訂背景顏色，圖片大小調整。當圖片載入失敗時，自動重新載入圖片。提供熱鍵功能：[← 上一頁]、[下一頁 →]、[↑ 自動上滾動]、[↓ 自動下滾動]。當用戶滾動到頁面底部時，自動跳轉到下一頁。
@@ -128,10 +128,10 @@
           Img_Mw: "100%",
         });
       },
-      getNodes(Root) {
+      getNodes(root) {
         const nodes = [];
-        function task(root) {
-          const tree = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+        function task(root2) {
+          const tree = document.createTreeWalker(root2, NodeFilter.SHOW_ELEMENT, {
             acceptNode: (node) => {
               if (idWhiteList.has(node.id)) {
                 return NodeFilter.FILTER_REJECT;
@@ -143,8 +143,8 @@
             nodes.push(tree.currentNode);
           }
         }
-        task(Root.head);
-        task(Root.body);
+        task(root.head);
+        task(root.body);
         return nodes;
       },
       autoScroll(move) {
@@ -172,7 +172,12 @@
         return Param.IsFinalPage;
       },
       visibleObjects: (object) => object.filter((img) => img.height > 0 || img.src),
-      lastObject: (object) => (object.length > 1 ? (object.at(-2) ?? object.at(-1)) : object[0]),
+      lastObject: (object) => {
+        const len = object.length;
+        if (len <= 5) return object[0];
+        if (len <= 10) return object.at(-2) ?? object[0];
+        return object.at(-3) ?? object[0];
+      },
       detectionValue(object) {
         return this.visibleObjects(object).length >= Math.floor(object.length * 0.5);
       },
@@ -335,18 +340,21 @@
         `,
         Control.IdList.Scroll,
       );
-      const StylelRules = Lib.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
+      const stylelRules = Lib.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
       if (Param.IsMainPage) {
-        let Size = 0;
+        let size = 0;
         Lib.onEvent(window, "message", (event) => {
           const data = event.data;
           if (data && data.length > 0) {
             const { Title, PreviousUrl, CurrentUrl, NextUrl, Resize, SizeSet, SizeRecord } = data[0];
             if (Resize) {
-              if (Size > SizeRecord) Size -= SizeRecord;
-              Size += Resize;
-              StylelRules[2].style.height = `${Size}px`;
-            } else if (SizeSet) StylelRules[2].style.height = `${SizeSet}px`;
+              if (optimized) {
+                size = Math.max(Resize, SizeRecord);
+              } else {
+                size += Resize - SizeRecord;
+              }
+              stylelRules[2].style.height = `${size}px`;
+            } else if (SizeSet) stylelRules[2].style.height = `${SizeSet}px`;
             else if (Title && NextUrl && PreviousUrl && CurrentUrl) {
               document.title = Title;
               Param.NextLink = NextUrl;
@@ -370,16 +378,16 @@
             `,
           Control.IdList.ChildS,
         );
-        let MainWindow = window;
+        let mainWindow = window;
         Lib.onEvent(window, "message", (event) => {
-          while (MainWindow.parent !== MainWindow) {
-            MainWindow = MainWindow.parent;
+          while (mainWindow.parent !== mainWindow) {
+            mainWindow = mainWindow.parent;
           }
-          MainWindow.postMessage(event.data, Lib.$origin);
+          mainWindow.postMessage(event.data, Lib.$origin);
         });
       }
       const iframe = Lib.createElement("iframe", { id: Control.IdList.Iframe, src: Param.NextLink });
-      (() => {
+      (async () => {
         let img,
           Observer,
           quantity = 0;
@@ -392,16 +400,16 @@
               if ((isIntersecting || isPastTarget) && Tools.detectionValue(img)) {
                 observerNext.disconnect();
                 Observer.disconnect();
-                TurnPage();
+                turnPage();
               }
             });
           },
-          { threshold: 0.1, rootMargin: "0px 0px 100px 0px" },
+          { threshold: [0, 0.1, 0.5], rootMargin: "0px 0px 200px 0px" },
         );
         setTimeout(() => {
           img = Param.MangaList.$qa("img");
           if (img.length <= 5) {
-            TurnPage();
+            turnPage();
             return;
           }
           const lastImg = Tools.lastObject(Tools.visibleObjects(img));
@@ -420,31 +428,34 @@
                 }
               }
             },
-            { debounce: 100 },
+            {
+              debounce: 100,
+              attributeFilter: ["src"],
+            },
             (observer) => {
               Observer = observer.ob;
             },
           );
         }, Control.WaitPicture);
       })();
-      let Turned = false;
-      function TurnPage() {
-        if (Turned) return;
-        Turned = true;
-        let CurrentHeight = 0;
-        const Resize = new ResizeObserver(() => {
-          const NewHeight = Param.MangaList.offsetHeight;
-          if (NewHeight > CurrentHeight) {
+      let turned = false;
+      function turnPage() {
+        if (turned) return;
+        turned = true;
+        let currentHeight = 0;
+        const resizeObserver = new ResizeObserver(() => {
+          const newHeight = Param.MangaList.isConnected ? Param.MangaList.offsetHeight : currentHeight;
+          if (newHeight > currentHeight) {
             window.parent.postMessage(
               [
                 {
-                  Resize: Param.MangaList.offsetHeight,
-                  SizeRecord: CurrentHeight,
+                  Resize: newHeight,
+                  SizeRecord: currentHeight,
                 },
               ],
               Lib.$origin,
             );
-            CurrentHeight = NewHeight;
+            currentHeight = newHeight;
           }
         });
         if (Tools.isFinalPage(Param.NextLink)) {
@@ -458,43 +469,45 @@
               Lib.$origin,
             );
           }
-          StylelRules[0].style.display = "block";
+          stylelRules[0].style.display = "block";
           return;
         }
-        Waitload();
+        waitLoad();
         Param.Body.appendChild(iframe);
-        Resize.observe(Param.MangaList);
-        function Waitload() {
-          let IframeWindow, CurrentUrl, Content, AllImg;
-          const Failed = () => {
+        resizeObserver.observe(Param.MangaList);
+        function waitLoad() {
+          let iframeWindow, currentUrl, content, allImg;
+          const failed = () => {
             iframe.offAll();
-            iframe.src = Param.NextLink;
-            Waitload();
+            iframe.src = "";
+            setTimeout(() => {
+              iframe.src = Param.NextLink;
+              waitLoad();
+            });
           };
-          const Success = () => {
+          const success = () => {
             iframe.offAll();
-            IframeWindow = iframe.contentWindow;
-            CurrentUrl = IframeWindow.location.href;
-            if (CurrentUrl !== Param.NextLink) {
-              Failed();
+            iframeWindow = iframe.contentWindow;
+            currentUrl = iframeWindow.location.href;
+            if (currentUrl !== Param.NextLink) {
+              failed();
               return;
             }
-            Content = IframeWindow.document;
-            Content.body.style.overflow = "hidden";
-            Lib.log(CurrentUrl, { group: "無盡翻頁" });
-            AllImg = Content.$qa("#mangalist img");
-            const UrlUpdate = new IntersectionObserver(
+            content = iframeWindow.document;
+            content.body.style.overflow = "hidden";
+            Lib.log(currentUrl, { group: "無盡翻頁" });
+            allImg = content.$qa("#mangalist img");
+            const urlUpdate = new IntersectionObserver(
               (observed) => {
                 observed.forEach((entry) => {
                   if (entry.isIntersecting) {
-                    UrlUpdate.disconnect();
-                    Resize.disconnect();
-                    const PageLink = Content.body.$qa("div.mh_readend ul a");
+                    urlUpdate.disconnect();
+                    const PageLink = content.body.$qa("div.mh_readend ul a");
                     window.parent.postMessage(
                       [
                         {
-                          Title: Content.title,
-                          CurrentUrl,
+                          Title: content.title,
+                          CurrentUrl: currentUrl,
                           PreviousUrl: PageLink[0]?.href,
                           NextUrl: PageLink[2]?.href,
                         },
@@ -506,18 +519,18 @@
               },
               { threshold: 0 },
             );
-            AllImg.forEach(async (img) => UrlUpdate.observe(img));
+            allImg.forEach((img) => urlUpdate.observe(img));
             if (optimized) {
               Lib.$q("title").id = Control.IdList.Title;
               const adapt = Lib.platform === "Desktop" ? 0.5 : 0.7;
-              const ReleaseMemory = new IntersectionObserver(
+              const releaseMemory = new IntersectionObserver(
                 (observed) => {
                   observed.forEach((entry) => {
                     if (entry.isIntersecting) {
                       const targetImg = entry.target;
                       const ratio = Math.min(adapt, (Lib.iH * adapt) / targetImg.clientHeight);
                       if (entry.intersectionRatio >= ratio) {
-                        ReleaseMemory.disconnect();
+                        releaseMemory.disconnect();
                         Tools.getNodes(document).forEach((node) => {
                           node.remove();
                         });
@@ -528,11 +541,11 @@
                 },
                 { threshold: [0, 0.5, 1] },
               );
-              AllImg.forEach(async (img) => ReleaseMemory.observe(img));
+              allImg.forEach((img) => releaseMemory.observe(img));
             }
           };
-          iframe.on("load", Success);
-          iframe.on("error", Failed);
+          iframe.on("load", success);
+          iframe.on("error", failed);
         }
       }
     }
@@ -603,7 +616,7 @@
             Config.RegisterHotkey.Enable && Hotkey();
           } else {
             Lib.log("Manga Page Init Error").error;
-            setTimeout(() => Main(true), 2e3);
+            setTimeout(() => Main(true), 1e3);
           }
         });
       } else contentsPageInit();
