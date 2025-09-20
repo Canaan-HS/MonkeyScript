@@ -27,11 +27,11 @@ export default async () => {
         `, Control.IdList.Scroll);
 
         // 取得樣式
-        const StylelRules = Lib.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
+        const stylelRules = Lib.$q(`#${Control.IdList.Scroll}`).sheet.cssRules;
 
         // 修改最上層主頁面 (根據無盡翻頁的變化)
         if (Param.IsMainPage) {
-            let Size = 0;
+            let size = 0;
 
             Lib.onEvent(window, "message", event => {
                 const data = event.data;
@@ -42,11 +42,15 @@ export default async () => {
                     } = data[0];
 
                     if (Resize) {
-                        if (Size > SizeRecord) Size -= SizeRecord; // 減去先前的大小
-                        Size += Resize; // 以最新大小累加
-                        StylelRules[2].style.height = `${Size}px`; // 根據容器高度調整
+                        if (optimized) {
+                            size = Math.max(Resize, SizeRecord);
+                        } else {
+                            size += Resize - SizeRecord;
+                        }
+
+                        stylelRules[2].style.height = `${size}px`; // 根據容器高度調整
                     }
-                    else if (SizeSet) StylelRules[2].style.height = `${SizeSet}px`; // 設置新的大小
+                    else if (SizeSet) stylelRules[2].style.height = `${SizeSet}px`; // 設置新的大小
                     else if (Title && NextUrl && PreviousUrl && CurrentUrl) { // 更新頁面信息
                         document.title = Title;
                         Param.NextLink = NextUrl;
@@ -68,19 +72,19 @@ export default async () => {
                 }
             `, Control.IdList.ChildS);
 
-            let MainWindow = window;
+            let mainWindow = window;
             Lib.onEvent(window, "message", event => {
-                while (MainWindow.parent !== MainWindow) {
-                    MainWindow = MainWindow.parent;
+                while (mainWindow.parent !== mainWindow) {
+                    mainWindow = mainWindow.parent;
                 }
-                MainWindow.postMessage(event.data, Lib.$origin);
+                mainWindow.postMessage(event.data, Lib.$origin);
             })
         };
 
         // 創建 iframe 元素
         const iframe = Lib.createElement("iframe", { id: Control.IdList.Iframe, src: Param.NextLink });
 
-        (() => {
+        (async () => {
             /* 檢測翻頁 */
 
             let img, Observer, quantity = 0;
@@ -93,17 +97,17 @@ export default async () => {
                     if ((isIntersecting || isPastTarget) && Tools.detectionValue(img)) {
                         observerNext.disconnect();
                         Observer.disconnect();
-                        TurnPage();
+                        turnPage();
                     }
                 });
-            }, { threshold: .1, rootMargin: '0px 0px 100px 0px' });
+            }, { threshold: [0, .1, .5], rootMargin: '0px 0px 200px 0px' });
             if (import.meta.hot) monkeyWindow.Next = observerNext;
 
             setTimeout(() => {
                 img = Param.MangaList.$qa("img"); // 取得當前狀態
 
                 if (img.length <= 5) { // 總長度 <= 5 直接觸發換頁
-                    TurnPage();
+                    turnPage();
                     return;
                 };
 
@@ -127,7 +131,10 @@ export default async () => {
                         }
                     }
 
-                }, { debounce: 100 }, observer => {
+                }, {
+                    debounce: 100,
+                    attributeFilter: ['src']
+                }, observer => {
                     Observer = observer.ob;
                     if (import.meta.hot) monkeyWindow.changeObserver = Observer;
                 });
@@ -136,22 +143,23 @@ export default async () => {
         })();
 
         /* 翻頁邏輯 */
-        let Turned = false;
-        function TurnPage() {
-            if (Turned) return;
-            Turned = true;
+        let turned = false;
+        function turnPage() {
+            if (turned) return;
+            turned = true;
 
-            let CurrentHeight = 0;
-            const Resize = new ResizeObserver(() => {
-                const NewHeight = Param.MangaList.offsetHeight;
+            let currentHeight = 0;
+            const resizeObserver = new ResizeObserver(() => {
+                const newHeight = Param.MangaList.offsetHeight;
 
-                if (NewHeight > CurrentHeight) {
+                if (newHeight > currentHeight) {
+
                     window.parent.postMessage([{
                         Resize: Param.MangaList.offsetHeight,
-                        SizeRecord: CurrentHeight
+                        SizeRecord: currentHeight,
                     }], Lib.$origin);
 
-                    CurrentHeight = NewHeight;
+                    currentHeight = newHeight;
                 }
             });
 
@@ -163,63 +171,64 @@ export default async () => {
                     }], Lib.$origin);
                 }
 
-                StylelRules[0].style.display = "block"; // 恢復隱藏的元素度
+                stylelRules[0].style.display = "block"; // 恢復隱藏的元素度
                 return;
             };
 
-            Waitload();
+            waitLoad();
             Param.Body.appendChild(iframe); // 添加到 body 中
-            Resize.observe(Param.MangaList); // 持續設置高度
+            resizeObserver.observe(Param.MangaList);
 
             // 等待 iframe 載入完成
-            function Waitload() {
-                let IframeWindow, CurrentUrl, Content, AllImg;
+            function waitLoad() {
+                let iframeWindow, currentUrl, content, allImg;
 
                 // 失敗載入處理
-                const Failed = () => {
+                const failed = () => {
                     iframe.offAll();
-                    iframe.src = Param.NextLink;
-                    Waitload();
+                    iframe.src = "";
+                    setTimeout(() => {
+                        iframe.src = Param.NextLink;
+                        waitLoad();
+                    })
                 };
 
                 // 成功載入後處理
-                const Success = () => {
+                const success = () => {
 
                     iframe.offAll();
-                    IframeWindow = iframe.contentWindow;
-                    CurrentUrl = IframeWindow.location.href;
+                    iframeWindow = iframe.contentWindow;
+                    currentUrl = iframeWindow.location.href;
 
-                    if (CurrentUrl !== Param.NextLink) { // 避免載入錯誤頁面
-                        Failed();
+                    if (currentUrl !== Param.NextLink) { // 避免載入錯誤頁面
+                        failed();
                         return;
                     };
 
-                    Content = IframeWindow.document;
-                    Content.body.style.overflow = "hidden";
-                    Lib.log(CurrentUrl, { group: "無盡翻頁" });
+                    content = iframeWindow.document;
+                    content.body.style.overflow = "hidden";
+                    Lib.log(currentUrl, { group: "無盡翻頁" });
 
                     // 全部圖片
-                    AllImg = Content.$qa("#mangalist img");
+                    allImg = content.$qa("#mangalist img");
 
                     // 監聽換頁點
-                    const UrlUpdate = new IntersectionObserver(observed => {
+                    const urlUpdate = new IntersectionObserver(observed => {
                         observed.forEach(entry => {
                             if (entry.isIntersecting) {
-                                UrlUpdate.disconnect();
-                                Resize.disconnect();
+                                urlUpdate.disconnect();
 
-                                const PageLink = Content.body.$qa("div.mh_readend ul a");
-
+                                const PageLink = content.body.$qa("div.mh_readend ul a");
                                 window.parent.postMessage([{
-                                    Title: Content.title,
-                                    CurrentUrl,
+                                    Title: content.title,
+                                    CurrentUrl: currentUrl,
                                     PreviousUrl: PageLink[0]?.href,
                                     NextUrl: PageLink[2]?.href
                                 }], Lib.$origin);
                             }
                         });
                     }, { threshold: 0 });
-                    AllImg.forEach(async img => UrlUpdate.observe(img));
+                    allImg.forEach(img => urlUpdate.observe(img));
 
                     if (optimized) {
                         Lib.$q("title").id = Control.IdList.Title; // 賦予一個 ID 用於白名單排除
@@ -227,7 +236,7 @@ export default async () => {
                         const adapt = Lib.platform === "Desktop" ? .5 : .7;
 
                         // 監聽釋放點
-                        const ReleaseMemory = new IntersectionObserver(observed => {
+                        const releaseMemory = new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
 
@@ -235,23 +244,25 @@ export default async () => {
                                     const ratio = Math.min(adapt, (Lib.iH * adapt) / targetImg.clientHeight); // 動態計算
 
                                     if (entry.intersectionRatio >= ratio) {
-                                        ReleaseMemory.disconnect();
+                                        releaseMemory.disconnect();
+
                                         Tools.getNodes(document).forEach(node => {
                                             node.remove(); // 刪除元素, 等待瀏覽器自己釋放
                                         })
+
                                         targetImg.scrollIntoView();
                                     }
                                 }
                             });
                         }, { threshold: [0, .5, 1] });
 
-                        AllImg.forEach(async img => ReleaseMemory.observe(img));
+                        allImg.forEach(img => releaseMemory.observe(img));
                     }
                 };
 
                 // 監聽 iframe 載入事件
-                iframe.on("load", Success); // ! 有些漫畫觸發很慢, 詢輪查找又有其他 Bug, 暫時放棄解決
-                iframe.on("error", Failed);
+                iframe.on("load", success); // ! 有些漫畫觸發很慢, 詢輪查找又有其他 Bug, 暫時放棄解決
+                iframe.on("error", failed);
             }
         }
     };
