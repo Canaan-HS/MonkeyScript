@@ -84,7 +84,7 @@ export default function Main(raf = import.meta.hot) {
                     Config.RegisterHotkey.Enable && Hotkey();
                 } else {
                     Lib.log("Manga Page Init Error").error;
-                    setTimeout(() => Main(true), 2e3); // 2 秒後重新執行
+                    setTimeout(() => Main(true), 1e3); // 1 秒後重新執行
                 }
             });
         } else contentsPageInit();
