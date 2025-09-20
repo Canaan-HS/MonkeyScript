@@ -39,7 +39,7 @@ const Tools = (() => {
         },
 
         /* 取得釋放節點 */
-        getNodes(Root) {
+        getNodes(root) {
             const nodes = [];
 
             function task(root) {
@@ -61,8 +61,8 @@ const Tools = (() => {
                 }
             };
 
-            task(Root.head);
-            task(Root.body);
+            task(root.head);
+            task(root.body);
 
             return nodes;
         },
@@ -98,7 +98,12 @@ const Tools = (() => {
         /* 篩選出可見的圖片 */
         visibleObjects: (object) => object.filter(img => img.height > 0 || img.src),
         /* 取得物件的倒數第二 */
-        lastObject: (object) => object.length > 1 ? object.at(-2) ?? object.at(-1) : object[0],
+        lastObject: (object) => {
+            const len = object.length;
+            if (len <= 5) return object[0];
+            if (len <= 10) return object.at(-2) ?? object[0];
+            return object.at(-3) ?? object[0];
+        },
         /* 總圖片數的 50 % */
         detectionValue(object) {
             return this.visibleObjects(object).length >= Math.floor(object.length * .5)
