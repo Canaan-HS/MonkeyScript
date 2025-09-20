@@ -42,12 +42,8 @@ export default async () => {
                     } = data[0];
 
                     if (Resize) {
-                        if (optimized) {
-                            size = Math.max(Resize, SizeRecord);
-                        } else {
-                            size += Resize - SizeRecord;
-                        }
-
+                        if (size > SizeRecord) size -= SizeRecord;
+                        size += Resize;
                         stylelRules[2].style.height = `${size}px`; // 根據容器高度調整
                     }
                     else if (SizeSet) stylelRules[2].style.height = `${SizeSet}px`; // 設置新的大小
@@ -150,11 +146,12 @@ export default async () => {
 
             let currentHeight = 0;
             const resizeObserver = new ResizeObserver(() => {
-                // ! 直接清理好像又有奇怪的 Bug
-                const newHeight = Param.MangaList.isConnected
-                    ? Param.MangaList.offsetHeight
-                    : currentHeight;
+                if (!Param.MangaList.isConnected) {
+                    resizeObserver.disconnect();
+                    return;
+                };
 
+                const newHeight = Param.MangaList.offsetHeight
                 if (newHeight > currentHeight) {
 
                     window.parent.postMessage([{
@@ -290,7 +287,7 @@ export default async () => {
                                 location.assign(Param.NextLink);
                             }
                         });
-                    }, { threshold: .5 });
+                    }, { threshold: 1 });
 
                     // 預設觀察底部換頁條
                     observerNext.observe(Param.BottomStrip);
