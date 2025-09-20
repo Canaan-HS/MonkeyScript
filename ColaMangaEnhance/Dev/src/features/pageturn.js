@@ -150,12 +150,15 @@ export default async () => {
 
             let currentHeight = 0;
             const resizeObserver = new ResizeObserver(() => {
-                const newHeight = Param.MangaList.offsetHeight;
+                // ! 直接清理好像又有奇怪的 Bug
+                const newHeight = Param.MangaList.isConnected
+                    ? Param.MangaList.offsetHeight
+                    : currentHeight;
 
                 if (newHeight > currentHeight) {
 
                     window.parent.postMessage([{
-                        Resize: Param.MangaList.offsetHeight,
+                        Resize: newHeight,
                         SizeRecord: currentHeight,
                     }], Lib.$origin);
 
@@ -166,6 +169,7 @@ export default async () => {
             if (Tools.isFinalPage(Param.NextLink)) { // 檢測是否是最後一頁 (進行恢復處理)
 
                 if (optimized) {
+                    // ! 後續測試 (通常會超出容器高度, 但有時會小於 所以 + 245 確保)
                     window.parent.postMessage([{
                         SizeSet: (Param.MangaList.offsetHeight + 245),
                     }], Lib.$origin);
@@ -184,6 +188,7 @@ export default async () => {
                 let iframeWindow, currentUrl, content, allImg;
 
                 // 失敗載入處理
+                // ! 目前是靠 load 判斷, 跟 error 監聽觸發, 這兩種判斷無法 100% 保證正確載入, 主要還是網站本身的問題
                 const failed = () => {
                     iframe.offAll();
                     iframe.src = "";
@@ -236,6 +241,7 @@ export default async () => {
                         const adapt = Lib.platform === "Desktop" ? .5 : .7;
 
                         // 監聽釋放點
+                        // ! 還需要測試, 目前有一些小 Bug, 可能會導致圖片被切到
                         const releaseMemory = new IntersectionObserver(observed => {
                             observed.forEach(entry => {
                                 if (entry.isIntersecting) {
@@ -261,7 +267,7 @@ export default async () => {
                 };
 
                 // 監聽 iframe 載入事件
-                iframe.on("load", success); // ! 有些漫畫觸發很慢, 詢輪查找又有其他 Bug, 暫時放棄解決
+                iframe.on("load", success);
                 iframe.on("error", failed);
             }
         }
