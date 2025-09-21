@@ -18,6 +18,7 @@ export default `
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
 
