@@ -10,6 +10,17 @@ import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
 import config from './ColaMangaEnhance/Dev/config'; // ? 引入特定腳本開發配置
 
+/* 配置範例 */
+interface configType {
+    meta: string; // userscript 元數據
+    entry: string; // 開發用入口檔案 (相對於腳本根目錄)
+    devFileName: string; // 開發編譯檔名
+    devOutDir: string; // 開發編譯目錄 (相對於腳本根目錄)
+    releaseFileName: string; // 發佈編譯檔名
+    releaseOutDir: string; // 發佈編譯目錄 (相對於腳本根目錄)
+    userscript: object; // vite-plugin-monkey 的 userscript 配置
+};
+
 const browserPaths = {
     brave: 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe',
     chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
