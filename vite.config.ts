@@ -8,7 +8,7 @@ import open from 'open';
 import monkey from 'vite-plugin-monkey';
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
-import config from './ColaMangaEnhance/Dev/config'; // ? 引入特定腳本開發配置
+import config from './YTHideTool/Dev/config'; // ? 引入特定腳本開發配置
 
 /* 配置範例 */
 interface configType {
