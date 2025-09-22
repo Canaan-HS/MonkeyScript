@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1654935/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -89,16 +89,16 @@
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
     const DLL = (() => {
-        // 頁面正則
-        const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
-        const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
-        const User = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/;
-        const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
-        const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
-        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
-        const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
-        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
-        const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
+        // 頁面正則 (早期寫的正則 有些忘記了)
+        const Posts = /\/posts\/?.*$/;
+        const Search = /\/artists\/?.*$/;
+        const User = /\/.+\/user\/[^\/]+(\?.*)?$/;
+        const Content = /\/.+\/user\/.+\/post\/.+$/;
+        const Favor = /\/favorites\?type=post\/?.*$/;
+        const Link = /\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const FavorArtist = /\/favorites(?:\?(?!type=post).*)?$/;
+        const Recommended = /\/.+\/user\/[^\/]+\/recommended\/?.*$/;
+        const Announcement = /\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
 
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const Color = {
@@ -444,7 +444,7 @@
             IsContent: () => Content.test(Url),
             IsAnnouncement: () => Announcement.test(Url),
             IsSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
-            IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
+            IsPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
             IsNeko: Lib.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
 
             Language() {
@@ -521,7 +521,7 @@
             async run() {
                 call("Global");
 
-                if (DLL.IsAllPreview()) call("Preview");
+                if (DLL.IsPreview()) call("Preview");
                 else if (DLL.IsContent()) {
                     /* 就算沒開啟原圖功能, 還是需要導入 Postview (暫時寫在這) */
                     DLL.Style.Postview(); // 導入 Post 頁面樣式
@@ -1204,6 +1204,18 @@
                     }
                 }, { capture: true, mark: "FixArtist" });
 
+                // 監聽滑鼠移入事件
+                if (Lib.platform === "Desktop") {
+                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                        const target = event.target;
+                        if (target.tagName === "IMG" && target.$hAttr("jump")) {
+                            const uri = new URL(target.$gAttr("jump"));
+                            console.log(`${uri.origin}/api/v1${uri.pathname}/posts`);
+                        }
+                    }, 3e2), { passive: true, mark: "PostShow" });
+                }
+
+
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.IsSearch()) {
                     Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
@@ -1216,8 +1228,8 @@
                         func.dynamicFix(card_items);
                         card_items.$sAttr("fix-trigger", true); // 避免沒觸發變更
                     });
-
-                } else if (DLL.IsContent()) { // 是內容頁面
+                }
+                else if (DLL.IsContent()) { // 是內容頁面
                     Lib.waitEl([
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
@@ -1225,7 +1237,8 @@
                         func.otherFix(artist, title, artist.href, Lib.url, "fix_cont");
                     });
 
-                } else { // 一般 預覽頁面
+                }
+                else { // 一般 預覽頁面
                     Lib.waitEl("span[itemprop='name']", null, { raf: true, timeout: 3 }).then(artist => {
                         func.otherFix(artist);
                     });
