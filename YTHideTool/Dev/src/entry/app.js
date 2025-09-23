@@ -84,7 +84,7 @@ export default function Main() {
 
                 // 調整操作
                 const modify = {
-                    title: (mode, save = "Title") => { // 以下的 save 不需要, 就傳遞 false 或是 空值
+                    Title: (mode, save = "Title") => { // 以下的 save 不需要, 就傳遞 false 或是 空值
                         mode = save ? mode : !mode; // 同上
 
                         Lib.title(mode ? (
@@ -94,22 +94,22 @@ export default function Main() {
                         ));
                         Tools.hideJudgment(h1, save);
                     },
-                    minimalist: (mode, save = true) => { // 這個比較特別, 他時直接在這操作存儲, 所以 save 是 Boolen
+                    Minimalist: (mode, save = true) => { // 這個比較特別, 他時直接在這操作存儲, 所以 save 是 Boolen
                         mode = save ? mode : !mode; // 全局修改時的判斷 mode 需要是反的, 剛好全局判斷的 save 始終為 false, 所以這樣寫
 
                         if (mode) {
-                            modify.title(false, false);
+                            modify.Title(false, false);
                             save && Lib.setV("Minimalist", false);
                             Tools.styleTransform([document.body], "overflow", "auto");
                             Tools.styleTransform([end, below, secondary, related], "display", "block");
                         } else {
-                            modify.title(true, false);
+                            modify.Title(true, false);
                             save && Lib.setV("Minimalist", true);
                             Tools.styleTransform([document.body], "overflow", "hidden");
                             Tools.styleTransform([end, below, secondary, related], "display", "none");
                         }
                     },
-                    recomViewing: (_, save = "RecomViewing") => {
+                    RecomViewing: (_, save = "RecomViewing") => {
                         if (inner.childElementCount > 1) {
                             Tools.hideJudgment(secondary);
                             Tools.hideJudgment(related, save);
@@ -119,10 +119,10 @@ export default function Main() {
                             Param.Token = true;
                         }
                     },
-                    comment: (_, save = "Comment") => {
+                    Comment: (_, save = "Comment") => {
                         Tools.hideJudgment(comments, save);
                     },
-                    functionBar: (_, save = "FunctionBar") => {
+                    FunctionBar: (_, save = "FunctionBar") => {
                         Tools.hideJudgment(actions, save);
                     }
                 };
@@ -131,19 +131,19 @@ export default function Main() {
                 Lib.onEvent(document, "keydown", event => {
                     if (hotKey.MinimaList(event)) {
                         event.preventDefault();
-                        modify.minimalist(Lib.getV("Minimalist"));
+                        modify.Minimalist(Lib.getV("Minimalist"));
                     } else if (hotKey.Title(event)) {
                         event.preventDefault();
-                        modify.title(Lib.title() === "...");
+                        modify.Title(Lib.title() === "...");
                     } else if (hotKey.RecomViewing(event)) {
                         event.preventDefault();
-                        modify.recomViewing();
+                        modify.RecomViewing();
                     } else if (hotKey.Comment(event)) {
                         event.preventDefault();
-                        modify.comment();
+                        modify.Comment();
                     } else if (hotKey.FunctionBar(event)) {
                         event.preventDefault();
-                        modify.functionBar();
+                        modify.FunctionBar();
                     }
                 }, { capture: true });
 
