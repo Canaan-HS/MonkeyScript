@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      2025.09.23-Beta
+// @version      2025.09.23-Beta1
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -35,7 +35,7 @@
 
 (function () {
   const Config = {
-    Dev: true,
+    Dev: false,
     GlobalChange: true,
     HotKey: {
       Adapt: (k) => k.key.toLowerCase(),
@@ -238,26 +238,26 @@
             }
           }
           const modify = {
-            title: (mode, save = "Title") => {
+            Title: (mode, save = "Title") => {
               mode = save ? mode : !mode;
               Lib.title(mode ? (Tools.titleOb.disconnect(), Tools.titleFormat(h1)) : (Tools.titleOb.observe(title, Tools.titleOp), "..."));
               Tools.hideJudgment(h1, save);
             },
-            minimalist: (mode, save = true) => {
+            Minimalist: (mode, save = true) => {
               mode = save ? mode : !mode;
               if (mode) {
-                modify.title(false, false);
+                modify.Title(false, false);
                 save && Lib.setV("Minimalist", false);
                 Tools.styleTransform([document.body], "overflow", "auto");
                 Tools.styleTransform([end, below, secondary, related], "display", "block");
               } else {
-                modify.title(true, false);
+                modify.Title(true, false);
                 save && Lib.setV("Minimalist", true);
                 Tools.styleTransform([document.body], "overflow", "hidden");
                 Tools.styleTransform([end, below, secondary, related], "display", "none");
               }
             },
-            recomViewing: (_, save = "RecomViewing") => {
+            RecomViewing: (_, save = "RecomViewing") => {
               if (inner.childElementCount > 1) {
                 Tools.hideJudgment(secondary);
                 Tools.hideJudgment(related, save);
@@ -267,10 +267,10 @@
                 Param.Token = true;
               }
             },
-            comment: (_, save = "Comment") => {
+            Comment: (_, save = "Comment") => {
               Tools.hideJudgment(comments, save);
             },
-            functionBar: (_, save = "FunctionBar") => {
+            FunctionBar: (_, save = "FunctionBar") => {
               Tools.hideJudgment(actions, save);
             },
           };
@@ -280,19 +280,19 @@
             (event) => {
               if (hotKey.MinimaList(event)) {
                 event.preventDefault();
-                modify.minimalist(Lib.getV("Minimalist"));
+                modify.Minimalist(Lib.getV("Minimalist"));
               } else if (hotKey.Title(event)) {
                 event.preventDefault();
-                modify.title(Lib.title() === "...");
+                modify.Title(Lib.title() === "...");
               } else if (hotKey.RecomViewing(event)) {
                 event.preventDefault();
-                modify.recomViewing();
+                modify.RecomViewing();
               } else if (hotKey.Comment(event)) {
                 event.preventDefault();
-                modify.comment();
+                modify.Comment();
               } else if (hotKey.FunctionBar(event)) {
                 event.preventDefault();
-                modify.functionBar();
+                modify.FunctionBar();
               }
             },
             { capture: true },
