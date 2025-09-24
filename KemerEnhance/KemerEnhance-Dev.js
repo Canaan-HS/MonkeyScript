@@ -527,15 +527,6 @@
             thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
             registered: new Set(),
             supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
-            imgType: new Set([
-                "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic",
-                "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2",
-                "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd",
-                "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff",
-                "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz",
-                "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf",
-                "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges",
-            ]),
             videoType: new Set([
                 "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v",
                 "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts",
@@ -1994,11 +1985,13 @@
                 `, "CardZoom-Effects", false);
             },
             async BetterThumbnail() { /* 變更預覽卡縮圖 */
-                Lib.waitEl(".post-card__image", null, { raf: true, all: true, timeout: 5 }).then(images => {
+                Lib.waitEl(
+                    DLL.isNeko ? ".post-card__image" : "article.post-card", null, { raf: true, all: true, timeout: 5 }
+                ).then(postCard => {
                     const func = loadFunc.betterThumbnailRequ();
 
                     if (DLL.isNeko) {
-                        images.forEach(img => {
+                        postCard.forEach(img => {
                             const src = img.src;
                             if (!src?.endsWith(".gif")) { // gif 太大
                                 func.changeSrc(img, src, src.replace("thumbnail/", ""));
@@ -2010,31 +2003,39 @@
                             uri.searchParams.delete("q");
                         };
 
+                        const postData = [...postCard].reduce((acc, card) => {
+                            const id = card.$gAttr("data-id");
+                            if (id) acc[id] = { img: card.$q("img"), footer: card.$q("time").nextElementSibling };
+                            return acc;
+                        }, {});
+
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
                         DLL.fetchApi(api, data => {
                             // ! 不特別處理 API 格式修改, 會導致報錯的問題
                             if (Lib.$type(data) === "Object") data = data?.posts || [];
 
-                            for (const [index, post] of data.entries()) {
-                                const img = images[index];
-                                const src = img?.src;
-                                const attachments = post.attachments || [];
-                                const validated = src === DLL.thumbnailApi + post.file.path;
+                            for (const post of data) {
+                                const { img, footer } = postData[post.id];
+                                if (!img && !footer) continue;
 
                                 let replaced = false;
+                                const src = img?.src;
+                                const attachments = post.attachments || [];
+
                                 const count = [post.file, ...attachments].reduce((count, attach, index) => {
                                     const path = attach.path || "";
                                     const ext = path.split(".").at(-1).toLowerCase();
                                     if (!ext) return count;
 
-                                    const isImg = DLL.imgType.has(ext);
-
+                                    // 計算檔案類型
+                                    const isImg = DLL.supportImg.has(ext);
                                     if (isImg) count.image = (count.image ?? 0) + 1;
                                     else if (DLL.videoType.has(ext)) count.video = (count.video ?? 0) + 1;
                                     else count.file = (count.file ?? 0) + 1;
 
-                                    if (validated && !replaced && index > 0 && isImg) {
+                                    // 替換縮圖
+                                    if (src && !replaced && index > 0 && isImg) {
                                         replaced = true;
                                         func.changeSrc(img, src, DLL.thumbnailApi + path);
                                     };
@@ -2042,8 +2043,7 @@
                                     return count;
                                 }, {});
 
-                                // ? 有時後會有沒有縮圖的情況, 因此不驗證 (實驗性)
-                                if (img && Object.keys(count).length > 0) {
+                                if (footer && Object.keys(count).length > 0) {
                                     const { image, video, file } = count;
 
                                     const parts = [];
@@ -2052,7 +2052,7 @@
                                     if (file) parts.push(`${file} files`);
 
                                     const showText = parts.join(" | ");
-                                    if (showText) img.closest("a").$q("time").nextElementSibling.$text(showText);
+                                    if (showText) footer.$text(showText);
                                 }
                             }
                         });
