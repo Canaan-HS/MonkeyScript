@@ -29,7 +29,11 @@ export default function Main() {
                 .ytp-ce-element {
                     display: none;
                 }
-                #movie_player:not(.ytp-fullscreen):hover .ytp-ce-element {
+                .ytp-endscreen-content {
+                    display: none;
+                }
+                #movie_player:not(.ytp-fullscreen):hover .ytp-ce-element,
+                #movie_player:not(.ytp-fullscreen):hover .ytp-endscreen-content {
                     display: block;
                 }
                 .ytp-show-tiles .ytp-videowall-still {
