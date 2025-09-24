@@ -71,11 +71,11 @@ const Process = {
     ImageExts: [
         "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic",
         "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2",
-        "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd",
+        "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd",
         "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff",
-        "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz",
+        "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz",
         "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf",
-        "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges",
+        "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges",
     ],
     VideoExts: [
         "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v",
