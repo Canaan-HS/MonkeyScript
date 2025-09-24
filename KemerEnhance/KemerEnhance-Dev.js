@@ -89,32 +89,21 @@
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
     const DLL = (() => {
-        // 頁面正則 (早期寫的正則 有些忘記了)
-        const Posts = /\/posts\/?.*$/;
-        const Search = /\/artists\/?.*$/;
-        const User = /\/.+\/user\/[^\/]+(\?.*)?$/;
-        const Content = /\/.+\/user\/.+\/post\/.+$/;
-        const Favor = /\/favorites\?type=post\/?.*$/;
-        const Link = /\/.+\/user\/[^\/]+\/links\/?.*$/;
-        const FavorArtist = /\/favorites(?:\?(?!type=post).*)?$/;
-        const Recommended = /\/.+\/user\/[^\/]+\/recommended\/?.*$/;
-        const Announcement = /\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
-
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
-        const Color = {
+        const color = {
             "kemono": "#e8a17d !important",
             "coomer": "#99ddff !important",
             "nekohouse": "#bb91ff !important"
         }[Lib.$domain.split(".")[0]];
 
-        const SaveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
+        const saveKey = { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" };
         // 導入使用者設定
-        const UserSet = {
-            MenuSet: () => Lib.getV(SaveKey.Menu, {
+        const userSet = {
+            menuSet: () => Lib.getV(saveKey.Menu, {
                 Top: "10vh",
                 Left: "10vw"
             }),
-            ImgSet: () => Lib.getV(SaveKey.Img, {
+            imgSet: () => Lib.getV(saveKey.Img, {
                 Width: "auto",
                 Height: "auto",
                 Spacing: "0px",
@@ -123,32 +112,32 @@
         };
 
         // 動態調整圖片樣式
-        let ImgRule, MenuRule;
-        const ImportantStyle = async (element, property, value) => {
+        let imgRule, menuRule;
+        const importantStyle = (element, property, value) => {
             requestAnimationFrame(() => {
                 element.style.setProperty(property, value, "important");
             })
         };
-        const NormalStyle = (element, property, value) => {
+        const normalStyle = (element, property, value) => {
             requestAnimationFrame(() => {
                 element.style[property] = value;
             });
         };
         const stylePointer = {
-            Top: value => NormalStyle(MenuRule[1], "top", value),
-            Left: value => NormalStyle(MenuRule[1], "left", value),
-            Width: value => ImportantStyle(ImgRule[1], "width", value),
-            Height: value => ImportantStyle(ImgRule[1], "height", value),
-            MaxWidth: value => ImportantStyle(ImgRule[1], "max-width", value),
-            Spacing: value => ImportantStyle(ImgRule[1], "margin", `${value} auto`)
+            Top: value => normalStyle(menuRule[1], "top", value),
+            Left: value => normalStyle(menuRule[1], "left", value),
+            Width: value => importantStyle(imgRule[1], "width", value),
+            Height: value => importantStyle(imgRule[1], "height", value),
+            MaxWidth: value => importantStyle(imgRule[1], "max-width", value),
+            Spacing: value => importantStyle(imgRule[1], "margin", `${value} auto`)
         };
 
         // 功能依賴樣式
-        const Style = {
-            async Global() { // 全域 修復所需
+        const style = {
+            get getGlobal() { // 全域 修復所需
                 Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
-                    fix_tag:hover { color: ${Color}; }
+                    fix_tag:hover { color: ${color}; }
                     .card-list__items a:not(article a) {
                         cursor: default;
                     }
@@ -199,7 +188,7 @@
                         display: block;
                     }
                     .user-card:hover fix_name {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                     .edit_textarea ~ fix_name,
                     .edit_textarea ~ fix_edit {
@@ -225,7 +214,7 @@
                         transform: translateY(-80%);
                     }
                     fix_view:hover fix_name {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                     fix_view:hover fix_edit {
                         display: block;
@@ -245,7 +234,7 @@
                         margin-top: 1.5rem;
                     }
                     fix_cont fix_name {
-                        color: ${Color};
+                        color: ${color};
                         font-size: 1.8rem;
                         display: inline-block;
                     }
@@ -266,11 +255,47 @@
                     fix_cont fix_wrapper:hover fix_edit {
                         display: block;
                     }
+
+                    .post-show-box {
+                        bottom: 85%;
+                        z-index: 9999;
+                        cursor: pointer;
+                        position: absolute;
+                        padding: 8px 4px;
+                        max-width: 120%;
+                        min-width: 80px;
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        white-space: nowrap;
+                        border-radius: 5px;
+                        background: #1d1f20ff;
+                        border: 1px solid #fff;
+                    }
+                    .post-show-box::-webkit-scrollbar {
+                        display: none;
+                    }
+                    .post-show-box img {
+                        height: 23vh;
+                        margin: 0 5px;
+                        min-width: 55%;
+                    }
+                    .fancy-image__image {
+                        z-index: 1;
+                        position: relative;
+                    }
+                    .fancy-image__picture:before {
+                        content: "";
+                        z-index: 0;
+                        bottom: 20%;
+                        width: 100px;
+                        height: 105px;
+                        position: absolute;
+                    }
                 `, "Global-Effects", false);
             },
-            async Postview() { // 觀看帖子頁所需
+            get getPostview() { // 觀看帖子頁所需
                 // 讀取圖像設置
-                const set = UserSet.ImgSet();
+                const set = userSet.imgSet();
                 Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -310,12 +335,12 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+                imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
 
                 // 全局修改功能
-                Lib.storeListen(Object.values(SaveKey), call => {
+                Lib.storeListen(Object.values(saveKey), call => {
                     if (call.far) {
-                        if (Lib.$type(call.nv) === "String") {
+                        if (typeof call.nv === "string") {
                             menuInit();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
@@ -325,7 +350,7 @@
                     }
                 });
             },
-            async PostExtra() { // 觀看帖子頁圖示
+            get getPostExtra() { // 觀看帖子頁圖示
                 Lib.addStyle(`
                     #main section {
                         width: 100%;
@@ -334,14 +359,14 @@
                         cursor: pointer;
                     }
                     #next_box a:hover {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                 `, "Post-Extra", false);
             }
         };
 
         // 展示語言
-        const Word = {
+        const word = {
             Traditional: {},
             Simplified: {
                 "📝 設置選單": "📝 设置菜单",
@@ -440,24 +465,62 @@
             }
         };
 
+        // 頁面正則 (早期寫的正則 有些忘記了)
+        const Posts = /\/posts\/?.*$/;
+        const Search = /\/artists\/?.*$/;
+        const User = /\/.+\/user\/[^\/]+(\?.*)?$/;
+        const Content = /\/.+\/user\/.+\/post\/.+$/;
+        const Favor = /\/favorites\?type=post\/?.*$/;
+        const Link = /\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const FavorArtist = /\/favorites(?:\?(?!type=post).*)?$/;
+        const Recommended = /\/.+\/user\/[^\/]+\/recommended\/?.*$/;
+        const Announcement = /\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
+
         return {
-            IsContent: () => Content.test(Url),
-            IsAnnouncement: () => Announcement.test(Url),
-            IsSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
-            IsPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Lib.$domain.startsWith("nekohouse"), // ? 用判斷字段開頭的方式, 比判斷域名字串更為穩定
+            isContent: () => Content.test(Url),
+            isAnnouncement: () => Announcement.test(Url),
+            isSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
+            isPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
+            isNeko: Lib.$domain.startsWith("nekohouse"),
 
-            Language() {
-                const Log = Lib.getV(SaveKey.Lang);
-                const ML = Lib.translMatcher(Word, Log);
+            language() {
+                const Log = Lib.getV(saveKey.Lang);
+                const ML = Lib.translMatcher(word, Log);
 
-                return {
-                    Log: Log,
-                    Transl: (Str) => ML[Str] ?? Str
-                }
+                return { Log, Transl: (str) => ML[str] ?? str }
             },
-            ...UserSet, Style, MenuRule, Color, SaveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
-            Registered: new Set()
+            responseRule: {
+                text: res => res.text(),
+                json: res => res.json(),
+                blob: res => res.blob(),
+                arrayBuffer: res => res.arrayBuffer(),
+                formData: res => res.formData(),
+                document: async res => {
+                    res = await res.text();
+                    return new DOMParser().parseFromString(res, "text/html");
+                },
+            },
+            fetchApi(url, callback, {
+                responseType = "json",
+                headers = { "Accept": "text/css" }
+            } = {}) {
+                fetch(url, { headers })
+                    .then(async response => {
+                        if (!response.ok) {
+                            const text = await response.text();
+                            throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
+                        }
+                        return await this.responseRule[responseType](response);
+                    })
+                    .then(callback)
+                    .catch(error => {
+                        Lib.log(error).error;
+                    });
+            },
+            ...userSet, style, menuRule, color, saveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
+            thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
+            registered: new Set(),
+            supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
         };
     })();
 
@@ -521,10 +584,10 @@
             async run() {
                 call("Global");
 
-                if (DLL.IsPreview()) call("Preview");
-                else if (DLL.IsContent()) {
+                if (DLL.isPreview()) call("Preview");
+                else if (DLL.isContent()) {
                     /* 就算沒開啟原圖功能, 還是需要導入 Postview (暫時寫在這) */
-                    DLL.Style.Postview(); // 導入 Post 頁面樣式
+                    DLL.style.getPostview; // 導入 Post 頁面樣式
                     call("Content"); // 呼叫功能
                     menuInit();
                 }
@@ -756,7 +819,7 @@
                             } else return;
                         },
                         candfansPageAdapt(oldId, newId, oldUrl, oldName, newName) { // Candfans 很麻煩, 不同頁面的格式不一樣
-                            if (DLL.IsSearch()) {
+                            if (DLL.isSearch()) {
                                 oldId = newId ? newId : oldId;
                             } else {
                                 oldUrl = newId ? this.replaceUrlTail(oldUrl, newId) : oldUrl;
@@ -961,7 +1024,7 @@
                 Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 5 }).then(announcement => announcement.remove());
             },
             async BlockAds() { /* (阻止/封鎖)廣告 */
-                if (DLL.IsNeko) return;
+                if (DLL.isNeko) return;
 
                 const cookieString = Lib.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
@@ -985,7 +1048,7 @@
                 // 舊版白名單正則轉換
                 // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
 
-                if (DLL.Registered.has("BlockAds")) return;
+                if (DLL.registered.has("BlockAds")) return;
 
                 Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
@@ -1019,10 +1082,10 @@
                     }
                 });
 
-                DLL.Registered.add("BlockAds");
+                DLL.registered.add("BlockAds");
             },
             async CacheFetch() { /* 緩存請求 */
-                if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
+                if (DLL.isNeko || DLL.registered.has("CacheFetch")) return;
 
                 const script = `
                     const cache = new Map();
@@ -1089,14 +1152,14 @@
 
                 eval(script); // sandbox 內部攔截
                 Lib.addScript(script, "Cache-Fetch", false); // 主頁 context 攔截
-                DLL.Registered.add("CacheFetch");
+                DLL.registered.add("CacheFetch");
             },
             async TextToLink(config) { /* 連結文本轉連結 (沒有連結文本的不會執行) */
-                if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
+                if (!DLL.isContent() && !DLL.isAnnouncement()) return;
 
                 const func = loadFunc.textToLinkRequ(config);
 
-                if (DLL.IsContent()) {
+                if (DLL.isContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
 
                         let [article, content] = [
@@ -1126,7 +1189,7 @@
                         }
                     });
 
-                } else if (DLL.IsAnnouncement()) {
+                } else if (DLL.isAnnouncement()) {
                     Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
                         const items = Lib.$q(".card-list__items");
 
@@ -1138,7 +1201,7 @@
                 }
             },
             async FixArtist({ newtab, newtab_active, newtab_insert }) { /* 修復藝術家名稱 */
-                DLL.Style.Global(); // 導入 Global 頁面樣式
+                DLL.style.getGlobal; // 導入 Global 頁面樣式
                 const func = loadFunc.fixArtistRequ();
 
                 // 監聽點擊事件
@@ -1180,22 +1243,22 @@
                             }, 50);
                         }, 300);
                     } else if (
-                        newtab && (Lib.platform !== "Mobile" || DLL.IsContent()) && (
+                        newtab && (Lib.platform !== "Mobile" || DLL.isContent()) && (
                             target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")
                         )
-                        || !newtab && DLL.IsContent()
+                        || !newtab && DLL.isContent()
                     ) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
 
                         const jump = target.$gAttr("jump");
                         if (!target.parentElement.matches("fix_cont") && jump) {
-                            DLL.IsSearch()
+                            DLL.isSearch()
                                 || target.matches("fix_tag")
                                 ? GM_openInTab(jump, { active, insert })
                                 : location.assign(jump);
                         } else if (jump) {
-                            newtab && DLL.IsContent() && target.matches("fix_name")
+                            newtab && DLL.isContent() && target.matches("fix_name")
                                 ? GM_openInTab(jump, { active, insert })
                                 : location.assign(jump);
                         } else if (target.tagName === "IMG") {
@@ -1206,18 +1269,91 @@
 
                 // 監聽滑鼠移入事件
                 if (Lib.platform === "Desktop") {
+                    let currentBox, currentTarget;
+
                     Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
-                        const target = event.target;
+                        let target = event.target;
+
                         if (target.tagName === "IMG" && target.$hAttr("jump")) {
-                            const uri = new URL(target.$gAttr("jump"));
-                            console.log(`${uri.origin}/api/v1${uri.pathname}/posts`);
+                            currentTarget = target.parentElement;
+                            currentBox = target.previousElementSibling;
                         }
+                        else if (target.tagName === "PICTURE") {
+                            currentTarget = target;
+                            currentBox = target.$q(".post-show-box");
+                            target = target.$q("img");
+                        } else return;
+
+                        if (!currentBox && target) {
+                            currentBox = Lib.createElement("div", {
+                                text: "Loading...",
+                                style: "display: none;",
+                                class: "post-show-box",
+                                on: {
+                                    type: "wheel",
+                                    listener: event => {
+                                        event.preventDefault();
+                                        event.currentTarget.scrollLeft += event.deltaY;
+                                    }
+                                }
+                            })
+                            target.$iAdjacent(currentBox, "beforebegin");
+
+                            const url = target.$gAttr("jump");
+                            // 目前暫時只有 discord 不支援, 就不用正則
+                            if (!url.includes("discord")) {
+                                const uri = new URL(url);
+                                const api = DLL.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                                DLL.fetchApi(api, data => {
+                                    if (DLL.isNeko) data = data.$qa(".post-card__image");
+                                    currentBox.$text(""); // 清除載入文本
+
+                                    for (const [index, post] of data.entries()) {
+                                        let src = "";
+
+                                        if (DLL.isNeko) src = post.src ?? "";
+                                        else {
+                                            for (const { path } of [
+                                                post.file,
+                                                ...post?.attachments || {}
+                                            ]) {
+                                                if (!path) continue;
+
+                                                const isImg = DLL.supportImg.has(path.split(".")[1]);
+                                                if (!isImg) continue;
+
+                                                src = DLL.thumbnailApi + path;
+                                                break;
+                                            }
+                                        }
+
+                                        if (!src) continue;
+                                        Lib.createElement(currentBox, "img", {
+                                            src,
+                                            loading: "lazy",
+                                            attr: { "number": index + 1 }
+                                        })
+                                    }
+
+                                    if (currentBox.childElementCount === 0) currentBox.$text("No Image");
+                                }, { responseType: DLL.isNeko ? "document" : "json" })
+                            } else currentBox.$text("Not Supported");
+                        }
+
+                        // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
+                        currentBox?.$sAttr("style", "display: block;");
                     }, 3e2), { passive: true, mark: "PostShow" });
+
+                    Lib.onEvent(Lib.body, "mouseout", event => {
+                        if (!currentTarget) return;
+                        if (currentTarget.contains(event.relatedTarget)) return;
+                        currentTarget = null;
+                        currentBox?.$sAttr("style", "display: none;");
+                    }, { passive: true, mark: "PostHide" });
                 }
 
-
                 // 搜尋頁面, 與一些特殊預覽頁
-                if (DLL.IsSearch()) {
+                if (DLL.isSearch()) {
                     Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
                         if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
                             // 特定頁面的 名稱修復
@@ -1229,7 +1365,7 @@
                         card_items.$sAttr("fix-trigger", true); // 避免沒觸發變更
                     });
                 }
-                else if (DLL.IsContent()) { // 是內容頁面
+                else if (DLL.isContent()) { // 是內容頁面
                     Lib.waitEl([
                         "h1 span:nth-child(2)",
                         ".post__user-name, .scrape__user-name"
@@ -1245,7 +1381,7 @@
                 }
             },
             async KeyScroll({ mode }) { /* 快捷自動滾動 */
-                if (Lib.platform === "Mobile" || DLL.Registered.has("KeyScroll")) return;
+                if (Lib.platform === "Mobile" || DLL.registered.has("KeyScroll")) return;
 
                 // 滾動配置
                 const Scroll_Requ = {
@@ -1323,7 +1459,7 @@
                     }
                 }, 100), { capture: true });
 
-                DLL.Registered.add("KeyScroll");
+                DLL.registered.add("KeyScroll");
             }
         }
     };
@@ -1334,7 +1470,6 @@
             betterThumbnailCache: undefined,
             betterThumbnailRequ() {
                 return this.betterThumbnailCache ??= {
-                    supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
                     imgReload: (img, thumbnailSrc, retry) => {
                         if (retry <= 0) {
                             img.src = thumbnailSrc;
@@ -1388,10 +1523,10 @@
             },
             async QuickPostToggle() { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
-                if (!DLL.IsNeko || DLL.Registered.has("QuickPostToggle")) return; // ! 暫時只支援 Neko
+                if (!DLL.isNeko || DLL.registered.has("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
                 Lib.waitEl("menu", null, { all: true, timeout: 5 }).then(menu => {
-                    DLL.Registered.add("QuickPostToggle");
+                    DLL.registered.add("QuickPostToggle");
 
                     // 渲染
                     function Rendering({ href, className, textContent, style }) {
@@ -1720,7 +1855,7 @@
                             history.pushState(null, null, pageLinks[targetPage - 1]);
                         } catch (error) {
                             if (error.message !== 'Aborted') {
-                                console.error('Page fetch failed:', error);
+                                Lib.log('Page fetch failed:', error).error;
                             }
                         } finally {
                             isLoading = false;
@@ -1787,8 +1922,7 @@
                                 transform: scale(1.1) translateY(0);
                             }
                             .post-card a::-webkit-scrollbar {
-                                width: 0;
-                                height: 0;
+                                display: none;
                             }
                             .post-card a:hover .post-card__image-container {
                                 position: relative;
@@ -1796,7 +1930,7 @@
                         `, "CardZoom-Effects-2", false);
                         break;
                     case 3:
-                        const [paddingBottom, rowGap, height] = DLL.IsNeko
+                        const [paddingBottom, rowGap, height] = DLL.isNeko
                             ? ["0", "0", "57"]
                             : ["7", "5.8", "50"];
 
@@ -1833,7 +1967,7 @@
                 Lib.waitEl(".post-card__image", null, { raf: true, all: true, timeout: 5 }).then(images => {
                     const func = loadFunc.betterThumbnailRequ();
 
-                    if (DLL.IsNeko) {
+                    if (DLL.isNeko) {
                         images.forEach(img => {
                             const src = img.src;
                             if (!src?.endsWith(".gif")) { // gif 太大
@@ -1846,12 +1980,10 @@
                             uri.searchParams.delete("q");
                         };
 
-                        let basicUri = null;
                         const imgBox = images.reduce((acc, img) => {
                             const src = img.src;
                             if (src) {
                                 acc[src] = img;
-                                basicUri = src;
                             }
                             return acc;
                         }, {});
@@ -1861,47 +1993,31 @@
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
                         // ! 有時會重複觸發, 不知道為啥
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
-                        fetch(api, {
-                            headers: { "Accept": "text/css" }
-                        })
-                            .then(async response => {
-                                if (!response.ok) {
-                                    const text = await response.text();
-                                    throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
+                        DLL.fetchApi(api, data => {
+                            const type = Lib.$type(data);
+
+                            if (type === "Object") {
+                                data = data?.posts ?? [];
+                            };
+
+                            for (const obj of data) {
+                                const file = obj.file.path;
+                                const img = imgBox[DLL.thumbnailApi + file];
+                                const src = img?.src;
+
+                                if (!src) continue; // 沒有的話就跳過
+                                for (const attach of obj.attachments ?? []) {
+                                    const path = attach.path;
+                                    if (!path) continue;
+
+                                    const isImg = DLL.supportImg.has(path.split(".")[1]);
+                                    if (!isImg) continue;
+
+                                    func.changeSrc(img, src, DLL.thumbnailApi + path);
+                                    break;
                                 }
-                                return await response.json();
-
-                            })
-                            .then(data => {
-                                const type = Lib.$type(data);
-
-                                if (type === "Object") {
-                                    data = data?.posts ?? [];
-                                };
-
-                                basicUri = basicUri.split("data/")[0] + "data";
-
-                                for (const obj of data) {
-                                    const file = obj.file.path;
-                                    const img = imgBox[basicUri + file];
-                                    const src = img?.src;
-
-                                    if (!src) continue; // 沒有的話就跳過
-                                    for (const attach of obj.attachments ?? []) {
-                                        const path = attach.path;
-                                        if (!path) continue;
-
-                                        const isImg = func.supportImg.has(path.split(".")[1]);
-                                        if (!isImg) continue;
-
-                                        func.changeSrc(img, src, basicUri + path);
-                                        break;
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error(error);
-                            });
+                            }
+                        });
                     }
                 })
             }
@@ -1914,7 +2030,7 @@
             linkBeautifyCache: undefined,
             linkBeautifyRequ() {
                 return this.linkBeautifyCache ??= async function showBrowse(browse) {
-                    const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
+                    const url = DLL.isNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
 
                     // 初始化
                     browse.style.position = "relative"; // 修改樣式避免跑版
@@ -1930,8 +2046,8 @@
                         onload: response => {
                             if (response.status !== 200) return;
 
-                            if (DLL.IsNeko) {
-                                // ! 忘記這個 API 有什麼用了, IsNeko 好像是沒有用
+                            if (DLL.isNeko) {
+                                // ! 忘記這個 API 有什麼用了, isNeko 好像是沒有用
 
                                 const main = response.responseXML.$q("main");
                                 const view = Lib.createElement("View");
@@ -2033,14 +2149,14 @@
                     for (const link of post) {
 
                         // 過濾先前處理層
-                        if (!DLL.IsNeko && link.$gAttr("beautify")) {
+                        if (!DLL.isNeko && link.$gAttr("beautify")) {
                             link.remove();
                             continue;
                         };
 
                         const text = link.$text().replace("Download ", ""); // 修正原文本
 
-                        if (DLL.IsNeko) {
+                        if (DLL.isNeko) {
                             link.$text(text);
                             link.$sAttr("download", text);
                         } else {
@@ -2058,7 +2174,7 @@
                 });
             },
             async VideoBeautify({ mode }) { /* 調整影片區塊大小, 將影片名稱轉換成下載連結 */
-                if (DLL.IsNeko) {
+                if (DLL.isNeko) {
                     Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then(video => {
                         video.forEach(media => media.$sAttr("preload", "metadata"));
                     });
@@ -2123,7 +2239,7 @@
                     /**
                      * 針對 Neko 網站的支援
                      */
-                    const linkQuery = DLL.IsNeko ? "div" : "a";
+                    const linkQuery = DLL.isNeko ? "div" : "a";
                     const safeGetSrc = (element) => element?.src || element?.$gAttr("src");
                     const safeGetHref = (element) => element?.href || element?.$gAttr("href");
 
@@ -2438,7 +2554,7 @@
             },
             async ExtraButton() { /* 下方額外擴充按鈕 */
                 Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then(comments => {
-                    DLL.Style.PostExtra(); // 導入需求樣式
+                    DLL.style.getPostExtra; // 導入需求樣式
                     const getNextPage = loadFunc.extraButtonRequ();
 
                     const [Prev, Next, Svg, Span, Buffer] = [
@@ -2452,13 +2568,13 @@
                     Svg.id = "To_top";
                     Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
-                            <style>svg{fill: ${DLL.Color}}</style>
+                            <style>svg{fill: ${DLL.color}}</style>
                             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
                         </svg>
                     `);
 
                     const Next_btn = Next?.$copy(true) ?? document.createElement("div");
-                    Next_btn.style = `color: ${DLL.Color};`;
+                    Next_btn.style = `color: ${DLL.color};`;
                     Next_btn.$sAttr("jump", Next_btn.href);
                     Next_btn.$dAttr("href");
 
@@ -2473,7 +2589,7 @@
 
                     // 點擊切換下一頁按鈕
                     Lib.onE(Next_btn, "click", () => {
-                        if (DLL.IsNeko) {
+                        if (DLL.isNeko) {
                             getNextPage(
                                 Next_btn.$gAttr("jump"),
                                 Lib.$q("main")
@@ -2519,7 +2635,7 @@
 
     /* ==================== 設置菜單 ==================== */
     async function menuInit(callback = null) {
-        const { Log, Transl } = DLL.Language(); // 菜單觸發器, 每次創建都會獲取新數據
+        const { Log, Transl } = DLL.language(); // 菜單觸發器, 每次創建都會獲取新數據
 
         callback?.({ Log, Transl }); // 使用 callback 會額外回傳數據
         Lib.regMenu({ [Transl("📝 設置選單")]: () => createMenu(Log, Transl) });
@@ -2575,7 +2691,7 @@
         if (Lib.$q(`#${shadowID}`)) return;
 
         // 取得圖片設置
-        const imgSet = DLL.ImgSet();
+        const imgSet = DLL.imgSet();
         const imgSetData = [
             ["圖片高度", "Height", imgSet.Height],
             ["圖片寬度", "Width", imgSet.Width],
@@ -2617,7 +2733,7 @@
             </script>
         `;
 
-        const menuSet = DLL.MenuSet(); // 取得菜單設置
+        const menuSet = DLL.menuSet(); // 取得菜單設置
         // 菜單樣式
         const menuStyle = `
             <style id="menu-style">
@@ -2853,7 +2969,7 @@
         languageEl.value = Log ?? "en-US"; // 添加語言設置
         draggable(interfaceEl); // 添加拖曳功能
 
-        DLL.MenuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
+        DLL.menuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
 
         // 菜單調整依賴
         const menuRequ = {
@@ -2862,7 +2978,7 @@
             },
             menuSave() { // 保存菜單
                 const styles = getComputedStyle(interfaceEl);
-                Lib.setV(DLL.SaveKey.Menu, { Top: styles.top, Left: styles.left }); // 保存設置數據
+                Lib.setV(DLL.saveKey.Menu, { Top: styles.top, Left: styles.left }); // 保存設置數據
             },
             imgSave() {
                 img_set = imageSetEl.querySelectorAll("p"); // 獲取設定 DOM 參數
@@ -2883,7 +2999,7 @@
                     save_cache[img_input.$gAttr("data-key")] = set_value;
                 });
 
-                Lib.setV(DLL.SaveKey.Img, save_cache); // 保存設置數據
+                Lib.setV(DLL.saveKey.Img, save_cache); // 保存設置數據
             },
             async imgSettings() {
 
@@ -2931,7 +3047,7 @@
             event.stopImmediatePropagation();
 
             const value = event.currentTarget.value;
-            Lib.setV(DLL.SaveKey.Lang, value);
+            Lib.setV(DLL.saveKey.Lang, value);
 
             menuRequ.menuSave();
             menuRequ.menuClose();
@@ -2949,7 +3065,7 @@
 
             // 菜單功能選擇
             if (id === "image-settings") {
-                const imgsetCss = DLL.MenuRule[2].style;
+                const imgsetCss = DLL.menuRule[2].style;
 
                 if (imgsetCss.opacity === "0") {
                     let dom = "";
