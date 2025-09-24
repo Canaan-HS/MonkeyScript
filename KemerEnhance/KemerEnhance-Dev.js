@@ -521,6 +521,22 @@
             thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
             registered: new Set(),
             supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
+            imgType: new Set([
+                "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic",
+                "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2",
+                "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd",
+                "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff",
+                "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz",
+                "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf",
+                "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges",
+            ]),
+            videoType: new Set([
+                "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v",
+                "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts",
+                "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt",
+                "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod",
+                "mxf", "ogg",
+            ])
         };
     })();
 
@@ -1322,7 +1338,7 @@
                                         else {
                                             for (const { path } of [
                                                 post.file,
-                                                ...post?.attachments || {}
+                                                ...post?.attachments || []
                                             ]) {
                                                 if (!path) continue;
 
@@ -1987,41 +2003,49 @@
                             uri.searchParams.delete("q");
                         };
 
-                        const imgBox = images.reduce((acc, img) => {
-                            const src = img.src;
-                            if (src) {
-                                acc[src] = img;
-                            }
-                            return acc;
-                        }, {});
-
-                        if (imgBox.length === 0) return;
-
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
-                        // ! 有時會重複觸發, 不知道為啥
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
                         DLL.fetchApi(api, data => {
-                            const type = Lib.$type(data);
+                            // ! 不特別處理 API 格式修改, 會導致報錯的問題
+                            if (Lib.$type(data) === "Object") data = data?.posts || [];
 
-                            if (type === "Object") {
-                                data = data?.posts ?? [];
-                            };
-
-                            for (const obj of data) {
-                                const file = obj.file.path;
-                                const img = imgBox[DLL.thumbnailApi + file];
+                            for (const [index, post] of data.entries()) {
+                                const img = images[index];
                                 const src = img?.src;
+                                const attachments = post.attachments || [];
+                                const validated = src === DLL.thumbnailApi + post.file.path;
 
-                                if (!src) continue; // 沒有的話就跳過
-                                for (const attach of obj.attachments ?? []) {
-                                    const path = attach.path;
-                                    if (!path) continue;
+                                let replaced = false;
+                                const count = [post.file, ...attachments].reduce((count, attach, index) => {
+                                    const path = attach.path || "";
+                                    const ext = path.split(".").at(-1).toLowerCase();
+                                    if (!ext) return count;
 
-                                    const isImg = DLL.supportImg.has(path.split(".")[1]);
-                                    if (!isImg) continue;
+                                    const isImg = DLL.imgType.has(ext);
 
-                                    func.changeSrc(img, src, DLL.thumbnailApi + path);
-                                    break;
+                                    if (isImg) count.image = (count.image ?? 0) + 1;
+                                    else if (DLL.videoType.has(ext)) count.video = (count.video ?? 0) + 1;
+                                    else count.file = (count.file ?? 0) + 1;
+
+                                    if (validated && !replaced && index > 0 && isImg) {
+                                        replaced = true;
+                                        func.changeSrc(img, src, DLL.thumbnailApi + path);
+                                    };
+
+                                    return count;
+                                }, {});
+
+                                // ? 有時後會有沒有縮圖的情況, 因此不驗證 (實驗性)
+                                if (img && Object.keys(count).length > 0) {
+                                    const { image, video, file } = count;
+
+                                    const parts = [];
+                                    if (image) parts.push(`${image} images`);
+                                    if (video) parts.push(`${video} videos`);
+                                    if (file) parts.push(`${file} files`);
+
+                                    const showText = parts.join(" | ");
+                                    if (showText) img.closest("a").$q("time").nextElementSibling.$text(showText);
                                 }
                             }
                         });
