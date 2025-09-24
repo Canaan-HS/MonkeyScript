@@ -57,6 +57,7 @@
             },
             BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
+                previewAbove: true, // 快速預覽展示位置
                 newtab: true,
                 newtab_active: true,
                 newtab_insert: true,
@@ -65,7 +66,7 @@
         Preview: {
             CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放, 3 = 卡片放大 + 自動縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            BetterThumbnail: true, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
+            BetterThumbnail: true, // 替換成內頁縮圖 , 與文件類型直接顯示 (nekohouse 某些不支援)
             QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 enable: true,
@@ -257,7 +258,6 @@
                     }
 
                     .post-show-box {
-                        bottom: 85%;
                         z-index: 9999;
                         cursor: pointer;
                         position: absolute;
@@ -270,6 +270,12 @@
                         border-radius: 5px;
                         background: #1d1f20ff;
                         border: 1px solid #fff;
+                    }
+                    .post-show-box[preview="above"] {
+                        bottom: 85%;
+                    }
+                    .post-show-box[preview="below"] {
+                        top: 85%;
                     }
                     .post-show-box::-webkit-scrollbar {
                         display: none;
@@ -286,9 +292,9 @@
                     .fancy-image__picture:before {
                         content: "";
                         z-index: 0;
-                        bottom: 20%;
+                        bottom: 10%;
                         width: 100px;
-                        height: 105px;
+                        height: 115px;
                         position: absolute;
                     }
                 `, "Global-Effects", false);
@@ -1216,7 +1222,7 @@
                     })
                 }
             },
-            async BetterPostCard({ newtab, newtab_active, newtab_insert }) { /* 更好的 PostCard */
+            async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove }) { /* 更好的 PostCard */
                 DLL.style.getGlobal; // 導入 Global 頁面樣式
                 const func = loadFunc.betterPostCardRequ();
 
@@ -1312,6 +1318,7 @@
                                 text: "Loading...",
                                 style: "display: none;",
                                 class: "post-show-box",
+                                attr: { preview: previewAbove ? "above" : "below" },
                                 on: {
                                     type: "wheel",
                                     listener: event => {
