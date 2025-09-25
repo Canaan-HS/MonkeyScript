@@ -55,7 +55,7 @@
                 newtab_active: false, // 切換焦點到新選項卡
                 newtab_insert: true, // 選項卡插入到當前選項卡的正後方
             },
-            FixArtist: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
+            BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
                 newtab: true,
                 newtab_active: true,
@@ -534,7 +534,7 @@
                 "SidebarCollapse",
                 "DeleteNotice",
                 "TextToLink",
-                "FixArtist",
+                "BetterPostCard",
                 "KeyScroll"
             ],
             Preview: [
@@ -743,9 +743,9 @@
                     }
                 };
             },
-            fixArtistCache: undefined,
-            fixArtistRequ() {
-                if (!this.fixArtistCache) {
+            betterPostCardCache: undefined,
+            betterPostCardRequ() {
+                if (!this.betterPostCardCache) {
                     const fixRequ = { // 宣告修復需要的函數
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
                         fixCache: new Map(), // 修復後 用於緩存
@@ -992,9 +992,9 @@
                     }
 
                     fixRequ.recordCache = fixRequ.getRecord(); // 初始化緩存
-                    this.fixArtistCache = fixRequ;
+                    this.betterPostCardCache = fixRequ;
                 };
-                return this.fixArtistCache;
+                return this.betterPostCardCache;
             }
         }
 
@@ -1200,19 +1200,20 @@
                     })
                 }
             },
-            async FixArtist({ newtab, newtab_active, newtab_insert }) { /* 修復藝術家名稱 */
+            async BetterPostCard({ newtab, newtab_active, newtab_insert }) { /* 更好的 PostCard */
                 DLL.style.getGlobal; // 導入 Global 頁面樣式
-                const func = loadFunc.fixArtistRequ();
+                const func = loadFunc.betterPostCardRequ();
 
                 // 監聽點擊事件
                 const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
+                    const tagName = target.tagName;
 
-                    if (target.tagName === "TEXTAREA") {
+                    if (tagName === "TEXTAREA") {
                         event.preventDefault();
                         event.stopImmediatePropagation();
-                    } else if (target.matches("fix_edit")) {
+                    } else if (tagName === "FIX_EDIT") {
                         event.preventDefault();
                         event.stopImmediatePropagation();
 
@@ -1243,29 +1244,34 @@
                             }, 50);
                         }, 300);
                     } else if (
-                        newtab && (Lib.platform !== "Mobile" || DLL.isContent()) && (
-                            target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")
+                        // ! 以後在優化, 現在只是為了快速實現
+                        newtab && Lib.platform !== "Mobile" && (
+                            tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE"
+                            || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")
                         )
-                        || !newtab && DLL.isContent()
+                        || tagName === "FIX_TAG"
+                        || tagName === "FIX_NAME" && (DLL.isPreview() || DLL.isContent())
+                        || DLL.isContent() && target.matches(".fancy-image__image")
                     ) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
 
                         const jump = target.$gAttr("jump");
-                        if (!target.parentElement.matches("fix_cont") && jump) {
-                            DLL.isSearch()
-                                || target.matches("fix_tag")
+                        if (jump) {
+                            newtab
+                                || tagName === "FIX_TAG"
+                                || tagName === "FIX_NAME" && DLL.isPreview()
                                 ? GM_openInTab(jump, { active, insert })
                                 : location.assign(jump);
-                        } else if (jump) {
-                            newtab && DLL.isContent() && target.matches("fix_name")
-                                ? GM_openInTab(jump, { active, insert })
-                                : location.assign(jump);
-                        } else if (target.tagName === "IMG") {
-                            location.assign(target.closest("a").href);
+                        }
+                        else if (tagName === "IMG" || tagName === "PICTURE") {
+                            const href = target.closest("a").href;
+                            newtab && !DLL.isContent()
+                                ? GM_openInTab(href, { active, insert })
+                                : location.assign(href);
                         }
                     }
-                }, { capture: true, mark: "FixArtist" });
+                }, { capture: true, mark: "BetterPostCard" });
 
                 // 監聽滑鼠移入事件
                 if (Lib.platform === "Desktop") {
@@ -1273,12 +1279,13 @@
 
                     Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
                         let target = event.target;
+                        const tagName = target.tagName;
 
-                        if (target.tagName === "IMG" && target.$hAttr("jump")) {
+                        if (tagName === "IMG" && target.$hAttr("jump")) {
                             currentTarget = target.parentElement;
                             currentBox = target.previousElementSibling;
                         }
-                        else if (target.tagName === "PICTURE") {
+                        else if (tagName === "PICTURE") {
                             currentTarget = target;
                             currentBox = target.$q(".post-show-box");
                             target = target.$q("img");
