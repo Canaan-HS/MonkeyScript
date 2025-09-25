@@ -1320,7 +1320,7 @@
 
                             const url = target.$gAttr("jump");
                             // 目前暫時只有 discord 不支援, 就不用正則
-                            if (!url.includes("discord")) {
+                            if (url && !url.includes("discord")) {
                                 const uri = new URL(url);
                                 const api = DLL.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
                                 DLL.fetchApi(api, data => {
