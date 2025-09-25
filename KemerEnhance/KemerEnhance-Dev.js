@@ -6,15 +6,15 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.07-Beta
+// @version      2025.09.25-Beta
 // @author       Canaan HS
-// @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
-// @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
-// @description:zh-CN  美化界面和重新排版，包括移除广告和多余的横幅，修正画师名称和编辑相关的资讯保存，自动载入原始图像，菜单设置图像大小间距，快捷键触发自动滚动，解析文本中的链接并转换为可点击的链接，快速的页面切换和跳转功能，并重新定向到新分頁
-// @description:ja     インターフェイスの美化と再配置、広告や余分なバナーの削除、イラストレーター名の修正と関連情報の保存の編集、オリジナル画像の自動読み込み、メニューでの画像のサイズと間隔の設定、ショートカットキーによる自動スクロールのトリガー、テキスト内のリンクの解析とクリック可能なリンクへの変換、高速なページ切り替えとジャンプ機能、新しいタブへのリダイレクト
-// @description:ko     인터페이스 미화 및 재배치, 광고 및 불필요한 배너 제거, 아티스트 이름 수정 및 관련 정보 저장 편집, 원본 이미지 자동 로드, 메뉴에서 이미지 크기 및 간격 설정, 단축키로 자동 스크롤 트리거, 텍스트 내 링크 분석 및 클릭 가능한 링크로 변환, 빠른 페이지 전환 및 점프 기능, 새 탭으로 리디렉션
-// @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
-// @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
+// @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
+// @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
+// @description:zh-CN  美化界面与操作增强，增加额外功能，提供更好的使用体验
+// @description:ja     インターフェースを美化し操作を強化、追加機能により、より良い使用体験を提供します
+// @description:ko     인터페이스를 미화하고 조작을 강화하며, 추가 기능을 통해 더 나은 사용 경험을 제공합니다
+// @description:ru     Улучшение интерфейса и функций управления, добавление дополнительных возможностей для лучшего опыта использования
+// @description:en     Beautify interface and enhance operations, add extra features, and provide a better user experience
 
 // @connect      *
 // @match        *://kemono.cr/*
@@ -55,7 +55,7 @@
                 newtab_active: false, // 切換焦點到新選項卡
                 newtab_insert: true, // 選項卡插入到當前選項卡的正後方
             },
-            FixArtist: { // 修復作者名稱
+            FixArtist: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
                 newtab: true,
                 newtab_active: true,
