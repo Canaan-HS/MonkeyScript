@@ -6,15 +6,15 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.07-Beta
+// @version      2025.09.25-Beta
 // @author       Canaan HS
-// @description        美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
-// @description:zh-TW  美化介面和重新排版，包括移除廣告和多餘的橫幅，修正繪師名稱和編輯相關的資訊保存，自動載入原始圖像，菜單設置圖像大小間距，快捷鍵觸發自動滾動，解析文本中的連結並轉換為可點擊的連結，快速的頁面切換和跳轉功能，並重新定向到新分頁
-// @description:zh-CN  美化界面和重新排版，包括移除广告和多余的横幅，修正画师名称和编辑相关的资讯保存，自动载入原始图像，菜单设置图像大小间距，快捷键触发自动滚动，解析文本中的链接并转换为可点击的链接，快速的页面切换和跳转功能，并重新定向到新分頁
-// @description:ja     インターフェイスの美化と再配置、広告や余分なバナーの削除、イラストレーター名の修正と関連情報の保存の編集、オリジナル画像の自動読み込み、メニューでの画像のサイズと間隔の設定、ショートカットキーによる自動スクロールのトリガー、テキスト内のリンクの解析とクリック可能なリンクへの変換、高速なページ切り替えとジャンプ機能、新しいタブへのリダイレクト
-// @description:ko     인터페이스 미화 및 재배치, 광고 및 불필요한 배너 제거, 아티스트 이름 수정 및 관련 정보 저장 편집, 원본 이미지 자동 로드, 메뉴에서 이미지 크기 및 간격 설정, 단축키로 자동 스크롤 트리거, 텍스트 내 링크 분석 및 클릭 가능한 링크로 변환, 빠른 페이지 전환 및 점프 기능, 새 탭으로 리디렉션
-// @description:ru     Улучшение интерфейса и перекомпоновка, включая удаление рекламы и лишних баннеров, исправление имен художников и редактирование сохранения связанной информации, автоматическая загрузка оригинальных изображений, настройка размера и интервала изображений в меню, запуск автоматической прокрутки с помощью горячих клавиш, анализ ссылок в тексте и преобразование их в кликабельные ссылки, быстрые функции переключения и перехода между страницами, перенаправление на новую вкладку
-// @description:en     Beautify the interface and re-layout, including removing ads and redundant banners, correcting artist names and editing related information retention, automatically loading original images, setting image size and spacing in the menu, triggering automatic scrolling with hotkeys, parsing links in the text and converting them to clickable links, fast page switching and jumping functions, and redirecting to a new tab
+// @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
+// @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
+// @description:zh-CN  美化界面与操作增强，增加额外功能，提供更好的使用体验
+// @description:ja     インターフェースを美化し操作を強化、追加機能により、より良い使用体験を提供します
+// @description:ko     인터페이스를 미화하고 조작을 강화하며, 추가 기능을 통해 더 나은 사용 경험을 제공합니다
+// @description:ru     Улучшение интерфейса и функций управления, добавление дополнительных возможностей для лучшего опыта использования
+// @description:en     Beautify interface and enhance operations, add extra features, and provide a better user experience
 
 // @connect      *
 // @match        *://kemono.cr/*
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1654935/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -45,7 +45,6 @@
     const User_Config = {
         Global: {
             BlockAds: true, // 阻擋廣告
-            BackToTop: true, // 翻頁後回到頂部
             CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
             DeleteNotice: true, // 刪除上方公告
             SidebarCollapse: true, // 側邊攔摺疊
@@ -56,7 +55,7 @@
                 newtab_active: false, // 切換焦點到新選項卡
                 newtab_insert: true, // 選項卡插入到當前選項卡的正後方
             },
-            FixArtist: { // 修復作者名稱
+            FixArtist: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
                 newtab: true,
                 newtab_active: true,
@@ -88,61 +87,52 @@
     };
     let Url = Lib.$url;
     const DLL = (() => {
-        const Posts = /^(https?:\/\/)?(www\.)?.+\/posts\/?.*$/;
-        const Search = /^(https?:\/\/)?(www\.)?.+\/artists\/?.*$/;
-        const User = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+(\?.*)?$/;
-        const Content = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/.+\/post\/.+$/;
-        const Favor = /^(https?:\/\/)?(www\.)?.+\/favorites\?type=post\/?.*$/;
-        const Link = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/links\/?.*$/;
-        const FavorArtist = /^(https?:\/\/)?(www\.)?.+\/favorites(?:\?(?!type=post).*)?$/;
-        const Recommended = /^(https?:\/\/)?(www\.)?.+\/.+\/user\/[^\/]+\/recommended\/?.*$/;
-        const Announcement = /^(https?:\/\/)?(www\.)?.+\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
-        const Color = {
+        const color = {
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
             nekohouse: "#bb91ff !important"
         }[Lib.$domain.split(".")[0]];
-        const SaveKey = {
+        const saveKey = {
             Img: "ImgStyle",
             Lang: "Language",
             Menu: "MenuPoint"
         };
-        const UserSet = {
-            MenuSet: () => Lib.getV(SaveKey.Menu, {
+        const userSet = {
+            menuSet: () => Lib.getV(saveKey.Menu, {
                 Top: "10vh",
                 Left: "10vw"
             }),
-            ImgSet: () => Lib.getV(SaveKey.Img, {
+            imgSet: () => Lib.getV(saveKey.Img, {
                 Width: "auto",
                 Height: "auto",
                 Spacing: "0px",
                 MaxWidth: "100%"
             })
         };
-        let ImgRule, MenuRule;
-        const ImportantStyle = async (element, property, value) => {
+        let imgRule, menuRule;
+        const importantStyle = (element, property, value) => {
             requestAnimationFrame(() => {
                 element.style.setProperty(property, value, "important");
             });
         };
-        const NormalStyle = (element, property, value) => {
+        const normalStyle = (element, property, value) => {
             requestAnimationFrame(() => {
                 element.style[property] = value;
             });
         };
         const stylePointer = {
-            Top: value => NormalStyle(MenuRule[1], "top", value),
-            Left: value => NormalStyle(MenuRule[1], "left", value),
-            Width: value => ImportantStyle(ImgRule[1], "width", value),
-            Height: value => ImportantStyle(ImgRule[1], "height", value),
-            MaxWidth: value => ImportantStyle(ImgRule[1], "max-width", value),
-            Spacing: value => ImportantStyle(ImgRule[1], "margin", `${value} auto`)
+            Top: value => normalStyle(menuRule[1], "top", value),
+            Left: value => normalStyle(menuRule[1], "left", value),
+            Width: value => importantStyle(imgRule[1], "width", value),
+            Height: value => importantStyle(imgRule[1], "height", value),
+            MaxWidth: value => importantStyle(imgRule[1], "max-width", value),
+            Spacing: value => importantStyle(imgRule[1], "margin", `${value} auto`)
         };
-        const Style = {
-            async Global() {
+        const style = {
+            get getGlobal() {
                 Lib.addStyle(`
                     /* 搜尋頁面的樣式 */
-                    fix_tag:hover { color: ${Color}; }
+                    fix_tag:hover { color: ${color}; }
                     .card-list__items a:not(article a) {
                         cursor: default;
                     }
@@ -193,7 +183,7 @@
                         display: block;
                     }
                     .user-card:hover fix_name {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                     .edit_textarea ~ fix_name,
                     .edit_textarea ~ fix_edit {
@@ -219,7 +209,7 @@
                         transform: translateY(-80%);
                     }
                     fix_view:hover fix_name {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                     fix_view:hover fix_edit {
                         display: block;
@@ -239,7 +229,7 @@
                         margin-top: 1.5rem;
                     }
                     fix_cont fix_name {
-                        color: ${Color};
+                        color: ${color};
                         font-size: 1.8rem;
                         display: inline-block;
                     }
@@ -260,10 +250,46 @@
                     fix_cont fix_wrapper:hover fix_edit {
                         display: block;
                     }
+
+                    .post-show-box {
+                        bottom: 85%;
+                        z-index: 9999;
+                        cursor: pointer;
+                        position: absolute;
+                        padding: 8px 4px;
+                        max-width: 120%;
+                        min-width: 80px;
+                        overflow-x: auto;
+                        overflow-y: hidden;
+                        white-space: nowrap;
+                        border-radius: 5px;
+                        background: #1d1f20ff;
+                        border: 1px solid #fff;
+                    }
+                    .post-show-box::-webkit-scrollbar {
+                        display: none;
+                    }
+                    .post-show-box img {
+                        height: 23vh;
+                        margin: 0 5px;
+                        min-width: 55%;
+                    }
+                    .fancy-image__image {
+                        z-index: 1;
+                        position: relative;
+                    }
+                    .fancy-image__picture:before {
+                        content: "";
+                        z-index: 0;
+                        bottom: 20%;
+                        width: 100px;
+                        height: 105px;
+                        position: absolute;
+                    }
                 `, "Global-Effects", false);
             },
-            async Postview() {
-                const set = UserSet.ImgSet();
+            get getPostview() {
+                const set = userSet.imgSet();
                 Lib.addStyle(`
                     .post__files > div,
                     .scrape__files > div {
@@ -303,10 +329,10 @@
                         background-color: rgba(0, 0, 0, 0.3);
                     }
                 `, "Image-Custom-Style", false);
-                ImgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
-                Lib.storeListen(Object.values(SaveKey), call => {
+                imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+                Lib.storeListen(Object.values(saveKey), call => {
                     if (call.far) {
-                        if (Lib.$type(call.nv) === "String") {
+                        if (typeof call.nv === "string") {
                             menuInit();
                         } else {
                             for (const [key, value] of Object.entries(call.nv)) {
@@ -316,7 +342,7 @@
                     }
                 });
             },
-            async PostExtra() {
+            get getPostExtra() {
                 Lib.addStyle(`
                     #main section {
                         width: 100%;
@@ -325,12 +351,12 @@
                         cursor: pointer;
                     }
                     #next_box a:hover {
-                        background-color: ${Color};
+                        background-color: ${color};
                     }
                 `, "Post-Extra", false);
             }
         };
-        const Word = {
+        const word = {
             Traditional: {},
             Simplified: {
                 "📝 設置選單": "📝 设置菜单",
@@ -428,25 +454,63 @@
                 "圖片間隔高度": "Image Spacing"
             }
         };
+        const Posts = /\/posts\/?.*$/;
+        const Search = /\/artists\/?.*$/;
+        const User = /\/.+\/user\/[^\/]+(\?.*)?$/;
+        const Content = /\/.+\/user\/.+\/post\/.+$/;
+        const Favor = /\/favorites\?type=post\/?.*$/;
+        const Link = /\/.+\/user\/[^\/]+\/links\/?.*$/;
+        const FavorArtist = /\/favorites(?:\?(?!type=post).*)?$/;
+        const Recommended = /\/.+\/user\/[^\/]+\/recommended\/?.*$/;
+        const Announcement = /\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
         return {
-            IsContent: () => Content.test(Url),
-            IsAnnouncement: () => Announcement.test(Url),
-            IsSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
-            IsAllPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
-            IsNeko: Lib.$domain.startsWith("nekohouse"),
-            Language() {
-                const Log = Lib.getV(SaveKey.Lang);
-                const ML = Lib.translMatcher(Word, Log);
+            isContent: () => Content.test(Url),
+            isAnnouncement: () => Announcement.test(Url),
+            isSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
+            isPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
+            isNeko: Lib.$domain.startsWith("nekohouse"),
+            language() {
+                const Log = Lib.getV(saveKey.Lang);
+                const ML = Lib.translMatcher(word, Log);
                 return {
                     Log: Log,
-                    Transl: Str => ML[Str] ?? Str
+                    Transl: str => ML[str] ?? str
                 };
             },
-            ...UserSet,
-            Style: Style,
-            MenuRule: MenuRule,
-            Color: Color,
-            SaveKey: SaveKey,
+            responseRule: {
+                text: res => res.text(),
+                json: res => res.json(),
+                blob: res => res.blob(),
+                arrayBuffer: res => res.arrayBuffer(),
+                formData: res => res.formData(),
+                document: async res => {
+                    res = await res.text();
+                    return new DOMParser().parseFromString(res, "text/html");
+                }
+            },
+            fetchApi(url, callback, {
+                responseType = "json",
+                headers = {
+                    Accept: "text/css"
+                }
+            } = {}) {
+                fetch(url, {
+                    headers: headers
+                }).then(async response => {
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
+                    }
+                    return await this.responseRule[responseType](response);
+                }).then(callback).catch(error => {
+                    Lib.log(error).error;
+                });
+            },
+            ...userSet,
+            style: style,
+            menuRule: menuRule,
+            color: color,
+            saveKey: saveKey,
             stylePointer: stylePointer,
             Link: Link,
             Posts: Posts,
@@ -457,12 +521,14 @@
             FavorArtist: FavorArtist,
             Announcement: Announcement,
             Recommended: Recommended,
-            Registered: new Set()
+            thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
+            registered: new Set(),
+            supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"])
         };
     })();
     const Enhance = (() => {
         const order = {
-            Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "FixArtist", "BackToTop", "KeyScroll"],
+            Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "FixArtist", "KeyScroll"],
             Preview: ["CardText", "CardZoom", "NewTabOpens", "QuickPostToggle", "BetterThumbnail"],
             Content: ["LinkBeautify", "VideoBeautify", "OriginalImage", "ExtraButton", "CommentFormat"]
         };
@@ -470,9 +536,15 @@
             globalCache: undefined,
             previewCache: undefined,
             contentCache: undefined,
-            Global: () => this.globalCache ??= globalFunc(),
-            Preview: () => this.previewCache ??= previewFunc(),
-            Content: () => this.contentCache ??= contentFunc()
+            Global() {
+                return this.globalCache ??= globalFunc();
+            },
+            Preview() {
+                return this.previewCache ??= previewFunc();
+            },
+            Content() {
+                return this.contentCache ??= contentFunc();
+            }
         };
         async function call(page, config = User_Config[page]) {
             const func = loadFunc[page]();
@@ -490,8 +562,8 @@
         return {
             async run() {
                 call("Global");
-                if (DLL.IsAllPreview()) call("Preview"); else if (DLL.IsContent()) {
-                    DLL.Style.Postview();
+                if (DLL.isPreview()) call("Preview"); else if (DLL.isContent()) {
+                    DLL.style.getPostview;
                     call("Content");
                     menuInit();
                 }
@@ -697,7 +769,7 @@
                             } else return;
                         },
                         candfansPageAdapt(oldId, newId, oldUrl, oldName, newName) {
-                            if (DLL.IsSearch()) {
+                            if (DLL.isSearch()) {
                                 oldId = newId ? newId : oldId;
                             } else {
                                 oldUrl = newId ? this.replaceUrlTail(oldUrl, newId) : oldUrl;
@@ -870,7 +942,7 @@
                 }).then(announcement => announcement.remove());
             },
             async BlockAds() {
-                if (DLL.IsNeko) return;
+                if (DLL.isNeko) return;
                 const cookieString = Lib.cookie();
                 const required = ["ts_popunder", "ts_popunder-cnt"];
                 const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
@@ -886,7 +958,7 @@
                         Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
                     }
                 }
-                if (DLL.Registered.has("BlockAds")) return;
+                if (DLL.registered.has("BlockAds")) return;
                 Lib.addStyle(`
                     .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
                 `, "Ad-blocking-style");
@@ -911,10 +983,10 @@
                         });
                     }
                 });
-                DLL.Registered.add("BlockAds");
+                DLL.registered.add("BlockAds");
             },
             async CacheFetch() {
-                if (DLL.IsNeko || DLL.Registered.has("CacheFetch")) return;
+                if (DLL.isNeko || DLL.registered.has("CacheFetch")) return;
                 const script = `
                     const cache = new Map();
                     const originalFetch = window.fetch;
@@ -979,12 +1051,12 @@
                 `;
                 eval(script);
                 Lib.addScript(script, "Cache-Fetch", false);
-                DLL.Registered.add("CacheFetch");
+                DLL.registered.add("CacheFetch");
             },
             async TextToLink(config) {
-                if (!DLL.IsContent() && !DLL.IsAnnouncement()) return;
+                if (!DLL.isContent() && !DLL.isAnnouncement()) return;
                 const func = loadFunc.textToLinkRequ(config);
-                if (DLL.IsContent()) {
+                if (DLL.isContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(body => {
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
                         if (article) {
@@ -1006,7 +1078,7 @@
                             attachments && func.jumpTrigger(attachments);
                         }
                     });
-                } else if (DLL.IsAnnouncement()) {
+                } else if (DLL.isAnnouncement()) {
                     Lib.waitEl(".card-list__items pre", null, {
                         raf: true
                     }).then(() => {
@@ -1023,7 +1095,7 @@
                 newtab_active,
                 newtab_insert
             }) {
-                DLL.Style.Global();
+                DLL.style.getGlobal;
                 const func = loadFunc.fixArtistRequ();
                 const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
@@ -1060,17 +1132,17 @@
                                 });
                             }, 50);
                         }, 300);
-                    } else if (newtab && (Lib.platform !== "Mobile" || DLL.IsContent()) && (target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")) || !newtab && DLL.IsContent()) {
+                    } else if (newtab && (Lib.platform !== "Mobile" || DLL.isContent()) && (target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")) || !newtab && DLL.isContent()) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const jump = target.$gAttr("jump");
                         if (!target.parentElement.matches("fix_cont") && jump) {
-                            DLL.IsSearch() || target.matches("fix_tag") ? GM_openInTab(jump, {
+                            DLL.isSearch() || target.matches("fix_tag") ? GM_openInTab(jump, {
                                 active: active,
                                 insert: insert
                             }) : location.assign(jump);
                         } else if (jump) {
-                            newtab && DLL.IsContent() && target.matches("fix_name") ? GM_openInTab(jump, {
+                            newtab && DLL.isContent() && target.matches("fix_name") ? GM_openInTab(jump, {
                                 active: active,
                                 insert: insert
                             }) : location.assign(jump);
@@ -1082,7 +1154,83 @@
                     capture: true,
                     mark: "FixArtist"
                 });
-                if (DLL.IsSearch()) {
+                if (Lib.platform === "Desktop") {
+                    let currentBox, currentTarget;
+                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                        let target = event.target;
+                        if (target.tagName === "IMG" && target.$hAttr("jump")) {
+                            currentTarget = target.parentElement;
+                            currentBox = target.previousElementSibling;
+                        } else if (target.tagName === "PICTURE") {
+                            currentTarget = target;
+                            currentBox = target.$q(".post-show-box");
+                            target = target.$q("img");
+                        } else return;
+                        if (!currentBox && target) {
+                            currentBox = Lib.createElement("div", {
+                                text: "Loading...",
+                                style: "display: none;",
+                                class: "post-show-box",
+                                on: {
+                                    type: "wheel",
+                                    listener: event => {
+                                        event.preventDefault();
+                                        event.currentTarget.scrollLeft += event.deltaY;
+                                    }
+                                }
+                            });
+                            target.$iAdjacent(currentBox, "beforebegin");
+                            const url = target.$gAttr("jump");
+                            if (!url.includes("discord")) {
+                                const uri = new URL(url);
+                                const api = DLL.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                                DLL.fetchApi(api, data => {
+                                    if (DLL.isNeko) data = data.$qa(".post-card__image");
+                                    currentBox.$text("");
+                                    for (const [index, post] of data.entries()) {
+                                        let src = "";
+                                        if (DLL.isNeko) src = post.src ?? ""; else {
+                                            for (const {
+                                                path
+                                            } of [post.file, ...post?.attachments || {}]) {
+                                                if (!path) continue;
+                                                const isImg = DLL.supportImg.has(path.split(".")[1]);
+                                                if (!isImg) continue;
+                                                src = DLL.thumbnailApi + path;
+                                                break;
+                                            }
+                                        }
+                                        if (!src) continue;
+                                        Lib.createElement(currentBox, "img", {
+                                            src: src,
+                                            loading: "lazy",
+                                            attr: {
+                                                number: index + 1
+                                            }
+                                        });
+                                    }
+                                    if (currentBox.childElementCount === 0) currentBox.$text("No Image");
+                                }, {
+                                    responseType: DLL.isNeko ? "document" : "json"
+                                });
+                            } else currentBox.$text("Not Supported");
+                        }
+                        currentBox?.$sAttr("style", "display: block;");
+                    }, 300), {
+                        passive: true,
+                        mark: "PostShow"
+                    });
+                    Lib.onEvent(Lib.body, "mouseout", event => {
+                        if (!currentTarget) return;
+                        if (currentTarget.contains(event.relatedTarget)) return;
+                        currentTarget = null;
+                        currentBox?.$sAttr("style", "display: none;");
+                    }, {
+                        passive: true,
+                        mark: "PostHide"
+                    });
+                }
+                if (DLL.isSearch()) {
                     Lib.waitEl(".card-list__items", null, {
                         raf: true,
                         timeout: 10
@@ -1094,7 +1242,7 @@
                         func.dynamicFix(card_items);
                         card_items.$sAttr("fix-trigger", true);
                     });
-                } else if (DLL.IsContent()) {
+                } else if (DLL.isContent()) {
                     Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
                         raf: true,
                         timeout: 10
@@ -1110,19 +1258,10 @@
                     });
                 }
             },
-            async BackToTop() {
-                Lib.onEvent(Lib.body, "pointerup", event => {
-                    event.target.closest("#paginator-bottom") && Lib.$q("#paginator-top").scrollIntoView();
-                }, {
-                    capture: true,
-                    passive: true,
-                    mark: "BackToTop"
-                });
-            },
             async KeyScroll({
                 mode
             }) {
-                if (Lib.platform === "Mobile" || DLL.Registered.has("KeyScroll")) return;
+                if (Lib.platform === "Mobile" || DLL.registered.has("KeyScroll")) return;
                 const Scroll_Requ = {
                     Scroll_Pixels: 2,
                     Scroll_Interval: 800
@@ -1190,7 +1329,7 @@
                 }, 100), {
                     capture: true
                 });
-                DLL.Registered.add("KeyScroll");
+                DLL.registered.add("KeyScroll");
             }
         };
     }
@@ -1199,7 +1338,6 @@
             betterThumbnailCache: undefined,
             betterThumbnailRequ() {
                 return this.betterThumbnailCache ??= {
-                    supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
                     imgReload: (img, thumbnailSrc, retry) => {
                         if (retry <= 0) {
                             img.src = thumbnailSrc;
@@ -1250,12 +1388,12 @@
                 });
             },
             async QuickPostToggle() {
-                if (!DLL.IsNeko || DLL.Registered.has("QuickPostToggle")) return;
+                if (!DLL.isNeko || DLL.registered.has("QuickPostToggle")) return;
                 Lib.waitEl("menu", null, {
                     all: true,
                     timeout: 5
                 }).then(menu => {
-                    DLL.Registered.add("QuickPostToggle");
+                    DLL.registered.add("QuickPostToggle");
                     function Rendering({
                         href,
                         className,
@@ -1378,8 +1516,8 @@
                         return elements;
                     }
                     function initializeButtonCache() {
-                        const menu1Buttons = [...menu[0].$qa("a")];
-                        const menu2Buttons = [...menu[1].$qa("a")];
+                        const menu1Buttons = menu[0].$qa("a");
+                        const menu2Buttons = menu[1].$qa("a");
                         const navOffset = hasScrolling ? 2 : 1;
                         buttonCache = {
                             menu1: {
@@ -1509,10 +1647,11 @@
                                 updatePagination(targetPage);
                                 resolve();
                             })]);
+                            target.closest("#paginator-bottom") && menu[0].scrollIntoView();
                             history.pushState(null, null, pageLinks[targetPage - 1]);
                         } catch (error) {
                             if (error.message !== "Aborted") {
-                                console.error("Page fetch failed:", error);
+                                Lib.log("Page fetch failed:", error).error;
                             }
                         } finally {
                             isLoading = false;
@@ -1586,8 +1725,7 @@
                                 transform: scale(1.1) translateY(0);
                             }
                             .post-card a::-webkit-scrollbar {
-                                width: 0;
-                                height: 0;
+                                display: none;
                             }
                             .post-card a:hover .post-card__image-container {
                                 position: relative;
@@ -1596,7 +1734,7 @@
                         break;
 
                     case 3:
-                        const [paddingBottom, rowGap, height] = DLL.IsNeko ? ["0", "0", "57"] : ["7", "5.8", "50"];
+                        const [paddingBottom, rowGap, height] = DLL.isNeko ? ["0", "0", "57"] : ["7", "5.8", "50"];
                         Lib.addStyle(`
                             .card-list--legacy { padding-bottom: ${paddingBottom}em }
                             .card-list--legacy .card-list__items {
@@ -1632,7 +1770,7 @@
                     timeout: 5
                 }).then(images => {
                     const func = loadFunc.betterThumbnailRequ();
-                    if (DLL.IsNeko) {
+                    if (DLL.isNeko) {
                         images.forEach(img => {
                             const src = img.src;
                             if (!src?.endsWith(".gif")) {
@@ -1644,49 +1782,34 @@
                         if (uri.searchParams.get("q") === "") {
                             uri.searchParams.delete("q");
                         }
-                        let basicUri = null;
                         const imgBox = images.reduce((acc, img) => {
                             const src = img.src;
                             if (src) {
                                 acc[src] = img;
-                                basicUri = src;
                             }
                             return acc;
                         }, {});
                         if (imgBox.length === 0) return;
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
-                        fetch(api, {
-                            headers: {
-                                Accept: "text/css"
-                            }
-                        }).then(async response => {
-                            if (!response.ok) {
-                                const text = await response.text();
-                                throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
-                            }
-                            return await response.json();
-                        }).then(data => {
+                        DLL.fetchApi(api, data => {
                             const type = Lib.$type(data);
                             if (type === "Object") {
                                 data = data?.posts ?? [];
                             }
-                            basicUri = basicUri.split("data/")[0] + "data";
                             for (const obj of data) {
                                 const file = obj.file.path;
-                                const img = imgBox[basicUri + file];
+                                const img = imgBox[DLL.thumbnailApi + file];
                                 const src = img?.src;
                                 if (!src) continue;
                                 for (const attach of obj.attachments ?? []) {
                                     const path = attach.path;
                                     if (!path) continue;
-                                    const isImg = func.supportImg.has(path.split(".")[1]);
+                                    const isImg = DLL.supportImg.has(path.split(".")[1]);
                                     if (!isImg) continue;
-                                    func.changeSrc(img, src, basicUri + path);
+                                    func.changeSrc(img, src, DLL.thumbnailApi + path);
                                     break;
                                 }
                             }
-                        }).catch(error => {
-                            console.error(error);
                         });
                     }
                 });
@@ -1698,7 +1821,7 @@
             linkBeautifyCache: undefined,
             linkBeautifyRequ() {
                 return this.linkBeautifyCache ??= async function showBrowse(browse) {
-                    const url = DLL.IsNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file");
+                    const url = DLL.isNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file");
                     browse.style.position = "relative";
                     browse.$q("View")?.remove();
                     GM_xmlhttpRequest({
@@ -1710,7 +1833,7 @@
                         },
                         onload: response => {
                             if (response.status !== 200) return;
-                            if (DLL.IsNeko) {
+                            if (DLL.isNeko) {
                                 const main = response.responseXML.$q("main");
                                 const view = Lib.createElement("View");
                                 const buffer = Lib.createFragment;
@@ -1807,12 +1930,12 @@
                 }).then(post => {
                     const showBrowse = loadFunc.linkBeautifyRequ();
                     for (const link of post) {
-                        if (!DLL.IsNeko && link.$gAttr("beautify")) {
+                        if (!DLL.isNeko && link.$gAttr("beautify")) {
                             link.remove();
                             continue;
                         }
                         const text = link.$text().replace("Download ", "");
-                        if (DLL.IsNeko) {
+                        if (DLL.isNeko) {
                             link.$text(text);
                             link.$sAttr("download", text);
                         } else {
@@ -1827,7 +1950,7 @@
             async VideoBeautify({
                 mode
             }) {
-                if (DLL.IsNeko) {
+                if (DLL.isNeko) {
                     Lib.waitEl(".scrape__files video", null, {
                         raf: true,
                         all: true,
@@ -1895,7 +2018,7 @@
                     all: true,
                     timeout: 5
                 }).then(thumbnail => {
-                    const linkQuery = DLL.IsNeko ? "div" : "a";
+                    const linkQuery = DLL.isNeko ? "div" : "a";
                     const safeGetSrc = element => element?.src || element?.$gAttr("src");
                     const safeGetHref = element => element?.href || element?.$gAttr("href");
                     function cleanMark(img) {
@@ -2194,18 +2317,18 @@
                     raf: true,
                     timeout: 5
                 }).then(comments => {
-                    DLL.Style.PostExtra();
+                    DLL.style.getPostExtra;
                     const getNextPage = loadFunc.extraButtonRequ();
                     const [Prev, Next, Svg, Span, Buffer] = [Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev"), Lib.$q(".post__nav-link.next, .scrape__nav-link.next"), document.createElement("svg"), document.createElement("span"), Lib.createFragment];
                     Svg.id = "To_top";
                     Svg.$iHtml(`
                         <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
-                            <style>svg{fill: ${DLL.Color}}</style>
+                            <style>svg{fill: ${DLL.color}}</style>
                             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
                         </svg>
                     `);
                     const Next_btn = Next?.$copy(true) ?? document.createElement("div");
-                    Next_btn.style = `color: ${DLL.Color};`;
+                    Next_btn.style = `color: ${DLL.color};`;
                     Next_btn.$sAttr("jump", Next_btn.href);
                     Next_btn.$dAttr("href");
                     Span.id = "Next_box";
@@ -2218,7 +2341,7 @@
                         passive: true
                     });
                     Lib.onE(Next_btn, "click", () => {
-                        if (DLL.IsNeko) {
+                        if (DLL.isNeko) {
                             getNextPage(Next_btn.$gAttr("jump"), Lib.$q("main"));
                         } else {
                             Svg.remove();
@@ -2262,7 +2385,7 @@
         const {
             Log,
             Transl
-        } = DLL.Language();
+        } = DLL.language();
         callback?.({
             Log: Log,
             Transl: Transl
@@ -2309,7 +2432,7 @@
     function createMenu(Log, Transl) {
         const shadowID = "shadow";
         if (Lib.$q(`#${shadowID}`)) return;
-        const imgSet = DLL.ImgSet();
+        const imgSet = DLL.imgSet();
         const imgSetData = [["圖片高度", "Height", imgSet.Height], ["圖片寬度", "Width", imgSet.Width], ["圖片最大寬度", "MaxWidth", imgSet.MaxWidth], ["圖片間隔高度", "Spacing", imgSet.Spacing]];
         let analyze, img_set, img_input, img_select, set_value, save_cache = {};
         const shadow = Lib.createElement(Lib.body, "div", {
@@ -2342,7 +2465,7 @@
                 }
             </script>
         `;
-        const menuSet = DLL.MenuSet();
+        const menuSet = DLL.menuSet();
         const menuStyle = `
             <style id="menu-style">
                 .modal-background {
@@ -2570,14 +2693,14 @@
         const imageSetEl = shadowRoot.querySelector("#image-settings-show");
         languageEl.value = Log ?? "en-US";
         draggable(interfaceEl);
-        DLL.MenuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
+        DLL.menuRule = shadowRoot.querySelector("#menu-style")?.sheet?.cssRules;
         const menuRequ = {
             menuClose() {
                 shadow.remove();
             },
             menuSave() {
                 const styles = getComputedStyle(interfaceEl);
-                Lib.setV(DLL.SaveKey.Menu, {
+                Lib.setV(DLL.saveKey.Menu, {
                     Top: styles.top,
                     Left: styles.left
                 });
@@ -2593,7 +2716,7 @@
                     set_value = selectVal === "auto" ? "auto" : inputVal === "" ? set : `${inputVal}${selectVal}`;
                     save_cache[img_input.$gAttr("data-key")] = set_value;
                 });
-                Lib.setV(DLL.SaveKey.Img, save_cache);
+                Lib.setV(DLL.saveKey.Img, save_cache);
             },
             async imgSettings() {
                 let running = false;
@@ -2629,7 +2752,7 @@
         Lib.onE(languageEl, "change", event => {
             event.stopImmediatePropagation();
             const value = event.currentTarget.value;
-            Lib.setV(DLL.SaveKey.Lang, value);
+            Lib.setV(DLL.saveKey.Lang, value);
             menuRequ.menuSave();
             menuRequ.menuClose();
             menuInit(Updata => {
@@ -2641,7 +2764,7 @@
             const id = target?.id;
             if (!id) return;
             if (id === "image-settings") {
-                const imgsetCss = DLL.MenuRule[2].style;
+                const imgsetCss = DLL.menuRule[2].style;
                 if (imgsetCss.opacity === "0") {
                     let dom = "";
                     imgSetData.forEach(([title, key]) => {
