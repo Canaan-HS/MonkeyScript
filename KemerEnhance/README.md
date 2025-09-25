@@ -32,7 +32,6 @@
 |   **Parameter**   |                                     **Description**                                      | **Default** |
 | :---------------: | :--------------------------------------------------------------------------------------: | :---------: |
 |    `BlockAds`     |                                    Simple ad blocking                                    |   `true`    |
-|    `BackToTop`    |                       Automatically return to top after page jump                        |   `true`    |
 |   `CacheFetch`    |        Cache Fetch data under the same tab to speed up subsequent identical loads        |   `true`    |
 |  `DeleteNotice`   |                                      Delete notice                                       |   `true`    |
 | `SidebarCollapse` |                   Sidebar collapses, restored when mouse hovers nearby                   |   `true`    |
@@ -158,13 +157,13 @@ Compatibility recommendations:
 
 ## **📦 Version Info**
 
-**Release Version: 2025.09.07-Beta**
+**Release Version: 2025.09.25-Beta**
 
 ### **Changelog**
-1. **OriginalImage**
-   - Fixed page switch issues
-   - Adjusted mode 1 logic: now batch-loads up to 7 images per cycle (excluding failed ones, experimental)
-   - Reduced auto-retry attempts for failed loads (site often won’t return original, retry is useless)
+1. Updated core library  
+2. Improved content matching method (experimental, please report issues)  
+3. Removed BackToTop (already provided natively by the site)  
+4. Added "Quick Preview" to FixArtist
 
 ### **Known Issues**
 1. Sometimes page render lags behind feature load, causing functions to fail. Refreshing usually resolves it.
