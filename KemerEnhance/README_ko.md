@@ -38,7 +38,7 @@
 | `SidebarCollapse` |                      사이드바 접기, 마우스를 가까이 대면 복원                       |   `true`   |
 |    `KeyScroll`    |                            키보드 단축키 ↑↓ 자동 스크롤                             |   `true`   |
 |   `TextToLink`    |                 텍스트 형식의 링크 문자열을 클릭 가능한 링크로 변환                 |   `true`   |
-|    `FixArtist`    | Pixiv 이름으로 사이트 표시명을 수정, 사용자 지정 가능, 원본 사이트 태그로 직접 연결 |   `true`   |
+| `BetterPostCard`  | Pixiv 이름으로 사이트 표시명을 수정, 사용자 지정 가능, 원본 사이트 태그로 직접 연결 |   `true`   |
 |    `CardZoom`     |                               미리보기 카드 크기 조정                               |   `true`   |
 |    `CardText`     |                           미리보기 카드 텍스트 효과 조정                            |   `true`   |
 | `BetterThumbnail` |                   미리보기 카드 이미지를 게시글 내 이미지로 변경                    |   `true`   |
@@ -163,13 +163,13 @@ OriginalImage:
 
 ## **📦 버전 정보**
 
-**배포 버전: 2025.09.25-Beta**
+**배포 버전: 2025.09.26-Beta**
 
 ### **업데이트 내용**
-1. 도구 라이브러리 업데이트  
-2. 콘텐츠 매칭 방식 개선 (실험 기능, 문제 발생 시 알려주세요)  
-3. BackToTop 제거 (사이트에 기본 기능으로 제공됨)  
-4. FixArtist에 "빠른 미리보기" 추가
+1. 도구 라이브러리 업데이트
+2. 이름 변경: FixArtist -> BetterPostCard
+3. BetterPostCard에 `previewAbove` 설정 추가. 기본값은 위쪽에 표시되며, false로 설정하면 아래쪽에 표시됨
+4. BetterThumbnail 추가. attachments 유형을 직접 표시 (nekohouse 미지원) [실험적]
 
 ### **알려진 문제**
 1. 가끔 페이지 로드 속도가 기능 초기화보다 늦어서 기능이 작동하지 않을 수 있음. 보통 새로고침으로 해결 가능.
