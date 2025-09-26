@@ -179,8 +179,11 @@ const Lib = (() => {
         _on: (root, events) => {
             const event = {};
             for (const type of Object.keys(events)) {
-                const cfg = events[type];
-                if (cfg && typeof cfg.listen === "function") {
+                let cfg = events[type];
+                if (!cfg) continue;
+
+                typeof cfg === "function" && (cfg = { listen: cfg });
+                if (cfg.listen) {
                     root.addEventListener(type, cfg.listen, cfg.add);
                     event[type] = () => root.removeEventListener(type, cfg.listen, cfg.add);
                 }
@@ -213,7 +216,7 @@ const Lib = (() => {
          *    attr: { "container-id": "1" },
          *    on: {
          *        click: { listen: () => console.log("click"), add: { capture: true } },
-         *        dblclick: { listen: () => console.log("dblclick") },
+         *        dblclick: () => console.log("dblclick"),
          *    }
          * });
          *
