@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.26-Beta
+// @version      2025.09.26-Beta1
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -282,8 +282,9 @@
                     }
                     .post-show-box img {
                         height: 23vh;
-                        margin: 0 5px;
+                        margin: 0 .3rem;
                         min-width: 55%;
+                        border: 1px solid #fff;
                     }
                     .fancy-image__image {
                         z-index: 1;
@@ -1326,7 +1327,8 @@
                                     if (DLL.isNeko) data = data.$qa(".post-card__image");
                                     currentBox.$text(""); // 清除載入文本
 
-                                    for (const [index, post] of data.entries()) {
+                                    const srcBox = new Set();
+                                    for (const post of data) {
                                         let src = "";
 
                                         if (DLL.isNeko) src = post.src ?? "";
@@ -1346,14 +1348,14 @@
                                         }
 
                                         if (!src) continue;
-                                        Lib.createElement(currentBox, "img", {
-                                            src,
-                                            loading: "lazy",
-                                            attr: { "number": index + 1 }
-                                        })
+                                        srcBox.add(src);
                                     }
 
-                                    if (currentBox.childElementCount === 0) currentBox.$text("No Image");
+                                    if (srcBox.size === 0) currentBox.$text("No Image");
+                                    else {
+                                        currentBox.$iAdjacent([...srcBox].map((src, index) =>`<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
+                                        srcBox.clear();
+                                    }
                                 }, { responseType: DLL.isNeko ? "document" : "json" })
                             } else currentBox.$text("Not Supported");
                         }
