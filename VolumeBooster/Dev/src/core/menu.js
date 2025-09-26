@@ -1,8 +1,8 @@
-import { Lib } from "../services/client.js";
-import { Share } from "../core/config.js";
-import Transl from "../shared/language.js";
+import { Lib } from '../services/client.js';
+import { Share } from '../core/config.js';
+import Transl from '../shared/language.js';
 
-const CreateMenu = (() => {
+const CreateMenu = () => {
     const icon = GM_getResourceURL("Icon");
 
     return () => {
@@ -436,6 +436,7 @@ const CreateMenu = (() => {
             const controlId = target.id.replace("-Label", "");
             const slider = shadowGate.querySelector(`#${controlId}`);
 
+            target.textContent = "";
             const input = Lib.createElement(target, "input", {
                 class: "Booster-Label-Input",
                 value: originalValue,
@@ -457,9 +458,10 @@ const CreateMenu = (() => {
                             target.isEditing = false;
                             updateControl(controlId, newValue);
                             target.textContent = newValue; // 移除 input
-                        }, add: { once: true }
+                        },
+                        add: { once: true }
                     },
-                    keydown: (e) => {
+                    keydown: e => {
                         if (e.key === "Enter") e.target.blur();
                         if (e.key === "Escape") {
                             e.target.value = originalValue;
@@ -469,8 +471,7 @@ const CreateMenu = (() => {
                 }
             });
 
-            target.textContent = "";
-            input.focus();
+            requestAnimationFrame(() => input.focus());
         });
 
         // 監聽保存關閉
@@ -500,6 +501,6 @@ const CreateMenu = (() => {
             }
         });
     };
-})();
+};
 
 export default CreateMenu;
