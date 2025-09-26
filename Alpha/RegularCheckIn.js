@@ -83,7 +83,7 @@
         {
             Name: "Android 台灣中文網",
             Method: "GET",
-            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=250db20b&zjtesttimes=1756224218&inajax=1&ajaxtarget=my_amupper",
+            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=e88f1aff&inajax=1", // 待測試
             Page: "https://apk.tw/forum.php",
             verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
         }
