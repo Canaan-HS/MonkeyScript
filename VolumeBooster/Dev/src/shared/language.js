@@ -1,4 +1,4 @@
-import { Lib } from "../services/client.js";
+import { Lib } from '../services/client.js';
 
 const word = {
     Traditional: {},
