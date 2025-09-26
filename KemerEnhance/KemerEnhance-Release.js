@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.25-Beta
+// @version      2025.09.26-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1666944/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -55,17 +55,18 @@
                 newtab_active: false, // 切換焦點到新選項卡
                 newtab_insert: true, // 選項卡插入到當前選項卡的正後方
             },
-            FixArtist: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
+            BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
                 newtab: true,
                 newtab_active: true,
                 newtab_insert: true,
+                previewAbove: true, // 快速預覽展示於帖子上方
             },
         },
         Preview: {
             CardZoom: { mode: 3, enable: true }, // 縮放預覽卡大小 [mode: 1 = 卡片放大 , 2 = 卡片放大 + 懸浮縮放, 3 = 卡片放大 + 自動縮放]
             CardText: { mode: 2, enable: true }, // 預覽卡文字效果 [mode: 1 = 隱藏文字 , 2 = 淡化文字]
-            BetterThumbnail: true, // 變更成內頁的縮圖 , nekohouse 是顯示原圖 (但排除 gif)
+            BetterThumbnail: true, // 替換成內頁縮圖 , 與文件類型直接顯示 (nekohouse 某些不支援)
             QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 enable: true,
@@ -252,7 +253,6 @@
                     }
 
                     .post-show-box {
-                        bottom: 85%;
                         z-index: 9999;
                         cursor: pointer;
                         position: absolute;
@@ -265,6 +265,12 @@
                         border-radius: 5px;
                         background: #1d1f20ff;
                         border: 1px solid #fff;
+                    }
+                    .post-show-box[preview="above"] {
+                        bottom: 85%;
+                    }
+                    .post-show-box[preview="below"] {
+                        top: 85%;
                     }
                     .post-show-box::-webkit-scrollbar {
                         display: none;
@@ -281,9 +287,9 @@
                     .fancy-image__picture:before {
                         content: "";
                         z-index: 0;
-                        bottom: 20%;
+                        bottom: 10%;
                         width: 100px;
-                        height: 105px;
+                        height: 115px;
                         position: absolute;
                     }
                 `, "Global-Effects", false);
@@ -523,12 +529,13 @@
             Recommended: Recommended,
             thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
             registered: new Set(),
-            supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"])
+            supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
+            videoType: new Set(["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"])
         };
     })();
     const Enhance = (() => {
         const order = {
-            Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "FixArtist", "KeyScroll"],
+            Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "BetterPostCard", "KeyScroll"],
             Preview: ["CardText", "CardZoom", "NewTabOpens", "QuickPostToggle", "BetterThumbnail"],
             Content: ["LinkBeautify", "VideoBeautify", "OriginalImage", "ExtraButton", "CommentFormat"]
         };
@@ -691,9 +698,9 @@
                     }
                 };
             },
-            fixArtistCache: undefined,
-            fixArtistRequ() {
-                if (!this.fixArtistCache) {
+            betterPostCardCache: undefined,
+            betterPostCardRequ() {
+                if (!this.betterPostCardCache) {
                     const fixRequ = {
                         recordCache: undefined,
                         fixCache: new Map(),
@@ -909,9 +916,9 @@
                         }
                     };
                     fixRequ.recordCache = fixRequ.getRecord();
-                    this.fixArtistCache = fixRequ;
+                    this.betterPostCardCache = fixRequ;
                 }
-                return this.fixArtistCache;
+                return this.betterPostCardCache;
             }
         };
         return {
@@ -1090,31 +1097,32 @@
                     });
                 }
             },
-            async FixArtist({
+            async BetterPostCard({
                 newtab,
                 newtab_active,
-                newtab_insert
+                newtab_insert,
+                previewAbove
             }) {
                 DLL.style.getGlobal;
-                const func = loadFunc.fixArtistRequ();
+                const func = loadFunc.betterPostCardRequ();
                 const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
-                    if (target.tagName === "TEXTAREA") {
+                    const tagName = target.tagName;
+                    if (tagName === "TEXTAREA") {
                         event.preventDefault();
                         event.stopImmediatePropagation();
-                    } else if (target.matches("fix_edit")) {
+                    } else if (tagName === "FIX_EDIT") {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         Lib.$q(".edit_textarea")?.remove();
                         const display = target.previousElementSibling;
-                        const text = Lib.createElement("textarea", {
+                        const text = Lib.createElement(display, "textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`
-                        });
+                        }, "beforebegin");
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.$iAdjacent(text, "beforebegin");
                         text.scrollTop = 0;
                         setTimeout(() => {
                             text.focus();
@@ -1132,54 +1140,55 @@
                                 });
                             }, 50);
                         }, 300);
-                    } else if (newtab && (Lib.platform !== "Mobile" || DLL.isContent()) && (target.matches("fix_name") || target.matches("fix_tag") || target.matches(".fancy-image__image")) || !newtab && DLL.isContent()) {
+                    } else if (newtab && Lib.platform !== "Mobile" && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (DLL.isPreview() || DLL.isContent()) || DLL.isContent() && target.matches(".fancy-image__image")) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const jump = target.$gAttr("jump");
-                        if (!target.parentElement.matches("fix_cont") && jump) {
-                            DLL.isSearch() || target.matches("fix_tag") ? GM_openInTab(jump, {
+                        if (jump) {
+                            newtab || tagName === "FIX_TAG" || tagName === "FIX_NAME" && DLL.isPreview() ? GM_openInTab(jump, {
                                 active: active,
                                 insert: insert
                             }) : location.assign(jump);
-                        } else if (jump) {
-                            newtab && DLL.isContent() && target.matches("fix_name") ? GM_openInTab(jump, {
+                        } else if (tagName === "IMG" || tagName === "PICTURE") {
+                            const href = target.closest("a").href;
+                            newtab && !DLL.isContent() ? GM_openInTab(href, {
                                 active: active,
                                 insert: insert
-                            }) : location.assign(jump);
-                        } else if (target.tagName === "IMG") {
-                            location.assign(target.closest("a").href);
+                            }) : location.assign(href);
                         }
                     }
                 }, {
                     capture: true,
-                    mark: "FixArtist"
+                    mark: "BetterPostCard"
                 });
                 if (Lib.platform === "Desktop") {
                     let currentBox, currentTarget;
                     Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
                         let target = event.target;
-                        if (target.tagName === "IMG" && target.$hAttr("jump")) {
+                        const tagName = target.tagName;
+                        if (tagName === "IMG" && target.$hAttr("jump")) {
                             currentTarget = target.parentElement;
                             currentBox = target.previousElementSibling;
-                        } else if (target.tagName === "PICTURE") {
+                        } else if (tagName === "PICTURE") {
                             currentTarget = target;
                             currentBox = target.$q(".post-show-box");
                             target = target.$q("img");
                         } else return;
                         if (!currentBox && target) {
-                            currentBox = Lib.createElement("div", {
+                            currentBox = Lib.createElement(target, "div", {
                                 text: "Loading...",
                                 style: "display: none;",
                                 class: "post-show-box",
+                                attr: {
+                                    preview: previewAbove ? "above" : "below"
+                                },
                                 on: {
-                                    type: "wheel",
-                                    listener: event => {
+                                    wheel: event => {
                                         event.preventDefault();
                                         event.currentTarget.scrollLeft += event.deltaY;
                                     }
                                 }
-                            });
-                            target.$iAdjacent(currentBox, "beforebegin");
+                            }, "beforebegin");
                             const url = target.$gAttr("jump");
                             if (!url.includes("discord")) {
                                 const uri = new URL(url);
@@ -1192,7 +1201,7 @@
                                         if (DLL.isNeko) src = post.src ?? ""; else {
                                             for (const {
                                                 path
-                                            } of [post.file, ...post?.attachments || {}]) {
+                                            } of [post.file, ...post?.attachments || []]) {
                                                 if (!path) continue;
                                                 const isImg = DLL.supportImg.has(path.split(".")[1]);
                                                 if (!isImg) continue;
@@ -1764,14 +1773,14 @@
                 `, "CardZoom-Effects", false);
             },
             async BetterThumbnail() {
-                Lib.waitEl(".post-card__image", null, {
+                Lib.waitEl(DLL.isNeko ? ".post-card__image" : "article.post-card", null, {
                     raf: true,
                     all: true,
                     timeout: 5
-                }).then(images => {
+                }).then(postCard => {
                     const func = loadFunc.betterThumbnailRequ();
                     if (DLL.isNeko) {
-                        images.forEach(img => {
+                        postCard.forEach(img => {
                             const src = img.src;
                             if (!src?.endsWith(".gif")) {
                                 func.changeSrc(img, src, src.replace("thumbnail/", ""));
@@ -1782,32 +1791,50 @@
                         if (uri.searchParams.get("q") === "") {
                             uri.searchParams.delete("q");
                         }
-                        const imgBox = images.reduce((acc, img) => {
-                            const src = img.src;
-                            if (src) {
-                                acc[src] = img;
-                            }
+                        const postData = [...postCard].reduce((acc, card) => {
+                            const id = card.$gAttr("data-id");
+                            if (id) acc[id] = {
+                                img: card.$q("img"),
+                                footer: card.$q("time").nextElementSibling
+                            };
                             return acc;
                         }, {});
-                        if (imgBox.length === 0) return;
                         const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
                         DLL.fetchApi(api, data => {
-                            const type = Lib.$type(data);
-                            if (type === "Object") {
-                                data = data?.posts ?? [];
-                            }
-                            for (const obj of data) {
-                                const file = obj.file.path;
-                                const img = imgBox[DLL.thumbnailApi + file];
+                            if (Lib.$type(data) === "Object") data = data?.posts || [];
+                            for (const post of data) {
+                                const {
+                                    img,
+                                    footer
+                                } = postData[post.id];
+                                if (!img && !footer) continue;
+                                let replaced = false;
                                 const src = img?.src;
-                                if (!src) continue;
-                                for (const attach of obj.attachments ?? []) {
-                                    const path = attach.path;
-                                    if (!path) continue;
-                                    const isImg = DLL.supportImg.has(path.split(".")[1]);
-                                    if (!isImg) continue;
-                                    func.changeSrc(img, src, DLL.thumbnailApi + path);
-                                    break;
+                                const attachments = post.attachments || [];
+                                const count = [post.file, ...attachments].reduce((count, attach, index) => {
+                                    const path = attach.path || "";
+                                    const ext = path.split(".").at(-1).toLowerCase();
+                                    if (!ext) return count;
+                                    const isImg = DLL.supportImg.has(ext);
+                                    if (isImg) count.image = (count.image ?? 0) + 1; else if (DLL.videoType.has(ext)) count.video = (count.video ?? 0) + 1; else count.file = (count.file ?? 0) + 1;
+                                    if (src && !replaced && index > 0 && isImg) {
+                                        replaced = true;
+                                        func.changeSrc(img, src, DLL.thumbnailApi + path);
+                                    }
+                                    return count;
+                                }, {});
+                                if (footer && Object.keys(count).length > 0) {
+                                    const {
+                                        image,
+                                        video,
+                                        file
+                                    } = count;
+                                    const parts = [];
+                                    if (image) parts.push(`${image} images`);
+                                    if (video) parts.push(`${video} videos`);
+                                    if (file) parts.push(`${file} files`);
+                                    const showText = parts.join(" | ");
+                                    if (showText) footer.$text(showText);
                                 }
                             }
                         });
