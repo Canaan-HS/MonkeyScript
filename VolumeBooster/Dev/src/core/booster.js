@@ -1,8 +1,8 @@
-import { Lib } from "../services/client.js";
-import { Share } from "../core/config.js";
-import Transl from "../shared/language.js";
+import { Lib } from '../services/client.js';
+import { Share } from '../core/config.js';
+import Transl from '../shared/language.js';
 
-import { updateParame } from "../utils/tools.js";
+import { updateParame } from '../utils/tools.js';
 
 const Booster = (() => {
     let updated = false; // 是否已更新
@@ -120,8 +120,7 @@ const Booster = (() => {
                     initialized = true;
 
                     let disconnected = false;
-
-                    (() => {
+                    const regChange = () => {
                         Lib.regMenu({
                             [Transl(disconnected ? "🔗 恢復增幅" : "✂️ 斷開增幅")]: () => {
                                 if (Share.EnhancedNodes.length === 0) {
@@ -163,7 +162,8 @@ const Booster = (() => {
                                 func: () => { Share.Menu() }
                             }
                         }, { index: 2 });
-                    })();
+                    };
+                    regChange();
 
                     Lib.onEvent(document, "keydown", event => {
                         if (event.altKey && event.key.toUpperCase() == "B") Share.Menu();
