@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.09.16
+// @version      2025.09.26
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -176,12 +176,16 @@ const Lib = (() => {
         title: (value = null) => value === null ? document.title : (document.title = value),
         cookie: (value = null) => value === null ? document.cookie : (document.cookie = value),
         createUrl: (object) => URL.createObjectURL(object),
-        _on: (root, { type, listener, add }) => {
-            if (typeof type === "string" && typeof listener === "function") {
-                root.addEventListener(type, listener, add);
-                return { [type]: () => root.removeEventListener(type, listener, add) };
+        _on: (root, events) => {
+            const event = {};
+            for (const type of Object.keys(events)) {
+                const cfg = events[type];
+                if (cfg && typeof cfg.listen === "function") {
+                    root.addEventListener(type, cfg.listen, cfg.add);
+                    event[type] = () => root.removeEventListener(type, cfg.listen, cfg.add);
+                }
             }
-            return {};
+            return event;
         },
         /**
          * @description 創建元素
@@ -189,69 +193,61 @@ const Lib = (() => {
          * @param {element|string} arg1 - 添加的根元素 或 創建元素標籤
          * @param {string|object} arg2 - 創建元素標籤 或 元素屬性, arg2 = arg1 == element ? string : object
          * @param {object|undefined} arg3 - 元素屬性 或 不傳參數
-         * @param {string} [arg.id] - 元素ID
-         * @param {string} [arg.title] - 元素標題
+         * @param {string} arg4 - 插入位置
          * @param {string} [arg.class] - 元素類別
          * @param {string} [arg.text] - 元素內文
          * @param {number} [arg.rows] - 行數
          * @param {number} [arg.cols] - 列數
-         * @param {object} [arg.on] - 監聽事件, 可用 [] 多設置
+         * @param {object} [arg.on] - 監聽事件
          * @param {string|object} [arg.style] - 元素樣式
          * @param {object} [arg.attr] - 元素屬性
          * @param {object} [arg.props] - 其餘屬性
          * @returns {element}
          * @example
          * const parent = document.querySelector("#parent");
-         * createElement(parent, "div", { class: "child", text: "Hello World" });
+         * createElement(parent, "div", { class: "child", text: "Hello World" }, "beforebegin");
          *
          * const container = createElement("div", {
-         *  id: "container",
-         *  class: "container",
-         *  attr: { "container-id": "1" },
-         *  on: {
-         *      type: "click",
-         *      listener: () => console.log("click"),
-         *      add: {
-         *          capture: true,
-         *          once: true
-         *      }
+         *    id: "container",
+         *    class: "container",
+         *    attr: { "container-id": "1" },
+         *    on: {
+         *        click: { listen: () => console.log("click"), add: { capture: true } },
+         *        dblclick: { listen: () => console.log("dblclick") },
+         *    }
          * });
+         *
          * document.body.appendChild(container);
          */
-        createElement(arg1, arg2, arg3) {
-            const [root, tag, value = {}] = typeof arg1 === "string" ? [null, arg1, arg2] : [arg1, arg2, arg3];
-            if (!tag) return;
+        createElement(arg1, arg2, arg3, arg4) {
+            const [root, tag, value = {}, position = "beforeend"] = typeof arg1 === "string"
+                ? [undefined, arg1, arg2, arg3] : [arg1, arg2, arg3, arg4];
 
+            if (!tag) return;
             const {
-                id, title, class: className, text: textContent = "",
-                rows: rowSpan, cols: colSpan, on = {}, style = {}, attr = {}, ...props
+                class: className, text: textContent = "", rows: rowSpan, cols: colSpan,
+                on = {}, style = {}, attr = {}, ...props
             } = value;
 
-            const element = Object.assign(document.createElement(tag), { textContent });
+            const element = document.createElement(tag);
+            element.textContent = textContent;
 
-            if (id) element.id = id;
-            if (title) element.title = title;
             if (className) element.className = className;
             if (rowSpan !== undefined) element.rowSpan = rowSpan;
             if (colSpan !== undefined) element.colSpan = colSpan;
 
             // 批量賦值常見屬性
             Object.assign(element, props);
-
             // 設置樣式，支持字串或物件
-            Object.assign(element.style, typeof style === "string" ? { cssText: style } : style);
-
-            // 設置自定義屬性
-            Object.entries(attr).forEach(([key, val]) => element.setAttribute(key, val));
+            typeof style === "string"
+                ? element.style.cssText = style
+                : Object.assign(element.style, style);
+            // 設置屬性
+            for (const key in attr) element.setAttribute(key, attr[key]);
 
             // 設置監聽器
-            const event = {};
-
-            if (Array.isArray(on)) {
-                on.forEach(item => Object.assign(event, this._on(element, item)));
-            } else if (typeof on === "object") {
-                Object.assign(event, this._on(element, on));
-            }
+            const event = typeof on === "object" && Object.keys(on).length > 0
+                ? this._on(element, on) : {};
 
             // 掛載監聽器函數
             Object.assign(element, {
@@ -273,7 +269,8 @@ const Lib = (() => {
                 }
             });
 
-            return root?.nodeType === 1 ? root.appendChild(element) : element;
+            return root?.nodeType === 1
+                ? root.insertAdjacentElement(position, element) : element;
         },
     };
 
