@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1666936/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -1233,14 +1233,14 @@
                         Lib.$q(".edit_textarea")?.remove(); // 移除上一次的編輯框 (避免意外)
 
                         const display = target.previousElementSibling; // 取得上方的 name 元素
-                        const text = Lib.createElement("textarea", {
+                        const text = Lib.createElement(display, "textarea", {
                             class: "edit_textarea",
                             style: `height: ${display.scrollHeight + 10}px;`,
-                        });
+                        }, "beforebegin");
 
                         const original_name = display.$text();
                         text.value = original_name.trim();
-                        display.$iAdjacent(text, "beforebegin");
+                        // display.$iAdjacent(text, "beforebegin");
 
                         text.scrollTop = 0; // 滾動到最上方
                         setTimeout(() => {
@@ -1311,8 +1311,7 @@
                                 class: "post-show-box",
                                 attr: { preview: previewAbove ? "above" : "below" },
                                 on: {
-                                    type: "wheel",
-                                    listener: event => {
+                                    wheel: event => {
                                         event.preventDefault();
                                         event.currentTarget.scrollLeft += event.deltaY;
                                     }
