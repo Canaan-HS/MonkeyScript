@@ -37,7 +37,7 @@
 | `SidebarCollapse` |                   Sidebar collapses, restored when mouse hovers nearby                   |   `true`    |
 |    `KeyScroll`    |                             Keyboard hotkeys ↑↓ auto scroll                              |   `true`    |
 |   `TextToLink`    |                Convert plain text link strings into clickable hyperlinks                 |   `true`    |
-|    `FixArtist`    | Correct displayed name based on Pixiv name, customizable, direct link to source site Tag |   `true`    |
+| `BetterPostCard`  | Correct displayed name based on Pixiv name, customizable, direct link to source site Tag |   `true`    |
 |    `CardZoom`     |                                 Adjust card preview size                                 |   `true`    |
 |    `CardText`     |                             Adjust card preview text effect                              |   `true`    |
 | `BetterThumbnail` |                     Replace card preview image with image from post                      |   `true`    |
@@ -157,13 +157,13 @@ Compatibility recommendations:
 
 ## **📦 Version Info**
 
-**Release Version: 2025.09.25-Beta**
+**Release Version: 2025.09.26-Beta**
 
 ### **Changelog**
-1. Updated core library  
-2. Improved content matching method (experimental, please report issues)  
-3. Removed BackToTop (already provided natively by the site)  
-4. Added "Quick Preview" to FixArtist
+1. Update tool library
+2. Rename: FixArtist -> BetterPostCard
+3. BetterPostCard adds a `previewAbove` option. By default, the preview appears above; if set to false, it appears below.
+4. Added BetterThumbnail, which directly displays attachment types (not supported for nekohouse) [Experimental]
 
 ### **Known Issues**
 1. Sometimes page render lags behind feature load, causing functions to fail. Refreshing usually resolves it.
