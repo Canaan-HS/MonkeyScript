@@ -1,5 +1,5 @@
-import { Lib } from "../services/client.js";
-import { Default, Share } from "../core/config.js";
+import { Lib } from '../services/client.js';
+import { Default, Share } from '../core/config.js';
 
 const bannedDomains = (() => {
     let banned = new Set(Lib.getV("Banned", [])); // 禁用網域
