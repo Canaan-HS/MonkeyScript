@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.25-Beta
+// @version      2025.09.26-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -57,10 +57,10 @@
             },
             BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
                 enable: true,
-                previewAbove: true, // 快速預覽展示位置
                 newtab: true,
                 newtab_active: true,
                 newtab_insert: true,
+                previewAbove: true, // 快速預覽展示於帖子上方
             },
         },
         Preview: {
