@@ -1304,7 +1304,7 @@
                         } else return;
 
                         if (!currentBox && target) {
-                            currentBox = Lib.createElement("div", {
+                            currentBox = Lib.createElement(target, "div", {
                                 text: "Loading...",
                                 style: "display: none;",
                                 class: "post-show-box",
@@ -1315,8 +1315,7 @@
                                         event.currentTarget.scrollLeft += event.deltaY;
                                     }
                                 }
-                            })
-                            target.$iAdjacent(currentBox, "beforebegin");
+                            }, "beforebegin")
 
                             const url = target.$gAttr("jump");
                             // 目前暫時只有 discord 不支援, 就不用正則
