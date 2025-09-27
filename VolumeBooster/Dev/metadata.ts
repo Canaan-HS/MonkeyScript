@@ -18,6 +18,10 @@ export default `
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
+
+// @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
+// @require      https://update.greasyfork.org/scripts/487608/1666944/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -25,8 +29,6 @@ export default `
 // @grant        GM_getResourceURL
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
-// @resource     Img https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1637584/SyntaxLite_min.js
 
 // @run-at       document-body
 // ==/UserScript==
