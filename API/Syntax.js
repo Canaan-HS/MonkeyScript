@@ -804,46 +804,105 @@ const Lib = (() => {
 
     /**
      * @description 瀏覽器 storage 操作
-     * @param {string} key - 要操作的鍵
-     * @param {object} options - 配置選項
-     * @param {any} [options.value] - 要儲存的值
-     * @param {any} [options.error] - 預設錯誤值
-     * @returns {any}
-     *
      * @example
-     * 支援的類型 (String, Number, Array, Object, Boolean, Date, Map)
+     * 基本支援類型 (String, Number, Array, Object, Boolean, Date, Map, Set)
+     * 支援日期格式 (YYYY-MM-DD HH:MM:SS, Yy M Dd h m s)
      *
-     * session("數據", {value: 123, error: false})
-     * session("數據")
+     * setLocal("數據", 123);
+     * setSession("憑證", "token", "7d");
      *
-     * local("數據", {value: 123, error: null})
+     * getLocal("數據", 456, true);
+     * getSession("憑證", "過期");
      */
+    const storageParse = {
+        Set: value => new Set(value),
+        Map: value => new Map(value),
+        Date: value => new Date(value),
+    };
+    const storageSerialize = {
+        Set: value => [...value],
+        Map: value => [...value],
+        Date: value => value.toISOString(),
+    };
+    function parseExpire(expireStr) {
+        // 傳入空值或只包含空白的字串，返回 0
+        if (!expireStr || !expireStr.trim()) {
+            return 0;
+        }
+
+        // 檢查是否為絕對時間格式 "YYYY-MM-DD HH:MM:SS"
+        const absoluteDatePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+        if (absoluteDatePattern.test(expireStr)) {
+            const dateObj = new Date(expireStr);
+            const time = dateObj.getTime();
+            if (!isNaN(time)) {
+                return Math.floor(time / 1000);
+            }
+        }
+
+        // 解析特定格式字串, 計算到期時間
+        const now = new Date();
+        const pattern = /(\d+)\s*([YyMDdhms])/g;
+        const matches = [...expireStr.matchAll(pattern)];
+        if (matches.length === 0) return 0;
+
+        const durations = { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+        for (const match of matches) {
+            const value = parseInt(match[1], 10);
+            const unit = match[2];
+
+            switch (unit.toLowerCase()) {
+                case 'y': durations.years += value; break;
+                case 'd': durations.days += value; break;
+                case 'h': durations.hours += value; break;
+                case 's': durations.seconds += value; break;
+                default:
+                    if (unit === 'M') durations.months += value;
+                    else if (unit === 'm') durations.minutes += value;
+            }
+        }
+
+        now.setFullYear(now.getFullYear() + durations.years);
+        now.setMonth(now.getMonth() + durations.months);
+        now.setDate(now.getDate() + durations.days);
+        now.setHours(now.getHours() + durations.hours);
+        now.setMinutes(now.getMinutes() + durations.minutes);
+        now.setSeconds(now.getSeconds() + durations.seconds);
+
+        return Math.floor(now.getTime() / 1000);
+    };
+    function storage(storage, key, { value, error, expireStr, autoRemove = false } = {}) {
+        if (value != null) {
+            const type = $type(value);
+            const pack = { type, value: storageSerialize[type]?.(value) ?? value };
+            const expireTime = parseExpire(expireStr);
+            expireTime && (pack.expire = expireTime);
+            storage.setItem(key, JSON.stringify(pack));
+        }
+        else {
+            let item = storage.getItem(key);
+            if (item == null) return error;
+
+            item = JSON.parse(item);
+            if (item.expire && Date.now() > (item.expire * 1000)) {
+                storage.removeItem(key);
+                return error;
+            };
+
+            const result = storageParse[item.type]?.(item.value) ?? item.value;
+            autoRemove && storage.removeItem(key);
+
+            return result;
+        }
+    };
     const storageCall = {
-        session: (key, { value = null, error = undefined } = {}) => storage(key, sessionStorage, value, error),
-        local: (key, { value = null, error = undefined } = {}) => storage(key, localStorage, value, error)
-    };
-    const storageHandlers = {
-        String: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
-        Number: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true) : Number(key),
-        Array: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true)
-                : (key = JSON.parse(key), Array.isArray(key[0]) ? new Map(key) : key),
-        Object: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
-        Boolean: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true) : JSON.parse(key),
-        Date: (storage, key, value) =>
-            value != null ? (storage.setItem(key, JSON.stringify(value)), true) : new Date(key),
-        Map: (storage, key, value) =>
-            (storage.setItem(key, JSON.stringify([...value])), true)
-    };
-    function storage(key, type, value, error) {
-        let data;
-        return value != null
-            ? storageHandlers[$type(value)](type, key, value)
-            : (data = type.getItem(key), data != undefined ? storageHandlers[$type(JSON.parse(data))](type, data) : error);
+        getLocal: (key, error, autoRemove) => storage(localStorage, key, { error, autoRemove }),
+        setLocal: (key, value, expireStr) => storage(localStorage, key, { value, expireStr }),
+        delLocal: (key) => localStorage.removeItem(key),
+        getSession: (key, error, autoRemove) => storage(sessionStorage, key, { error, autoRemove }),
+        setSession: (key, value, expireStr) => storage(sessionStorage, key, { value, expireStr }),
+        delSession: (key) => sessionStorage.removeItem(key)
     };
 
     /**
