@@ -1,10 +1,10 @@
-const { monkeyWindow, Lib } = '../services/client.js';
+import { monkeyWindow, Lib } from '../services/client.js';
 import { Share } from '../core/config.js';
-import Transl from "../shared/language.js";
+import Transl from '../shared/language.js';
 
-import { bannedDomains } from "../utils/tools.js";
-import Booster from "../core/booster.js";
-import CreateMenu from "../core/menu.js";
+import { bannedDomains } from '../utils/tools.js';
+import Booster from '../core/booster.js';
+import CreateMenu from '../core/menu.js';
 
 export default function Main() {
     bannedDomains.isEnabled(status => {
