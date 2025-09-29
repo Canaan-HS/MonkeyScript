@@ -764,15 +764,11 @@
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
                         fixCache: new Map(), // 修復後 用於緩存
                         getRecord() {
-                            const record = Lib.local("fix_record_v2", { error: new Map() });
+                            const record = Lib.getLocal("fix_record_v2", new Map());
                             return record instanceof Map ? record : new Map(); // 有時會出現錯誤
                         },
                         async saveRecord(save) {
-                            await Lib.local("fix_record_v2",
-                                {
-                                    value: new Map([...this.getRecord(), ...save]) // 取得完整數據並合併
-                                }
-                            );
+                            await Lib.setLocal("fix_record_v2", new Map([...this.getRecord(), ...save]));
                             this.fixCache.clear();
                         },
                         replaceUrlTail(url, tail) {
@@ -1353,7 +1349,7 @@
 
                                     if (srcBox.size === 0) currentBox.$text("No Image");
                                     else {
-                                        currentBox.$iAdjacent([...srcBox].map((src, index) =>`<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
+                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
                                         srcBox.clear();
                                     }
                                 }, { responseType: DLL.isNeko ? "document" : "json" })
