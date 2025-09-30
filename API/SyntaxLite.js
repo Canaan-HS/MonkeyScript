@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025.09.30
+// @version      2025.10.01
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -9,13 +9,13 @@
 // ==/UserScript==
 
 const Lib = (() => {
+    const $domParser = new DOMParser();
     const $type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const deviceCall = {
         get sX() { return window.scrollX },
         get sY() { return window.scrollY },
         get iW() { return window.innerWidth },
         get iH() { return window.innerHeight },
-        _cache: undefined,
         get platform() {
             let value;
 
@@ -148,14 +148,14 @@ const Lib = (() => {
         $Qa: (root, select) => selector(root, select, true),
         html: document.documentElement,
         get head() {
-            const h = document.head;
-            h && Object.defineProperty(this, "head", { value: h, writable: false });
-            return h;
+            const value = document.head;
+            value && Object.defineProperty(this, "head", { value, writable: false });
+            return value;
         },
         get body() {
-            const b = document.body;
-            b && Object.defineProperty(this, "body", { value: b, writable: false });
-            return b;
+            const value = document.body;
+            value && Object.defineProperty(this, "body", { value, writable: false });
+            return value;
         },
         img: document.images,
         link: document.links,
@@ -171,6 +171,7 @@ const Lib = (() => {
         get lang() { return navigator.language },
         $agen: navigator.userAgent,
         get agen() { return navigator.userAgent },
+        isEmpty(object) { for (const _ in object) return false; return true },
         createDomFragment: (value) => document.createRange().createContextualFragment(value),
         get createFragment() { return document.createDocumentFragment() },
         title: (value = null) => value === null ? document.title : (document.title = value),
@@ -249,7 +250,7 @@ const Lib = (() => {
             for (const key in attr) element.setAttribute(key, attr[key]);
 
             // 設置監聽器
-            const event = typeof on === "object" && Object.keys(on).length > 0
+            const event = typeof on === "object" && !this.isEmpty(on)
                 ? this._on(element, on) : {};
 
             // 掛載監聽器函數
@@ -671,7 +672,7 @@ const Lib = (() => {
     };
 
     /**
-     * @description 等待元素出現在DOM中並執行回調
+     * @description 等待元素出現在 DOM 中並執行回調
      * @param {string|string[]} select - 要查找的選擇器 或 選擇器數組
      * @param {Function} [found=null] - 找到元素後執行的回調函數
      * @param {Object} [options] - 配置選項
@@ -820,9 +821,9 @@ const Lib = (() => {
         Date: value => new Date(value),
     };
     const storageSerialize = {
-        Set: value => [...value],
-        Map: value => [...value],
-        Date: value => value.toISOString(),
+        Set: value => value instanceof Set ? [...value] : value,
+        Map: value => value instanceof Map ? [...value] : value,
+        Date: value => value instanceof Date ? value.toISOString() : value,
     };
     function parseExpire(expireStr) {
         // 傳入空值或只包含空白的字串，返回 0
@@ -872,37 +873,64 @@ const Lib = (() => {
 
         return Math.floor(now.getTime() / 1000);
     };
-    function storage(storage, key, { value, error, expireStr, autoRemove = false } = {}) {
-        if (value != null) {
-            const type = $type(value);
-            const pack = { type, value: storageSerialize[type]?.(value) ?? value };
-            const expireTime = parseExpire(expireStr);
-            expireTime && (pack.expire = expireTime);
-            storage.setItem(key, JSON.stringify(pack));
-        }
-        else {
-            let item = storage.getItem(key);
-            if (item == null) return error;
+    // setter = localStorage.setItem, sessionStorage.setItem, GM_setValue
+    function setStorage(setter, key, value, { space = 0, expireStr } = {}) {
+        const type = $type(value);
+        const pack = { type, value: storageSerialize[type]?.(value) ?? value };
+        const expireTime = parseExpire(expireStr);
 
+        expireTime && (pack.expire = expireTime);
+        setter(key, JSON.stringify(pack, null, space));
+    };
+    // getter = localStorage.getItem, sessionStorage.getItem, GM_getValue
+    // removeer = localStorage.removeItem, sessionStorage.removeItem, GM_deleteValue
+    function getStorage(getter, key, error, { autoRemove = false, removeer } = {}) {
+        let item = getter(key);
+        if (item == null) return error;
+
+        try {
             item = JSON.parse(item);
-            if (item.expire && Date.now() > (item.expire * 1000)) {
-                storage.removeItem(key);
+
+            const isObject = item instanceof Object;
+            if (isObject && item.expire && Date.now() > (item.expire * 1000)) {
+                removeer(key);
                 return error;
             };
 
-            const result = storageParse[item.type]?.(item.value) ?? item.value;
-            autoRemove && storage.removeItem(key);
+            // 速度優先不用 三元式 + 解構
+            let type, value;
+            if (isObject) { // 使用該函數存取的數據
+                type = item.type ?? "Object";
+                value = item.value ?? item;
+            } else { // 一般數據
+                type = $type(item);
+                value = item;
+            };
 
-            return result;
+            const unPack = storageParse[type]?.(value) ?? value;
+            autoRemove && removeer(key);
+
+            return unPack;
+        }
+        catch {
+            if (typeof item === "object" && sugar.isEmpty(item)) return error;
+            if (typeof item === "string" && item.startsWith("[object")) return error;
+            return item;
         }
     };
+    const delLocal = localStorage.removeItem.bind(localStorage);
+    const setLocal = localStorage.setItem.bind(localStorage);
+    const getLocal = localStorage.getItem.bind(localStorage);
+    const delSession = sessionStorage.removeItem.bind(sessionStorage);
+    const setSession = sessionStorage.setItem.bind(sessionStorage);
+    const getSession = sessionStorage.getItem.bind(sessionStorage);
     const storageCall = {
-        getLocal: (key, error, autoRemove) => storage(localStorage, key, { error, autoRemove }),
-        setLocal: (key, value, expireStr) => storage(localStorage, key, { value, expireStr }),
-        delLocal: (key) => localStorage.removeItem(key),
-        getSession: (key, error, autoRemove) => storage(sessionStorage, key, { error, autoRemove }),
-        setSession: (key, value, expireStr) => storage(sessionStorage, key, { value, expireStr }),
-        delSession: (key) => sessionStorage.removeItem(key)
+        delLocal: (key) => delLocal(key),
+        setLocal: (key, value, expireStr) => setStorage(setLocal, key, value, { expireStr }),
+        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
+        delSession: (key) => delSession(key),
+        setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
+        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
     };
 
     /**
@@ -953,6 +981,25 @@ const Lib = (() => {
     };
 
     /* ========== 請求數據處理 ========== */
+
+    /**
+     * @description 創建 Worker 工作
+     * @param {string} code - 運行代碼
+     * @returns {Worker}    - 創建的 Worker 連結
+     */
+    function createWorker(code) {
+        const blob = new Blob([code], { type: "application/javascript" });
+        const url = URL.createObjectURL(blob);
+        const worker = new Worker(url);
+
+        const terminate = worker.terminate;
+        worker.terminate = function () {
+            terminate.call(worker);
+            URL.revokeObjectURL(url);
+        };
+
+        return worker;
+    };
 
     /**
      * @description 輸出 Json 檔案
@@ -1178,17 +1225,14 @@ const Lib = (() => {
      * setJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
      * getJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
      */
-    const storeVerify = (val) => val === void 0 || val === null ? null : val;
-    const storeCall = {
+    const GM_storageVerify = val => val == null ? null : val;
+    const GM_storageCall = {
         delV: key => GM_deleteValue(key),
-        allV: () => storeVerify(GM_listValues()),
+        allV: () => GM_storageVerify(GM_listValues()),
         setV: (key, value) => GM_setValue(key, value),
-        getV: (key, error) => storeVerify(GM_getValue(key, error)),
-        setJV: (key, value, space = 0) => GM_setValue(key, JSON.stringify(value, null, space)),
-        getJV(key, error) {
-            try { return JSON.parse(storeVerify(GM_getValue(key, error))) }
-            catch { return error }
-        }
+        getV: (key, error) => GM_storageVerify(GM_getValue(key, error)),
+        setJV: (key, value, space = 0, expireStr) => setStorage(GM_setValue, key, value, { space, expireStr }),
+        getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
     };
 
     /**
@@ -1206,7 +1250,7 @@ const Lib = (() => {
      * nv - 對象新值
      * far - 是否是其他窗口觸發
      *
-     * const listenHandle = storeListen(["key1", "key2"], call=> {
+     * const listenHandle = storageListen(["key1", "key2"], call=> {
      *      console.log(call.key, call.nv);
      * })
      *
@@ -1214,7 +1258,7 @@ const Lib = (() => {
      * listenHandle.offAll();
      */
     const listenRecord = new Map();
-    function storeListen(object, callback) {
+    function storageListen(object, callback) {
         object.forEach(label => {
             if (!listenRecord.has(label)) {
                 const id = GM_addValueChangeListener(label, function (key, oldValue, newValue, remote) {
@@ -1255,11 +1299,24 @@ const Lib = (() => {
     return _keepGetterMerge(
         deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
-            ...addCall, ...storageCall, ...storeCall,
+            ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange,
-            log, createLog, $observer, waitEl, $throttle, $debounce, outputJson,
-            runTime, getDate, translMatcher, regMenu, unMenu, storeListen
-        }
-    );
+            $type, onE, onEvent, offEvent, onUrlChange, log, createLog,
+            $observer, waitEl, $throttle, $debounce, createWorker, outputJson,
+            runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
+
+            /**
+             * @description 暫停異步函數
+             * @param {Integer} delay - 延遲毫秒
+             * @returns { Promise }
+             */
+            sleep: (delay) => new Promise(resolve => setTimeout(resolve, delay)),
+
+            /**
+             * @description 解析請求後的頁面, 為 dom 文件
+             * @param {htnl} html - 要解析成 html 的文檔
+             * @returns {htnl}    - html 文檔
+             */
+            domParse: (html) => $domParser.parseFromString(html, "text/html"),
+        });
 })();
