@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1666944/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1669404/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        GM_setValue
@@ -90,6 +90,13 @@
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
     const DLL = (() => {
+        // 舊數據轉移 (暫時)
+        const oldRecord = localStorage.getItem("fix_record_v2");
+        if (oldRecord instanceof String) {
+            Lib.setLocal("fix_record_v3", new Map(JSON.parse(oldRecord)));
+            Lib.delLocal("fix_record_v2");
+        };
+
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const color = {
             "kemono": "#e8a17d !important",
@@ -764,11 +771,11 @@
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
                         fixCache: new Map(), // 修復後 用於緩存
                         getRecord() {
-                            const record = Lib.getLocal("fix_record_v2", new Map());
+                            const record = Lib.getLocal("fix_record_v3", new Map());
                             return record instanceof Map ? record : new Map(); // 有時會出現錯誤
                         },
                         async saveRecord(save) {
-                            await Lib.setLocal("fix_record_v2", new Map([...this.getRecord(), ...save]));
+                            await Lib.setLocal("fix_record_v3", new Map([...this.getRecord(), ...save]));
                             this.fixCache.clear();
                         },
                         replaceUrlTail(url, tail) {
