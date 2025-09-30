@@ -29,6 +29,7 @@
 // @require      https://update.greasyfork.org/scripts/487608/1669404/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
+// @grant        unsafeWindow
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
@@ -92,7 +93,7 @@
     const DLL = (() => {
         // 舊數據轉移 (暫時)
         const oldRecord = localStorage.getItem("fix_record_v2");
-        if (oldRecord instanceof String) {
+        if (oldRecord) {
             Lib.setLocal("fix_record_v3", new Map(JSON.parse(oldRecord)));
             Lib.delLocal("fix_record_v2");
         };
@@ -1104,71 +1105,75 @@
             async CacheFetch() { /* 緩存請求 */
                 if (DLL.isNeko || DLL.registered.has("CacheFetch")) return;
 
-                const script = `
-                    const cache = new Map();
-                    const originalFetch = window.fetch;
+                const cache = Lib.getLocal("CacheFetch", new Map());
+                const saveCache = Lib.$debounce(() => Lib.setLocal("CacheFetch", cache, "5m"), 1e3); // 有效 5 分鐘緩存 (每次都刷新)
 
-                    window.fetch = async function (...args) {
-                        const input = args[0];
-                        const options = args[1] || {};
+                // unsafeWindow 是 瀏覽器環境, window 是 sandbox 環境
+                const originalFetch = { Sandbox: window.fetch, Window: unsafeWindow.fetch };
 
-                        const url = (typeof input === 'string') ? input : input.url;
-                        const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
+                window.fetch = (...args) => fetchWrapper(originalFetch.Sandbox, ...args);
+                unsafeWindow.fetch = (...args) => fetchWrapper(originalFetch.Window, ...args);
 
-                        // 如果不是 GET 請求，或有 X-Bypass-CacheFetch 標頭，立即返回原始請求
-                        if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch']) {
-                            return originalFetch.apply(this, args);
+                async function fetchWrapper(windowContext, ...args) {
+                    const input = args[0];
+                    const options = args[1] || {};
+
+                    const url = (typeof input === 'string') ? input : input.url;
+                    const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
+
+                    // 如果不是 GET 請求，或有 X-Bypass-CacheFetch 標頭，立即返回原始請求
+                    if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch']) {
+                        return windowContext(...args);
+                    }
+
+                    // 如果快取命中，立即返回快取中的 Response
+                    if (cache.has(url)) {
+                        const cached = cache.get(url);
+                        return new Response(cached.body, {
+                            status: cached.status,
+                            headers: cached.headers
+                        });
+                    }
+
+                    // 執行請求與非阻塞式快取
+                    try {
+                        // 等待原始請求完成
+                        const response = await windowContext(...args);
+
+                        // 檢查是否滿足所有快取條件
+                        if (response.status === 200 && url.includes('api')) {
+
+                            // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
+                            (async () => {
+                                try {
+                                    const responseClone = response.clone();
+                                    const bodyText = await responseClone.text();
+
+                                    // 檢查是否有實際內容
+                                    if (bodyText) {
+                                        const headersObject = {};
+                                        responseClone.headers.forEach((value, key) => {
+                                            headersObject[key] = value;
+                                        });
+
+                                        cache.set(url, {
+                                            body: bodyText,
+                                            status: responseClone.status,
+                                            headers: headersObject
+                                        });
+
+                                        saveCache();
+                                    }
+                                } catch {}
+                            })();
                         }
 
-                        // 如果快取命中，立即返回快取中的 Response
-                        if (cache.has(url)) {
-                            const cached = cache.get(url);
-                            return new Response(cached.body, {
-                                status: cached.status,
-                                headers: cached.headers
-                            });
-                        }
+                        return response;
+                    } catch (error) {
+                        throw error;
+                    }
+                };
 
-                        // 執行請求與非阻塞式快取
-                        try {
-                            // 等待原始請求完成
-                            const response = await originalFetch.apply(this, args);
-
-                            // 檢查是否滿足所有快取條件
-                            if (response.status === 200 && url.includes('api')) {
-
-                                // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
-                                (async () => {
-                                    try {
-                                        const responseClone = response.clone();
-                                        const bodyText = await responseClone.text();
-
-                                        // 檢查是否有實際內容
-                                        if (bodyText) {
-                                            const headersObject = {};
-                                            responseClone.headers.forEach((value, key) => {
-                                                headersObject[key] = value;
-                                            });
-
-                                            cache.set(url, {
-                                                body: bodyText,
-                                                status: responseClone.status,
-                                                headers: headersObject
-                                            });
-                                        }
-                                    } catch { }
-                                })();
-                            }
-
-                            return response;
-                        } catch (error) {
-                            throw error;
-                        }
-                    };
-                `;
-
-                eval(script); // sandbox 內部攔截
-                Lib.addScript(script, "Cache-Fetch", false); // 主頁 context 攔截
                 DLL.registered.add("CacheFetch");
             },
             async TextToLink(config) { /* 連結文本轉連結 (沒有連結文本的不會執行) */
