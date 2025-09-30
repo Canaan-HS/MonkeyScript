@@ -1271,7 +1271,7 @@ const Lib = (() => {
      * const strCompress = createStrCompress();
      * (async () => {
      *      const compressed = await strCompress.compress("Hello World", { level: 9 });
-     *      const decompressed = await strCompress.decompress(compressed);   
+     *      const decompressed = await strCompress.decompress(compressed);
      * })()
      */
     function createStrCompress() {
