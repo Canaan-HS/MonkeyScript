@@ -353,7 +353,7 @@
                 imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
 
                 // 全局修改功能
-                Lib.storeListen(Object.values(saveKey), call => {
+                Lib.storageListen(Object.values(saveKey), call => {
                     if (call.far) {
                         if (typeof call.nv === "string") {
                             menuInit();
@@ -512,7 +512,7 @@
                 formData: res => res.formData(),
                 document: async res => {
                     res = await res.text();
-                    return new DOMParser().parseFromString(res, "text/html");
+                    return Lib.domParse(res);
                 },
             },
             fetchApi(url, callback, {
@@ -2050,7 +2050,7 @@
                                     return count;
                                 }, {});
 
-                                if (footer && Object.keys(count).length > 0) {
+                                if (footer && !Lib.isEmpty(count)) {
                                     const { image, video, file } = count;
 
                                     const parts = [];
@@ -2075,7 +2075,7 @@
             linkBeautifyCache: undefined,
             linkBeautifyRequ() {
                 return this.linkBeautifyCache ??= async function showBrowse(browse) {
-                    const url = DLL.isNeko ? browse.href : browse.href.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
+                    const url = DLL.isNeko ? browse.href : browse.href?.replace("posts/archives", "api/v1/file"); // 根據站點修改 API
 
                     // 初始化
                     browse.style.position = "relative"; // 修改樣式避免跑版
@@ -2552,7 +2552,7 @@
                         loadFailedClick();
                         for (const [index, root] of [...thumbnail].entries()) {
                             while (token >= 7) {
-                                await new Promise(resolve => setTimeout(resolve, 7e2));
+                                await Lib.sleep(7e2);
                             };
                             imgLoad(root, index);
                         }
