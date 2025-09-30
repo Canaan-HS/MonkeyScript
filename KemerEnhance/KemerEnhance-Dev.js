@@ -26,7 +26,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1669404/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1669599/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -91,13 +91,6 @@
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
     const DLL = (() => {
-        // 舊數據轉移 (暫時)
-        const oldRecord = localStorage.getItem("fix_record_v2");
-        if (oldRecord) {
-            Lib.setLocal("fix_record_v3", new Map(JSON.parse(oldRecord)));
-            Lib.delLocal("fix_record_v2");
-        };
-
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const color = {
             "kemono": "#e8a17d !important",
@@ -772,11 +765,13 @@
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
                         fixCache: new Map(), // 修復後 用於緩存
                         getRecord() {
-                            const record = Lib.getLocal("fix_record_v3", new Map());
-                            return record instanceof Map ? record : new Map(); // 有時會出現錯誤
+                            // TODO - 等待改用 IndexedDB 儲存
+                            const record = Lib.getLocal("fix_record_v2", new Map());
+                            return record instanceof Map  // 有時會出現錯誤
+                                ? record : record instanceof Array ? new Map(record) : new Map();
                         },
                         async saveRecord(save) {
-                            await Lib.setLocal("fix_record_v3", new Map([...this.getRecord(), ...save]));
+                            await Lib.setLocal("fix_record_v2", new Map([...this.getRecord(), ...save]));
                             this.fixCache.clear();
                         },
                         replaceUrlTail(url, tail) {
@@ -1105,8 +1100,9 @@
             async CacheFetch() { /* 緩存請求 */
                 if (DLL.isNeko || DLL.registered.has("CacheFetch")) return;
 
-                const cache = Lib.getLocal("CacheFetch", new Map());
-                const saveCache = Lib.$debounce(() => Lib.setLocal("CacheFetch", cache, "5m"), 1e3); // 有效 5 分鐘緩存 (每次都刷新)
+                const cache = Lib.getJV("CacheFetch", new Map());
+                // TODO - 需要改用 IndexedDB 儲存
+                // const saveCache = Lib.$debounce(() => Lib.setJV("CacheFetch", cache, 0, "5m"), 1e3); // 有效 5 分鐘緩存 (每次都刷新)
 
                 // unsafeWindow 是 瀏覽器環境, window 是 sandbox 環境
                 const originalFetch = { Sandbox: window.fetch, Window: unsafeWindow.fetch };
@@ -1162,7 +1158,7 @@
                                             headers: headersObject
                                         });
 
-                                        saveCache();
+                                        // saveCache();
                                     }
                                 } catch {}
                             })();
