@@ -560,21 +560,6 @@ const Lib = (() => {
     };
 
     /**
-     * @description log 函數的工具
-     * @param {*} options - 與 log 函數同樣的選項
-     * @returns { Function }
-     * @example
-     * const log = createLog({ dev: true, group: 'API' });
-     * log('訊息').log;
-     * log('訊息2').log;
-     * log('警告訊息').warn;
-     * log('錯誤訊息').error;
-     */
-    function createLog(options = {}) {
-        return (...args) => log(...args, options);
-    };
-
-    /**
      * @description 添加元素到 head
      * @param {string} Rule - 元素內容
      * @param {string} ID - 元素ID
@@ -926,11 +911,11 @@ const Lib = (() => {
     const getSession = sessionStorage.getItem.bind(sessionStorage);
     const storageCall = {
         delLocal: (key) => delLocal(key),
-        setLocal: (key, value, expireStr) => setStorage(setLocal, key, value, { expireStr }),
-        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
+        setLocal: (key, value, { expireStr } = {}) => setStorage(setLocal, key, value, { expireStr }),
+        getLocal: (key, error, { autoRemove } = {}) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
         delSession: (key) => delSession(key),
-        setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
-        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
+        setSession: (key, value, { expireStr } = {}) => setStorage(setSession, key, value, { expireStr }),
+        getSession: (key, error, { autoRemove } = {}) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
     };
 
     /**
@@ -1110,11 +1095,11 @@ const Lib = (() => {
     };
 
     /**
-     * @description 建立壓縮器
+     * @description 創建 zip 壓縮函數
      * @returns {object} - 壓縮函數
      *
      * @example
-     * const zipEngine = createCompressor();
+     * const zipEngine = createZip();
      * const { destroyWorker, file, generateZip } = zipEngine;
      *
      * file('test.txt', 'Hello, World!');
@@ -1129,11 +1114,11 @@ const Lib = (() => {
      *
      * ---
      *
-     * const zipEngine = createCompressor();
+     * const zipEngine = createZip();
      * zipEngine.file('test.txt', 'Hello, World!');
      * zipEngine.generateZip().then(zip => {})
      */
-    function createCompressor() {
+    function createZip() {
         let worker = createWorker(`
             importScripts("https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js");
             onmessage = function(e) {
@@ -1275,6 +1260,108 @@ const Lib = (() => {
                     }
                 });
             },
+        }
+    };
+
+    /**
+     * @description 創建字串壓縮函數
+     * @returns {Object} - 壓縮函數
+     *
+     * @example
+     * const strCompress = createStrCompress();
+     * (async () => {
+     *      const compressed = await strCompress.compress("Hello World", { level: 9 });
+     *      const decompressed = await strCompress.decompress(compressed);   
+     * })()
+     */
+    function createStrCompress() {
+        let worker = createWorker(`
+            importScripts("https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js");
+            onmessage = function(e) {
+                const { type, data, level, requestId } = e.data;
+
+                const bytes = type === "compress"
+                    ? pako.deflate(data, { level })
+                    : pako.inflate(data);
+
+                postMessage({ data: bytes, requestId: requestId }, [bytes.buffer]);
+            }
+        `);
+
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        function uint8ArrayToBase64_Async(bytes) {
+            return new Promise((resolve, reject) => {
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const dataUrl = e.target.result;
+                    const base64String = dataUrl.substring(dataUrl.indexOf(',') + 1);
+                    resolve(base64String);
+                };
+                reader.onerror = function (error) {
+                    reject(error);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function base64ToUint8Array(base64) {
+            const binary_string = atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            let i;
+            for (i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            };
+            return bytes;
+        };
+
+
+        let requestIdCounter = 0;
+        const pendingRequests = new Map();
+
+        worker.onmessage = (e) => {
+            const { requestId, data } = e.data;
+            if (pendingRequests.has(requestId)) {
+                pendingRequests.get(requestId)(data);
+                pendingRequests.delete(requestId);
+            }
+        };
+
+        function sendRequest(type, data, level) {
+            return new Promise(resolve => {
+                const requestId = requestIdCounter++;
+                pendingRequests.set(requestId, resolve);
+                worker.postMessage({ type, data, level, requestId }, [data.buffer]);
+            })
+        };
+
+        return {
+            async destroyWorker() {
+                if (worker) {
+                    worker.terminate();
+                    worker = null;
+                }
+            },
+
+            async compress(str, { level = 5, stringify = true } = {}) {
+                if (str == null) return str;
+
+                const compressedBytes = await sendRequest("compress", encoder.encode(
+                    stringify ? JSON.stringify(str) : str
+                ), level);
+                return await uint8ArrayToBase64_Async(compressedBytes);
+            },
+
+            async decompress(str, parse = true) {
+                if (str == null) return str;
+
+                const decompressedBytes = await sendRequest("decompress", base64ToUint8Array(str));
+                const decodedString = decoder.decode(decompressedBytes);
+                return parse ? JSON.parse(decodedString) : decodedString;
+            }
         }
     };
 
@@ -1660,8 +1747,8 @@ const Lib = (() => {
         allV: () => GM_storageVerify(GM_listValues()),
         setV: (key, value) => GM_setValue(key, value),
         getV: (key, error) => GM_storageVerify(GM_getValue(key, error)),
-        setJV: (key, value, space = 0, expireStr) => setStorage(GM_setValue, key, value, { space, expireStr }),
-        getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
+        setJV: (key, value, { space, expireStr } = {}) => setStorage(GM_setValue, key, value, { space, expireStr }),
+        getJV: (key, error, { autoRemove } = {}) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
     };
 
     /**
@@ -1730,8 +1817,9 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log, createLog, $observer, waitEl, $throttle, $debounce, scopeParse,
-            createWorker, formatTemplate, createCompressor, createNnetworkObserver, outputTXT, outputJson, runTime, getDate, translMatcher,
+            $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
+            createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
+            outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storageListen,
 
             /**
