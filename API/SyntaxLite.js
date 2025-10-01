@@ -560,21 +560,6 @@ const Lib = (() => {
     };
 
     /**
-     * @description log 函數的工具
-     * @param {*} options - 與 log 函數同樣的選項
-     * @returns { Function }
-     * @example
-     * const log = createLog({ dev: true, group: 'API' });
-     * log('訊息').log;
-     * log('訊息2').log;
-     * log('警告訊息').warn;
-     * log('錯誤訊息').error;
-     */
-    function createLog(options = {}) {
-        return (...args) => log(...args, options);
-    };
-
-    /**
      * @description 添加元素到 head
      * @param {string} Rule - 元素內容
      * @param {string} ID - 元素ID
@@ -1301,7 +1286,7 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log, createLog,
+            $type, onE, onEvent, offEvent, onUrlChange, log,
             $observer, waitEl, $throttle, $debounce, createWorker, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
 
