@@ -2189,7 +2189,9 @@
                         overflow: auto;
                         color: #f2f2f2;
                         font-size: 14px;
+                        max-height: 50vh;
                         font-weight: 600;
+                        text-align: center;
                         position: absolute;
                         white-space: nowrap;
                         border-radius: .5rem;
@@ -2198,6 +2200,12 @@
                         background-color: #3b3e44;
                     }
                     a:hover View { display: block }
+                    .post__attachment .fancy-link::after {
+                        content: "";
+                        position: absolute;
+                        height: 100%;
+                        padding: .4rem;
+                    }
                     .post__attachment-link:not([beautify]) { display: none !important; }
                 `, "Link-Effects", false);
 
