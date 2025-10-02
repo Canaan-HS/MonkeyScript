@@ -250,7 +250,7 @@
                     fix_cont fix_wrapper::after {
                         content: "";
                         position: absolute;
-                        width: 5rem;
+                        width: 1.2rem;
                         height: 100%;
                     }
                     fix_cont fix_wrapper:hover fix_name {
