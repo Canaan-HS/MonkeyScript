@@ -882,7 +882,7 @@ const Lib = (() => {
                 return error;
             };
 
-            // 速度優先不用 三元式 + 解構
+            // 速度優先 不用 三元式 + 解構
             let type, value;
             if (isObject) { // 使用該函數存取的數據
                 type = item.type ?? "Object";
@@ -911,11 +911,11 @@ const Lib = (() => {
     const getSession = sessionStorage.getItem.bind(sessionStorage);
     const storageCall = {
         delLocal: (key) => delLocal(key),
-        setLocal: (key, value, { expireStr } = {}) => setStorage(setLocal, key, value, { expireStr }),
-        getLocal: (key, error, { autoRemove } = {}) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
+        setLocal: (key, value, expireStr) => setStorage(setLocal, key, value, { expireStr }),
+        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
         delSession: (key) => delSession(key),
-        setSession: (key, value, { expireStr } = {}) => setStorage(setSession, key, value, { expireStr }),
-        getSession: (key, error, { autoRemove } = {}) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
+        setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
+        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
     };
 
     /**
@@ -927,7 +927,7 @@ const Lib = (() => {
      * (async () => {
      *     const db = await openDB("測試資料庫", 1);
      *     await db.set("測試數據", { a: 1, b: 2 }, { space: 2, compress: false, expireStr: "1m" });
-     *     const data = await db.get("測試數據", "error", { autoRemove: true });
+     *     const data = await db.get("測試數據", "error", true);
      *     console.log(data);
      * })();
      */
@@ -973,7 +973,7 @@ const Lib = (() => {
                     })
                 };
 
-                async function get(key, error = null, { autoRemove = false } = {}) {
+                async function get(key, error = null, autoRemove = false) {
                     const tx = db.transaction("storage", "readonly");
                     const store = tx.objectStore("storage");
 
@@ -1090,7 +1090,7 @@ const Lib = (() => {
         }
     };
 
-    /* ========== 請求數據處理 ========== */
+    /* ========== 數據處理 ========== */
 
     /**
      * @description 創建 Worker 工作
@@ -1863,8 +1863,8 @@ const Lib = (() => {
      * allV() // 列出所有數據
      * setV("存儲鍵", "數據") // 儲存數據
      * getV("存儲鍵", "錯誤回傳") // 取得數據
-     * setJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
-     * getJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
+     * setJV("存儲鍵", "可轉換成 Json 的數據", { space: 2, expireStr: "1d" }) // 儲存 JSON 數據
+     * getJV("存儲鍵", "錯誤回傳", true) // 取得 JSON 格式數據
      */
     const GM_storageVerify = val => val == null ? null : val;
     const GM_storageCall = {
@@ -1873,7 +1873,7 @@ const Lib = (() => {
         setV: (key, value) => GM_setValue(key, value),
         getV: (key, error) => GM_storageVerify(GM_getValue(key, error)),
         setJV: (key, value, { space, expireStr } = {}) => setStorage(GM_setValue, key, value, { space, expireStr }),
-        getJV: (key, error, { autoRemove } = {}) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
+        getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
     };
 
     /**
@@ -1942,8 +1942,8 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
-            openDB, createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
+            $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, openDB, $throttle, $debounce, scopeParse,
+            createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
             outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storageListen,
 
