@@ -925,8 +925,10 @@ const Lib = (() => {
      * @returns {object} - 開啟成功回傳操作物件
      * @example
      * (async () => {
+     *     ! 啟用壓縮模式時不要存取特殊格式的多層結構, 例: { a: new Map(), b: new Set() } 壓縮後數據會丟失
+     *     ! 不壓縮 與 單獨 特殊格式的 能正常保留 (根據 IndexedDB 與 storageSerialize 支援狀況)
      *     const db = await openDB("測試資料庫", 1);
-     *     await db.set("測試數據", { a: 1, b: 2 }, { space: 2, compress: false, expireStr: "1m" });
+     *     await db.set("測試數據", { a: 1, b: 2 }, { compress: false, expireStr: "1m" });
      *     const data = await db.get("測試數據", "error", true);
      *     console.log(data);
      * })();
@@ -935,27 +937,29 @@ const Lib = (() => {
     async function openDB(name = "StorageDB", version = 1) {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(name, version);
+            const storeName = name.replace(/db$/i, "").toLowerCase();
 
             req.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                if (!db.objectStoreNames.contains("storage")) {
-                    db.createObjectStore("storage", { keyPath: "key" });
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName);
                 }
             };
 
-            // ? 內部的處理是異步的, 無法直接調用 setStorage 和 getStorage
             req.onsuccess = (event) => {
                 const db = event.target.result;
 
-                async function set(key, value, { space = 0, compress = true, expireStr } = {}) {
-                    const type = $type(value);
-                    const pack = { type };
-
-                    value = storageSerialize[type]?.(value) ?? value;
+                async function set(key, value, { compress = true, expireStr } = {}) {
+                    const pack = {};
 
                     if (compress) {
                         strCompress ??= createStrCompress();
-                        pack.data = await strCompress.compress(value);
+
+                        const type = $type(value);
+                        pack.type = type;
+                        pack.data = await strCompress.compress( // 有壓縮的要特別處理
+                            storageSerialize[type]?.(value) ?? value, { base64: false }
+                        );
                         pack.compressed = true;
                     } else {
                         pack.data = value;
@@ -965,28 +969,27 @@ const Lib = (() => {
                     if (expireTime) pack.expire = expireTime;
 
                     return new Promise((res, rej) => {
-                        const tx = db.transaction("storage", "readwrite");
-                        const store = tx.objectStore("storage");
-                        const r = store.put({ key, value: JSON.stringify(pack, null, space) });
+                        const tx = db.transaction(storeName, "readwrite");
+                        const store = tx.objectStore(storeName);
+                        const r = store.put(pack, key);
                         r.onsuccess = () => res(r.result);
                         r.onerror = () => rej(r.error);
                     })
                 };
 
                 async function get(key, error = null, autoRemove = false) {
-                    const tx = db.transaction("storage", "readonly");
-                    const store = tx.objectStore("storage");
+                    const tx = db.transaction(storeName, "readonly");
+                    const store = tx.objectStore(storeName);
 
-                    const itemWrapper = await new Promise((res, rej) => {
+                    const item = await new Promise((res, rej) => {
                         const r = store.get(key);
-                        r.onsuccess = () => res(r.result?.value ?? null);
+                        r.onsuccess = () => res(r.result);
                         r.onerror = () => rej(error);
                     });
 
-                    if (itemWrapper == null) return error;
+                    if (item == null) return error;
 
                     try {
-                        let item = JSON.parse(itemWrapper);
 
                         const isObject = item instanceof Object;
                         if (isObject && item.expire && Date.now() > item.expire * 1000) {
@@ -994,33 +997,32 @@ const Lib = (() => {
                             return error;
                         }
 
-                        let type, value;
+                        let data;
                         if (isObject) {
-                            type = item.type ?? "Object";
-                            value = item.data ?? item;
+                            data = item.data ?? item;
 
                             if (item.compressed) {
                                 strCompress ??= createStrCompress();
-                                value = await strCompress.decompress(value);
+                                data = await strCompress.decompress(data);
+
+                                const type = item.type || $type(data);
+                                data = storageParse[type]?.(data) ?? data;
                             }
                         } else {
-                            type = $type(item);
-                            value = item;
+                            data = item;
                         }
 
-                        const unPack = storageParse[type]?.(value) ?? value;
                         autoRemove && del(key);
-
-                        return unPack;
+                        return data;
                     } catch {
-                        return itemWrapper;
+                        return item;
                     }
                 };
 
                 async function del(key) {
                     return new Promise((res, rej) => {
-                        const tx = db.transaction("storage", "readwrite");
-                        const store = tx.objectStore("storage");
+                        const tx = db.transaction(storeName, "readwrite");
+                        const store = tx.objectStore(storeName);
                         const r = store.delete(key);
                         r.onsuccess = () => res(r.result);
                         r.onerror = () => rej(r.error);
@@ -1118,7 +1120,8 @@ const Lib = (() => {
      * @example
      * const strCompress = createStrCompress();
      * (async () => {
-     *      const compressed = await strCompress.compress("Hello World", { level: 9 });
+     *      ! 預設會以 base64 字串回傳, 方便一般存儲, 使用 IndexedDB 可以直接存儲 Uint8Array, 就將 base64 參數設為 false
+     *      const compressed = await strCompress.compress("Hello World", { level: 9, base64: false });
      *      const decompressed = await strCompress.decompress(compressed);
      * })()
      */
@@ -1127,11 +1130,7 @@ const Lib = (() => {
             importScripts("https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js");
             onmessage = function(e) {
                 const { type, data, level, requestId } = e.data;
-
-                const bytes = type === "compress"
-                    ? pako.deflate(data, { level })
-                    : pako.inflate(data);
-
+                const bytes = type === "compress" ? pako.deflate(data, { level }) : pako.inflate(data);
                 postMessage({ data: bytes, requestId: requestId }, [bytes.buffer]);
             }
         `);
@@ -1194,19 +1193,22 @@ const Lib = (() => {
                 }
             },
 
-            async compress(str, { level = 5, stringify = true } = {}) {
+            async compress(str, { level = 5, base64 = true, stringify = true } = {}) {
                 if (str == null) return str;
 
                 const compressedBytes = await sendRequest("compress", encoder.encode(
                     stringify ? JSON.stringify(str) : str
                 ), level);
-                return await uint8ArrayToBase64_Async(compressedBytes);
+
+                return base64 ? await uint8ArrayToBase64_Async(compressedBytes) : compressedBytes;
             },
 
-            async decompress(str, parse = true) {
-                if (str == null) return str;
+            async decompress(data, parse = true) {
+                if (data == null) return data;
 
-                const decompressedBytes = await sendRequest("decompress", base64ToUint8Array(str));
+                const decompressedBytes = await sendRequest("decompress",
+                    data instanceof Uint8Array ? data : base64ToUint8Array(data)
+                );
                 const decodedString = decoder.decode(decompressedBytes);
                 return parse ? JSON.parse(decodedString) : decodedString;
             }
