@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025.10.01
+// @version      2025.10.02
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -861,7 +861,7 @@ const Lib = (() => {
     // setter = localStorage.setItem, sessionStorage.setItem, GM_setValue
     function setStorage(setter, key, value, { space = 0, expireStr } = {}) {
         const type = $type(value);
-        const pack = { type, value: storageSerialize[type]?.(value) ?? value };
+        const pack = { type, data: storageSerialize[type]?.(value) ?? value };
         const expireTime = parseExpire(expireStr);
 
         expireTime && (pack.expire = expireTime);
@@ -877,16 +877,16 @@ const Lib = (() => {
             item = JSON.parse(item);
 
             const isObject = item instanceof Object;
-            if (isObject && item.expire && Date.now() > (item.expire * 1000)) {
+            if (isObject && item.expire && Date.now() > item.expire * 1000) {
                 removeer(key);
                 return error;
             };
 
-            // 速度優先不用 三元式 + 解構
+            // 速度優先 不用 三元式 + 解構
             let type, value;
             if (isObject) { // 使用該函數存取的數據
                 type = item.type ?? "Object";
-                value = item.value ?? item;
+                value = item.data ?? item;
             } else { // 一般數據
                 type = $type(item);
                 value = item;
@@ -916,6 +916,131 @@ const Lib = (() => {
         delSession: (key) => delSession(key),
         setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
         getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
+    };
+
+    /**
+     * @description 瀏覽器 IndexedDB 操作
+     * @param {string} name - 資料庫名稱
+     * @param {number} version - 資料庫版本
+     * @returns {object} - 開啟成功回傳操作物件
+     * @example
+     * (async () => {
+     *     const db = await openDB("測試資料庫", 1);
+     *     await db.set("測試數據", { a: 1, b: 2 }, { space: 2, compress: false, expireStr: "1m" });
+     *     const data = await db.get("測試數據", "error", true);
+     *     console.log(data);
+     * })();
+     */
+    let strCompress = null;
+    async function openDB(name = "StorageDB", version = 1) {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(name, version);
+
+            req.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("storage")) {
+                    db.createObjectStore("storage", { keyPath: "key" });
+                }
+            };
+
+            // ? 內部的處理是異步的, 無法直接調用 setStorage 和 getStorage
+            req.onsuccess = (event) => {
+                const db = event.target.result;
+
+                async function set(key, value, { space = 0, compress = true, expireStr } = {}) {
+                    const type = $type(value);
+                    const pack = { type };
+
+                    value = storageSerialize[type]?.(value) ?? value;
+
+                    if (compress) {
+                        strCompress ??= createStrCompress();
+                        pack.data = await strCompress.compress(value);
+                        pack.compressed = true;
+                    } else {
+                        pack.data = value;
+                    };
+
+                    const expireTime = parseExpire(expireStr);
+                    if (expireTime) pack.expire = expireTime;
+
+                    return new Promise((res, rej) => {
+                        const tx = db.transaction("storage", "readwrite");
+                        const store = tx.objectStore("storage");
+                        const r = store.put({ key, value: JSON.stringify(pack, null, space) });
+                        r.onsuccess = () => res(r.result);
+                        r.onerror = () => rej(r.error);
+                    })
+                };
+
+                async function get(key, error = null, autoRemove = false) {
+                    const tx = db.transaction("storage", "readonly");
+                    const store = tx.objectStore("storage");
+
+                    const itemWrapper = await new Promise((res, rej) => {
+                        const r = store.get(key);
+                        r.onsuccess = () => res(r.result?.value ?? null);
+                        r.onerror = () => rej(error);
+                    });
+
+                    if (itemWrapper == null) return error;
+
+                    try {
+                        let item = JSON.parse(itemWrapper);
+
+                        const isObject = item instanceof Object;
+                        if (isObject && item.expire && Date.now() > item.expire * 1000) {
+                            del(key);
+                            return error;
+                        }
+
+                        let type, value;
+                        if (isObject) {
+                            type = item.type ?? "Object";
+                            value = item.data ?? item;
+
+                            if (item.compressed) {
+                                strCompress ??= createStrCompress();
+                                value = await strCompress.decompress(value);
+                            }
+                        } else {
+                            type = $type(item);
+                            value = item;
+                        }
+
+                        const unPack = storageParse[type]?.(value) ?? value;
+                        autoRemove && del(key);
+
+                        return unPack;
+                    } catch {
+                        return itemWrapper;
+                    }
+                };
+
+                async function del(key) {
+                    return new Promise((res, rej) => {
+                        const tx = db.transaction("storage", "readwrite");
+                        const store = tx.objectStore("storage");
+                        const r = store.delete(key);
+                        r.onsuccess = () => res(r.result);
+                        r.onerror = () => rej(r.error);
+                    })
+                };
+
+                function destroy() {
+                    if (!db) return;
+
+                    db.close();
+                    indexedDB.deleteDatabase(name);
+                    strCompress.destroyWorker();
+                    setTimeout(() => strCompress = null, 100); // 等待 worker 關閉 (避免意外)
+                };
+
+                resolve({ set, get, del, destroy });
+            };
+
+            req.onerror = () => reject(req.error);
+        })
     };
 
     /**
@@ -965,7 +1090,7 @@ const Lib = (() => {
         }
     };
 
-    /* ========== 請求數據處理 ========== */
+    /* ========== 數據處理 ========== */
 
     /**
      * @description 創建 Worker 工作
@@ -984,6 +1109,108 @@ const Lib = (() => {
         };
 
         return worker;
+    };
+
+    /**
+     * @description 創建字串壓縮函數
+     * @returns {Object} - 壓縮函數
+     *
+     * @example
+     * const strCompress = createStrCompress();
+     * (async () => {
+     *      const compressed = await strCompress.compress("Hello World", { level: 9 });
+     *      const decompressed = await strCompress.decompress(compressed);
+     * })()
+     */
+    function createStrCompress() {
+        let worker = createWorker(`
+            importScripts("https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js");
+            onmessage = function(e) {
+                const { type, data, level, requestId } = e.data;
+
+                const bytes = type === "compress"
+                    ? pako.deflate(data, { level })
+                    : pako.inflate(data);
+
+                postMessage({ data: bytes, requestId: requestId }, [bytes.buffer]);
+            }
+        `);
+
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        function uint8ArrayToBase64_Async(bytes) {
+            return new Promise((resolve, reject) => {
+                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const dataUrl = e.target.result;
+                    const base64String = dataUrl.substring(dataUrl.indexOf(',') + 1);
+                    resolve(base64String);
+                };
+                reader.onerror = function (error) {
+                    reject(error);
+                };
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function base64ToUint8Array(base64) {
+            const binary_string = atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            let i;
+            for (i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            };
+            return bytes;
+        };
+
+
+        let requestIdCounter = 0;
+        const pendingRequests = new Map();
+
+        worker.onmessage = (e) => {
+            const { requestId, data } = e.data;
+            if (pendingRequests.has(requestId)) {
+                pendingRequests.get(requestId)(data);
+                pendingRequests.delete(requestId);
+            }
+        };
+
+        function sendRequest(type, data, level) {
+            return new Promise(resolve => {
+                const requestId = requestIdCounter++;
+                pendingRequests.set(requestId, resolve);
+                worker.postMessage({ type, data, level, requestId }, [data.buffer]);
+            })
+        };
+
+        return {
+            async destroyWorker() {
+                if (worker) {
+                    worker.terminate();
+                    worker = null;
+                }
+            },
+
+            async compress(str, { level = 5, stringify = true } = {}) {
+                if (str == null) return str;
+
+                const compressedBytes = await sendRequest("compress", encoder.encode(
+                    stringify ? JSON.stringify(str) : str
+                ), level);
+                return await uint8ArrayToBase64_Async(compressedBytes);
+            },
+
+            async decompress(str, parse = true) {
+                if (str == null) return str;
+
+                const decompressedBytes = await sendRequest("decompress", base64ToUint8Array(str));
+                const decodedString = decoder.decode(decompressedBytes);
+                return parse ? JSON.parse(decodedString) : decodedString;
+            }
+        }
     };
 
     /**
@@ -1207,8 +1434,8 @@ const Lib = (() => {
      * allV() // 列出所有數據
      * setV("存儲鍵", "數據") // 儲存數據
      * getV("存儲鍵", "錯誤回傳") // 取得數據
-     * setJV("存儲鍵", "可轉換成 Json 的數據") // 儲存 JSON 數據
-     * getJV("存儲鍵", "錯誤回傳") // 取得 JSON 格式數據
+     * setJV("存儲鍵", "可轉換成 Json 的數據", { space: 2, expireStr: "1d" }) // 儲存 JSON 數據
+     * getJV("存儲鍵", "錯誤回傳", true) // 取得 JSON 格式數據
      */
     const GM_storageVerify = val => val == null ? null : val;
     const GM_storageCall = {
@@ -1216,7 +1443,7 @@ const Lib = (() => {
         allV: () => GM_storageVerify(GM_listValues()),
         setV: (key, value) => GM_setValue(key, value),
         getV: (key, error) => GM_storageVerify(GM_getValue(key, error)),
-        setJV: (key, value, space = 0, expireStr) => setStorage(GM_setValue, key, value, { space, expireStr }),
+        setJV: (key, value, { space, expireStr } = {}) => setStorage(GM_setValue, key, value, { space, expireStr }),
         getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
     };
 
@@ -1287,7 +1514,7 @@ const Lib = (() => {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
             $type, onE, onEvent, offEvent, onUrlChange, log,
-            $observer, waitEl, $throttle, $debounce, createWorker, outputJson,
+            $observer, waitEl, openDB, $throttle, $debounce, createWorker, createStrCompress, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
 
             /**
