@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.10.01
+// @version      2025.10.02
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -789,7 +789,7 @@ const Lib = (() => {
     };
 
     /**
-     * @description 瀏覽器 storage 操作
+     * @description 瀏覽器 Storage 操作
      * @example
      * 基本支援類型 (String, Number, Array, Object, Boolean, Date, Map, Set)
      * 支援日期格式 (YYYY-MM-DD HH:MM:SS, Yy M Dd h m s)
@@ -861,7 +861,7 @@ const Lib = (() => {
     // setter = localStorage.setItem, sessionStorage.setItem, GM_setValue
     function setStorage(setter, key, value, { space = 0, expireStr } = {}) {
         const type = $type(value);
-        const pack = { type, value: storageSerialize[type]?.(value) ?? value };
+        const pack = { type, data: storageSerialize[type]?.(value) ?? value };
         const expireTime = parseExpire(expireStr);
 
         expireTime && (pack.expire = expireTime);
@@ -877,7 +877,7 @@ const Lib = (() => {
             item = JSON.parse(item);
 
             const isObject = item instanceof Object;
-            if (isObject && item.expire && Date.now() > (item.expire * 1000)) {
+            if (isObject && item.expire && Date.now() > item.expire * 1000) {
                 removeer(key);
                 return error;
             };
@@ -886,7 +886,7 @@ const Lib = (() => {
             let type, value;
             if (isObject) { // 使用該函數存取的數據
                 type = item.type ?? "Object";
-                value = item.value ?? item;
+                value = item.data ?? item;
             } else { // 一般數據
                 type = $type(item);
                 value = item;
@@ -916,6 +916,131 @@ const Lib = (() => {
         delSession: (key) => delSession(key),
         setSession: (key, value, { expireStr } = {}) => setStorage(setSession, key, value, { expireStr }),
         getSession: (key, error, { autoRemove } = {}) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
+    };
+
+    /**
+     * @description 瀏覽器 IndexedDB 操作
+     * @param {string} name - 資料庫名稱
+     * @param {number} version - 資料庫版本
+     * @returns {object} - 開啟成功回傳操作物件
+     * @example
+     * (async () => {
+     *     const db = await openDB("測試資料庫", 1);
+     *     await db.set("測試數據", { a: 1, b: 2 }, { space: 2, compress: false, expireStr: "1m" });
+     *     const data = await db.get("測試數據", "error", { autoRemove: true });
+     *     console.log(data);
+     * })();
+     */
+    let strCompress = null;
+    async function openDB(name = "StorageDB", version = 1) {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(name, version);
+
+            req.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("storage")) {
+                    db.createObjectStore("storage", { keyPath: "key" });
+                }
+            };
+
+            // ? 內部的處理是異步的, 無法直接調用 setStorage 和 getStorage
+            req.onsuccess = (event) => {
+                const db = event.target.result;
+
+                async function set(key, value, { space = 0, compress = true, expireStr } = {}) {
+                    const type = $type(value);
+                    const pack = { type };
+
+                    value = storageSerialize[type]?.(value) ?? value;
+
+                    if (compress) {
+                        strCompress ??= createStrCompress();
+                        pack.data = await strCompress.compress(value);
+                        pack.compressed = true;
+                    } else {
+                        pack.data = value;
+                    };
+
+                    const expireTime = parseExpire(expireStr);
+                    if (expireTime) pack.expire = expireTime;
+
+                    return new Promise((res, rej) => {
+                        const tx = db.transaction("storage", "readwrite");
+                        const store = tx.objectStore("storage");
+                        const r = store.put({ key, value: JSON.stringify(pack, null, space) });
+                        r.onsuccess = () => res(r.result);
+                        r.onerror = () => rej(r.error);
+                    })
+                };
+
+                async function get(key, error = null, { autoRemove = false } = {}) {
+                    const tx = db.transaction("storage", "readonly");
+                    const store = tx.objectStore("storage");
+
+                    const itemWrapper = await new Promise((res, rej) => {
+                        const r = store.get(key);
+                        r.onsuccess = () => res(r.result?.value ?? null);
+                        r.onerror = () => rej(error);
+                    });
+
+                    if (itemWrapper == null) return error;
+
+                    try {
+                        let item = JSON.parse(itemWrapper);
+
+                        const isObject = item instanceof Object;
+                        if (isObject && item.expire && Date.now() > item.expire * 1000) {
+                            del(key);
+                            return error;
+                        }
+
+                        let type, value;
+                        if (isObject) {
+                            type = item.type ?? "Object";
+                            value = item.data ?? item;
+
+                            if (item.compressed) {
+                                strCompress ??= createStrCompress();
+                                value = await strCompress.decompress(value);
+                            }
+                        } else {
+                            type = $type(item);
+                            value = item;
+                        }
+
+                        const unPack = storageParse[type]?.(value) ?? value;
+                        autoRemove && del(key);
+
+                        return unPack;
+                    } catch {
+                        return itemWrapper;
+                    }
+                };
+
+                async function del(key) {
+                    return new Promise((res, rej) => {
+                        const tx = db.transaction("storage", "readwrite");
+                        const store = tx.objectStore("storage");
+                        const r = store.delete(key);
+                        r.onsuccess = () => res(r.result);
+                        r.onerror = () => rej(r.error);
+                    })
+                };
+
+                function destroy() {
+                    if (!db) return;
+
+                    db.close();
+                    indexedDB.deleteDatabase(name);
+                    strCompress.destroyWorker();
+                    setTimeout(() => strCompress = null); // 等待 worker 關閉
+                };
+
+                resolve({ set, get, del, destroy });
+            };
+
+            req.onerror = () => reject(req.error);
+        })
     };
 
     /**
@@ -1818,7 +1943,7 @@ const Lib = (() => {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
             $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, $throttle, $debounce, scopeParse,
-            createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
+            openDB, createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
             outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storageListen,
 
