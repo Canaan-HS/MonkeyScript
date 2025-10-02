@@ -246,7 +246,7 @@
         }
 
         /* 主要運行 */
-        static async ran() {
+        static async run() {
             const Detec = new Detection(); // Detec = 靜態函數需要將自身類實例化
             const Self = Detec.Config; // Self = 這樣只是讓語法短一點, 沒有必要性
 
@@ -336,7 +336,7 @@
                 }
                 /* 差異大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
                 else if (diff >= Self.JudgmentInterval && progress === record) {
-                    Self.RestartLive && Restart.ran(maxElement); // 已最大進度對象, 進行直播重啟
+                    Self.RestartLive && Restart.run(maxElement); // 已最大進度對象, 進行直播重啟
                     Detec.storage("Record", [progress, Detec.getTime()]);
                 }
                 /* 標題與進度值不同 = 有變化 */
@@ -407,7 +407,7 @@
             };
         }
 
-        async ran(Index) { // 傳入對應的頻道索引
+        async run(Index) { // 傳入對應的頻道索引
             window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
             const Dir = this;
             const Self = Dir.Config;
@@ -675,6 +675,6 @@
 
     // 主運行調用
     const Restart = new RestartLive();
-    Detection.ran();
+    Detection.run();
 
 })();
