@@ -1033,7 +1033,7 @@ const Lib = (() => {
                     db.close();
                     indexedDB.deleteDatabase(name);
                     strCompress.destroyWorker();
-                    setTimeout(() => strCompress = null); // 等待 worker 關閉
+                    setTimeout(() => strCompress = null, 100); // 等待 worker 關閉 (避免意外)
                 };
 
                 resolve({ set, get, del, destroy });
