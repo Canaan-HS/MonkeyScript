@@ -26,19 +26,20 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1669599/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1670248/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_openInTab
+// @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @run-at       document-end
+// @run-at       document-body
 // ==/UserScript==
 
 (async () => {
@@ -90,6 +91,7 @@
 
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
+    const DB = await Lib.openDB("KemerEnhanceDB");
     const DLL = (() => {
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const color = {
@@ -759,21 +761,31 @@
                 };
             },
             betterPostCardCache: undefined,
-            betterPostCardRequ() {
+            async betterPostCardRequ() {
                 if (!this.betterPostCardCache) {
+                    const oldKey = "fix_record_v2";
+                    const recordKey = "better_post_record";
+
+                    const oldRecord = Lib.getLocal(oldKey); // 數據轉移
+                    if (oldRecord instanceof Array) {
+                        const r = await DB.set(recordKey, new Map(oldRecord));
+                        r === recordKey && Lib.delLocal(oldKey);
+                    };
+
                     const fixRequ = { // 宣告修復需要的函數
                         recordCache: undefined, // 讀取修復紀錄 用於緩存
                         fixCache: new Map(), // 修復後 用於緩存
-                        getRecord() {
-                            // TODO - 等待改用 IndexedDB 儲存
-                            const record = Lib.getLocal("fix_record_v2", new Map());
-                            return record instanceof Map  // 有時會出現錯誤
-                                ? record : record instanceof Array ? new Map(record) : new Map();
+                        async init() {
+                            this.recordCache = await this.getRecord(); // 初始化獲取緩存
+                        },
+                        async getRecord() {
+                            return await DB.get(recordKey, new Map());
                         },
                         async saveRecord(save) {
-                            await Lib.setLocal("fix_record_v2", new Map([...this.getRecord(), ...save]));
+                            await DB.set(recordKey, new Map([...await this.getRecord(), ...save]));
                             this.fixCache.clear();
                         },
+                        saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1e3))(),
                         replaceUrlTail(url, tail) {
                             const uri = new URL(url);
                             uri.pathname = tail;
@@ -793,7 +805,6 @@
                             server = this.specialServer[server] ?? server;
                             return uri ? { server, user } : { uri };
                         },
-                        saveWork: (() => Lib.$debounce(() => fixRequ.saveRecord(fixRequ.fixCache), 1000))(),
                         async fixRequest(url, headers = {}) { // 請求修復數據
                             return new Promise(resolve => {
                                 GM_xmlhttpRequest({
@@ -910,8 +921,7 @@
                         async fixTrigger(data) { // 觸發修復
                             let { mainUrl, otherUrl, server, user, nameEl, tagEl, appendTag } = data;
 
-                            let recordName = this.recordCache.get(user); // 從緩存 使用尾部 ID 取出對應紀錄
-
+                            let recordName = this.recordCache?.get(user); // 從緩存 使用尾部 ID 取出對應紀錄
                             if (recordName) {
                                 if (server === "candfans") {
                                     [user, mainUrl, recordName] = this.candfansPageAdapt(
@@ -995,8 +1005,8 @@
                             } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */ }
                         },
                         async dynamicFix(element) {
-                            Lib.$observer(element, () => {
-                                this.recordCache = this.getRecord(); // 觸發時重新取得緩存
+                            Lib.$observer(element, async () => {
+                                this.recordCache = await this.getRecord(); // 觸發時重新取得緩存
                                 for (const items of element.$qa("a")) {
                                     !items.$gAttr("fix") && this.searchFix(items); // 沒有修復標籤的才修復
                                 }
@@ -1004,9 +1014,10 @@
                         }
                     }
 
-                    fixRequ.recordCache = fixRequ.getRecord(); // 初始化緩存
+                    await fixRequ.init();
                     this.betterPostCardCache = fixRequ;
                 };
+
                 return this.betterPostCardCache;
             }
         }
@@ -1100,9 +1111,11 @@
             async CacheFetch() { /* 緩存請求 */
                 if (DLL.isNeko || DLL.registered.has("CacheFetch")) return;
 
-                const cache = Lib.getJV("CacheFetch", new Map());
-                // TODO - 需要改用 IndexedDB 儲存
-                // const saveCache = Lib.$debounce(() => Lib.setJV("CacheFetch", cache, 0, "5m"), 1e3); // 有效 5 分鐘緩存 (每次都刷新)
+                const cacheKey = "fetch_cache_data";
+                const cache = await DB.get(cacheKey, new Map());
+                const saveCache = Lib.$debounce(() => {
+                    DB.set(cacheKey, cache, { expireStr: "5m" }); // 有效 5 分鐘緩存 (每次都刷新)
+                }, 1e3);
 
                 // unsafeWindow 是 瀏覽器環境, window 是 sandbox 環境
                 const originalFetch = { Sandbox: window.fetch, Window: unsafeWindow.fetch };
@@ -1158,9 +1171,9 @@
                                             headers: headersObject
                                         });
 
-                                        // saveCache();
+                                        saveCache();
                                     }
-                                } catch {}
+                                } catch { }
                             })();
                         }
 
@@ -1220,7 +1233,7 @@
             },
             async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove }) { /* 更好的 PostCard */
                 DLL.style.getGlobal; // 導入 Global 頁面樣式
-                const func = loadFunc.betterPostCardRequ();
+                const func = await loadFunc.betterPostCardRequ();
 
                 // 監聽點擊事件
                 const [active, insert] = [newtab_active, newtab_insert];
@@ -2026,8 +2039,11 @@
                                 const src = img?.src;
                                 const attachments = post.attachments || [];
 
+                                const record = new Set();
                                 const count = [post.file, ...attachments].reduce((count, attach, index) => {
                                     const path = attach.path || "";
+                                    if (record.has(path)) return count;
+
                                     const ext = path.split(".").at(-1).toLowerCase();
                                     if (!ext) return count;
 
@@ -2043,6 +2059,7 @@
                                         func.changeSrc(img, src, DLL.thumbnailApi + path);
                                     };
 
+                                    record.add(path);
                                     return count;
                                 }, {});
 
