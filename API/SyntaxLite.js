@@ -729,26 +729,26 @@ const Lib = (() => {
                 let timer, result;
 
                 if (raf) {
-                    let AnimationFrame;
+                    let animationFrame;
 
                     const queryRun = () => {
                         result = query(select, all);
 
                         if (result) {
-                            cancelAnimationFrame(AnimationFrame);
+                            cancelAnimationFrame(animationFrame);
                             clearTimeout(timer);
 
                             found?.(result);
                             resolve(result);
                         } else {
-                            AnimationFrame = requestAnimationFrame(queryRun);
+                            animationFrame = requestAnimationFrame(queryRun);
                         }
                     };
 
-                    AnimationFrame = requestAnimationFrame(queryRun);
+                    animationFrame = requestAnimationFrame(queryRun);
 
                     timer = setTimeout(() => {
-                        cancelAnimationFrame(AnimationFrame);
+                        cancelAnimationFrame(animationFrame);
 
                         if (timeoutResult) {
                             found?.(result);
