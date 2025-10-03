@@ -345,11 +345,6 @@
                 };
             };
 
-            waitEl(document, Self.EndLine, () => { // 初始等待頁面載入
-                process(5);
-                Self.TryStayActive && stayActive(document);
-            }, { timeoutResult: true });
-
             const waitLoad = (element, interval = 500, timeout = 15000) => { // 持續等待 15 秒載入
                 let result, elapsed = 0;
                 return new Promise((resolve, reject) => {
@@ -382,7 +377,11 @@
                 })
             };
 
-            monitor();
+            waitEl(document, Self.EndLine, () => { // 初始等待頁面載入
+                process(5);
+                monitor();
+                Self.TryStayActive && stayActive(document);
+            }, { timeoutResult: true });
         }
     };
 
