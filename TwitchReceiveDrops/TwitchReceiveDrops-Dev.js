@@ -343,28 +343,32 @@
                 } else if (token > 0 && supportCheck()) { // 沒找到進度, 且有 token, 並處於支援頁面
                     setTimeout(() => { process(token - 1) }, 2e3); // 等待重試
                     return;
-                } else if (supportCheck()) { // 沒找到進度, 且沒有 token, 並處於支援頁面
-                    location.assign(supportPage);
-                    return;
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
                 const [record, timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
                 const diffInterval = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
-                /* 無取得進度, 且啟用自動關閉, 且紀錄又不為 0, 判斷掉寶領取完成, 最後避免意外 token 為 0 才觸發 */
-                if (!currentProgress && Self.EndAutoClose && record !== 0 && token === 0) {
+                const notHasToken = token === 0;
+                const hasProgress = currentProgress > 0;
+
+                /* 差異大於檢測間隔 & 有進度 & 進度與紀錄相同 */
+                if (diffInterval >= Self.JudgmentInterval && hasProgress && currentProgress === record) {
+                    Self.RestartLive && restartLive.run(maxProgressIndex); // 最大進度對象, 進行重啟
+                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
+                }
+                /* 有進度 & 進度與紀錄不相同 */
+                else if (hasProgress && currentProgress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
+                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
+                }
+                /* 啟用了自動關閉 & 沒 token & 沒找到進度 & 紀錄不為 0 */
+                else if (Self.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
                     window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
                 }
-                /* 差異大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
-                else if (diffInterval >= Self.JudgmentInterval && currentProgress === record) {
-                    Self.RestartLive && restartLive.run(maxProgressIndex); // 已最大進度對象, 進行直播重啟
-                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
-                }
-                /* 標題與進度值不同 = 有變化 */
-                else if (currentProgress !== 0 && currentProgress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
+                /* 沒有 token & 處於支援頁面 */
+                else if (notHasToken && supportCheck()) {
+                    location.assign(supportPage);
                 };
             };
 
