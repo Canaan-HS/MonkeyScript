@@ -215,7 +215,7 @@
                         const elapsed = Math.floor((Date.now() - start) / 1000); // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
                         const remaining = interval - elapsed;
                         if (remaining >= 0) {
-                            document.title = `【 ${remaining}s 】 ${this.progressValue}`;
+                            document.title = `【 ${remaining}s 】 ${this.progressStr}`;
                         }
                     }
                 }, 1e3);
@@ -229,14 +229,14 @@
             /* 展示進度於標籤 */
             this.showProgress = () => {
                 this.titleObserver = new MutationObserver(() => {
-                    document.title !== this.progressValue && (document.title = this.progressValue);
+                    document.title !== this.progressStr && (document.title = this.progressStr);
                 });
 
                 this.titleObserver.observe(
                     document.querySelector("title"), { childList: 1, subtree: 0 }
                 );
 
-                document.title = this.progressValue; // 初始觸發
+                document.title = this.progressStr; // 初始觸發
             };
 
             /* 查找過期的項目將其刪除 */
@@ -246,7 +246,7 @@
             };
 
             this.currentTime; // 保存當前時間
-            this.progressValue; // 保存進度值字串
+            this.progressStr; // 保存進度值字串
             this.titleObserver; // 標題觀察者
 
             /* 初始化數據 */
@@ -271,14 +271,14 @@
             const updateDisplay = Self.UpdateDisplay;
 
             let campaigns, inventory; // 頁面按鈕
-            let task, progress, maxElement, progressInfo; // 任務數量, 掉寶進度, 最大進度元素, 保存進度的資訊
+            let taskCount, currentProgress, maxProgressIndex, progressInfo; // 任務數量, 掉寶進度, 最大進度索引, 保存進度的資訊
 
             // 初始化數據
             const initData = () => {
-                Detec.progressValue = "";
+                Detec.progressStr = "";
                 Detec.currentTime = new Date();
 
-                task = 0, progress = 0, maxElement = 0;
+                taskCount = 0, currentProgress = 0, maxProgressIndex = 0;
                 progressInfo = {};
             };
             initData();
@@ -302,13 +302,13 @@
                             adapter, // 適配器
                             activityTime?.textContent, // 時間戳
                             notExpired => { // 取得未過期的物件
-                                // 嘗試查找領取按鈕 (可能會出現因為過期, 而無法自動領取問題, 除非我在另外寫一個 allProgress 遍歷)
+                                // 嘗試查找領取按鈕 (可能會出現因過期, 而無法自動領取問題, 除非我在另寫一個 allProgress 遍歷)
                                 notExpired.querySelectorAll("button").forEach(draw => { draw.click() });
 
                                 const ProgressBar = devTrace("ProgressBar", notExpired.querySelectorAll(Self.ProgressBar));
 
                                 // 紀錄為第幾個任務數, 與掉寶進度
-                                progressInfo[task++] = [...ProgressBar].map(progress => +progress.textContent);
+                                progressInfo[taskCount++] = [...ProgressBar].map(progress => +progress.textContent);
                             }
                         )
                     });
@@ -319,52 +319,52 @@
                     );
 
                     // 開始找到當前運行的任務
-                    for (const [key, value] of Object.entries(newTask)) {
-                        const OldValue = oldTask[key] ?? value;
+                    for (const [indexKey, newProgress] of Object.entries(newTask)) {
+                        const oldProgress = oldTask[indexKey] ?? newProgress;
 
-                        if (value != OldValue) { // 找到第一個新值不等於舊值的
-                            maxElement = key;
-                            progress = value;
+                        if (newProgress != oldProgress) { // 找到第一個新值不等於舊值的
+                            maxProgressIndex = indexKey;
+                            currentProgress = newProgress;
                             break;
-                        } else if (value > progress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
-                            maxElement = key;
-                            progress = value;
+                        } else if (newProgress > currentProgress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
+                            maxProgressIndex = indexKey;
+                            currentProgress = newProgress;
                         }
                     };
 
                     Detec.storage("Task", newTask); // 保存新任務狀態
                 };
 
-                // 處理進度 (寫在這裡是, allProgress 找不到時, 也要正確試錯)
-                if (progress > 0) {
-                    if (Self.ProgressDisplay) {
-                        Detec.progressValue = `${progress}%`; // 賦予進度值
+                if (currentProgress > 0) { // 找到進度
+                    if (Self.ProgressDisplay) { // 啟用進度顯示
+                        Detec.progressStr = `${currentProgress}%`; // 賦予進度值
                         !updateDisplay && Detec.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
                     }
-                } else if (token > 0) {
-                    supportCheck() && setTimeout(() => { process(token - 1) }, 2e3); // 試錯
+                } else if (token > 0 && supportCheck()) { // 沒找到進度, 且有 token, 並處於支援頁面
+                    setTimeout(() => { process(token - 1) }, 2e3); // 等待重試
                     return;
-                } else {
-                    supportCheck() ? location.assign(supportPage) : waitSupport();
+                } else if (supportCheck()) { // 沒找到進度, 且沒有 token, 並處於支援頁面
+                    location.assign(supportPage);
+                    return;
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
                 const [record, timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
-                const diff = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
+                const diffInterval = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
                 /* 無取得進度, 且啟用自動關閉, 且紀錄又不為 0, 判斷掉寶領取完成, 最後避免意外 token 為 0 才觸發 */
-                if (!progress && Self.EndAutoClose && record !== 0 && token === 0) {
+                if (!currentProgress && Self.EndAutoClose && record !== 0 && token === 0) {
                     window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
                 }
                 /* 差異大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
-                else if (diff >= Self.JudgmentInterval && progress === record) {
-                    Self.RestartLive && restartLive.run(maxElement); // 已最大進度對象, 進行直播重啟
-                    Detec.storage("Record", [progress, Detec.getTime()]);
+                else if (diffInterval >= Self.JudgmentInterval && currentProgress === record) {
+                    Self.RestartLive && restartLive.run(maxProgressIndex); // 已最大進度對象, 進行直播重啟
+                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
                 }
                 /* 標題與進度值不同 = 有變化 */
-                else if (progress !== 0 && progress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    Detec.storage("Record", [progress, Detec.getTime()]);
+                else if (currentProgress !== 0 && currentProgress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
+                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
                 };
             };
 
