@@ -346,11 +346,10 @@
             };
 
             const waitLoad = (element, interval = 500, timeout = 15000) => { // 持續等待 15 秒載入
-                let result, elapsed = 0;
+                let elapsed = 0;
                 return new Promise((resolve, reject) => {
                     const query = () => {
-                        result = document.querySelector(element);
-                        if (result) resolve(result);
+                        if (document.querySelector(element)) resolve();
                         else {
                             elapsed += interval;
                             elapsed >= timeout
