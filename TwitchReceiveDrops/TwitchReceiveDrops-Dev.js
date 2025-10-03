@@ -350,18 +350,35 @@
                 Self.TryStayActive && stayActive(document);
             }, { timeoutResult: true });
 
-            const monitor = () => { // 後續變更監聽
-                Detec.pageRefresh(display, Self.UpdateInterval, () => {
-                    initData();
-                    campaigns?.click();
+            const waitLoad = (element, interval = 500, timeout = 15000) => { // 持續等待 15 秒載入
+                let result, elapsed = 0;
+                return new Promise((resolve, reject) => {
+                    const query = () => {
+                        result = document.querySelector(element);
+                        if (result) resolve(result);
+                        else {
+                            elapsed += interval;
+                            elapsed >= timeout
+                                ? location.assign("https://www.twitch.tv/drops/inventory")
+                                : setTimeout(query, interval);
+                        }
+                    }
+                    setTimeout(query, interval);
+                })
+            };
 
-                    setTimeout(() => {
-                        inventory?.click();
-                        setTimeout(() => {
-                            process(5);
-                            monitor();
-                        }, 1e3);
-                    }, 2e3);
+            const monitor = () => { // 後續變更監聽
+                Detec.pageRefresh(display, Self.UpdateInterval, async () => {
+                    initData();
+
+                    campaigns?.click();
+                    await waitLoad(".accordion-header");
+
+                    inventory?.click();
+                    await waitLoad(Self.EndLine);
+
+                    process(5);
+                    monitor();
                 })
             };
 
