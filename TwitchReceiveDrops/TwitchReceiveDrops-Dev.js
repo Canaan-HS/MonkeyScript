@@ -79,7 +79,7 @@
 
             /* storage 操作 (極簡版), 只操作基本類型 */
             this.storage = (key, value = null) => value == null
-                ? (value = sessionStorage.getItem(key), value != null && JSON.parse(value))
+                ? (value = sessionStorage.getItem(key), value != null ? JSON.parse(value) : value)
                 : sessionStorage.setItem(key, JSON.stringify(value));
 
             /* 語言 時間格式 適配器 */
@@ -259,17 +259,17 @@
         static async run() {
             regMenu();
 
-            const Detec = new Detection(); // Detec = 靜態函數需要將自身類實例化
-            const Self = Detec.Config; // Self = 這樣只是讓語法短一點, 沒有必要性
+            const self = new Detection(); // self = 靜態函數需要將自身類實例化
+            const config = self.Config;
 
-            const updateDisplay = Self.UpdateDisplay;
+            const updateDisplay = config.UpdateDisplay;
 
             let campaigns, inventory; // 頁面按鈕
             let taskCount, currentProgress, maxProgressIndex, progressInfo; // 任務數量, 掉寶進度, 最大進度索引, 保存進度的資訊
 
             // 初始化數據
             const initData = () => {
-                Detec.progressStr = "Twitch";
+                self.progressStr = "Twitch";
 
                 taskCount = 0, currentProgress = 0, maxProgressIndex = 0;
                 progressInfo = {};
@@ -278,19 +278,19 @@
 
             /* 主要處理函數 */
             const process = (token = 10) => {
-                campaigns ??= devTrace("Campaigns", document.querySelector(Self.Campaigns));
-                inventory ??= devTrace("Inventory", document.querySelector(Self.Inventory));
+                campaigns ??= devTrace("Campaigns", document.querySelector(config.Campaigns));
+                inventory ??= devTrace("Inventory", document.querySelector(config.Inventory));
 
                 // 這邊寫這麼複雜是為了處理, (1: 只有一個, 2: 存在兩個以上, 3: 存在兩個以上但有些過期)
-                const allProgress = devTrace("allProgress", document.querySelectorAll(Self.allProgress));
+                const allProgress = devTrace("AllProgress", document.querySelectorAll(config.allProgress));
 
                 if (allProgress?.length > 0) {
-                    const adapter = Detec.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
+                    const adapter = self.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
 
                     allProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
-                        const activityTime = devTrace("ActivityTime", data.querySelector(Self.ActivityTime));
+                        const activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
 
-                        Detec.expiredCleanup(
+                        self.expiredCleanup(
                             data, // 物件整體
                             adapter, // 適配器
                             activityTime?.textContent, // 時間戳
@@ -298,17 +298,17 @@
                                 // 嘗試查找領取按鈕 (可能會出現因過期, 而無法自動領取問題, 除非我在另寫一個 allProgress 遍歷)
                                 notExpired.querySelectorAll("button").forEach(draw => { draw.click() });
 
-                                const ProgressBar = devTrace("ProgressBar", notExpired.querySelectorAll(Self.ProgressBar));
+                                const progressBar = devTrace("ProgressBar", notExpired.querySelectorAll(config.ProgressBar));
 
                                 // 紀錄為第幾個任務數, 與掉寶進度
-                                progressInfo[taskCount++] = [...ProgressBar].map(progress => +progress.textContent);
+                                progressInfo[taskCount++] = [...progressBar].map(progress => +progress.textContent);
                             }
                         )
                     });
 
-                    const oldTask = Detec.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
+                    const oldTask = self.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
                     const newTask = Object.fromEntries( // 獲取新任務數據
-                        Object.entries(progressInfo).map(([key, value]) => [key, Detec.progressParse(value)])
+                        Object.entries(progressInfo).map(([key, value]) => [key, self.progressParse(value)])
                     );
 
                     // 開始找到當前運行的任務
@@ -325,13 +325,13 @@
                         }
                     };
 
-                    Detec.storage("Task", newTask); // 保存新任務狀態
+                    self.storage("Task", newTask); // 保存新任務狀態
                 };
 
                 if (currentProgress > 0) { // 找到進度
-                    if (Self.ProgressDisplay) { // 啟用進度顯示
-                        Detec.progressStr = `${currentProgress}%`; // 賦予進度值
-                        !updateDisplay && Detec.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
+                    if (config.ProgressDisplay) { // 啟用進度顯示
+                        self.progressStr = `${currentProgress}%`; // 賦予進度值
+                        !updateDisplay && self.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
                     }
                 } else if (token > 0 && supportCheck()) { // 沒找到進度, 且有 token, 並處於支援頁面
                     setTimeout(() => { process(token - 1) }, 2e3); // 等待重試
@@ -339,24 +339,24 @@
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
-                const [record, timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()]; // 進度值, 時間戳
-                const diffInterval = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
+                const [record, timestamp] = self.storage("Record") ?? [0, self.getTime()]; // 進度值, 時間戳
+                const diffInterval = ~~((self.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
                 const notHasToken = token === 0;
                 const hasProgress = currentProgress > 0;
 
                 /* 差異大於檢測間隔 & 有進度 & 進度與紀錄相同 */
-                if (diffInterval >= Self.JudgmentInterval && hasProgress && currentProgress === record) {
-                    Self.RestartLive && restartLive.run(maxProgressIndex); // 最大進度對象, 進行重啟
-                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
+                if (diffInterval >= config.JudgmentInterval && hasProgress && currentProgress === record) {
+                    config.RestartLive && restartLive.run(maxProgressIndex); // 最大進度對象, 進行重啟
+                    self.storage("Record", [currentProgress, self.getTime()]);
                 }
                 /* 有進度 & 進度與紀錄不相同 */
                 else if (hasProgress && currentProgress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    Detec.storage("Record", [currentProgress, Detec.getTime()]);
+                    self.storage("Record", [currentProgress, self.getTime()]);
                 }
                 /* 啟用了自動關閉 & 沒 token & 沒找到進度 & 紀錄不為 0 */
-                else if (Self.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
-                    window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
+                else if (config.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
+                    window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
                 }
                 /* 沒有 token & 處於支援頁面 */
@@ -365,11 +365,11 @@
                 };
             };
 
-            const waitLoad = (element, interval = 500, timeout = 15000) => { // 持續等待 15 秒載入
+            const waitLoad = (select, interval = 500, timeout = 15000) => { // 持續等待 15 秒載入
                 let elapsed = 0;
                 return new Promise((resolve, reject) => {
                     const query = () => {
-                        if (document.querySelector(element)) resolve();
+                        if (document.querySelector(select)) resolve();
                         else {
                             elapsed += interval;
                             elapsed >= timeout
@@ -382,7 +382,7 @@
             };
 
             const monitor = () => { // 後續變更監聽
-                Detec.pageRefresh(updateDisplay, Self.UpdateInterval, async () => {
+                self.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
                     initData();
 
                     if (!supportCheck()) {
@@ -394,17 +394,17 @@
                     await waitLoad(".accordion-header");
 
                     inventory?.click();
-                    await waitLoad(Self.EndLine);
+                    await waitLoad(config.EndLine);
 
                     process();
                     monitor();
                 })
             };
 
-            waitEl(document, Self.EndLine, () => { // 初始等待頁面載入
+            waitEl(document, config.EndLine, () => { // 初始等待頁面載入
                 process();
                 monitor();
-                Self.TryStayActive && stayActive(document);
+                config.TryStayActive && stayActive(document);
             }, { timeoutResult: true });
         }
     };
@@ -413,25 +413,43 @@
     class RestartLive {
         constructor() {
             /* 重啟直播的靜音(持續執行 15 秒) */
-            this.liveMute = async Newindow => {
-                waitEl(Newindow.document, "video", video => {
-                    const SilentInterval = setInterval(() => { video.muted = 1 }, 5e2);
-                    setTimeout(() => { clearInterval(SilentInterval) }, 1.5e4);
+            this.liveMute = async _document => {
+                waitEl(_document, "video", video => {
+                    const silentInterval = setInterval(() => { video.muted = 1 }, 5e2);
+                    setTimeout(() => { clearInterval(silentInterval) }, 1.5e4);
                 })
             };
 
-            /* 直播自動最低畫質 */
-            this.liveLowQuality = async Newindow => {
-                const Dom = Newindow.document;
-                waitEl(Dom, "[data-a-target='player-settings-button']", Menu => {
-                    Menu.click(); // 點擊設置選單
-                    waitEl(Dom, "[data-a-target='player-settings-menu-item-quality']", Quality => {
-                        Quality.click(); // 點擊畫質設定
-                        waitEl(Dom, "[data-a-target='player-settings-menu']", Settings => {
-                            Settings.lastElementChild.click(); // 選擇最低畫質
-                            setTimeout(() => { Menu.click() }, 800); // 等待一下關閉菜單
+            /* 直播自動最低畫質 (土法煉鋼) */
+            this.liveLowQuality = async _document => {
+                const dom = _document;
+                waitEl(dom, "[data-a-target='player-settings-button']", menu => {
+                    menu.click(); // 點擊設置選單
+                    waitEl(dom, "[data-a-target='player-settings-menu-item-quality']", quality => {
+                        quality.click(); // 點擊畫質設定
+                        waitEl(dom, "[data-a-target='player-settings-menu']", settings => {
+                            settings.lastElementChild.click(); // 選擇最低畫質
+                            requestAnimationFrame(() => menu.click());
                         })
                     })
+                })
+            };
+
+            /* 等待新窗口 document 載入 (實驗性) */
+            this.waitDocument = async (_window, checkFu) => {
+                let animationFrame;
+                return new Promise((resolve, reject) => {
+                    const query = () => {
+                        if (_window.document && checkFu(_window.document)) {
+                            cancelAnimationFrame(animationFrame);
+                            resolve(_window.document);
+                        } else {
+                            animationFrame = requestAnimationFrame(query);
+                        }
+                    }
+                    animationFrame = requestAnimationFrame(query);
+
+                    // _window.onload = () => {}
                 })
             };
 
@@ -448,120 +466,97 @@
         }
 
         async run(maxIndex) { // 傳入對應的頻道索引
-            window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
-            const Dir = this;
-            const Self = Dir.Config;
+            window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
+            const self = this;
+            const config = self.Config;
 
-            let NewWindow;
-            let Channel = document.querySelectorAll(Self.ActivityLink2)[maxIndex];
+            let newWindow;
+            let channel = document.querySelectorAll(config.ActivityLink2)[maxIndex];
 
-            if (Channel) {
-                NewWindow = window.open(Channel.href, "LiveWindow");
-                dirSearch(NewWindow);
+            if (channel) {
+                newWindow = window.open(channel.href, "NewWindow");
+                dirSearch(newWindow);
             } else {
-                Channel = document.querySelectorAll(Self.ActivityLink1)[maxIndex];
-                const OpenLink = [...Channel.querySelectorAll("a")].reverse();
+                channel = document.querySelectorAll(config.ActivityLink1)[maxIndex];
+                const openLink = [...channel.querySelectorAll("a")].reverse();
 
                 findLive(0);
                 async function findLive(index) { // 持續找到有在直播的頻道
-                    if ((OpenLink.length - 1) < index) return 0;
+                    if ((openLink.length - 1) < index) return 0;
 
-                    const href = OpenLink[index].href;
-                    NewWindow = !NewWindow ? window.open(href, "LiveWindow") : (NewWindow.location.assign(href), NewWindow);
+                    const href = openLink[index].href;
+                    newWindow = !newWindow ? window.open(href, "NewWindow") : (newWindow.location.assign(href), newWindow);
 
                     if (href.includes("directory")) { // 是目錄頁面
-                        dirSearch(NewWindow);
+                        dirSearch(newWindow);
                     } else {
-                        let Offline, Online;
-                        const observer = new MutationObserver($throttle(() => {
-                            Online = devTrace("Online", NewWindow.document.querySelector(Self.Online));
-                            Offline = devTrace("Offline", NewWindow.document.querySelector(Self.Offline));
+                        const _document = await self.waitDocument(newWindow, document => {
+                            return document.querySelector(config.Offline) || document.querySelector(config.Online);
+                        });
 
-                            if (Offline) {
-                                observer.disconnect();
-                                findLive(index + 1);
-
-                            } else if (Online) {
-                                observer.disconnect();
-                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
-                                Self.TryStayActive && stayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
-
-                            }
-                        }, 300));
-
-                        NewWindow.onload = () => {
-                            observer.observe(NewWindow.document, { subtree: 1, childList: 1, characterData: 1 });
+                        if (devTrace("Offline", _document.querySelector(config.Offline))) {
+                            findLive(index + 1);
+                        } else if (devTrace("Online", _document.querySelector(config.Online))) {
+                            config.RestartLiveMute && self.liveMute(_document);
+                            config.TryStayActive && stayActive(_document);
+                            config.RestartLowQuality && self.liveLowQuality(_document);
                         }
                     }
                 }
             }
 
             // 目錄頁面的查找邏輯
-            const Pattern = Self.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
-            const FindTag = new RegExp(Pattern, "i");
-            async function dirSearch(NewWindow) {
+            const pattern = config.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("|");
+            const tagRegex = new RegExp(pattern, "i");
+            async function dirSearch(newWindow) {
+                const _document = await self.waitDocument(newWindow, document => document.querySelector(config.Container));
 
-                let timer
-                const observer = new MutationObserver($throttle(() => {
-                    const Container = devTrace("Container", NewWindow.document.querySelector(Self.Container));
+                let scrollHandle;
+                const container = devTrace("Container", _document.querySelector(config.Container));
 
-                    if (Container) {
-                        clearTimeout(timer);
-                        observer.disconnect();
-
+                const startFind = () => {
+                    try {
                         // 取得滾動句柄
-                        const ContainerHandle = devTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
+                        scrollHandle ??= devTrace("ContainerHandle", container.closest(config.ContainerHandle));
+                        // 取得頻道數據
+                        const channel = devTrace("Channel", container.querySelectorAll(`${config.Channel}:not([Drops-Processed])`))
 
-                        const startFind = () => {
-                            try {
-                                const Channel = devTrace("Channel", Container.querySelectorAll(`${Self.Channel}:not([Drops-Processed])`))
+                        const liveLink = [...channel]
+                            .find(channel => {
+                                channel.setAttribute("Drops-Processed", true);
+                                const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")]
+                                    .some(span => tagRegex.test(span.textContent))
+                                return haveDrops ? channel : null
+                            });
 
-                                const Link = [...Channel]
-                                    .find(channel => {
-                                        channel.setAttribute("Drops-Processed", true);
-                                        const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")]
-                                            .some(span => FindTag.test(span.textContent))
-                                        return haveDrops ? channel : null
-                                    });
+                        if (liveLink) {
+                            liveLink.click();
+                            liveLink.click(); // 避免意外點兩次 (直接用 dblclick MouseEvent 好像不行)
+                            config.RestartLiveMute && self.liveMute(_document);
+                            config.TryStayActive && stayActive(_document);
+                            config.RestartLowQuality && self.liveLowQuality(_document);
+                        } else if (scrollHandle) {
 
-                                if (Link) {
-                                    Link.click();
-                                    Link.click(); // 避免意外點兩次 (直接用 dblclick MouseEvent 好像不行)
-                                    Self.RestartLiveMute && Dir.liveMute(NewWindow);
-                                    Self.TryStayActive && stayActive(NewWindow.document);
-                                    Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
-                                } else if (ContainerHandle) {
+                            scrollHandle.scrollTo({ // 向下滾動
+                                top: scrollHandle.scrollHeight
+                            })
 
-                                    ContainerHandle.scrollTo({ // 向下滾動
-                                        top: ContainerHandle.scrollHeight
-                                    })
-
-                                    setTimeout(startFind, 1500);
-                                }
-                            } catch {
-                                setTimeout(startFind, 1500);
-                            }
+                            setTimeout(startFind, 1500);
                         }
-
-                        startFind();
+                    } catch {
+                        setTimeout(startFind, 1500);
                     }
-                }, 300));
-
-                NewWindow.onload = () => {
-                    observer.observe(NewWindow.document, { subtree: 1, childList: 1, characterData: 1 });
-                    timer = setTimeout(() => {
-                        NewWindow.location.reload();
-                    }, 1e4);
                 }
+
+                startFind();
             }
         }
     };
 
     /* 使窗口保持活躍 */
-    async function stayActive(target) {
+    async function stayActive(_document) {
         const id = "Stay-Active";
-        const head = target.head;
+        const head = _document.head;
         if (head.getElementById(id)) return;
 
         const script = document.createElement("script");
