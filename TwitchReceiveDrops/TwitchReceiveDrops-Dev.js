@@ -23,9 +23,9 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @grant        window.close
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        window.close
 // @grant        GM_deleteValue
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
