@@ -206,25 +206,24 @@
 
                 const start = Date.now();
                 const refresh = setInterval(() => { // 持續檢測狀態
-                    const elapsed = Math.floor((Date.now() - start) / 1000); // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
-                    const remaining = interval - elapsed;
-
-                    if (remaining < 0) {
-                        clearInterval(refresh); return;
-                    } else if (!supportCheck()) {
+                    if (!supportCheck()) {
                         clearInterval(refresh);
                         clearTimeout(timer);
                         this.titleObserver?.disconnect();
                         finishCall?.();
-                        return;
-                    };
-
-                    updateDisplay && (
-                        document.title = `【 ${remaining}s 】 ${this.progressValue}`
-                    );
+                    } else if (updateDisplay) {
+                        const elapsed = Math.floor((Date.now() - start) / 1000); // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
+                        const remaining = interval - elapsed;
+                        if (remaining >= 0) {
+                            document.title = `【 ${remaining}s 】 ${this.progressValue}`;
+                        }
+                    }
                 }, 1e3);
 
-                timer = setTimeout(() => { finishCall?.() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
+                timer = setTimeout(() => {
+                    clearInterval(refresh);
+                    finishCall?.();
+                }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
             };
 
             /* 展示進度於標籤 */
