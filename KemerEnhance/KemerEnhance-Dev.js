@@ -680,7 +680,9 @@
 
                                     const content = node.$text();
                                     if (!content || this.exclusionRegex.test(content)) return NodeFilter.FILTER_REJECT;
-                                    return this.urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                                    return content === "(frame embed)" || this.urlMatch(content)
+                                        ? NodeFilter.FILTER_ACCEPT
+                                        : NodeFilter.FILTER_REJECT;
                                 }
                             }
                         );
@@ -696,13 +698,18 @@
                         return url;
                     },
                     async parseModify(father, content) { // 解析後轉換網址
-                        const basicHref = father?.href || "";
-                        father.$iHtml(content.replace(this.urlRegex, url => {
-                            const decode = decodeURIComponent(url).trim();
-                            return basicHref === decode
-                                ? father
-                                : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
-                        }))
+                        if (content === "(frame embed)") {
+                            const a = father.closest("a");
+                            a?.$text(a.href || "(frame embed)");
+                        } else {
+                            const basicHref = father?.href || "";
+                            father.$iHtml(content.replace(this.urlRegex, url => {
+                                const decode = decodeURIComponent(url).trim();
+                                return basicHref === decode
+                                    ? father
+                                    : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                            }))
+                        }
                     },
                     async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
                         const [active, insert] = [newtab_active, newtab_insert];
