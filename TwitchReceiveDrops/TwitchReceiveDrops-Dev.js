@@ -563,7 +563,7 @@
         const head = target.head;
         if (head.getElementById(id)) return;
 
-        script = document.createElement("script");
+        const script = document.createElement("script");
         script.id = id;
         script.textContent = `
             function WorkerCreation(code) {
