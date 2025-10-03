@@ -16,7 +16,7 @@
 // @description:ko      Twitch 드롭을 자동으로 받아오고 탭에 진행 상황을 표시하며, 스트림이 종료되었을 때 아직 완료되지 않았다면 자동으로 다른 드롭 활성 스트림을 찾아 계속 수집합니다. 코드에서 사용자 정의 설정 가능합니다
 // @description:ru      Автоматически получает дропы Twitch, отображает прогресс во вкладке, и если дропы не завершены к концу трансляции, автоматически находит другую трансляцию с активированными дропами и продолжает фарминг. Настраиваемые параметры в коде.
 
-// @match        https://www.twitch.tv/drops/inventory
+// @match        https://www.twitch.tv/*
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/8214/8214044.png
 
@@ -27,6 +27,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 
 // @run-at       document-body
@@ -54,6 +55,9 @@
         FindTag: ["drops", "啟用掉寶", "启用掉宝", "드롭활성화됨"], // 查找直播標籤, 只要有包含該字串即可
         ...Backup
     };
+
+    const supportPage = "https://www.twitch.tv/drops/inventory";
+    const supportCheck = (url = location.href) => url === supportPage;
 
     /* 檢測邏輯 */
     class Detection {
@@ -197,31 +201,43 @@
             };
 
             /* 頁面刷新, 展示倒數 */
-            this.pageRefresh = async (display, interval, finish) => {
-                if (display) { // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
-                    const start = Date.now();
-                    const Refresh = setInterval(() => {
-                        const elapsed = Math.floor((Date.now() - start) / 1000);
-                        const remaining = interval - elapsed;
+            this.pageRefresh = async (updateDisplay, interval, finishCall) => {
+                let timer;
 
-                        if (remaining < 0) {
-                            clearInterval(Refresh);
-                            return;
-                        };
+                const start = Date.now();
+                const refresh = setInterval(() => { // 持續檢測狀態
+                    const elapsed = Math.floor((Date.now() - start) / 1000); // 展示倒數 (背景有時會卡住, 用 Date 計算即時修正)
+                    const remaining = interval - elapsed;
 
-                        document.title = `【 ${remaining}s 】 ${this.progressValue}`;
-                    }, 1e3);
-                }
+                    if (remaining < 0) {
+                        clearInterval(refresh); return;
+                    } else if (!supportCheck()) {
+                        clearInterval(refresh);
+                        clearTimeout(timer);
+                        this.titleObserver?.disconnect();
+                        finishCall?.();
+                        return;
+                    };
 
-                setTimeout(() => { finish?.() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
+                    updateDisplay && (
+                        document.title = `【 ${remaining}s 】 ${this.progressValue}`
+                    );
+                }, 1e3);
+
+                timer = setTimeout(() => { finishCall?.() }, (interval + 1) * 1e3); // 定時刷新 (準確計時)
             };
 
             /* 展示進度於標籤 */
             this.showProgress = () => {
-                (new MutationObserver(() => {
-                    document.title != this.progressValue && (document.title = this.progressValue);
-                })).observe(document.querySelector("title"), { childList: 1, subtree: 0 });
-                document.title = this.progressValue; // 觸發一次轉換
+                this.titleObserver = new MutationObserver(() => {
+                    document.title !== this.progressValue && (document.title = this.progressValue);
+                });
+
+                this.titleObserver.observe(
+                    document.querySelector("title"), { childList: 1, subtree: 0 }
+                );
+
+                document.title = this.progressValue; // 初始觸發
             };
 
             /* 查找過期的項目將其刪除 */
@@ -230,8 +246,9 @@
                 this.currentTime > targetTime ? (this.Config.ClearExpiration && element.remove()) : callback(element);
             };
 
-            this.progressValue; // 保存進度值字串
             this.currentTime; // 保存當前時間
+            this.progressValue; // 保存進度值字串
+            this.titleObserver; // 標題觀察者
 
             /* 初始化數據 */
             this.Config = {
@@ -247,10 +264,12 @@
 
         /* 主要運行 */
         static async run() {
+            regMenu();
+
             const Detec = new Detection(); // Detec = 靜態函數需要將自身類實例化
             const Self = Detec.Config; // Self = 這樣只是讓語法短一點, 沒有必要性
 
-            const display = Self.UpdateDisplay;
+            const updateDisplay = Self.UpdateDisplay;
 
             let campaigns, inventory; // 頁面按鈕
             let task, progress, maxElement, progressInfo; // 任務數量, 掉寶進度, 最大進度元素, 保存進度的資訊
@@ -266,7 +285,7 @@
             initData();
 
             /* 主要處理函數 */
-            const process = (token) => {
+            const process = (token = 10) => {
                 campaigns ??= devTrace("Campaigns", document.querySelector(Self.Campaigns));
                 inventory ??= devTrace("Inventory", document.querySelector(Self.Inventory));
 
@@ -319,10 +338,15 @@
 
                 // 處理進度 (寫在這裡是, allProgress 找不到時, 也要正確試錯)
                 if (progress > 0) {
-                    Detec.progressValue = `${progress}%`; // 賦予進度值
-                    !display && Detec.showProgress() // 有顯示更新狀態, 就由他動態展示, 沒有再呼叫 showProgress 動態處理展示
+                    if (Self.ProgressDisplay) {
+                        Detec.progressValue = `${progress}%`; // 賦予進度值
+                        !updateDisplay && Detec.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
+                    }
                 } else if (token > 0) {
-                    setTimeout(() => { process(token - 1) }, 2e3); // 試錯 (避免意外)
+                    supportCheck() && setTimeout(() => { process(token - 1) }, 2e3); // 試錯
+                    return;
+                } else {
+                    supportCheck() ? location.assign(supportPage) : waitSupport();
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
@@ -336,7 +360,7 @@
                 }
                 /* 差異大於檢測間隔, 且標題與進度值相同, 代表需要重啟 */
                 else if (diff >= Self.JudgmentInterval && progress === record) {
-                    Self.RestartLive && Restart.run(maxElement); // 已最大進度對象, 進行直播重啟
+                    Self.RestartLive && restartLive.run(maxElement); // 已最大進度對象, 進行直播重啟
                     Detec.storage("Record", [progress, Detec.getTime()]);
                 }
                 /* 標題與進度值不同 = 有變化 */
@@ -353,7 +377,7 @@
                         else {
                             elapsed += interval;
                             elapsed >= timeout
-                                ? location.assign("https://www.twitch.tv/drops/inventory")
+                                ? supportCheck() && location.assign(supportPage)
                                 : setTimeout(query, interval);
                         }
                     }
@@ -362,8 +386,13 @@
             };
 
             const monitor = () => { // 後續變更監聽
-                Detec.pageRefresh(display, Self.UpdateInterval, async () => {
+                Detec.pageRefresh(updateDisplay, Self.UpdateInterval, async () => {
                     initData();
+
+                    if (!supportCheck()) {
+                        waitSupport();
+                        return;
+                    };
 
                     campaigns?.click();
                     await waitLoad(".accordion-header");
@@ -371,13 +400,13 @@
                     inventory?.click();
                     await waitLoad(Self.EndLine);
 
-                    process(5);
+                    process();
                     monitor();
                 })
             };
 
             waitEl(document, Self.EndLine, () => { // 初始等待頁面載入
-                process(5);
+                process();
                 monitor();
                 Self.TryStayActive && stayActive(document);
             }, { timeoutResult: true });
@@ -477,10 +506,12 @@
             const FindTag = new RegExp(Pattern, "i");
             async function dirSearch(NewWindow) {
 
+                let timer
                 const observer = new MutationObserver($throttle(() => {
                     const Container = devTrace("Container", NewWindow.document.querySelector(Self.Container));
 
                     if (Container) {
+                        clearTimeout(timer);
                         observer.disconnect();
 
                         // 取得滾動句柄
@@ -519,9 +550,70 @@
 
                 NewWindow.onload = () => {
                     observer.observe(NewWindow.document, { subtree: 1, childList: 1, characterData: 1 });
+                    timer = setTimeout(() => {
+                        NewWindow.location.reload();
+                    }, 1e4);
                 }
             }
         }
+    };
+
+    /* 使窗口保持活躍 */
+    async function stayActive(target) {
+        const id = "Stay-Active";
+        const head = target.head;
+        if (head.getElementById(id)) return;
+
+        script = document.createElement("script");
+        script.id = id;
+        script.textContent = `
+            function WorkerCreation(code) {
+                const blob = new Blob([code], {type: "application/javascript"});
+                return new Worker(URL.createObjectURL(blob));
+            }
+
+            const Active = WorkerCreation(\`
+                onmessage = function(e) {
+                    setTimeout(() => {
+                        const { url } = e.data;
+                        fetch(url);
+                        postMessage({ url });
+                    }, 1e4);
+                }
+            \`);
+
+            Active.postMessage({ url: location.href });
+            Active.onmessage = (e) => {
+                const { url } = e.data;
+                document.querySelector("video")?.play();
+                Active.postMessage({ url });
+            };
+
+            let emptyAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA...");
+            emptyAudio.loop = true;
+            emptyAudio.muted = true;
+
+            // 後台播放 / 前台暫停
+            const visHandler = (isHidden) => {
+                if (typeof isHidden !== 'boolean') isHidden = document.hidden;
+                if (isHidden) {
+                    emptyAudio.play().catch(()=>{});
+                } else {
+                    emptyAudio.pause();
+                }
+            };
+
+            if (typeof document.hidden !== "undefined") {
+                document.addEventListener("visibilitychange", () => visHandler());
+            } else {
+                window.addEventListener("focus", () => visHandler(false));
+                window.addEventListener("blur", () => visHandler(true));
+            }
+
+            visHandler();
+        `;
+
+        head.append(script);
     };
 
     /* 節流函數 */
@@ -539,7 +631,6 @@
     /* 開發模式追蹤 */
     let cleaner = null;
     let traceRecord = {};
-
     function getCompositeKey(elements) {
         return Array.from(elements).map(el => {
             if (!(el instanceof Element)) return '';
@@ -623,73 +714,80 @@
 
     };
 
-    /* 使窗口保持活躍 */
-    async function stayActive(target) {
-        const script = document.createElement("script");
-        script.id = "Stay-Active";
-        script.textContent = `
-            function WorkerCreation(code) {
-                const blob = new Blob([code], {type: "application/javascript"});
-                return new Worker(URL.createObjectURL(blob));
-            }
-
-            const Active = WorkerCreation(\`
-                onmessage = function(e) {
-                    setTimeout(() => {
-                        const { url } = e.data;
-                        fetch(url);
-                        postMessage({ url });
-                    }, 1e4);
-                }
-            \`);
-
-            Active.postMessage({ url: location.href });
-            Active.onmessage = (e) => {
-                const { url } = e.data;
-                document.querySelector("video")?.play();
-                Active.postMessage({ url });
-            };
-
-            let emptyAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA...");
-            emptyAudio.loop = true;
-            emptyAudio.muted = true;
-
-            // 後台播放 / 前台暫停
-            const visHandler = (isHidden) => {
-                if (typeof isHidden !== 'boolean') isHidden = document.hidden;
-                if (isHidden) {
-                    emptyAudio.play().catch(()=>{});
-                } else {
-                    emptyAudio.pause();
-                }
-            };
-
-            if (typeof document.hidden !== "undefined") {
-                document.addEventListener("visibilitychange", () => visHandler());
-            } else {
-                window.addEventListener("focus", () => visHandler(false));
-                window.addEventListener("blur", () => visHandler(true));
-            }
-
-            visHandler();
-        `;
-        target.head.append(script);
+    /* 監聽網址變化 */
+    function onUrlChange(callback, timeout = 15) {
+        let timer = null;
+        let cleaned = false;
+        let support_urlchange = false;
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+        const eventHandler = {
+            urlchange: () => trigger('urlchange'), popstate: () => trigger('popstate'), hashchange: () => trigger('hashchange')
+        };
+        function trigger(type) {
+            clearTimeout(timer);
+            if (!support_urlchange && type === 'urlchange') support_urlchange = true;
+            timer = setTimeout(() => {
+                if (support_urlchange) off(false, true);
+                callback({
+                    type: type,
+                    url: location.href,
+                    domain: location.hostname
+                });
+            }, Math.max(15, timeout));
+        };
+        function off(all = true, clean = false) {
+            if (clean && cleaned) return;
+            clearTimeout(timer);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            window.removeEventListener('popstate', eventHandler.popstate);
+            window.removeEventListener('hashchange', eventHandler.hashchange);
+            all && window.removeEventListener('urlchange', eventHandler.urlchange);
+            cleaned = true;
+        };
+        window.addEventListener('urlchange', eventHandler.urlchange);
+        window.addEventListener('popstate', eventHandler.popstate);
+        window.addEventListener('hashchange', eventHandler.hashchange);
+        history.pushState = function () {
+            originalPushState.apply(this, arguments);
+            trigger('pushState');
+        };
+        history.replaceState = function () {
+            originalReplaceState.apply(this, arguments);
+            trigger('replacestate');
+        };
+        return { off };
     };
 
-    if (Object.keys(Backup).length > 0) {
-        GM_registerMenuCommand("🗑️ Clear Config", () => {
-            GM_deleteValue("Config");
-            location.reload();
-        });
-    } else {
-        const SaveConfig = structuredClone(Config); // 維持初始配置
-        GM_registerMenuCommand("📝 Save Config", () => {
-            GM_setValue("Config", SaveConfig);
-        });
-    }
+    /* 註冊菜單 */
+    function regMenu() {
+        if (Object.keys(Backup).length > 0) {
+            GM_registerMenuCommand("🗑️ Clear Config", () => {
+                GM_deleteValue("Config");
+                location.reload();
+            });
+        } else {
+            const SaveConfig = structuredClone(Config); // 維持初始配置
+            GM_registerMenuCommand("📝 Save Config", () => {
+                GM_setValue("Config", SaveConfig);
+            });
+        }
+    };
+
+    /* 等待跳轉到支援網站 */
+    function waitSupport() {
+        const { off } = onUrlChange(uri => {
+            if (supportCheck(uri.url)) {
+                Detection.run();
+                off();
+            }
+        })
+    };
 
     // 主運行調用
-    const Restart = new RestartLive();
-    Detection.run();
+    const restartLive = new RestartLive();
+    if (supportCheck()) Detection.run();
+    else waitSupport();
 
 })();
