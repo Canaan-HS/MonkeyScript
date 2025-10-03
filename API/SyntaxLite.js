@@ -377,6 +377,7 @@ const Lib = (() => {
 
     /**
      * @description 監聽網址變化
+     * @grant window.onurlchange
      * @param {function} callback - 回調 {type, url, domain} 
      * @param {number} timeout - 防抖 (毫秒) [設置延遲多少 ms 之後才回條]
      *
@@ -414,7 +415,7 @@ const Lib = (() => {
         };
 
         /**
-         * @param {boolean} all - 是否清除所有監聽器 (否會跳過最新的 urlchange 監聽器)
+         * @param {boolean} all - 是否清除所有監聽器 (false 會跳過最新的 urlchange 監聽器)
          * @param {boolean} clean - 是否要判斷已經被清理過 
          */
         function off(all = true, clean = false) {
@@ -423,9 +424,9 @@ const Lib = (() => {
             clearTimeout(timer);
             history.pushState = originalPushState;
             history.replaceState = originalReplaceState;
-            all && window.removeEventListener('urlchange', eventHandler.urlchange);
             window.removeEventListener('popstate', eventHandler.popstate);
             window.removeEventListener('hashchange', eventHandler.hashchange);
+            all && window.removeEventListener('urlchange', eventHandler.urlchange);
 
             cleaned = true;
         };
