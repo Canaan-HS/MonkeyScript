@@ -668,8 +668,8 @@
                         this.urlRegex.lastIndex = 0;
                         return this.urlRegex.test(str);
                     },
-                    getTextNodes(root) {
-                        const nodes = new Set();
+                    getTextNodeMap(root) {
+                        const nodes = new Map();
                         const tree = document.createTreeWalker(
                             root,
                             NodeFilter.SHOW_TEXT,
@@ -686,10 +686,17 @@
                                 }
                             }
                         );
-                        while (tree.nextNode()) {
-                            nodes.add(tree.currentNode.parentElement);
-                        }
-                        return [...nodes];
+                        let node, parent, pack;
+                        while ((node = tree.nextNode())) {
+                            parent = node.parentElement;
+                            pack = nodes.get(parent);
+                            if (pack === undefined) {
+                                pack = [];
+                                nodes.set(parent, pack);
+                            }
+                            pack.push(node);
+                        };
+                        return nodes;
                     },
                     protocolParse(url) {
                         if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
@@ -697,17 +704,28 @@
                         if (/^\/\//.test(url)) return "https:" + url;
                         return url;
                     },
-                    async parseModify(father, content) { // 解析後轉換網址
-                        if (content === "(frame embed)") {
+                    // 解析後轉換網址
+                    async parseModify(father, text, textNode = null, complex = false) {
+                        if (text === "(frame embed)") {
                             const a = father.closest("a");
                             a?.$text(a.href || "(frame embed)");
-                        } else {
-                            const basicHref = father?.href || "";
-                            father.$iHtml(content.replace(this.urlRegex, url => {
+                        }
+                        else if (complex) {
+                            textNode.replaceWith(
+                                Lib.createDomFragment(
+                                    text.replace(this.urlRegex, url => {
+                                        const decode = decodeURIComponent(url).trim();
+                                        return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                                    })
+                                )
+                            )
+                        }
+                        else {
+                            const basicHref = father?.href;
+                            father.$iHtml(text.replace(this.urlRegex, url => {
                                 const decode = decodeURIComponent(url).trim();
-                                return basicHref === decode
-                                    ? father
-                                    : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                                return basicHref === decode // 避免 a 重複
+                                    ? father : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
                             }))
                         }
                     },
@@ -1165,20 +1183,26 @@
 
                         if (article) {
                             func.jumpTrigger(content);
-                            for (const span of article.$qa("span.choice-text")) {
+                            let span;
+                            for (span of article.$qa("span.choice-text")) {
                                 func.parseModify(span, span.$text());
                             }
                         } else if (content) {
                             func.jumpTrigger(content);
-                            for (const node of func.getTextNodes(content)) {
-                                let text = node.$text();
+                            let parentNode, text, textNode, data, dataLength;
+                            for ([parentNode, data] of func.getTextNodeMap(content).entries()) {
+                                dataLength = data.length;
 
-                                if (text.startsWith("https://mega.nz")) {
-                                    func.mega ??= megaUtils(func.urlRegex);
-                                    text = await func.mega.getPassword(node, text);
+                                for (textNode of data) {
+                                    text = textNode.$text();
+
+                                    if (text.startsWith("https://mega.nz")) {
+                                        func.mega ??= megaUtils(func.urlRegex);
+                                        text = await func.mega.getPassword(parentNode, text);
+                                    }
+
+                                    func.parseModify(parentNode, text, textNode, dataLength > 1);
                                 }
-
-                                func.parseModify(node, text);
                             }
                         } else {
                             const attachments = body.$q(".post__attachments, .scrape__attachments");
@@ -1189,11 +1213,15 @@
                 } else if (DLL.isAnnouncement()) {
                     Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
                         const items = Lib.$q(".card-list__items");
-
                         func.jumpTrigger(items);
-                        func.getTextNodes(items).forEach(node => {
-                            func.parseModify(node, node.$text());
-                        });
+
+                        let parentNode, textNode, data, dataLength;
+                        for ([parentNode, data] of func.getTextNodeMap(items).entries()) {
+                            dataLength = data.length;
+                            for (textNode of data) {
+                                func.parseModify(parentNode, textNode.$text(), textNode, dataLength > 1);
+                            }
+                        }
                     })
                 }
             },
