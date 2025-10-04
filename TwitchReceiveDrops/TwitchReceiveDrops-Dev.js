@@ -437,12 +437,13 @@
 
             /* 等待新窗口 document 載入 (實驗性) */
             this.waitDocument = async (_window, checkFu) => {
-                let animationFrame;
+                let _document, animationFrame;
                 return new Promise((resolve, reject) => {
                     const query = () => {
-                        if (_window.document && checkFu(_window.document)) {
+                        _document = _window.document;
+                        if (_document && checkFu(_document)) {
                             cancelAnimationFrame(animationFrame);
-                            resolve(_window.document);
+                            resolve(_document);
                         } else {
                             animationFrame = requestAnimationFrame(query);
                         }
@@ -490,9 +491,9 @@
                     if (href.includes("directory")) { // 是目錄頁面
                         dirSearch(newWindow);
                     } else {
-                        const _document = await self.waitDocument(newWindow, document => {
-                            return document.querySelector(config.Offline) || document.querySelector(config.Online);
-                        });
+                        const _document = await self.waitDocument(newWindow, document =>
+                            document.querySelector(config.Offline) || document.querySelector(config.Online)
+                        );
 
                         if (devTrace("Offline", _document.querySelector(config.Offline))) {
                             findLive(index + 1);
