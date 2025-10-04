@@ -77,19 +77,10 @@
                 return `${year}-${month}-${date} ${hour}:${minute}:${second}`;
             };
 
-            /* 保存數據 */
-            this.storage = (key, value = null) => {
-                let data,
-                    Formula = {
-                        Type: (parse) => Object.prototype.toString.call(parse).slice(8, -1),
-                        Number: (parse) => parse ? Number(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
-                        Array: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
-                        Object: (parse) => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)), 1),
-                    };
-                return value != null
-                    ? Formula[Formula.Type(value)]()
-                    : (data = sessionStorage.getItem(key), data != undefined ? Formula[Formula.Type(JSON.parse(data))](data) : data);
-            };
+            /* storage 操作 (極簡版), 只操作基本類型 */
+            this.storage = (key, value = null) => value == null
+                ? (value = sessionStorage.getItem(key), value != null && JSON.parse(value))
+                : sessionStorage.setItem(key, JSON.stringify(value));
 
             /* 語言 時間格式 適配器 */
             this.adapter = {
@@ -245,7 +236,6 @@
                 this.currentTime > targetTime ? (this.Config.ClearExpiration && element.remove()) : callback(element);
             };
 
-            this.currentTime; // 保存當前時間
             this.progressStr; // 保存進度值字串
             this.titleObserver; // 標題觀察者
 
@@ -259,6 +249,10 @@
                 ProgressBar: "[role='progressbar'] + div span", // 掉寶進度數據
                 ActivityTime: ".inventory-campaign-info span:last-child", // 掉寶活動的日期
             };
+        }
+
+        get currentTime() {
+            return new Date();
         }
 
         /* 主要運行 */
@@ -276,7 +270,6 @@
             // 初始化數據
             const initData = () => {
                 Detec.progressStr = "";
-                Detec.currentTime = new Date();
 
                 taskCount = 0, currentProgress = 0, maxProgressIndex = 0;
                 progressInfo = {};
@@ -454,19 +447,19 @@
             };
         }
 
-        async run(Index) { // 傳入對應的頻道索引
+        async run(maxIndex) { // 傳入對應的頻道索引
             window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
             const Dir = this;
             const Self = Dir.Config;
 
             let NewWindow;
-            let Channel = document.querySelectorAll(Self.ActivityLink2)[Index];
+            let Channel = document.querySelectorAll(Self.ActivityLink2)[maxIndex];
 
             if (Channel) {
                 NewWindow = window.open(Channel.href, "LiveWindow");
                 dirSearch(NewWindow);
             } else {
-                Channel = document.querySelectorAll(Self.ActivityLink1)[Index];
+                Channel = document.querySelectorAll(Self.ActivityLink1)[maxIndex];
                 const OpenLink = [...Channel.querySelectorAll("a")].reverse();
 
                 findLive(0);
