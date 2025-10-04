@@ -641,6 +641,7 @@
             textToLinkCache: undefined,
             textToLinkRequ({ newtab, newtab_active, newtab_insert }) {
                 return this.textToLinkCache ??= {
+                    mega: undefined,
                     exclusionRegex: /onfanbokkusuokibalab\.net/,
                     urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
                     exclusionTags: new Set([
@@ -687,49 +688,6 @@
                             nodes.add(tree.currentNode.parentElement);
                         }
                         return [...nodes];
-                    },
-                    searchPassword(href, text) {
-                        let state = false;
-                        if (!text) return { state, href };
-
-                        const lowerText = text.toLowerCase();
-                        if (text.startsWith("#")) {
-                            state = true;
-                            href += text;
-                        }
-                        else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
-                            state = true;
-                            href += "#" + text;
-                        }
-                        else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
-                            const key = text.match(/^(Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-                            if (key) {
-                                state = true;
-                                href += "#" + key;
-                            }
-                        }
-
-                        return {
-                            state,
-                            href: href.match(this.urlRegex)?.[0] ?? href
-                        };
-                    },
-                    getMegaPass(node, href) {
-                        let state;
-                        const nextNode = node.nextSibling;
-
-                        if (nextNode) {
-                            if (nextNode.nodeType === Node.TEXT_NODE) {
-                                ({ state, href } = this.searchPassword(href, nextNode.$text()));
-
-                                if (state) nextNode.remove(); // 清空字串
-                            } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
-                                const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                                ({ state, href } = this.searchPassword(href, nodeText));
-                            }
-                        }
-
-                        return href;
                     },
                     protocolParse(url) {
                         if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
@@ -1191,7 +1149,7 @@
                 const func = loadFunc.textToLinkRequ(config);
 
                 if (DLL.isContent()) {
-                    Lib.waitEl(".post__body, .scrape__body", null).then(body => {
+                    Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
 
                         let [article, content] = [
                             body.$q("article"),
@@ -1205,15 +1163,16 @@
                             }
                         } else if (content) {
                             func.jumpTrigger(content);
-                            func.getTextNodes(content).forEach(node => {
+                            for (const node of func.getTextNodes(content)) {
                                 let text = node.$text();
 
-                                if (text.startsWith("https://mega.nz") && !text.includes("#")) {
-                                    text = func.getMegaPass(node, text);
-                                };
+                                if (text.startsWith("https://mega.nz")) {
+                                    func.mega ??= megaUtils(func.urlRegex);
+                                    text = await func.mega.getPassword(node, text);
+                                }
 
                                 func.parseModify(node, text);
-                            })
+                            }
                         } else {
                             const attachments = body.$q(".post__attachments, .scrape__attachments");
                             attachments && func.jumpTrigger(attachments);
@@ -3186,4 +3145,220 @@
             }
         });
     };
+
+    /* ==================== 功能函數 ==================== */
+    function megaUtils(urlRegex) { // ! 這個功能整體都是實驗性的, 只能根據我遇到的狀況處理
+
+        const megaPDecoder = (() => {
+            const encoder = new TextEncoder();
+            const ITER = 100000;
+
+            const urlBase64ToBase64 = s => s.replace(/-/g, '+').replace(/_/g, '/').replace(/,/g, '');
+
+            function base64ToBytes(b64) {
+                try {
+                    const raw = atob(b64);
+                    const n = raw.length;
+                    const out = new Uint8Array(n);
+                    for (let i = 0; i < n; i++) out[i] = raw.charCodeAt(i);
+                    return out;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function bytesToBase64Url(bytes) {
+                let bin = '';
+                for (let i = 0, L = bytes.length; i < L; i++) bin += String.fromCharCode(bytes[i]);
+                let b64 = btoa(bin);
+                return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            }
+
+            function equalBytesConstTime(a, b) {
+                if (!a || !b || a.length !== b.length) return false;
+                let r = 0;
+                for (let i = 0, L = a.length; i < L; i++) r |= a[i] ^ b[i];
+                return r === 0;
+            }
+
+            function xorInto(a, b) {
+                const n = a.length;
+                const out = new Uint8Array(n);
+                for (let i = 0; i < n; i++) out[i] = a[i] ^ b[i];
+                return out;
+            }
+
+            async function importPwKey(password) {
+                return crypto.subtle.importKey('raw', encoder.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']);
+            }
+
+            async function deriveDK(pwKey, salt) {
+                const bits = await crypto.subtle.deriveBits(
+                    { name: 'PBKDF2', salt: salt, iterations: ITER, hash: 'SHA-512' },
+                    pwKey,
+                    512
+                );
+
+                return new Uint8Array(bits);
+            }
+
+            async function importMacKey(raw) {
+                return crypto.subtle.importKey('raw', raw, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+            }
+
+            return async (pFragmentOrFull, password) => {
+                try {
+                    if (!pFragmentOrFull || !password) return pFragmentOrFull;
+
+                    let s = String(pFragmentOrFull);
+                    const idx = s.indexOf('#P!');
+                    if (idx >= 0) s = s.slice(idx + 3);
+                    if (s.toUpperCase().startsWith('P!')) s = s.slice(2);
+
+                    let b64 = urlBase64ToBase64(s);
+
+                    const mod = b64.length % 4;
+                    if (mod !== 0) b64 += '='.repeat(4 - mod);
+
+                    const data = base64ToBytes(b64);
+                    if (!data || data.length < (1 + 1 + 6 + 32 + 32)) {
+                        return pFragmentOrFull;
+                    }
+
+                    const algorithm = data[0];
+                    const type = data[1];
+                    const publicHandle = data.subarray(2, 8);
+                    const salt = data.subarray(8, 40);
+                    const macTag = data.subarray(data.length - 32);
+                    const encryptedKey = data.subarray(40, data.length - 32);
+                    const keyLen = encryptedKey.length;
+
+                    const pwKey = await importPwKey(password);
+                    const dk = await deriveDK(pwKey, salt);
+
+                    if (dk.length < 64 || dk.length < (32 + 32)) {
+                        return pFragmentOrFull;
+                    }
+                    const xorKey = dk.subarray(0, keyLen);
+                    const macKey = dk.subarray(32, 64);
+
+                    const recoveredKey = xorInto(encryptedKey, xorKey);
+
+                    const msgLen = 1 + 1 + publicHandle.length + salt.length + encryptedKey.length;
+                    const msg = new Uint8Array(msgLen);
+                    let off = 0;
+                    msg[off++] = algorithm;
+                    msg[off++] = type;
+                    msg.set(publicHandle, off); off += publicHandle.length;
+                    msg.set(salt, off); off += salt.length;
+                    msg.set(encryptedKey, off);
+
+                    const macCryptoKey = await importMacKey(macKey);
+                    const macBuffer = await crypto.subtle.sign('HMAC', macCryptoKey, msg);
+                    const mac = new Uint8Array(macBuffer);
+
+                    if (!equalBytesConstTime(mac, macTag)) {
+                        return pFragmentOrFull;
+                    }
+
+                    const handleB64Url = bytesToBase64Url(publicHandle);
+                    const keyB64Url = bytesToBase64Url(recoveredKey);
+                    return `folder/${handleB64Url}#${keyB64Url}`;
+                } catch (e) {
+                    return pFragmentOrFull;
+                }
+            }
+        })();
+
+        function getNextSiblings(el) {
+            const siblings = [];
+            let next = el.nextElementSibling;
+            while (next) {
+                siblings.push(next);
+                next = next.nextElementSibling;
+            }
+            return siblings;
+        };
+
+        const passwordCleaner = (text) =>
+            text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
+
+        function fullNextSearchPassword(node) {
+            const searchBox = [];
+
+            const nextNode = node.nextElementSibling;
+            if (nextNode) {
+                searchBox.push(nextNode.$text());
+            } else {
+                getNextSiblings(node.parentElement).forEach((node) => {
+                    searchBox.push(node.$text());
+                })
+            }
+
+            for (const text of searchBox) {
+                const lowerText = text.toLowerCase();
+                if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
+                    const key = passwordCleaner(text);
+                    if (key) return key;
+                }
+            }
+        };
+
+        function searchPassword(href, text) {
+            let state = false;
+            if (!text) return { state, href };
+
+            const lowerText = text.toLowerCase();
+            if (text.startsWith("#")) { // 一般狀況, 含有 # 的完整連結
+                state = true;
+                href += text;
+            }
+            else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
+                state = true;
+                href += "#" + text;
+            }
+            else if (lowerText.startsWith("folder/")) { // 解密後字串
+                state = true;
+                href += text;
+            }
+            else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) { // 密碼字串
+                const key = passwordCleaner(text);
+                if (key) {
+                    state = true;
+                    href += "#" + key;
+                }
+            }
+
+            return {
+                state,
+                href: href.match(urlRegex)?.[0] ?? href
+            }
+        };
+
+        async function getPassword(node, href) {
+            let state;
+            const nextNode = node.nextSibling;
+
+            if (nextNode) { // 擁有下一個節點通常, 才代表他可能有密碼 或是一般文字
+                if (nextNode.nodeType === Node.TEXT_NODE) {
+                    let text = nextNode.$text();
+
+                    if (text.startsWith("#P!")) { // ! 特殊處理 (解密測試)
+                        const password = fullNextSearchPassword(node);
+                        if (password) text = await megaPDecoder(text, password);
+                    }
+
+                    ({ state, href } = searchPassword(href, text));
+                    if (state) nextNode?.remove(); // 清空字串
+                } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
+                    const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                    ({ state, href } = searchPassword(href, nodeText));
+                }
+            }
+
+            return href;
+        };
+
+        return { getPassword };
+    }
 })();
