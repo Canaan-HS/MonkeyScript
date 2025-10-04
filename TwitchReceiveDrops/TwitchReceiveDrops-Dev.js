@@ -439,18 +439,32 @@
             this.waitDocument = async (_window, checkFu) => {
                 let _document, animationFrame;
                 return new Promise((resolve, reject) => {
+                    let observe;
+
+                    _window.onload = () => {
+                        cancelAnimationFrame(animationFrame);
+                        _document = _window.document;
+                        observe = new MutationObserver($throttle(() => {
+                            if (checkFu(_document)) {
+                                observe.disconnect();
+                                resolve(_document);
+                            }
+                        }, 3e2));
+                        observe.observe(_document, { subtree: 1, childList: 1, characterData: 1 })
+                    }
+
                     const query = () => {
                         _document = _window.document;
                         if (_document && checkFu(_document)) {
                             cancelAnimationFrame(animationFrame);
+                            observe?.disconnect();
                             resolve(_document);
                         } else {
                             animationFrame = requestAnimationFrame(query);
                         }
                     }
-                    animationFrame = requestAnimationFrame(query);
 
-                    // _window.onload = () => {}
+                    animationFrame = requestAnimationFrame(query);
                 })
             };
 
