@@ -269,7 +269,7 @@
 
             // 初始化數據
             const initData = () => {
-                Detec.progressStr = "";
+                Detec.progressStr = "Twitch";
 
                 taskCount = 0, currentProgress = 0, maxProgressIndex = 0;
                 progressInfo = {};
@@ -513,34 +513,38 @@
                         // 取得滾動句柄
                         const ContainerHandle = devTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
 
-                        const StartFind = () => {
-                            const Channel = devTrace("Channel", Container.querySelectorAll(`${Self.Channel}:not([Drops-Processed])`))
+                        const startFind = () => {
+                            try {
+                                const Channel = devTrace("Channel", Container.querySelectorAll(`${Self.Channel}:not([Drops-Processed])`))
 
-                            const Link = [...Channel]
-                                .find(channel => {
-                                    channel.setAttribute("Drops-Processed", true);
-                                    const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")]
-                                        .some(span => FindTag.test(span.textContent))
-                                    return haveDrops ? channel : null
-                                });
+                                const Link = [...Channel]
+                                    .find(channel => {
+                                        channel.setAttribute("Drops-Processed", true);
+                                        const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")]
+                                            .some(span => FindTag.test(span.textContent))
+                                        return haveDrops ? channel : null
+                                    });
 
-                            if (Link) {
-                                Link.click();
-                                Link.click(); // 避免意外點兩次 (直接用 dblclick MouseEvent 好像不行)
-                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
-                                Self.TryStayActive && stayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
-                            } else if (ContainerHandle) {
+                                if (Link) {
+                                    Link.click();
+                                    Link.click(); // 避免意外點兩次 (直接用 dblclick MouseEvent 好像不行)
+                                    Self.RestartLiveMute && Dir.liveMute(NewWindow);
+                                    Self.TryStayActive && stayActive(NewWindow.document);
+                                    Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
+                                } else if (ContainerHandle) {
 
-                                ContainerHandle.scrollTo({ // 向下滾動
-                                    top: ContainerHandle.scrollHeight
-                                })
+                                    ContainerHandle.scrollTo({ // 向下滾動
+                                        top: ContainerHandle.scrollHeight
+                                    })
 
-                                setTimeout(StartFind, 1500);
+                                    setTimeout(startFind, 1500);
+                                }
+                            } catch {
+                                setTimeout(startFind, 1500);
                             }
                         }
 
-                        StartFind();
+                        startFind();
                     }
                 }, 300));
 
