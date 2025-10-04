@@ -265,13 +265,13 @@
             const updateDisplay = config.UpdateDisplay;
 
             let campaigns, inventory; // 頁面按鈕
-            let taskCount, currentProgress, maxProgressIndex, progressInfo; // 任務數量, 掉寶進度, 最大進度索引, 保存進度的資訊
+            let taskCount, currentProgress, inProgressIndex, progressInfo; // 任務數量, 掉寶進度, 進行中任務索引, 保存進度的資訊
 
             // 初始化數據
             const initData = () => {
                 self.progressStr = "Twitch";
 
-                taskCount = 0, currentProgress = 0, maxProgressIndex = 0;
+                taskCount = 0, currentProgress = 0, inProgressIndex = 0;
                 progressInfo = {};
             };
             initData();
@@ -312,15 +312,15 @@
                     );
 
                     // 開始找到當前運行的任務
-                    for (const [indexKey, newProgress] of Object.entries(newTask)) {
-                        const oldProgress = oldTask[indexKey] ?? newProgress;
+                    for (const [taskIndex, newProgress] of Object.entries(newTask)) {
+                        const oldProgress = oldTask[taskIndex] ?? newProgress;
 
-                        if (newProgress != oldProgress) { // 找到第一個新值不等於舊值的
-                            maxProgressIndex = indexKey;
+                        if (newProgress !== oldProgress) { // 找到第一個新值不等於舊值的
+                            inProgressIndex = taskIndex;
                             currentProgress = newProgress;
                             break;
                         } else if (newProgress > currentProgress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
-                            maxProgressIndex = indexKey;
+                            inProgressIndex = taskIndex;
                             currentProgress = newProgress;
                         }
                     };
@@ -347,7 +347,7 @@
 
                 /* 差異大於檢測間隔 & 有進度 & 進度與紀錄相同 */
                 if (diffInterval >= config.JudgmentInterval && hasProgress && currentProgress === record) {
-                    config.RestartLive && restartLive.run(maxProgressIndex); // 最大進度對象, 進行重啟
+                    config.RestartLive && restartLive.run(inProgressIndex); // 最大進度對象, 進行重啟
                     self.storage("Record", [currentProgress, self.getTime()]);
                 }
                 /* 有進度 & 進度與紀錄不相同 */
@@ -429,7 +429,7 @@
                         quality.click(); // 點擊畫質設定
                         waitEl(dom, "[data-a-target='player-settings-menu']", settings => {
                             settings.lastElementChild.click(); // 選擇最低畫質
-                            requestAnimationFrame(() => menu.click());
+                            setTimeout(() => menu.click(), 800);
                         })
                     })
                 })
