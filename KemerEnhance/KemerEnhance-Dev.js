@@ -3335,25 +3335,34 @@
             }
         };
 
+        async function parseP(node, href, text) { // ! 特殊處理 (解密測試)
+            const password = fullNextSearchPassword(node);
+            if (password) text = await megaPDecoder(text, password);
+            return searchPassword(href, text);
+        };
+
         async function getPassword(node, href) {
             let state;
             const nextNode = node.nextSibling;
 
-            if (nextNode) { // 擁有下一個節點通常, 才代表他可能有密碼 或是一般文字
+            if (nextNode) { // 擁有下一個節點可能是密碼, 或是網址後半段
                 if (nextNode.nodeType === Node.TEXT_NODE) {
                     let text = nextNode.$text();
 
-                    if (text.startsWith("#P!")) { // ! 特殊處理 (解密測試)
-                        const password = fullNextSearchPassword(node);
-                        if (password) text = await megaPDecoder(text, password);
+                    if (text.startsWith("#P!")) {
+                        ({ state, href } = await parseP(node, href, text));
+                    } else {
+                        ({ state, href } = searchPassword(href, text));
                     }
 
-                    ({ state, href } = searchPassword(href, text));
                     if (state) nextNode?.remove(); // 清空字串
                 } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
                     const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
                     ({ state, href } = searchPassword(href, nodeText));
                 }
+            } else if (href.includes("#P!")) {
+                const text = href.split("#P!");
+                ({ state, href } = await parseP(node, text[0], "#P!" + text[1]));
             }
 
             return href;
