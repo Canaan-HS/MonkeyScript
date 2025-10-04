@@ -705,12 +705,36 @@
                         if (/^\/\//.test(url)) return "https:" + url;
                         return url;
                     },
-                    // 解析後轉換網址
-                    async parseModify(father, text, textNode = null, complex = false) {
+                    // 解析後轉換網址 (上層容器, 文本父節點, 文本內容, 文本節點, 是否為複雜文本)
+                    async parseModify(
+                        container, father, text, textNode = null, complex = false
+                    ) {
+                        let modifyUrl, passwordDict = {};
+
+                        // 單獨的 (frame embed)
                         if (text === "(frame embed)") {
                             const a = father.closest("a");
-                            a?.$text(a.href || "(frame embed)");
+                            if (!a) return;
+
+                            const href = a.href;
+                            if (!href) return;
+
+                            if (href.includes("mega.nz/#P!")) {
+                                this.mega ??= megaUtils(this.urlRegex);
+                                passwordDict = this.mega.extractPasswords(container.$oHtml());
+                            }
+
+                            if (passwordDict[href])
+                                modifyUrl = await this.mega.getDecryptedUrl(href, passwordDict[href]);
+
+                            if (modifyUrl && modifyUrl !== href) {
+                                a.href = modifyUrl;
+                                a.$text(modifyUrl);
+                            } else {
+                                a.$text(href);
+                            }
                         }
+                        // 複雜文本, 同個父元素內含多個文本, 主要是避免跑板的 (還未支援 mega 解密)
                         else if (complex) {
                             textNode.replaceWith(
                                 Lib.createDomFragment(
@@ -721,17 +745,17 @@
                                 )
                             )
                         }
+                        // 通常是完整的 pre 文本
                         else {
                             // ? 用於提前退出, 與降低開始處理速度, 有時 AJAX 載入比較慢會導致沒處理到
                             if (text.match(this.urlRegex).length === 0) return;
 
-                            let passwordDict = {};
                             if (text.includes("mega.nz/#P!")) {
                                 this.mega ??= megaUtils(this.urlRegex);
                                 passwordDict = this.mega.extractPasswords(text);
                             }
 
-                            let url, modifyUrl, index, lastIndex = 0;
+                            let url, index, lastIndex = 0;
                             const segments = [];
                             for (const match of text.matchAll(this.urlRegex)) {
                                 url = match[0];
@@ -1212,7 +1236,7 @@
                             func.jumpTrigger(content);
                             let span;
                             for (span of article.$qa("span.choice-text")) {
-                                func.parseModify(span, span.$text());
+                                func.parseModify(article, span, span.$text());
                             }
                         } else if (content) {
                             func.jumpTrigger(content);
@@ -1228,7 +1252,7 @@
                                         text = await func.mega.getPassword(parentNode, text);
                                     }
 
-                                    func.parseModify(parentNode, text, textNode, dataLength > 1);
+                                    func.parseModify(content, parentNode, text, textNode, dataLength > 1);
                                 }
                             }
                         } else {
@@ -1246,7 +1270,7 @@
                         for ([parentNode, data] of func.getTextNodeMap(items).entries()) {
                             dataLength = data.length;
                             for (textNode of data) {
-                                func.parseModify(parentNode, textNode.$text(), textNode, dataLength > 1);
+                                func.parseModify(items, parentNode, textNode.$text(), textNode, dataLength > 1);
                             }
                         }
                     })
@@ -3333,22 +3357,22 @@
             }
         })();
 
+        const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
+
         const passwordCleaner = (text) =>
             text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
 
-        const extractRegex = /(https?:\/\/mega\.nz\/#P![^\s]+)[\s\r\n]*(?:Password|Pass|Key)?\s*:?\s*([^\s]+)?/gi;
-
-        const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
+        const extractRegex = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gius;
 
         // return { url: password }
-        function extractPasswords(text) {
+        function extractPasswords(data) {
             const result = {};
 
-            let match, url, password;
-            while ((match = extractRegex.exec(text)) !== null) {
-                url = match[1];
-                password = match[2] ? match[2].trim() : "";
-                result[url] = password;
+            if (typeof data === "string") {
+                let match;
+                while ((match = extractRegex.exec(data)) !== null) {
+                    result[match[1]] = match[2]?.trim() ?? "";
+                }
             }
 
             return result;
@@ -3363,7 +3387,7 @@
                 state = true;
                 href += text;
             }
-            else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
+            else if (/^[A-Za-z0-9_!F-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
                 state = true;
                 href += "#" + text;
             }
