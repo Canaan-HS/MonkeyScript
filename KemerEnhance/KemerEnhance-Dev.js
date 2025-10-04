@@ -528,7 +528,8 @@
                     });
             },
             ...userSet, style, menuRule, color, saveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
-            thumbnailApi: `https://img.${Lib.$domain}/thumbnail/data`,
+            originalApi: `https://${Lib.$domain}/data`,
+            thumbnailApi: `https://${Lib.$domain}/thumbnail/data`,
             registered: new Set(),
             supportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
             videoType: new Set([
@@ -643,7 +644,7 @@
                 return this.textToLinkCache ??= {
                     mega: undefined,
                     exclusionRegex: /onfanbokkusuokibalab\.net/,
-                    urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g,
+                    urlRegex: /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/gi,
                     exclusionTags: new Set([
                         // 腳本和樣式
                         "SCRIPT", "STYLE", "NOSCRIPT",
@@ -715,18 +716,44 @@
                                 Lib.createDomFragment(
                                     text.replace(this.urlRegex, url => {
                                         const decode = decodeURIComponent(url).trim();
-                                        return `<a href="${this.protocolParse(decode)}">${decode}</a>`;
+                                        return `<a href="${this.protocolParse(decode)}" rel="noopener noreferrer">${decode}</a>`;
                                     })
                                 )
                             )
                         }
                         else {
-                            const basicHref = father?.href;
-                            father.$iHtml(text.replace(this.urlRegex, url => {
-                                const decode = decodeURIComponent(url).trim();
-                                return basicHref === decode // 避免 a 重複
-                                    ? father : `<a href="${this.protocolParse(decode)}">${decode}</a>`;
-                            }))
+                            // ? 用於提前退出, 與降低開始處理速度, 有時 AJAX 載入比較慢會導致沒處理到
+                            if (text.match(this.urlRegex).length === 0) return;
+
+                            let passwordDict = {};
+                            if (text.includes("mega.nz/#P!")) {
+                                this.mega ??= megaUtils(this.urlRegex);
+                                passwordDict = this.mega.extractPasswords(text);
+                            }
+
+                            let url, modifyUrl, index, lastIndex = 0;
+                            const segments = [];
+                            for (const match of text.matchAll(this.urlRegex)) {
+                                url = match[0];
+                                index = match.index;
+
+                                if (index > lastIndex) segments.push(text.slice(lastIndex, index));
+
+                                modifyUrl = decodeURIComponent(url).trim();
+                                if (passwordDict[url])
+                                    modifyUrl = await this.mega.getDecryptedUrl(url, passwordDict[url]);
+
+                                segments.push(`<a href="${this.protocolParse(modifyUrl)}" rel="noopener noreferrer">${modifyUrl}</a>`);
+                                lastIndex = index + url.length;
+                            }
+
+                            if (lastIndex < text.length) {
+                                segments.push(text.slice(lastIndex));
+                            }
+
+                            father.tagName === "A"
+                                ? father.replaceWith(Lib.createDomFragment(segments.join("")))
+                                : father.$iHtml(segments.join(""));
                         }
                     },
                     async jumpTrigger(root) { // 將該區塊的所有 a 觸發跳轉, 改成開新分頁
@@ -2026,7 +2053,7 @@
                             if (Lib.$type(data) === "Object") data = data?.posts || [];
 
                             for (const post of data) {
-                                const { img, footer } = postData[post.id];
+                                const { img, footer } = postData[post?.id];
                                 if (!img && !footer) continue;
 
                                 let replaced = false;
@@ -3298,48 +3325,36 @@
 
                     const handleB64Url = bytesToBase64Url(publicHandle);
                     const keyB64Url = bytesToBase64Url(recoveredKey);
-                    return `folder/${handleB64Url}#${keyB64Url}`;
+                    const fileType = type === 0x00 ? "folder" : "file";
+                    return `https://mega.nz/${fileType}/${handleB64Url}#${keyB64Url}`;
                 } catch (e) {
                     return pFragmentOrFull;
                 }
             }
         })();
 
-        function getNextSiblings(el) {
-            const siblings = [];
-            let next = el.nextElementSibling;
-            while (next) {
-                siblings.push(next);
-                next = next.nextElementSibling;
-            }
-            return siblings;
-        };
-
         const passwordCleaner = (text) =>
             text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
 
-        function fullNextSearchPassword(node) {
-            const searchBox = [];
+        const extractRegex = /(https?:\/\/mega\.nz\/#P![^\s]+)[\s\r\n]*(?:Password|Pass|Key)?\s*:?\s*([^\s]+)?/gi;
 
-            const nextNode = node.nextElementSibling;
-            if (nextNode) {
-                searchBox.push(nextNode.$text());
-            } else {
-                getNextSiblings(node.parentElement).forEach((node) => {
-                    searchBox.push(node.$text());
-                })
+        const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
+
+        // return { url: password }
+        function extractPasswords(text) {
+            const result = {};
+
+            let match, url, password;
+            while ((match = extractRegex.exec(text)) !== null) {
+                url = match[1];
+                password = match[2] ? match[2].trim() : "";
+                result[url] = password;
             }
 
-            for (const text of searchBox) {
-                const lowerText = text.toLowerCase();
-                if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
-                    const key = passwordCleaner(text);
-                    if (key) return key;
-                }
-            }
+            return result;
         };
 
-        function searchPassword(href, text) {
+        function parsePassword(href, text) {
             let state = false;
             if (!text) return { state, href };
 
@@ -3351,10 +3366,6 @@
             else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
                 state = true;
                 href += "#" + text;
-            }
-            else if (lowerText.startsWith("folder/")) { // 解密後字串
-                state = true;
-                href += text;
             }
             else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) { // 密碼字串
                 const key = passwordCleaner(text);
@@ -3370,39 +3381,27 @@
             }
         };
 
-        async function parseP(node, href, text) { // ! 特殊處理 (解密測試)
-            const password = fullNextSearchPassword(node);
-            if (password) text = await megaPDecoder(text, password);
-            return searchPassword(href, text);
-        };
-
         async function getPassword(node, href) {
             let state;
             const nextNode = node.nextSibling;
 
             if (nextNode) { // 擁有下一個節點可能是密碼, 或是網址後半段
                 if (nextNode.nodeType === Node.TEXT_NODE) {
-                    let text = nextNode.$text();
-
-                    if (text.startsWith("#P!")) {
-                        ({ state, href } = await parseP(node, href, text));
-                    } else {
-                        ({ state, href } = searchPassword(href, text));
-                    }
-
+                    ({ state, href } = parsePassword(href, nextNode.$text()));
                     if (state) nextNode?.remove(); // 清空字串
                 } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
                     const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
-                    ({ state, href } = searchPassword(href, nodeText));
+                    ({ state, href } = parsePassword(href, nodeText));
                 }
-            } else if (href.includes("#P!")) {
-                const text = href.split("#P!");
-                ({ state, href } = await parseP(node, text[0], "#P!" + text[1]));
             }
 
             return href;
         };
 
-        return { getPassword };
+        return {
+            getPassword,
+            getDecryptedUrl,
+            extractPasswords,
+        };
     }
 })();
