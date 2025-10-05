@@ -264,7 +264,7 @@
 
             const updateDisplay = config.UpdateDisplay;
 
-            let campaigns, inventory; // 頁面按鈕
+            let campaigns, inventory, adapter; // 頁面按鈕, 適配器
             let taskCount, currentProgress, inProgressIndex, progressInfo; // 任務數量, 掉寶進度, 進行中任務索引, 保存進度的資訊
 
             // 初始化數據
@@ -285,11 +285,11 @@
                 const allProgress = devTrace("AllProgress", document.querySelectorAll(config.allProgress));
 
                 if (allProgress?.length > 0) {
-                    const adapter = self.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (寫在這裡是避免反覆調用)
+                    let activityTime, progressBar;
+                    adapter ??= self.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (載入完成才找的到 lang, 不能提前宣告)
 
                     allProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
-                        const activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
-
+                        activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
                         self.expiredCleanup(
                             data, // 物件整體
                             adapter, // 適配器
@@ -297,9 +297,7 @@
                             notExpired => { // 取得未過期的物件
                                 // 嘗試查找領取按鈕 (可能會出現因過期, 而無法自動領取問題, 除非我在另寫一個 allProgress 遍歷)
                                 notExpired.querySelectorAll("button").forEach(draw => { draw.click() });
-
-                                const progressBar = devTrace("ProgressBar", notExpired.querySelectorAll(config.ProgressBar));
-
+                                progressBar = devTrace("ProgressBar", notExpired.querySelectorAll(config.ProgressBar));
                                 // 紀錄為第幾個任務數, 與掉寶進度
                                 progressInfo[taskCount++] = [...progressBar].map(progress => +progress.textContent);
                             }
@@ -312,17 +310,24 @@
                     );
 
                     // 開始找到當前運行的任務
-                    for (const [taskIndex, newProgress] of Object.entries(newTask)) {
-                        const oldProgress = oldTask[taskIndex] ?? newProgress;
+                    let taskIndex, newProgress;
+                    const taskEntries = Object.entries(newTask);
+                    for ([taskIndex, newProgress] of taskEntries) {
+                        const oldProgress = oldTask[taskIndex] || newProgress;
 
                         if (newProgress !== oldProgress) { // 找到第一個新值不等於舊值的
                             inProgressIndex = taskIndex;
                             currentProgress = newProgress;
                             break;
-                        } else if (newProgress > currentProgress) { // 如果都相同, 或沒有紀錄, 就找當前最大對象
-                            inProgressIndex = taskIndex;
-                            currentProgress = newProgress;
                         }
+                    };
+
+                    // 當 inProgressIndex 是數字時, 代表沒有找到索引 且 任務數 > 1
+                    if (typeof inProgressIndex === "number" && taskEntries.length > 1) {
+                        // 找到最大進度
+                        [taskIndex, newProgress] = taskEntries.reduce((max, cur) => cur[1] > max[1] ? cur : max);
+                        inProgressIndex = taskIndex;
+                        currentProgress = newProgress;
                     };
 
                     self.storage("Task", newTask); // 保存新任務狀態
