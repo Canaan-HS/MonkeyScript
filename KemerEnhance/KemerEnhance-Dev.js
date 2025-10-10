@@ -1228,7 +1228,7 @@
                         const response = await windowContext(...args);
 
                         // 檢查是否滿足所有快取條件
-                        if (response.status === 200 && url.includes('api')) {
+                        if (response.status === 200 && (url.includes('api') || url.includes('default_config'))) {
 
                             // 使用一個立即執行的 async 函式 (IIFE) 來處理快取儲存。
                             (async () => {
@@ -1652,6 +1652,7 @@
             },
             async QuickPostToggle() { /* 預覽換頁 快速切換 (整體以性能為優先, 增加 代碼量|複雜度|緩存) */
 
+                // Todo - 等待重構
                 if (!DLL.isNeko || DLL.registered.has("QuickPostToggle")) return; // ! 暫時只支援 Neko
 
                 Lib.waitEl("menu", null, { all: true, timeout: 5 }).then(menu => {
@@ -1711,7 +1712,7 @@
                                     pageContentCache.set(url, contentToCache);
 
                                     // 應用到頁面
-                                    Lib.$q(".card-list--legacy").replaceChildren(...newContent.childNodes);
+                                    Lib.$q(".card-list--legacy").replaceWith(newContent);
                                     resolve();
                                 },
                                 onerror: () => reject(new Error('Network error'))
