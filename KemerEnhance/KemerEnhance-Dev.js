@@ -843,18 +843,25 @@
                             url = uri.href;
                             return url;
                         },
+                        uriFormat1: /\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/,
+                        uriFormat2: /\/([^\/]+)\/([^\/]+)$/,
+                        uriFormat3: /^https?:\/\/([^.]+)\.([^.]+)\./,
                         specialServer: { x: "twitter", maker_id: "dlsite" },
+                        supportServer: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans|Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/i,
                         parseUrlInfo(uri) { // 解析所有內部網址, 與作者外部網址
-                            uri =
-                                uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/)
-                                || uri.match(/\/([^\/]+)\/([^\/]+)$/);
-                            uri = uri.splice(1);
+                            uri = uri.match(this.uriFormat1) || uri.match(this.uriFormat2) || uri.match(this.uriFormat3);
+                            if (!uri) return;
 
-                            let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
-                            let user = uri[1];
+                            return uri.splice(1).reduce((acc, str) => {
+                                if (this.supportServer.test(str)) {
+                                    const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+                                    acc.server = this.specialServer[cleanStr] ?? cleanStr
+                                } else {
+                                    acc.user = str;
+                                }
 
-                            server = this.specialServer[server] ?? server;
-                            return uri ? { server, user } : { uri };
+                                return acc;
+                            }, {});
                         },
                         async fixRequest(url, headers = {}) { // 請求修復數據
                             return new Promise(resolve => {
@@ -895,17 +902,17 @@
                         },
                         candfansPageAdapt(oldId, newId, oldUrl, oldName, newName) { // Candfans 很麻煩, 不同頁面的格式不一樣
                             if (DLL.isSearch()) {
-                                oldId = newId ? newId : oldId;
+                                oldId = newId || oldId;
                             } else {
                                 oldUrl = newId ? this.replaceUrlTail(oldUrl, newId) : oldUrl;
                             }
 
-                            oldName = newName ? newName : oldName;
-
+                            oldName = newName || oldName;
                             return [oldId, oldUrl, oldName];
                         },
                         supportFixName: new Set(["pixiv", "fanbox", "candfans"]),
                         supportFixTag: { // 無論是 ID 修復, 還是 NAME 修復, 處理方式都一樣, 只是分開處理, 方便維護
+                            // ? 使用 g 是因為, 會有 'Pixiv Fanbox' 這樣的字串
                             ID: /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans/gi,
                             NAME: /Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/gi,
 
