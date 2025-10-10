@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.10.02
+// @version      2025.10.10
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -83,17 +83,17 @@ const Lib = (() => {
     });
 
     const $node = {
-        $text(value = null) {
-            return value === null ? this?.textContent?.trim() : (this.textContent = value?.trim() ?? "");
+        $text(value) {
+            return value == null ? this?.textContent?.trim() : (this.textContent = value?.trim() ?? "");
         },
         $copy(deep = true) {
             return this.cloneNode(deep);
         },
-        $iHtml(value = null) {
-            return value === null ? this.innerHTML : (this.innerHTML = value);
+        $iHtml(value) {
+            return value == null ? this.innerHTML : (this.innerHTML = value);
         },
-        $oHtml(value = null) {
-            return value === null ? this.outerHTML : (this.outerHTML = value);
+        $oHtml(value) {
+            return value == null ? this.outerHTML : (this.outerHTML = value);
         },
         $iAdjacent(value, position = "beforeend") {
             if (value == null) return;
@@ -174,8 +174,8 @@ const Lib = (() => {
         isEmpty(object) { for (const _ in object) return false; return true },
         createDomFragment: (value) => document.createRange().createContextualFragment(value),
         get createFragment() { return document.createDocumentFragment() },
-        title: (value = null) => value === null ? document.title : (document.title = value),
-        cookie: (value = null) => value === null ? document.cookie : (document.cookie = value),
+        title: (value) => value == null ? document.title : (document.title = value),
+        cookie: (value) => value == null ? document.cookie : (document.cookie = value),
         createUrl: (object) => URL.createObjectURL(object),
         _on: (root, events) => {
             const event = {};
@@ -295,7 +295,7 @@ const Lib = (() => {
      *
      * onE(元素, "監聽類型1, 監聽類型2|監聽類型3", 觸發 => {})
      */
-    async function onE(element, type, listener, add = {}, resolve = null) {
+    async function onE(element, type, listener, add = {}, resolve) {
         try {
             typeof element === "string" && (element = selector(document, element));
 
@@ -308,7 +308,7 @@ const Lib = (() => {
                 element.addEventListener(type, listener, add);
             }
             else {
-                let timeout = null;
+                let timeout;
                 const trigger = (event) => { // 防抖處理多個相同事件類型
                     clearTimeout(timeout);
                     timeout = setTimeout(() => listener(event), 15);
@@ -387,7 +387,7 @@ const Lib = (() => {
      * }, 100);
      */
     function onUrlChange(callback, timeout = 15) {
-        let timer = null;
+        let timer;
         let cleaned = false;
         let support_urlchange = false;
 
@@ -623,7 +623,7 @@ const Lib = (() => {
      * });
      */
     const observerRecord = new Map();
-    async function $observer(target, onFunc, options = {}, callback = null) {
+    async function $observer(target, onFunc, options = {}, callback) {
         const {
             mark = "",
             debounce = 0,
@@ -707,7 +707,7 @@ const Lib = (() => {
             return (all ? result.length > 0 : result) && result;
         }
     };
-    async function waitEl(select, found = null, options = {}) {
+    async function waitEl(select, found, options = {}) {
         const query = Array.isArray(select) ? waitCore.queryMap : waitCore.queryElement; //! 批量查找只能傳 Array
         const {
             raf = false,
@@ -923,6 +923,7 @@ const Lib = (() => {
      * @description 瀏覽器 IndexedDB 操作
      * @param {string} name - 資料庫名稱
      * @param {number} version - 資料庫版本
+     * @param {string} compressCode - 壓縮用的 pako.js 代碼 (可選, 需要會自動導入)
      * @returns {object} - 開啟成功回傳操作物件
      * @example
      * (async () => {
@@ -934,8 +935,8 @@ const Lib = (() => {
      *     console.log(data);
      * })();
      */
-    let strCompress = null;
-    async function openDB(name = "StorageDB", version = 1) {
+    let strCompress;
+    async function openDB(name = "StorageDB", version = 1, compressCode) {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(name, version);
             const storeName = name.replace(/db$/i, "").toLowerCase();
@@ -954,7 +955,7 @@ const Lib = (() => {
                     const pack = {};
 
                     if (compress) {
-                        strCompress ??= createStrCompress();
+                        strCompress ??= createStrCompress(compressCode);
 
                         const type = $type(value);
                         pack.type = type;
@@ -978,7 +979,7 @@ const Lib = (() => {
                     })
                 };
 
-                async function get(key, error = null, autoRemove = false) {
+                async function get(key, error, autoRemove = false) {
                     const tx = db.transaction(storeName, "readonly");
                     const store = tx.objectStore(storeName);
 
@@ -1003,7 +1004,7 @@ const Lib = (() => {
                             data = item.data ?? item;
 
                             if (item.compressed) {
-                                strCompress ??= createStrCompress();
+                                strCompress ??= createStrCompress(compressCode);
                                 data = await strCompress.decompress(data);
 
                                 const type = item.type || $type(data);
@@ -1084,7 +1085,7 @@ const Lib = (() => {
      * 使用方法同上, 改成 $debounce() 即可
      */
     function $debounce(func, delay) {
-        let timer = null;
+        let timer;
         return (...args) => {
             clearTimeout(timer);
             timer = setTimeout(function () {
@@ -1139,8 +1140,7 @@ const Lib = (() => {
             ) { save.add(i) }
         };
 
-        let str;
-        for (str of scope.split(/\s*[\.,|/]\s*/)) { // 使用 , . / | 進行分割
+        for (const str of scope.split(/\s*[\.,|/]\s*/)) { // 使用 , . / | 進行分割
             /* 可解析的類型
              * 1, -2, !3, 4~5, -6~7, !8-9
              */
@@ -1193,7 +1193,7 @@ const Lib = (() => {
      * console.log(result);
      */
     const templateUtils = {
-        Process: (template, key, value = null) => {
+        process: (template, key, value) => {
             const temp = template[key.toLowerCase()];
             return $type(temp) === "Function"
                 ? temp(value)
@@ -1212,11 +1212,11 @@ const Lib = (() => {
         );
 
         if ($type(format) === "String") {
-            return format.replace(/\{\s*([^}\s]+)\s*\}/g, (_, key) => templateUtils.Process(template, key));
+            return format.replace(/\{\s*([^}\s]+)\s*\}/g, (_, key) => templateUtils.process(template, key));
         }
 
         if ($type(format) === "Object") {
-            return Object.entries(format).map(([key, value]) => templateUtils.Process(template, key, value));
+            return Object.entries(format).map(([key, value]) => templateUtils.process(template, key, value));
         }
 
         return { "Unsupported format": format };
@@ -1224,6 +1224,8 @@ const Lib = (() => {
 
     /**
      * @description 創建 zip 壓縮函數
+     * @param {string} fflateCode - fflate 代碼
+     * @param {string} fflateUrl - fflate 網址
      * @returns {object} - 壓縮函數
      *
      * @example
@@ -1246,9 +1248,9 @@ const Lib = (() => {
      * zipEngine.file('test.txt', 'Hello, World!');
      * zipEngine.generateZip().then(zip => {})
      */
-    function createZip() {
+    function createZip(fflateCode, fflateUrl = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js") {
         let worker = createWorker(`
-            importScripts("https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js");
+            ${fflateCode || `importScripts('${fflateUrl}')`}
             onmessage = function(e) {
                 const { filesWithOptions } = e.data;
                 const fileNames = Object.keys(filesWithOptions);
@@ -1393,6 +1395,8 @@ const Lib = (() => {
 
     /**
      * @description 創建字串壓縮函數
+     * @param {string} pakoCode - pako 代碼
+     * @param {string} pakoUrl - pako 網址
      * @returns {Object} - 壓縮函數
      *
      * @example
@@ -1403,13 +1407,13 @@ const Lib = (() => {
      *      const decompressed = await strCompress.decompress(compressed);
      * })()
      */
-    function createStrCompress() {
+    function createStrCompress(pakoCode, pakoUrl = "https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js") {
         let worker = createWorker(`
-            importScripts("https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js");
+            ${pakoCode || `importScripts('${pakoUrl}')`}
             onmessage = function(e) {
                 const { type, data, level, requestId } = e.data;
                 const bytes = type === "compress" ? pako.deflate(data, { level }) : pako.inflate(data);
-                postMessage({ data: bytes, requestId: requestId }, [bytes.buffer]);
+                postMessage({ data: bytes, requestId }, [bytes.buffer]);
             }
         `);
 
@@ -1436,8 +1440,7 @@ const Lib = (() => {
             const binary_string = atob(base64);
             const len = binary_string.length;
             const bytes = new Uint8Array(len);
-            let i;
-            for (i = 0; i < len; i++) {
+            for (let i = 0; i < len; i++) {
                 bytes[i] = binary_string.charCodeAt(i);
             };
             return bytes;
@@ -1589,7 +1592,7 @@ const Lib = (() => {
             TIME_THRESHOLD = Math.max(20, Math.min(2000, TIME_THRESHOLD));
         };
 
-        return function dynamicParam(time, currentDelay, currentThread = null, minDelay = 0) {
+        return function dynamicParam(time, currentDelay, currentThread, minDelay = 0) {
             const responseTime = Date.now() - time;
             updateThreshold(responseTime);
 
@@ -1601,7 +1604,7 @@ const Lib = (() => {
             let newDelay = currentDelay * (1 + delayChange);
             newDelay = Math.max(minDelay, Math.min(newDelay, MAX_Delay));
 
-            if (currentThread !== null) {
+            if (currentThread != null) {
                 const threadChange = (ratio - 1) * ADJUSTMENT_FACTOR * threadFactor;
 
                 let newThread = currentThread * (1 - threadChange);
@@ -1625,7 +1628,7 @@ const Lib = (() => {
      *      console.log(success);
      * })
      */
-    async function outputTXT(data, name, success = null) {
+    async function outputTXT(data, name, success) {
         try {
 
             name = typeof name === "string"
@@ -1656,7 +1659,7 @@ const Lib = (() => {
      *      console.log(success);
      * })
      */
-    async function outputJson(data, name, success = null) {
+    async function outputJson(data, name, success) {
         try {
             data = typeof data === "string" ? data : JSON.stringify(data, null, 4);
             name = typeof name === "string"
@@ -1696,7 +1699,7 @@ const Lib = (() => {
      * let start = runTime();
      * runTime(start);
      */
-    function runTime(time = null, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
+    function runTime(time, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
         if (!time) return performance.now();
 
         const result = format
@@ -1714,7 +1717,7 @@ const Lib = (() => {
      * @example
      * getDate("{year}/{month}/{date} {hour}:{minute}")
      */
-    function getDate(format = null) {
+    function getDate(format) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
 
@@ -1869,7 +1872,7 @@ const Lib = (() => {
      * setJV("存儲鍵", "可轉換成 Json 的數據", { space: 2, expireStr: "1d" }) // 儲存 JSON 數據
      * getJV("存儲鍵", "錯誤回傳", true) // 取得 JSON 格式數據
      */
-    const GM_storageVerify = val => val == null ? null : val;
+    const GM_storageVerify = val => val || undefined;
     const GM_storageCall = {
         delV: key => GM_deleteValue(key),
         allV: () => GM_storageVerify(GM_listValues()),
@@ -2011,7 +2014,7 @@ const Lib = (() => {
              * @param {string} url    - 圖片的副檔名, 輸入圖片的連結
              * @returns {string}       - 經填充後的尾數
              */
-            mantissa(index, padding, filler = "0", url = null) {
+            mantissa(index, padding, filler = "0", url) {
                 return url
                     ? `${++index}`.padStart(padding, filler) + `.${this.suffixName(url)}`
                     : `${++index}`.padStart(padding, filler);
