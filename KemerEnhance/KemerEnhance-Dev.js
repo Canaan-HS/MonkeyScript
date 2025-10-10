@@ -26,7 +26,9 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @require      https://update.greasyfork.org/scripts/487608/1670307/SyntaxLite_min.js
+// @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
+
+// @require      https://update.greasyfork.org/scripts/487608/1674922/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -35,6 +37,7 @@
 // @grant        GM_openInTab
 // @grant        GM_deleteValue
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText
 // @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
@@ -91,7 +94,7 @@
 
     /* ==================== 依賴項目 ==================== */
     let Url = Lib.$url; // 全局變化
-    const DB = await Lib.openDB("KemerEnhanceDB");
+    const DB = await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako"));
     const DLL = (() => {
         // 所需樣式 (需要傳入顏色的, 就是需要動態適應顏色變化)
         const color = {
