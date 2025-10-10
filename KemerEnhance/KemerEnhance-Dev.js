@@ -478,22 +478,35 @@
             }
         };
 
-        // 頁面正則 (早期寫的正則 有些忘記了)
-        const Posts = /\/posts\/?.*$/;
-        const Search = /\/artists\/?.*$/;
-        const User = /\/.+\/user\/[^\/]+(\?.*)?$/;
-        const Content = /\/.+\/user\/.+\/post\/.+$/;
-        const Favor = /\/favorites\?type=post\/?.*$/;
-        const Link = /\/.+\/user\/[^\/]+\/links\/?.*$/;
-        const FavorArtist = /\/favorites(?:\?(?!type=post).*)?$/;
-        const Recommended = /\/.+\/user\/[^\/]+\/recommended\/?.*$/;
-        const Announcement = /\/(dms|(?:.+\/user\/[^\/]+\/announcements))(\?.*)?$/;
+        // 搜尋頁面 ./artists*
+        const Artists = /.+(?<!favorites)\/artists.*/;
+        // 預覽頁的藝術家其他頁面連結 ./links | ./links/new
+        const Links = /.+\/user\/[^\/]+\/links.*/;
+        // 預覽頁的推薦 ./recommended
+        const Recommended = /.+\/user\/[^\/]+\/recommended.*/;
+        // favorites 頁面 ./favorites/artists*
+        const FavoritesArtists = /.+\/favorites\/artists.*/;
+
+        // 排除 favorites 頁面以外的 posts & posts/popular 頁面
+        const Posts = /.+(?<!favorites)\/posts.*/;
+        // 最常見的 User 預覽頁面, ./user/id || ./user/id?.*
+        const User = /.+\/user\/[^\/]+(\?.*)?$/;
+        // favorites 頁面 ./favorites/posts*
+        const FavorPosts = /.+\/favorites\/posts.*/;
+
+        // DMs 頁面
+        const Dms = /.+\/dms(\?.*)?$/;
+        // 預覽頁的公告 ./announcements
+        const Announcement = /.+\/user\/[^\/]+\/announcements.*/;
+
+        // 帖子內容頁面
+        const Content = /.+\/user\/.+\/post\/.+$/;
 
         return {
             isContent: () => Content.test(Url),
-            isAnnouncement: () => Announcement.test(Url),
-            isSearch: () => Search.test(Url) || Link.test(Url) || Recommended.test(Url) || FavorArtist.test(Url),
-            isPreview: () => Posts.test(Url) || User.test(Url) || Favor.test(Url),
+            isAnnouncement: () => Announcement.test(Url) || Dms.test(Url),
+            isSearch: () => Artists.test(Url) || Links.test(Url) || Recommended.test(Url) || FavoritesArtists.test(Url),
+            isPreview: () => Posts.test(Url) || User.test(Url) || FavorPosts.test(Url),
             isNeko: Lib.$domain.startsWith("nekohouse"),
 
             language() {
@@ -530,7 +543,8 @@
                         Lib.log(error).error;
                     });
             },
-            ...userSet, style, menuRule, color, saveKey, stylePointer, Link, Posts, User, Favor, Search, Content, FavorArtist, Announcement, Recommended,
+            ...userSet, style, menuRule, color, saveKey, stylePointer,
+            Artists, FavoritesArtists, FavorPosts, Links, Recommended, Posts, User, Content, Dms,
             originalApi: `https://${Lib.$domain}/data`,
             thumbnailApi: `https://${Lib.$domain}/thumbnail/data`,
             registered: new Set(),
@@ -1167,8 +1181,8 @@
                     const url = (typeof input === 'string') ? input : input.url;
                     const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
 
-                    // 如果不是 GET 請求，或有 X-Bypass-CacheFetch 標頭，立即返回原始請求
-                    if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch']) {
+                    // 不是 GET 請求 或 有 X-Bypass-CacheFetch 標頭 或 url 結尾為 random
+                    if (method.toUpperCase() !== 'GET' || options.headers?.['X-Bypass-CacheFetch'] || url.endsWith("random")) {
                         return windowContext(...args);
                     }
 
@@ -1440,7 +1454,7 @@
                 // 搜尋頁面, 與一些特殊預覽頁
                 if (DLL.isSearch()) {
                     Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
-                        if (DLL.Link.test(Url) || DLL.Recommended.test(Url)) {
+                        if (DLL.Links.test(Url) || DLL.Recommended.test(Url)) {
                             // 特定頁面的 名稱修復
                             const artist = Lib.$q("span[itemprop='name']");
                             artist && func.otherFix(artist);
@@ -2063,8 +2077,15 @@
                         })
                     } else {
                         const uri = new URL(Url);
-                        if (uri.searchParams.get("q") === "") {
-                            uri.searchParams.delete("q");
+
+                        if (uri.searchParams.get("q") === "") uri.searchParams.delete("q"); // 移除空搜尋
+
+                        if (DLL.User.test(Url)) { // 一般預覽頁面適應
+                            uri.pathname += "/posts";
+                        }
+                        else if (DLL.FavorPosts.test(Url)) { // 收藏頁面適應
+                            uri.pathname = uri.pathname.replace("/posts", "");
+                            uri.searchParams.set("type", "post");
                         };
 
                         const postData = [...postCard].reduce((acc, card) => {
@@ -2074,13 +2095,13 @@
                         }, {});
 
                         // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
-                        const api = `${uri.origin}/api/v1${uri.pathname}${DLL.User.test(Url) ? "/posts" : ""}${uri.search}`;
+                        const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
                         DLL.fetchApi(api, data => {
                             // ! 不特別處理 API 格式修改, 會導致報錯的問題
                             if (Lib.$type(data) === "Object") data = data?.posts || [];
 
                             for (const post of data) {
-                                const { img, footer } = postData[post?.id];
+                                const { img, footer } = postData[post?.id] || {};
                                 if (!img && !footer) continue;
 
                                 let replaced = false;
