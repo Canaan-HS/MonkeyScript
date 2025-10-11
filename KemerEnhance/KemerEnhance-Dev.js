@@ -2187,7 +2187,7 @@
         const loadFunc = {
             linkBeautifyCache: undefined,
             linkBeautifyRequ() {
-                return this.linkBeautifyCache ??= function showBrowse(browse, retry = 5) {
+                return this.linkBeautifyCache ??= function showBrowse(browse, retry = 3) {
                     if (!retry) return;
 
                     browse.style.position = "relative"; // 修改樣式避免跑版
