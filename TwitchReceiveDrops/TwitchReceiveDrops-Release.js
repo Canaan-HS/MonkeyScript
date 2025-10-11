@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             2025.09.04-Beta
+// @version             2025.10.12-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -16,16 +16,18 @@
 // @description:ko      Twitch 드롭을 자동으로 받아오고 탭에 진행 상황을 표시하며, 스트림이 종료되었을 때 아직 완료되지 않았다면 자동으로 다른 드롭 활성 스트림을 찾아 계속 수집합니다. 코드에서 사용자 정의 설정 가능합니다
 // @description:ru      Автоматически получает дропы Twitch, отображает прогресс во вкладке, и если дропы не завершены к концу трансляции, автоматически находит другую трансляцию с активированными дропами и продолжает фарминг. Настраиваемые параметры в коде.
 
-// @match        https://www.twitch.tv/drops/inventory
+// @match        https://www.twitch.tv/*
+// @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/8214/8214044.png
 
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
-// @grant        window.close
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        window.close
 // @grant        GM_deleteValue
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 
 // @run-at       document-body
@@ -52,6 +54,8 @@
         FindTag: ["drops", "啟用掉寶", "启用掉宝", "드롭활성화됨"], // 查找直播標籤, 只要有包含該字串即可
         ...Backup
     };
+    const supportPage = "https://www.twitch.tv/drops/inventory";
+    const supportCheck = (url = location.href) => url === supportPage;
     class Detection {
         constructor() {
             this.progressParse = progress => progress.sort((a, b) => b - a).find(number => number < 100);
@@ -65,19 +69,8 @@
                 const second = `${time.getSeconds()}`.padStart(2, "0");
                 return `${year}-${month}-${date} ${hour}:${minute}:${second}`;
             };
-            this.storage = (key, value = null) => {
-                let data, Formula = {
-                    Type: parse => Object.prototype.toString.call(parse).slice(8, -1),
-                    Number: parse => parse ? Number(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        1),
-                    Array: parse => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        1),
-                    Object: parse => parse ? JSON.parse(parse) : (sessionStorage.setItem(key, JSON.stringify(value)),
-                        1)
-                };
-                return value != null ? Formula[Formula.Type(value)]() : (data = sessionStorage.getItem(key),
-                    data != undefined ? Formula[Formula.Type(JSON.parse(data))](data) : data);
-            };
+            this.storage = (key, value = null) => value == null ? (value = sessionStorage.getItem(key),
+                value != null ? JSON.parse(value) : value) : sessionStorage.setItem(key, JSON.stringify(value));
             this.adapter = {
                 _convertPM: time => time.replace(/(\d{1,2}):(\d{2})/, (_, hours, minutes) => `${+hours + 12}:${minutes}`),
                 "en-US": (timeStamp, currentYear) => new Date(`${timeStamp} ${currentYear}`),
@@ -99,7 +92,9 @@
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "de-DE": (timeStamp, currentYear) => {
-                    const ISO = { jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun" };
+                    const ISO = {
+                        jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun"
+                    };
                     const convert = timeStamp.replace(/(jan|feb|mär|apr|mai|jun|jul|aug|sep|okt|nov|dez|mo|di|mi|do|fr|sa|so)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
@@ -138,38 +133,44 @@
                     return new Date(`${currentYear}-${match[1]}-${match[2]} ${match[4]}:00 ${match[3]}`);
                 }
             };
-            this.pageRefresh = async (display, interval, finish) => {
-                if (display) {
-                    const start = Date.now();
-                    const Refresh = setInterval(() => {
+            this.pageRefresh = async (updateDisplay, interval, finishCall) => {
+                let timer;
+                const start = Date.now();
+                const refresh = setInterval(() => {
+                    if (!supportCheck()) {
+                        clearInterval(refresh);
+                        clearTimeout(timer);
+                        this.titleObserver?.disconnect();
+                        finishCall?.();
+                    } else if (updateDisplay) {
                         const elapsed = Math.floor((Date.now() - start) / 1e3);
                         const remaining = interval - elapsed;
-                        if (remaining < 0) {
-                            clearInterval(Refresh);
-                            return;
+                        if (remaining >= 0) {
+                            document.title = `【 ${remaining}s 】 ${this.progressStr}`;
                         }
-                        document.title = `【 ${remaining}s 】 ${this.progressValue}`;
-                    }, 1e3);
-                }
-                setTimeout(() => {
-                    finish?.();
+                    }
+                }, 1e3);
+                timer = setTimeout(() => {
+                    clearInterval(refresh);
+                    finishCall?.();
                 }, (interval + 1) * 1e3);
             };
             this.showProgress = () => {
-                new MutationObserver(() => {
-                    document.title != this.progressValue && (document.title = this.progressValue);
-                }).observe(document.querySelector("title"), {
+                this.titleObserver = new MutationObserver(() => {
+                    document.title !== this.progressStr && (document.title = this.progressStr);
+                });
+                this.titleObserver.observe(document.querySelector("title"), {
                     childList: 1,
                     subtree: 0
                 });
-                document.title = this.progressValue;
+                document.title = this.progressStr;
             };
             this.expiredCleanup = (element, adapter, timestamp, callback) => {
                 const targetTime = adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime;
                 this.currentTime > targetTime ? this.Config.ClearExpiration && element.remove() : callback(element);
             };
-            this.progressValue;
-            this.currentTime;
+            this.progressStr;
+            this.titleObserver;
             this.Config = {
                 ...Config,
                 EndLine: "p a[href='/drops/campaigns']",
@@ -180,117 +181,176 @@
                 ActivityTime: ".inventory-campaign-info span:last-child"
             };
         }
-        static async ran() {
-            const Detec = new Detection();
-            const Self = Detec.Config;
-            const display = Self.UpdateDisplay;
-            let campaigns, inventory;
-            let task, progress, maxElement, progressInfo;
+        get currentTime() {
+            return new Date();
+        }
+        static async run() {
+            regMenu();
+            const self = new Detection();
+            const config = self.Config;
+            const updateDisplay = config.UpdateDisplay;
+            let campaigns, inventory, adapter;
+            let taskCount, currentProgress, inProgressIndex, progressInfo;
             const initData = () => {
-                Detec.progressValue = "";
-                Detec.currentTime = new Date();
-                task = 0, progress = 0, maxElement = 0;
+                self.progressStr = "Twitch";
+                taskCount = 0, currentProgress = 0, inProgressIndex = 0;
                 progressInfo = {};
             };
             initData();
-            const process = token => {
-                campaigns ??= devTrace("Campaigns", document.querySelector(Self.Campaigns));
-                inventory ??= devTrace("Inventory", document.querySelector(Self.Inventory));
-                const allProgress = devTrace("allProgress", document.querySelectorAll(Self.allProgress));
+            const process = (token = 10) => {
+                campaigns ??= devTrace("Campaigns", document.querySelector(config.Campaigns));
+                inventory ??= devTrace("Inventory", document.querySelector(config.Inventory));
+                const allProgress = devTrace("AllProgress", document.querySelectorAll(config.allProgress));
                 if (allProgress?.length > 0) {
-                    const adapter = Detec.adapter[document.documentElement.lang];
+                    let activityTime, progressBar;
+                    adapter ??= self.adapter[document.documentElement.lang];
                     allProgress.forEach(data => {
-                        const activityTime = devTrace("ActivityTime", data.querySelector(Self.ActivityTime));
-                        Detec.expiredCleanup(data, adapter, activityTime?.textContent, notExpired => {
+                        activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
+                        self.expiredCleanup(data, adapter, activityTime?.textContent, notExpired => {
                             notExpired.querySelectorAll("button").forEach(draw => {
                                 draw.click();
                             });
-                            const ProgressBar = devTrace("ProgressBar", notExpired.querySelectorAll(Self.ProgressBar));
-                            progressInfo[task++] = [...ProgressBar].map(progress => +progress.textContent);
+                            progressBar = devTrace("ProgressBar", notExpired.querySelectorAll(config.ProgressBar));
+                            progressInfo[taskCount++] = [...progressBar].map(progress => +progress.textContent);
                         });
                     });
-                    const oldTask = Detec.storage("Task") ?? {};
-                    const newTask = Object.fromEntries(Object.entries(progressInfo).map(([key, value]) => [key, Detec.progressParse(value)]));
-                    for (const [key, value] of Object.entries(newTask)) {
-                        const OldValue = oldTask[key] ?? value;
-                        if (value != OldValue) {
-                            maxElement = key;
-                            progress = value;
+                    const oldTask = self.storage("Task") ?? {};
+                    const newTask = Object.fromEntries(Object.entries(progressInfo).map(([key, value]) => [key, self.progressParse(value)]));
+                    let taskIndex, newProgress;
+                    const taskEntries = Object.entries(newTask);
+                    for ([taskIndex, newProgress] of taskEntries) {
+                        const oldProgress = oldTask[taskIndex] || newProgress;
+                        if (newProgress !== oldProgress) {
+                            inProgressIndex = taskIndex;
+                            currentProgress = newProgress;
                             break;
-                        } else if (value > progress) {
-                            maxElement = key;
-                            progress = value;
                         }
                     }
-                    Detec.storage("Task", newTask);
+                    if (typeof inProgressIndex === "number" && taskEntries.length > 1) {
+                        [taskIndex, newProgress] = taskEntries.reduce((max, cur) => cur[1] > max[1] ? cur : max);
+                        inProgressIndex = taskIndex;
+                        currentProgress = newProgress;
+                    }
+                    self.storage("Task", newTask);
                 }
-                if (progress > 0) {
-                    Detec.progressValue = `${progress}%`;
-                    !display && Detec.showProgress();
-                } else if (token > 0) {
+                if (currentProgress > 0) {
+                    if (config.ProgressDisplay) {
+                        self.progressStr = `${currentProgress}%`;
+                        !updateDisplay && self.showProgress();
+                    }
+                } else if (token > 0 && supportCheck()) {
                     setTimeout(() => {
                         process(token - 1);
                     }, 2e3);
+                    return;
                 }
-                const [record, timestamp] = Detec.storage("Record") ?? [0, Detec.getTime()];
-                const diff = ~~((Detec.currentTime - new Date(timestamp)) / (1e3 * 60));
-                if (!progress && Self.EndAutoClose && record !== 0 && token === 0) {
-                    window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
+                const [record, timestamp] = self.storage("Record") ?? [0, self.getTime()];
+                const diffInterval = ~~((self.currentTime - new Date(timestamp)) / (1e3 * 60));
+                const notHasToken = token === 0;
+                const hasProgress = currentProgress > 0;
+                if (diffInterval >= config.JudgmentInterval && hasProgress && currentProgress === record) {
+                    config.RestartLive && restartLive.run(inProgressIndex);
+                    self.storage("Record", [currentProgress, self.getTime()]);
+                } else if (hasProgress && currentProgress !== record) {
+                    self.storage("Record", [currentProgress, self.getTime()]);
+                } else if (config.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
+                    window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
-                } else if (diff >= Self.JudgmentInterval && progress === record) {
-                    Self.RestartLive && Restart.ran(maxElement);
-                    Detec.storage("Record", [progress, Detec.getTime()]);
-                } else if (progress !== 0 && progress !== record) {
-                    Detec.storage("Record", [progress, Detec.getTime()]);
+                } else if (notHasToken && supportCheck()) {
+                    location.assign(supportPage);
                 }
             };
-            waitEl(document, Self.EndLine, () => {
-                process(5);
-                Self.TryStayActive && stayActive(document);
+            const waitLoad = (select, interval = 500, timeout = 15e3) => {
+                let elapsed = 0;
+                return new Promise((resolve, reject) => {
+                    const query = () => {
+                        if (document.querySelector(select)) resolve(); else {
+                            elapsed += interval;
+                            elapsed >= timeout ? supportCheck() && location.assign(supportPage) : setTimeout(query, interval);
+                        }
+                    };
+                    setTimeout(query, interval);
+                });
+            };
+            const monitor = () => {
+                self.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
+                    initData();
+                    if (!supportCheck()) {
+                        waitSupport();
+                        return;
+                    }
+                    campaigns?.click();
+                    await waitLoad(".accordion-header");
+                    inventory?.click();
+                    await waitLoad(config.EndLine);
+                    process();
+                    monitor();
+                });
+            };
+            waitEl(document, config.EndLine, () => {
+                process();
+                monitor();
+                config.TryStayActive && stayActive(document);
             }, {
                 timeoutResult: true
             });
-            const monitor = () => {
-                Detec.pageRefresh(display, Self.UpdateInterval, () => {
-                    initData();
-                    campaigns?.click();
-                    setTimeout(() => {
-                        inventory?.click();
-                        setTimeout(() => {
-                            process(5);
-                            monitor();
-                        }, 1e3);
-                    }, 2e3);
-                });
-            };
-            monitor();
         }
     }
     class RestartLive {
         constructor() {
-            this.liveMute = async Newindow => {
-                waitEl(Newindow.document, "video", video => {
-                    const SilentInterval = setInterval(() => {
+            this.liveMute = async _document => {
+                waitEl(_document, "video", video => {
+                    const silentInterval = setInterval(() => {
                         video.muted = 1;
                     }, 500);
                     setTimeout(() => {
-                        clearInterval(SilentInterval);
+                        clearInterval(silentInterval);
                     }, 15e3);
                 });
             };
-            this.liveLowQuality = async Newindow => {
-                const Dom = Newindow.document;
-                waitEl(Dom, "[data-a-target='player-settings-button']", Menu => {
-                    Menu.click();
-                    waitEl(Dom, "[data-a-target='player-settings-menu-item-quality']", Quality => {
-                        Quality.click();
-                        waitEl(Dom, "[data-a-target='player-settings-menu']", Settings => {
-                            Settings.lastElementChild.click();
-                            setTimeout(() => {
-                                Menu.click();
-                            }, 800);
+            this.liveLowQuality = async _document => {
+                const dom = _document;
+                waitEl(dom, "[data-a-target='player-settings-button']", menu => {
+                    menu.click();
+                    waitEl(dom, "[data-a-target='player-settings-menu-item-quality']", quality => {
+                        quality.click();
+                        waitEl(dom, "[data-a-target='player-settings-menu']", settings => {
+                            settings.lastElementChild.click();
+                            setTimeout(() => menu.click(), 800);
                         });
                     });
+                });
+            };
+            this.waitDocument = async (_window, checkFu) => {
+                let _document, animationFrame;
+                return new Promise((resolve, reject) => {
+                    let observe;
+                    _window.onload = () => {
+                        cancelAnimationFrame(animationFrame);
+                        _document = _window.document;
+                        observe = new MutationObserver($throttle(() => {
+                            if (checkFu(_document)) {
+                                observe.disconnect();
+                                resolve(_document);
+                            }
+                        }, 300));
+                        observe.observe(_document, {
+                            subtree: 1,
+                            childList: 1,
+                            characterData: 1
+                        });
+                    };
+                    const query = () => {
+                        _document = _window.document;
+                        if (_document && checkFu(_document)) {
+                            cancelAnimationFrame(animationFrame);
+                            observe?.disconnect();
+                            resolve(_document);
+                        } else {
+                            animationFrame = requestAnimationFrame(query);
+                        }
+                    };
+                    animationFrame = requestAnimationFrame(query);
                 });
             };
             this.Config = {
@@ -304,91 +364,126 @@
                 ActivityLink2: "[data-test-selector='DropsCampaignInProgressDescription-no-channels-hint-text']"
             };
         }
-        async ran(Index) {
-            window.open("", "LiveWindow", "top=0,left=0,width=1,height=1").close();
-            const Dir = this;
-            const Self = Dir.Config;
-            let NewWindow;
-            let Channel = document.querySelectorAll(Self.ActivityLink2)[Index];
-            if (Channel) {
-                NewWindow = window.open(Channel.href, "LiveWindow");
-                dirSearch(NewWindow);
+        async run(maxIndex) {
+            window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
+            const self = this;
+            const config = self.Config;
+            let newWindow;
+            let channel = document.querySelectorAll(config.ActivityLink2)[maxIndex];
+            if (channel) {
+                newWindow = window.open(channel.href, "NewWindow");
+                dirSearch(newWindow);
             } else {
-                Channel = document.querySelectorAll(Self.ActivityLink1)[Index];
-                const OpenLink = [...Channel.querySelectorAll("a")].reverse();
+                channel = document.querySelectorAll(config.ActivityLink1)[maxIndex];
+                const openLink = [...channel.querySelectorAll("a")].reverse();
                 findLive(0);
                 async function findLive(index) {
-                    if (OpenLink.length - 1 < index) return 0;
-                    const href = OpenLink[index].href;
-                    NewWindow = !NewWindow ? window.open(href, "LiveWindow") : (NewWindow.location.assign(href),
-                        NewWindow);
+                    if (openLink.length - 1 < index) return 0;
+                    const href = openLink[index].href;
+                    newWindow = !newWindow ? window.open(href, "NewWindow") : (newWindow.location.assign(href),
+                        newWindow);
                     if (href.includes("directory")) {
-                        dirSearch(NewWindow);
+                        dirSearch(newWindow);
                     } else {
-                        let Offline, Online;
-                        const observer = new MutationObserver($throttle(() => {
-                            Online = devTrace("Online", NewWindow.document.querySelector(Self.Online));
-                            Offline = devTrace("Offline", NewWindow.document.querySelector(Self.Offline));
-                            if (Offline) {
-                                observer.disconnect();
-                                findLive(index + 1);
-                            } else if (Online) {
-                                observer.disconnect();
-                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
-                                Self.TryStayActive && stayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
-                            }
-                        }, 300));
-                        NewWindow.onload = () => {
-                            observer.observe(NewWindow.document, {
-                                subtree: 1,
-                                childList: 1,
-                                characterData: 1
-                            });
-                        };
+                        const _document = await self.waitDocument(newWindow, document => document.querySelector(config.Offline) || document.querySelector(config.Online));
+                        if (devTrace("Offline", _document.querySelector(config.Offline))) {
+                            findLive(index + 1);
+                        } else if (devTrace("Online", _document.querySelector(config.Online))) {
+                            config.RestartLiveMute && self.liveMute(_document);
+                            config.TryStayActive && stayActive(_document);
+                            config.RestartLowQuality && self.liveLowQuality(_document);
+                        }
                     }
                 }
             }
-            const Pattern = Self.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-            const FindTag = new RegExp(Pattern, "i");
-            async function dirSearch(NewWindow) {
-                const observer = new MutationObserver($throttle(() => {
-                    const Container = devTrace("Container", NewWindow.document.querySelector(Self.Container));
-                    if (Container) {
-                        observer.disconnect();
-                        const ContainerHandle = devTrace("ContainerHandle", Container.closest(Self.ContainerHandle));
-                        const StartFind = () => {
-                            const Channel = devTrace("Channel", Container.querySelectorAll(`${Self.Channel}:not([Drops-Processed])`));
-                            const Link = [...Channel].find(channel => {
-                                channel.setAttribute("Drops-Processed", true);
-                                const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")].some(span => FindTag.test(span.textContent));
-                                return haveDrops ? channel : null;
+            const pattern = config.FindTag.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+            const tagRegex = new RegExp(pattern, "i");
+            async function dirSearch(newWindow) {
+                const _document = await self.waitDocument(newWindow, document => document.querySelector(config.Container));
+                let scrollHandle;
+                const container = devTrace("Container", _document.querySelector(config.Container));
+                const startFind = () => {
+                    try {
+                        scrollHandle ??= devTrace("ContainerHandle", container.closest(config.ContainerHandle));
+                        const channel = devTrace("Channel", container.querySelectorAll(`${config.Channel}:not([Drops-Processed])`));
+                        const liveLink = [...channel].find(channel => {
+                            channel.setAttribute("Drops-Processed", true);
+                            const haveDrops = [...channel.nextElementSibling?.querySelectorAll("span")].some(span => tagRegex.test(span.textContent));
+                            return haveDrops ? channel : null;
+                        });
+                        if (liveLink) {
+                            liveLink.click();
+                            liveLink.click();
+                            config.RestartLiveMute && self.liveMute(_document);
+                            config.TryStayActive && stayActive(_document);
+                            config.RestartLowQuality && self.liveLowQuality(_document);
+                        } else if (scrollHandle) {
+                            scrollHandle.scrollTo({
+                                top: scrollHandle.scrollHeight
                             });
-                            if (Link) {
-                                Link.click();
-                                Link.click();
-                                Self.RestartLiveMute && Dir.liveMute(NewWindow);
-                                Self.TryStayActive && stayActive(NewWindow.document);
-                                Self.RestartLowQuality && Dir.liveLowQuality(NewWindow);
-                            } else if (ContainerHandle) {
-                                ContainerHandle.scrollTo({
-                                    top: ContainerHandle.scrollHeight
-                                });
-                                setTimeout(StartFind, 1500);
-                            }
-                        };
-                        StartFind();
+                            setTimeout(startFind, 1500);
+                        }
+                    } catch {
+                        setTimeout(startFind, 1500);
                     }
-                }, 300));
-                NewWindow.onload = () => {
-                    observer.observe(NewWindow.document, {
-                        subtree: 1,
-                        childList: 1,
-                        characterData: 1
-                    });
                 };
+                startFind();
             }
         }
+    }
+    async function stayActive(_document) {
+        const id = "Stay-Active";
+        const head = _document.head;
+        if (head.getElementById(id)) return;
+        const script = document.createElement("script");
+        script.id = id;
+        script.textContent = `
+            function WorkerCreation(code) {
+                const blob = new Blob([code], {type: "application/javascript"});
+                return new Worker(URL.createObjectURL(blob));
+            }
+
+            const Active = WorkerCreation(\`
+                onmessage = function(e) {
+                    setTimeout(() => {
+                        const { url } = e.data;
+                        fetch(url);
+                        postMessage({ url });
+                    }, 1e4);
+                }
+            \`);
+
+            Active.postMessage({ url: location.href });
+            Active.onmessage = (e) => {
+                const { url } = e.data;
+                document.querySelector("video")?.play();
+                Active.postMessage({ url });
+            };
+
+            let emptyAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA...");
+            emptyAudio.loop = true;
+            emptyAudio.muted = true;
+
+            // 後台播放 / 前台暫停
+            const visHandler = (isHidden) => {
+                if (typeof isHidden !== 'boolean') isHidden = document.hidden;
+                if (isHidden) {
+                    emptyAudio.play().catch(()=>{});
+                } else {
+                    emptyAudio.pause();
+                }
+            };
+
+            if (typeof document.hidden !== "undefined") {
+                document.addEventListener("visibilitychange", () => visHandler());
+            } else {
+                window.addEventListener("focus", () => visHandler(false));
+                window.addEventListener("blur", () => visHandler(true));
+            }
+
+            visHandler();
+        `;
+        head.append(script);
     }
     function $throttle(func, delay) {
         let lastTime = 0;
@@ -466,68 +561,77 @@
             timeoutResult && found(element);
         }, timeout);
     }
-    async function stayActive(target) {
-        const script = document.createElement("script");
-        script.id = "Stay-Active";
-        script.textContent = `
-            function WorkerCreation(code) {
-                const blob = new Blob([code], {type: "application/javascript"});
-                return new Worker(URL.createObjectURL(blob));
-            }
-
-            const Active = WorkerCreation(\`
-                onmessage = function(e) {
-                    setTimeout(() => {
-                        const { url } = e.data;
-                        fetch(url);
-                        postMessage({ url });
-                    }, 1e4);
-                }
-            \`);
-
-            Active.postMessage({ url: location.href });
-            Active.onmessage = (e) => {
-                const { url } = e.data;
-                document.querySelector("video")?.play();
-                Active.postMessage({ url });
-            };
-
-            let emptyAudio = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA...");
-            emptyAudio.loop = true;
-            emptyAudio.muted = true;
-
-            // 後台播放 / 前台暫停
-            const visHandler = (isHidden) => {
-                if (typeof isHidden !== 'boolean') isHidden = document.hidden;
-                if (isHidden) {
-                    emptyAudio.play().catch(()=>{});
-                } else {
-                    emptyAudio.pause();
-                }
-            };
-
-            if (typeof document.hidden !== "undefined") {
-                document.addEventListener("visibilitychange", () => visHandler());
-            } else {
-                window.addEventListener("focus", () => visHandler(false));
-                window.addEventListener("blur", () => visHandler(true));
-            }
-
-            visHandler();
-        `;
-        target.head.append(script);
+    function onUrlChange(callback, timeout = 15) {
+        let timer = null;
+        let cleaned = false;
+        let support_urlchange = false;
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+        const eventHandler = {
+            urlchange: () => trigger("urlchange"),
+            popstate: () => trigger("popstate"),
+            hashchange: () => trigger("hashchange")
+        };
+        function trigger(type) {
+            clearTimeout(timer);
+            if (!support_urlchange && type === "urlchange") support_urlchange = true;
+            timer = setTimeout(() => {
+                if (support_urlchange) off(false, true);
+                callback({
+                    type: type,
+                    url: location.href,
+                    domain: location.hostname
+                });
+            }, Math.max(15, timeout));
+        }
+        function off(all = true, clean = false) {
+            if (clean && cleaned) return;
+            clearTimeout(timer);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            window.removeEventListener("popstate", eventHandler.popstate);
+            window.removeEventListener("hashchange", eventHandler.hashchange);
+            all && window.removeEventListener("urlchange", eventHandler.urlchange);
+            cleaned = true;
+        }
+        window.addEventListener("urlchange", eventHandler.urlchange);
+        window.addEventListener("popstate", eventHandler.popstate);
+        window.addEventListener("hashchange", eventHandler.hashchange);
+        history.pushState = function () {
+            originalPushState.apply(this, arguments);
+            trigger("pushState");
+        };
+        history.replaceState = function () {
+            originalReplaceState.apply(this, arguments);
+            trigger("replacestate");
+        };
+        return {
+            off: off
+        };
     }
-    if (Object.keys(Backup).length > 0) {
-        GM_registerMenuCommand("🗑️ Clear Config", () => {
-            GM_deleteValue("Config");
-            location.reload();
-        });
-    } else {
-        const SaveConfig = structuredClone(Config);
-        GM_registerMenuCommand("📝 Save Config", () => {
-            GM_setValue("Config", SaveConfig);
+    function regMenu() {
+        if (Object.keys(Backup).length > 0) {
+            GM_registerMenuCommand("🗑️ Clear Config", () => {
+                GM_deleteValue("Config");
+                location.reload();
+            });
+        } else {
+            const SaveConfig = structuredClone(Config);
+            GM_registerMenuCommand("📝 Save Config", () => {
+                GM_setValue("Config", SaveConfig);
+            });
+        }
+    }
+    function waitSupport() {
+        const {
+            off
+        } = onUrlChange(uri => {
+            if (supportCheck(uri.url)) {
+                Detection.run();
+                off();
+            }
         });
     }
-    const Restart = new RestartLive();
-    Detection.ran();
+    const restartLive = new RestartLive();
+    if (supportCheck()) Detection.run(); else waitSupport();
 })();
