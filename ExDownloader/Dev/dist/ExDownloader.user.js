@@ -25,7 +25,9 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1661431/Syntax_min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+
+// @require      https://update.greasyfork.org/scripts/495339/1676420/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -34,6 +36,7 @@
 // @grant        GM_download
 // @grant        GM_addElement
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
@@ -248,8 +251,8 @@
     };
   })();
   function Downloader() {
-    const zipper = Lib.createCompressor();
-    const dynamicParam = Lib.createNnetworkObserver({
+    const zipper = Lib.createZip(GM_getResourceText("fflate"));
+    const dynamicParam = Lib.createNetworkObserver({
       MAX_Delay: DConfig.MAX_Delay,
       MIN_CONCURRENCY: DConfig.MIN_CONCURRENCY,
       MAX_CONCURRENCY: DConfig.MAX_CONCURRENCY,
@@ -295,7 +298,7 @@
       async function getHomeData() {
         comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text());
         const ct6 = Lib.$q("#gdc .ct6");
-        const cacheData = Lib.session(DConfig.GetKey());
+        const cacheData = Lib.getSession(DConfig.GetKey());
         if (ct6) {
           const yes = confirm(Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"));
           DConfig.SortReverse = yes ? true : false;
@@ -393,7 +396,7 @@ ${JSON.stringify(box2, null, 4)}`,
             button.$text(`${Transl("獲取連結")}: ${display}`);
             if (task === pages) {
               imgData.sort((a, b) => a.Index - b.Index);
-              Lib.session(DConfig.GetKey(), { value: imgData });
+              Lib.setSession(DConfig.GetKey(), imgData);
               startTask(imgData);
             }
           } catch (error) {
@@ -515,10 +518,11 @@ ${JSON.stringify(dataList, null, 4)}`,
         function request(index, iurl) {
           if (enforce) return;
           ++task;
-          let timeout = null;
+          let timeout = null,
+            gmRequest = null;
           const time = Date.now();
           if (typeof iurl !== "undefined") {
-            GM_xmlhttpRequest({
+            gmRequest = GM_xmlhttpRequest({
               url: iurl,
               timeout: 15e3,
               method: "GET",
@@ -542,6 +546,7 @@ ${JSON.stringify(dataList, null, 4)}`,
             statusUpdate(time, index, iurl, null, true);
           }
           timeout = setTimeout(() => {
+            gmRequest?.abort();
             statusUpdate(time, index, iurl, null, true);
           }, 15e3);
         }
@@ -771,15 +776,13 @@ ${scope}`);
           class: "Download_Button",
           text: DConfig.ModeDisplay,
           on: {
-            type: "click",
-            listener: () => {
+            click: () => {
               Download ??= Downloader();
               DConfig.Lock = true;
               downloadButton.disabled = true;
               downloadButton.$text(Transl("開始下載"));
               Download(Url, downloadButton);
             },
-            add: { capture: true, passive: true },
           },
         });
       });
@@ -788,11 +791,11 @@ ${scope}`);
       initStyle();
       DConfig.TitleCache = Lib.title();
       buttonCreation();
-      if (Lib.session(DConfig.GetKey())) {
+      if (Lib.getSession(DConfig.GetKey())) {
         Lib.regMenu(
           {
             [Transl("🚮 清除數據緩存")]: () => {
-              sessionStorage.removeItem(DConfig.GetKey());
+              Lib.delSession(DConfig.GetKey());
               Lib.unMenu("ClearCache-1");
             },
           },
