@@ -620,8 +620,8 @@
             <button class="Booster-Accordion">${Transl(label)}</button>
             <div class="Booster-Panel">
                 ${groups
-          .map(
-            (group) => `
+                  .map(
+                    (group) => `
                     <div class="Booster-Control-Group">
                         <div class="Booster-Control-Label">
                             <span>${Transl(group.label)}</span>
@@ -630,11 +630,11 @@
                         <input type="range" id="${group.id}" class="Booster-Mini-Slider" min="${group.min}" max="${group.max}" value="${Share.Parame[group.id]}" step="${group.step}">
                     </div>
                 `,
-          )
-          .join("")}
+                  )
+                  .join("")}
             </div>
         `;
-      const menu = Lib.createDomFragment(`
+      shadowRoot.$safeiHtml(`
             ${style}
             <${shadowID} id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
@@ -647,25 +647,25 @@
                         <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${Share.Parame.Gain}" step="0.1">
                     </div>
             ${generateOtherTemplate("低頻設定", [
-        { label: "增益", id: "LowFilterGain", min: "-12", max: "12", step: "0.1" },
-        { label: "頻率", id: "LowFilterFreq", min: "20", max: "1000", step: "20" },
-      ])}
+              { label: "增益", id: "LowFilterGain", min: "-12", max: "12", step: "0.1" },
+              { label: "頻率", id: "LowFilterFreq", min: "20", max: "1000", step: "20" },
+            ])}
             ${generateOtherTemplate("中頻設定", [
-        { label: "增益", id: "MidFilterGain", min: "-12", max: "12", step: "0.1" },
-        { label: "頻率", id: "MidFilterFreq", min: "200", max: "8000", step: "100" },
-        { label: "Q值", id: "MidFilterQ", min: "0.5", max: "5", step: "0.1" },
-      ])}
+              { label: "增益", id: "MidFilterGain", min: "-12", max: "12", step: "0.1" },
+              { label: "頻率", id: "MidFilterFreq", min: "200", max: "8000", step: "100" },
+              { label: "Q值", id: "MidFilterQ", min: "0.5", max: "5", step: "0.1" },
+            ])}
             ${generateOtherTemplate("高頻設定", [
-        { label: "增益", id: "HighFilterGain", min: "-12", max: "12", step: "0.1" },
-        { label: "頻率", id: "HighFilterFreq", min: "2000", max: "22000", step: "500" },
-      ])}
+              { label: "增益", id: "HighFilterGain", min: "-12", max: "12", step: "0.1" },
+              { label: "頻率", id: "HighFilterFreq", min: "2000", max: "22000", step: "500" },
+            ])}
             ${generateOtherTemplate("動態壓縮", [
-        { label: "壓縮率", id: "CompressorRatio", min: "1", max: "30", step: "0.1" },
-        { label: "過渡反應", id: "CompressorKnee", min: "0", max: "40", step: "1" },
-        { label: "閾值", id: "CompressorThreshold", min: "-60", max: "0", step: "1" },
-        { label: "起音速度", id: "CompressorAttack", min: "0.001", max: "0.5", step: "0.001" },
-        { label: "釋放速度", id: "CompressorRelease", min: "0.01", max: "2", step: "0.01" },
-      ])}
+              { label: "壓縮率", id: "CompressorRatio", min: "1", max: "30", step: "0.1" },
+              { label: "過渡反應", id: "CompressorKnee", min: "0", max: "40", step: "1" },
+              { label: "閾值", id: "CompressorThreshold", min: "-60", max: "0", step: "1" },
+              { label: "起音速度", id: "CompressorAttack", min: "0.001", max: "0.5", step: "0.001" },
+              { label: "釋放速度", id: "CompressorRelease", min: "0.01", max: "2", step: "0.01" },
+            ])}
                     <div class="Booster-Buttons">
                         <button class="Booster-Modal-Button" id="Booster-Menu-Close">${Transl("關閉")}</button>
                         <button class="Booster-Modal-Button" id="Booster-Sound-Save">${Transl("保存")}</button>
@@ -673,7 +673,6 @@
                 </div>
             </${shadowID}>
         `);
-      shadowRoot.appendChild(menu);
       const shadowGate = shadow.shadowRoot;
       const modal = shadowGate.querySelector(shadowID);
       const content = shadowGate.querySelector(".Booster-Modal-Content");
