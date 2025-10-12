@@ -143,6 +143,11 @@
         const style = {
             get getGlobal() { // 全域 修復所需
                 Lib.addStyle(`
+                    a {
+                        user-drag: none;
+                        -webkit-user-drag: none; 
+                    }
+
                     /* 搜尋頁面的樣式 */
                     fix_tag:hover { color: ${color}; }
                     .card-list__items a:not(article a) {
@@ -1354,7 +1359,8 @@
                             setTimeout(() => { // 避免還沒設置好焦點就觸發
                                 text.on("blur", () => {
                                     const change_name = text.value.trim();
-                                    if (change_name != original_name) {
+                                    if (!change_name) display.$text(original_name);
+                                    else if (change_name !== original_name) {
                                         display.$text(change_name); // 修改顯示名
                                         func.saveRecord(new Map([[target.id, change_name]])); // 保存修改名
                                     }
