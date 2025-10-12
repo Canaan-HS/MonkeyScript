@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.10.12
+// @version      2025.10.13
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -1561,7 +1561,7 @@ const Lib = (() => {
      * @param {number} [config.ADJUSTMENT_FACTOR] - 調整因子
      * @returns {Function} - dynamicParam 用於動態設置延遲與並發
      * @example
-     * const dynamicParam = createNnetworkObserver();
+     * const dynamicParam = createNetworkObserver();
      * 
      * let 預設延遲 = 1000;
      * let 預設線程數 = 5;
@@ -1571,7 +1571,7 @@ const Lib = (() => {
      *
      * 預設延遲 = dynamicParam(new Date(), 預設延遲)
      */
-    function createNnetworkObserver(config = {}) {
+    function createNetworkObserver(config = {}) {
         let {
             /* 建議自訂參數 */
             MAX_Delay = 2e3, // 最大延遲
@@ -2000,7 +2000,7 @@ const Lib = (() => {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
             $type, onE, onEvent, offEvent, onUrlChange, log, $observer, waitEl, openDB, $throttle, $debounce, scopeParse,
-            createWorker, formatTemplate, createZip, createStrCompress, createNnetworkObserver,
+            createWorker, formatTemplate, createZip, createStrCompress, createNetworkObserver,
             outputTXT, outputJson, runTime, getDate, translMatcher,
             regMenu, unMenu, storageListen,
 
