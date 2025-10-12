@@ -406,7 +406,7 @@
                     width: 90%;
                     height: 6px;
                     cursor: pointer;
-                    margin: 2rem 0 3.5rem 0;
+                    margin: 2rem 0 2.5vh 0;
                     background: var(--slider-track);
                     border-radius: 3px;
                     outline: none;
