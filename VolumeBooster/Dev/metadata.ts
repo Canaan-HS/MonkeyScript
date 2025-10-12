@@ -21,7 +21,7 @@ export default `
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1674922/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1676101/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
