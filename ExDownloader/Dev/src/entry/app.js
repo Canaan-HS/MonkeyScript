@@ -99,17 +99,15 @@ export default function Main() {
                 class: "Download_Button",
                 text: DConfig.ModeDisplay,
                 on: {
-                    type: "click",
-                    listener: () => {
+                    click: () => {
                         Download ??= Downloader()
-
+ 
                         DConfig.Lock = true;
                         downloadButton.disabled = true;
                         downloadButton.$text(Transl("開始下載"));
 
                         Download(Url, downloadButton);
-                    },
-                    add: { capture: true, passive: true }
+                    }
                 }
             })
         });
@@ -123,10 +121,10 @@ export default function Main() {
 
         buttonCreation();
 
-        if (Lib.session(DConfig.GetKey())) {
+        if (Lib.getSession(DConfig.GetKey())) {
             Lib.regMenu({
                 [Transl("🚮 清除數據緩存")]: () => {
-                    sessionStorage.removeItem(DConfig.GetKey());
+                    Lib.delSession(DConfig.GetKey());
                     Lib.unMenu("ClearCache-1");
                 }
             }, { name: "ClearCache" });
