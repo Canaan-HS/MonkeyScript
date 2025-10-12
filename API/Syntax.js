@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.10.10
+// @version      2025.10.12
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -82,6 +82,11 @@ const Lib = (() => {
         };
     });
 
+    let policy = null;
+    const initPolicy = () => {
+        return window.trustedTypes?.getPolicy?.("default")
+            ?? window.trustedTypes?.createPolicy?.(Symbol("myPolicy").toString(), { createHTML: input => input });
+    };
     const $node = {
         $text(value) {
             return value == null ? this?.textContent?.trim() : (this.textContent = value?.trim() ?? "");
@@ -92,6 +97,18 @@ const Lib = (() => {
         $iHtml(value) {
             return value == null ? this.innerHTML : (this.innerHTML = value);
         },
+        $safeiHtml(value) {
+            if (value == null) return this.innerHTML;
+
+            try {
+                policy ??= initPolicy();
+                policy
+                    ? this.appendChild(document.createRange().createContextualFragment(policy.createHTML(value)))
+                    : this.innerHTML = value;
+            } catch (error) {
+                console.error(error);
+            }
+        },
         $oHtml(value) {
             return value == null ? this.outerHTML : (this.outerHTML = value);
         },
@@ -100,6 +117,40 @@ const Lib = (() => {
             value.nodeType === 1 // 元素
                 ? this.insertAdjacentElement(position, value)
                 : this.insertAdjacentHTML(position, value);
+        },
+        $safeiAdjacent(value, position = "beforeend") {
+            if (value == null) return;
+            if (value.nodeType === 1) return this.insertAdjacentElement(position, value);
+
+            try {
+                policy ??= initPolicy();
+                policy // 這種方式並非完全安全, 極端情況還是可能被 CSP 阻擋, 到時可以使用 $safeiBefore
+                    ? this.insertAdjacentHTML(position, policy.createHTML(value))
+                    : this.insertAdjacentHTML(position, value);
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        $safeiBefore(value, position = "beforeend") {
+            if (value == null) return;
+            try {
+                policy ??= initPolicy();
+                if (!policy) throw new Error("Policy not found");
+
+                const fragment = document.createRange().createContextualFragment(policy.createHTML(value));
+                switch (position) {
+                    case "beforebegin":
+                        this.parentNode?.insertBefore(fragment, this); break;
+                    case "afterbegin":
+                        this.insertBefore(fragment, this.firstChild); break;
+                    case "beforeend":
+                        this.appendChild(fragment); break;
+                    case "afterend":
+                        this.parentNode?.insertBefore(fragment, this.nextSibling); break;
+                }
+            } catch (error) {
+                console.error(error);
+            }
         },
         $sAttr(name, value) {
             this.setAttribute(name, value);
