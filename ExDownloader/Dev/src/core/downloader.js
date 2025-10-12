@@ -4,17 +4,10 @@ import Transl from '../shared/language.js';
 
 export default function Downloader() {
     const zipper = import.meta.hot
-        ? (() => {
-            const workerKey = "zipper";
-            let oldWorker = monkeyWindow[workerKey];
-            if (!oldWorker) {
-                oldWorker = monkeyWindow[workerKey] = Lib.createCompressor();
-            }
-            return oldWorker;
-        })()
-        : Lib.createCompressor();
+        ? monkeyWindow["zipper"] ??= Lib.createZip(GM_getResourceText("fflate"))
+        : Lib.createZip(GM_getResourceText("fflate"));
 
-    const dynamicParam = Lib.createNnetworkObserver({ // 網路監視器
+    const dynamicParam = Lib.createNetworkObserver({ // 網路監視器
         MAX_Delay: DConfig.MAX_Delay,
         MIN_CONCURRENCY: DConfig.MIN_CONCURRENCY,
         MAX_CONCURRENCY: DConfig.MAX_CONCURRENCY,
@@ -75,7 +68,7 @@ export default function Downloader() {
             comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text()); // 取得漫畫名稱
 
             const ct6 = Lib.$q("#gdc .ct6"); // 嘗試 取得圖片集 標籤
-            const cacheData = Lib.session(DConfig.GetKey()); // 嘗試獲取緩存數據
+            const cacheData = Lib.getSession(DConfig.GetKey()); // 嘗試獲取緩存數據
 
             /* 判斷是否為圖片集 (每次下載都可重新設置) */
             if (ct6) {
@@ -205,7 +198,7 @@ export default function Downloader() {
                     if (task === pages) {
                         imgData.sort((a, b) => a.Index - b.Index); // 排序
 
-                        Lib.session(DConfig.GetKey(), { value: imgData }); // 緩存數據
+                        Lib.setSession(DConfig.GetKey(), imgData); // 緩存數據
                         startTask(imgData);
                     };
                 } catch (error) { // 錯誤的直接跳過
@@ -373,11 +366,11 @@ export default function Downloader() {
             function request(index, iurl) {
                 if (enforce) return;
                 ++task; // 任務開始計數
-                let timeout = null;
+                let timeout = null, gmRequest = null;
                 const time = Date.now(); // 請求開始時間
 
                 if (typeof iurl !== "undefined") {
-                    GM_xmlhttpRequest({
+                    gmRequest = GM_xmlhttpRequest({
                         url: iurl,
                         timeout: 15000,
                         method: "GET",
@@ -404,6 +397,7 @@ export default function Downloader() {
                 }
 
                 timeout = setTimeout(() => {
+                    gmRequest?.abort();
                     statusUpdate(time, index, iurl, null, true);
                 }, 15000);
             };
