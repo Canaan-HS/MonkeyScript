@@ -34,7 +34,13 @@ const Booster = (() => {
                 };
 
                 try {
-                    if (!media.crossOrigin) media.crossOrigin = "anonymous"; // 設置跨域
+                    // 設置跨域
+                    if (!media.crossOrigin && media.src && !media.src.startsWith("blob:")) {
+                        const src = media.src;
+                        media.crossOrigin = "anonymous";
+                        media.src = "";
+                        media.src = src;
+                    };
 
                     const SourceNode = mediaAudioContent.createMediaElementSource(media); // 音頻來源
                     const GainNode = mediaAudioContent.createGain(); // 增益節點
@@ -100,10 +106,10 @@ const Booster = (() => {
 
                     // 紀錄增強成功的節點
                     successNode.push(media);
-                } catch (e) {
+                } catch (error) {
                     Lib.log(
-                        media, { group: Transl("添加增強節點失敗"), collapsed: false }
-                    );
+                        { media, error }, { group: Transl("添加增強節點失敗"), collapsed: false }
+                    ).error;
                 }
             };
 
@@ -169,7 +175,7 @@ const Booster = (() => {
                         if (event.altKey && event.key.toUpperCase() == "B") Share.Menu();
                     }, { passive: true, capture: true, mark: "Media-Booster-Hotkey" });
 
-                    Lib.storeListen([Lib.$domain], call => { // 全局監聽保存值變化
+                    Lib.storageListen([Lib.$domain], call => { // 全局監聽保存值變化
                         if (call.far && call.key === Lib.$domain) { // 由遠端且觸發網域相同
                             Object.entries(call.nv).forEach(([type, value]) => {
                                 Share.SetControl(type, value); // 更新增強參數
