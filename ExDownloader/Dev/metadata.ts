@@ -27,7 +27,9 @@ export default `
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1661431/Syntax_min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+
+// @require      https://update.greasyfork.org/scripts/495339/1676420/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -36,6 +38,7 @@ export default `
 // @grant        GM_download
 // @grant        GM_addElement
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
