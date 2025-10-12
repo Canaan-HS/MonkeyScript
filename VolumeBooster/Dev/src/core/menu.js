@@ -341,7 +341,7 @@ const CreateMenu = () => {
             </div>
         `;
 
-        const menu = Lib.createDomFragment(`
+        shadowRoot.$safeiHtml(`
             ${style}
             <${shadowID} id="Booster-Modal-Menu">
                 <div class="Booster-Modal-Content">
@@ -386,8 +386,6 @@ const CreateMenu = () => {
                 </div>
             </${shadowID}>
         `);
-
-        shadowRoot.appendChild(menu);
 
         const shadowGate = shadow.shadowRoot;
         const modal = shadowGate.querySelector(shadowID);
