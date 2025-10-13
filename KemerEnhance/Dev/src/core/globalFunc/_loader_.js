@@ -14,14 +14,14 @@ const globalLoader = {
     CacheFetch,
     async TextToLink(...args) {
         const value = TextToLinkFactory().TextToLink;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
     async BetterPostCard(...args) {
         const func = await BetterPostCardFactory();
         const value = func.BetterPostCard;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
 }
 
