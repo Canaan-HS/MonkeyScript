@@ -8,18 +8,18 @@ const contentLoader = {
     VideoBeautify,
     async LinkBeautify(...args) {
         const value = LinkBeautifyFactory().LinkBeautify;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
     async OriginalImage(...args) {
         const value = OriginalImageFactory().OriginalImage;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
     async ExtraButton(...args) {
         const value = ExtraButtonFactory().ExtraButton;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
     CommentFormat,
 };
