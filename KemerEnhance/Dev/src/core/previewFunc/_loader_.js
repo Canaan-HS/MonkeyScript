@@ -10,8 +10,8 @@ const previewLoader = {
     CardZoom,
     async BetterThumbnail(...args) {
         const value = BetterThumbnailFactory().BetterThumbnail;
-        Object.defineProperty(this, value.name, { value, writable: false });
         value(...args);
+        Object.defineProperty(this, value.name, { value, writable: false });
     },
     QuickPostToggle
 };
