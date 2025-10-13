@@ -456,7 +456,7 @@ const BetterPostCardFactory = async () => {
                 height: 115px;
                 position: absolute;
             }
-        `, "Global-Effects", false);
+        `, "Better-Post-Card-Effects", false);
     };
 
     return {
