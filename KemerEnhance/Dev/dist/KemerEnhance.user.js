@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.09.26-Beta1
+// @version      2025.10.13-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -1079,7 +1079,7 @@ statusText: ${text}`);
                 position: absolute;
             }
         `,
-        "Global-Effects",
+        "Better-Post-Card-Effects",
         false,
       );
     };
