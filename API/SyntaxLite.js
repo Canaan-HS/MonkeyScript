@@ -280,16 +280,18 @@ const Lib = (() => {
 
             if (!tag) return;
             const {
-                class: className, text: textContent = "", rows: rowSpan, cols: colSpan,
+                class: className, text: textContent,
+                html: innerHTML, rows: rowSpan, cols: colSpan,
                 on = {}, style = {}, attr = {}, ...props
             } = value;
 
             const element = document.createElement(tag);
-            element.textContent = textContent;
 
             if (className) element.className = className;
-            if (rowSpan !== undefined) element.rowSpan = rowSpan;
-            if (colSpan !== undefined) element.colSpan = colSpan;
+            if (textContent) element.textContent = textContent;
+            if (innerHTML) element.$safeiHtml(innerHTML);
+            if (rowSpan != null) element.rowSpan = rowSpan;
+            if (colSpan != null) element.colSpan = colSpan;
 
             // 批量賦值常見屬性
             Object.assign(element, props);
@@ -404,7 +406,7 @@ const Lib = (() => {
         element.addEventListener(type, listener, opts);
 
         if (!record) eventRecord.set(key, new Map());
-        eventRecord.get(key).set(type, listener);
+        eventRecord.get(key).set(type, { element, type, listener });
     };
 
     /**
@@ -415,14 +417,39 @@ const Lib = (() => {
      *
      * @example
      * offEvent(元素, "監聽類型")
+     * offEvent(null, "監聽類型", "自定鍵值")
+     *
+     * offEvent() // 移除所有監聽器
+     * offEvent(元素) // 移除該元素所有監聽器
      */
     async function offEvent(element, type, mark) {
+        if (element == null) {
+            for (const value of eventRecord.values()) {
+                for (const { element, type, listener } of value.values()) {
+                    element.removeEventListener(type, listener);
+                }
+            }
+            eventRecord.clear();
+            return;
+        };
+
         typeof element === "string" && (element = selector(document, element));
         const key = mark ?? element;
-        const listen = eventRecord.get(key)?.get(type);
-        if (listen) {
-            element.removeEventListener(type, listen);
-            eventRecord.get(key).delete(type);
+        const listens = eventRecord.get(key);
+
+        if (listens) {
+            const listen = listens.get(type);
+
+            if (listen) {
+                const { element, type, listener } = listen;
+                element.removeEventListener(type, listener);
+                eventRecord.get(key).delete(type);
+            } else {
+                for (const { element, type, listener } of listens.values()) {
+                    element.removeEventListener(type, listener);
+                }
+                eventRecord.delete(key);
+            }
         }
     };
 
@@ -621,15 +648,25 @@ const Lib = (() => {
      * addStyle(Rule, ID, RepeatAdd)
      * addScript(Rule, ID, RepeatAdd)
      */
-    const addRecord = new Set();
+    /**
+     * @description 添加元素到 head
+     * @param {string} Rule - 元素內容
+     * @param {string} ID - 元素ID
+     * @param {boolean} RepeatAdd - 是否重複添加
+     *
+     * @example
+     * addStyle(Rule, ID, RepeatAdd)
+     * addScript(Rule, ID, RepeatAdd)
+     */
+    const addRecord = new Map();
     const addCall = {
         addStyle: (rule, id, repeatAdd) => addHead("style", rule, id, repeatAdd),
         addScript: (rule, id, repeatAdd) => addHead("script", rule, id, repeatAdd),
     };
     async function addHead(type, rule, id = crypto.randomUUID(), repeatAdd = true) {
-        if (!repeatAdd && addRecord.has(id)) return;
+        let element = addRecord.get(id);
 
-        let element = document.getElementById(id);
+        if (!repeatAdd && element) return;
         if (!element) {
             element = document.createElement(type);
             element.id = id;
@@ -642,7 +679,29 @@ const Lib = (() => {
         };
 
         element.textContent += rule;
-        addRecord.add(id);
+        addRecord.set(id, element);
+    };
+
+    /**
+     * @description 移除使用 addHead 添加的 head 元素
+     * @param {string} id - 元素ID, 或 "all" (移除所有添加的元素)
+     * @example
+     * delHead() // 刪除所有
+     * delHead('id')
+     *
+     */
+    async function delHead(id) {
+        if (id == null) {
+            for (const el of addRecord.values()) el.remove();
+            addRecord.clear();
+            return;
+        }
+
+        const element = addRecord.get(id);
+        if (element) {
+            element.remove();
+            addRecord.delete(id);
+        }
     };
 
     /**
@@ -689,9 +748,8 @@ const Lib = (() => {
             const record = observerRecord.get(mark);
 
             if (record) {
-                if (record.target === target) return;
-                record.ob.disconnect();
-                observerRecord.delete(mark);
+                if (record.target === target) return; // 相同目標不重複創建
+                record.ob.disconnect(); // mark 相同 但目標不同 則斷開舊的觀察器
             }
         };
 
@@ -1569,7 +1627,7 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log,
+            $type, onE, onEvent, offEvent, onUrlChange, log, delHead,
             $observer, waitEl, openDB, $throttle, $debounce, createWorker, createStrCompress, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
 
