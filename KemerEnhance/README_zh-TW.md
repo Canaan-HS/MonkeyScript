@@ -163,13 +163,17 @@ OriginalImage:
 
 ## **📦 版本資訊**
 
-**發佈版本：2025.09.26-Beta**
+**發佈版本：2025.10.13-Beta**
 
 ### **更新內容**
 1. 更新工具庫
-2. 名稱變更 FixArtist -> BetterPostCard
-3. BetterPostCard 增加 previewAbove 設置，預設於上方顯示，false 為下方顯示
-4. BetterThumbnail 增加，直接顯示 attachments 類型 (不支援 nekohouse) [實驗性]
+2. 修復已知 Bug
+3. BetterThumbnail 移除對 nekohouse 的支援
+4. BetterPostCard 保存數據轉移 [實驗性]
+5. TextToLink 添加，Mega 雲端連結自動解密 [實驗性]
+6. CacheFetch 實現修改，並加入長時緩存 [實驗性] (如果有記憶體的問題請反饋)
+
+Mega 連結解析僅適用一些簡單的頁面格式，且只會對純文本生效，這是一個附加功能沒生效也不用在意
 
 ### **已知問題**
 1. 有時頁面載入速度，會慢於代碼功能載入，會導致功能失效，通常重新整理即可解決
