@@ -30,18 +30,18 @@ export default function Downloader() {
             }
             async function processQueue() {
                 if (queue.length > 0) {
-                    const {index, url, time, delay} = queue.shift();
-                    FetchRequest(index, url, time, delay);
+                    const {index, url, name, time, delay} = queue.shift();
+                    FetchRequest(index, url, name, time, delay);
                     setTimeout(processQueue, delay);
-                } else {processing = false}
+                } else { processing = false }
             }
-            async function FetchRequest(index, url, time, delay) {
+            async function FetchRequest(index, url, name, time, delay) {
                 try {
                     const response = await fetch(url);
                     const html = await response.text();
-                    postMessage({index, url, html, time, delay, error: false});
+                    postMessage({index, url, name, html, time, delay, error: false});
                 } catch {
-                    postMessage({index, url, html: null, time, delay, error: true});
+                    postMessage({index, url, name, html: null, time, delay, error: true});
                 }
             }
         `);
@@ -110,12 +110,17 @@ export default function Downloader() {
             function parseLink(index, page) {
                 try {
                     const box = [];
+                    const nameRegex = /[a-z0-9_\-\+]+/gi;
 
                     for (const link of page.$qa("#gdt a")) {
-                        const href = link.href;
-                        if (processed.has(href)) continue;
-                        processed.add(href);
-                        box.push(href);
+                        const url = link.href;
+                        if (processed.has(url)) continue;
+                        processed.add(url);
+
+                        let name = link.$q("div[title]").title?.match(nameRegex);
+                        name = name ? `${name[1] || index + 1} - ${name[2] || comicName}` : "";
+
+                        box.push({ name, url });
                     };
 
                     // 添加數據
@@ -139,8 +144,7 @@ export default function Downloader() {
                         Lib.log(`${comicName}\n${JSON.stringify(box, null, 4)}`, {
                             dev: Config.Dev,
                             group: Transl("內頁跳轉數據")
-                        }
-                        );
+                        });
 
                         getImageData(box); // 處理圖片數據
                     };
@@ -158,23 +162,23 @@ export default function Downloader() {
 
             // 接收請求訊息
             worker.onmessage = (e) => {
-                const { index, url, html, time, delay, error } = e.data;
+                const { index, url, name, html, time, delay, error } = e.data;
                 error
                     ? worker.postMessage({
-                        index, url, time,
+                        index, url, name, time,
                         delay: dynamicParam(time, delay, null, DConfig.Image_ND)
                     })
-                    : parseLink(index, url, Lib.domParse(html));
+                    : parseLink(index, url, name, Lib.domParse(html));
             };
 
             // 發起請求訊息
-            for (const [index, url] of homeDataList.entries()) {
-                worker.postMessage({ index, url, time: Date.now(), delay: DConfig.Image_ID });
+            for (const [index, { url, name }] of homeDataList.entries()) {
+                worker.postMessage({ index, url, name, time: Date.now(), delay: DConfig.Image_ID });
             };
 
             let task = 0; // 下載任務進度
             const imgData = []; // 保存圖片數據
-            function parseLink(index, url, page) {
+            function parseLink(index, url, name, page) {
                 try {
                     // 獲取 取樣 元素 與 原圖 連結
                     const resample = Lib.$Q(page, "#img");
@@ -189,7 +193,7 @@ export default function Downloader() {
                     const link = Config.Original && !original.endsWith("#")
                         ? original : resample.src || resample.href;
 
-                    imgData.push({ Index: index, PageUrl: url, ImgUrl: link });
+                    imgData.push({ Index: index, Name: name, PageUrl: url, ImgUrl: link });
 
                     const display = `[${++task}/${pages}]`;
                     Lib.title(display);
@@ -210,8 +214,8 @@ export default function Downloader() {
         };
 
         /* 重新獲取圖片數據 (試錯) -> {索引, 頁面連結, 圖片連結} */
-        function reGetImageData(index, url) {
-            function parseLink(index, url, page) {
+        function reGetImageData(index, name, url) {
+            function parseLink(index, url, name, page) {
                 const resample = Lib.$Q(page, "#img");
                 const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
 
@@ -221,29 +225,29 @@ export default function Downloader() {
                     ? original : resample.src || resample.href;
 
                 // 索引, 頁面連結, 圖片連結
-                return { Index: index, PageUrl: url, ImgUrl: link };
+                return { Index: index, Name: name, PageUrl: url, ImgUrl: link };
             };
 
             let token = Config.ReTry; // 取得試錯次數
             return new Promise(resolve => {
-                worker.postMessage({ index, url, time: Date.now(), delay: DConfig.Image_ID });
                 worker.onmessage = (e) => {
-                    const { index, url, html, time, delay, error } = e.data;
+                    const { index, url, name, html, time, delay, error } = e.data;
 
                     if (token <= 0) return resolve(false);
 
                     if (error) {
-                        worker.postMessage({ index, url, time, delay });
+                        worker.postMessage({ index, url, name, time, delay });
                     } else {
-                        const result = parseLink(index, url, Lib.domParse(html));
+                        const result = parseLink(index, url, name, Lib.domParse(html));
                         if (result) resolve(result);
                         else {
-                            worker.postMessage({ index, url, time, delay });
+                            worker.postMessage({ index, url, name, time, delay });
                         }
                     }
 
                     token--;
-                }
+                };
+                worker.postMessage({ index, url, name, time: Date.now(), delay: DConfig.Image_ID });
             })
         };
 
@@ -270,12 +274,9 @@ export default function Downloader() {
 
             Lib.log(
                 {
-                    ReTry: Config.ReTry,
-                    Original: Config.Original,
-                    ResetScope: Config.ResetScope,
-                    CompleteClose: Config.CompleteClose,
+                    ...Config,
                     SortReverse: DConfig.SortReverse,
-                    CompressMode: DConfig.CompressMode,
+                    CompressMode: DConfig.CompressMode ?? false,
                     CompressionLevel: DConfig.Compress_Level,
                     DownloadData: dataMap
                 },
@@ -329,8 +330,8 @@ export default function Downloader() {
                 }
             };
 
-            // 更新請求狀態 (開始請求時間, 數據的索引, 圖片連結, 圖片數據, 錯誤狀態)
-            function statusUpdate(time, index, iurl, blob, error = false) {
+            // 更新請求狀態 (開始請求時間, 數據的索引, 圖片名稱, 圖片連結, 圖片數據, 錯誤狀態)
+            function statusUpdate(time, index, name, iurl, blob, error = false) {
                 if (enforce) return;
                 [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND); // 動態變更延遲與線程
 
@@ -342,7 +343,10 @@ export default function Downloader() {
 
                 // Todo: 等待調整更完善判斷, 是否下載成功的條件
                 if (!error && blob) {
-                    zipper.file(`${comicName}/${Lib.mantissa(index, fillValue, "0", iurl)}`, blob); // 保存正確的數據 (有資料夾)
+                    zipper.file(`${comicName}/${Config.UseName
+                        ? `${name}.${Lib.suffixName(iurl)}`
+                        : Lib.mantissa(index, fillValue, "0", iurl)}`
+                        , blob); // 保存正確的數據 (有資料夾)
                     dataMap.delete(index); // 清除完成的任務
                 };
 
@@ -363,7 +367,7 @@ export default function Downloader() {
             };
 
             // 請求數據
-            function request(index, iurl) {
+            function request(index, name, iurl) {
                 if (enforce) return;
                 ++task; // 任務開始計數
                 let timeout = null, gmRequest = null;
@@ -379,26 +383,26 @@ export default function Downloader() {
                             clearTimeout(timeout);
 
                             if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                                request(index, response.finalUrl);
+                                request(index, name, response.finalUrl);
                             } else {
                                 response.status == 200
-                                    ? statusUpdate(time, index, iurl, response.response)
-                                    : statusUpdate(time, index, iurl, null, true);
+                                    ? statusUpdate(time, index, name, iurl, response.response)
+                                    : statusUpdate(time, index, name, iurl, null, true);
                             }
                         }, onerror: () => {
                             clearTimeout(timeout);
-                            statusUpdate(time, index, iurl, null, true);
+                            statusUpdate(time, index, name, iurl, null, true);
                         }
                     });
                 } else {
                     runClear();
                     clearTimeout(timeout);
-                    statusUpdate(time, index, iurl, null, true);
+                    statusUpdate(time, index, name, iurl, null, true);
                 }
 
                 timeout = setTimeout(() => {
                     gmRequest?.abort();
-                    statusUpdate(time, index, iurl, null, true);
+                    statusUpdate(time, index, name, iurl, null, true);
                 }, 15000);
             };
 
@@ -407,20 +411,20 @@ export default function Downloader() {
                 if (enforce) return;
                 init(); // 進行初始化
 
-                for (const { Index, PageUrl, ImgUrl } of dataMap.values()) {
+                for (const { Index, Name, PageUrl, ImgUrl } of dataMap.values()) {
                     if (enforce) break;
 
                     if (reGet) {
                         Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
-                        const result = await reGetImageData(Index, PageUrl);
+                        const result = await reGetImageData(Index, Name, PageUrl);
                         Lib.log(result, { dev: Config.Dev, group: `${Transl("取得結果")} (${reTry})` });
 
                         if (result) {
-                            const { Index, ImgUrl } = result;
-                            request(Index, ImgUrl);
+                            const { Index, Name, ImgUrl } = result;
+                            request(Index, Name, ImgUrl);
                         } else {
                             runClear();
-                            request(Index, ImgUrl);
+                            request(Index, Name, ImgUrl);
                         }
                     } else {
 
@@ -428,7 +432,7 @@ export default function Downloader() {
                             await Lib.sleep($delay);
                         }
 
-                        request(Index, ImgUrl);
+                        request(Index, Name, ImgUrl);
                     }
                 }
             };
@@ -495,7 +499,7 @@ export default function Downloader() {
                 }
             };
 
-            async function request(index, purl, iurl, retry) {
+            async function request(index, name, purl, iurl, retry) {
                 return new Promise((resolve, reject) => {
                     if (typeof iurl !== "undefined") {
 
@@ -504,7 +508,9 @@ export default function Downloader() {
 
                         GM_download({
                             url: iurl,
-                            name: `${comicName}-${Lib.mantissa(index, fillValue, "0", iurl)}`,
+                            name: `${comicName} - ${Config.UseName
+                                ? `${name}.${Lib.suffixName(iurl)}`
+                                : Lib.mantissa(index, fillValue, "0", iurl)}`,
                             onload: () => {
                                 [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
 
@@ -522,9 +528,9 @@ export default function Downloader() {
 
                                     --task;
                                     setTimeout(() => {
-                                        reGetImageData(index, purl)
-                                            .then(({ Index, PageUrl, ImgUrl }) => {
-                                                request(Index, PageUrl, ImgUrl, retry - 1);
+                                        reGetImageData(index, name, purl)
+                                            .then(({ Index, Name, PageUrl, ImgUrl }) => {
+                                                request(Index, Name, PageUrl, ImgUrl, retry - 1);
                                                 reject();
                                             })
                                             .catch((err) => {
@@ -547,13 +553,13 @@ export default function Downloader() {
             };
 
             /* 發起請求任務 */
-            for (const { Index, PageUrl, ImgUrl } of dataMap.values()) {
+            for (const { Index, Name, PageUrl, ImgUrl } of dataMap.values()) {
 
                 while (task >= $thread) {
                     await Lib.sleep($delay);
                 };
 
-                taskPromises.push(request(Index, PageUrl, ImgUrl, reTry));
+                taskPromises.push(request(Index, Name, PageUrl, ImgUrl, reTry));
             };
 
             await Promise.allSettled(taskPromises); // 等待任務完成
