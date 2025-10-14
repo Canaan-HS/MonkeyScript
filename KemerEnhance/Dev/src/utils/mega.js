@@ -123,26 +123,47 @@ export default function megaUtils(urlRegex) {
         }
     })();
 
+    // 搭配密碼直接解密
     const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
 
-    const passwordCleaner = (text) =>
-        text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-
-    const extractRegex = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gius;
-
     // return { url: password }
+    const encryptedExtract = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_!F-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gius;
     function extractPasswords(data) {
         const result = {};
 
         if (typeof data === "string") {
             let match;
-            while ((match = extractRegex.exec(data)) !== null) {
+            while ((match = encryptedExtract.exec(data)) !== null) {
                 result[match[1]] = match[2]?.trim() ?? "";
             }
         }
 
         return result;
     };
+
+    // 補全連結
+    const getCompleteUrl = (url, key) => {
+        const { state, href } =  parsePassword(url, key);
+        return state ? href : url;
+    };
+
+    // return { url: missingKey }
+    const missingExtract = /((?:https?:\/\/)?mega\.nz\/(?:file|folder)\/)(?![A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))([A-Za-z0-9_-]{8}(?![A-Za-z0-9_-])|)(?:(?:(?!#?[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))[\s\S])*?([A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}|#?[A-Za-z0-9_-]{16,43})(?![A-Za-z0-9_-]))?/gi;
+    function extractMissingKey(data) {
+        const result = {};
+
+        if (typeof data === "string") {
+            let match;
+            while ((match = missingExtract.exec(data)) !== null) {
+                result[match[1] + match[2]] = match[3] || "";
+            }
+        }
+
+        return result;
+    };
+
+    const passwordCleaner = (text) =>
+        text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
 
     function parsePassword(href, text) {
         let state = false;
@@ -153,7 +174,7 @@ export default function megaUtils(urlRegex) {
             state = true;
             href += text;
         }
-        else if (/^[A-Za-z0-9_!F-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
+        else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) { // 有尾部字串 但沒有 #
             state = true;
             href += "#" + text;
         }
@@ -190,7 +211,9 @@ export default function megaUtils(urlRegex) {
 
     return {
         getPassword,
+        getCompleteUrl,
         getDecryptedUrl,
         extractPasswords,
+        extractMissingKey
     };
 }
