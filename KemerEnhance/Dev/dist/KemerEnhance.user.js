@@ -445,18 +445,33 @@
       };
     })();
     const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
-    const passwordCleaner = (text) => text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-    const extractRegex = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gisu;
+    const encryptedExtract = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_!F-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gisu;
     function extractPasswords(data) {
       const result = {};
       if (typeof data === "string") {
         let match;
-        while ((match = extractRegex.exec(data)) !== null) {
+        while ((match = encryptedExtract.exec(data)) !== null) {
           result[match[1]] = match[2]?.trim() ?? "";
         }
       }
       return result;
     }
+    const getCompleteUrl = (url, key) => {
+      const { state, href } = parsePassword(url, key);
+      return state ? href : url;
+    };
+    const missingExtract = /((?:https?:\/\/)?mega\.nz\/(?:file|folder)\/)(?![A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))([A-Za-z0-9_-]{8}(?![A-Za-z0-9_-])|)(?:(?:(?!#?[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))[\s\S])*?([A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}|#?[A-Za-z0-9_-]{16,43})(?![A-Za-z0-9_-]))?/gi;
+    function extractMissingKey(data) {
+      const result = {};
+      if (typeof data === "string") {
+        let match;
+        while ((match = missingExtract.exec(data)) !== null) {
+          result[match[1] + match[2]] = match[3] || "";
+        }
+      }
+      return result;
+    }
+    const passwordCleaner = (text) => text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
     function parsePassword(href, text) {
       let state = false;
       if (!text) return { state, href };
@@ -464,7 +479,7 @@
       if (text.startsWith("#")) {
         state = true;
         href += text;
-      } else if (/^[A-Za-z0-9_!F-]{16,43}$/.test(text)) {
+      } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
         state = true;
         href += "#" + text;
       } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
@@ -495,8 +510,10 @@
     }
     return {
       getPassword,
+      getCompleteUrl,
       getDecryptedUrl,
       extractPasswords,
+      extractMissingKey,
     };
   }
   const TextToLinkFactory = () => {
@@ -557,16 +574,20 @@
     };
     async function parseModify(container, father, text, textNode = null, complex = false) {
       let modifyUrl,
-        passwordDict = {};
+        passwordDict = {},
+        missingDict = {};
       if (text === "(frame embed)") {
         const a = father.closest("a");
         if (!a) return;
         const href = a.href;
         if (!href) return;
-        if (href.includes("mega.nz/#P!")) {
+        if (href.includes("mega.nz")) {
           mega ??= megaUtils(urlRegex);
-          passwordDict = mega.extractPasswords(container.$oHtml());
+          text = container.$oHtml();
+          missingDict = mega.extractMissingKey(text);
+          passwordDict = mega.extractPasswords(text);
         }
+        if (missingDict[href]) modifyUrl = mega.getCompleteUrl(href, missingDict[href]);
         if (passwordDict[href]) modifyUrl = await mega.getDecryptedUrl(href, passwordDict[href]);
         if (modifyUrl && modifyUrl !== href) {
           a.href = modifyUrl;
@@ -585,8 +606,9 @@
         );
       } else {
         if (text.match(urlRegex).length === 0) return;
-        if (text.includes("mega.nz/#P!")) {
+        if (text.includes("mega.nz")) {
           mega ??= megaUtils(urlRegex);
+          missingDict = mega.extractMissingKey(text);
           passwordDict = mega.extractPasswords(text);
         }
         let url,
@@ -598,6 +620,7 @@
           index = match.index;
           if (index > lastIndex) segments.push(text.slice(lastIndex, index));
           modifyUrl = decodeURIComponent(url).trim();
+          if (missingDict[url]) modifyUrl = mega.getCompleteUrl(url, missingDict[url]);
           if (passwordDict[url]) modifyUrl = await mega.getDecryptedUrl(url, passwordDict[url]);
           segments.push(`<a href="${protocolParse(modifyUrl)}" rel="noopener noreferrer">${modifyUrl}</a>`);
           lastIndex = index + url.length;
@@ -611,6 +634,7 @@
     return {
       async TextToLink(config) {
         if (!Page.isContent() && !Page.isAnnouncement()) return;
+        let parentNode, text, textNode, data, dataLength;
         if (Page.isContent()) {
           Lib.waitEl(".post__body, .scrape__body", null).then(async (body) => {
             let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
@@ -622,7 +646,6 @@
               }
             } else if (content) {
               jumpTrigger(content, config);
-              let parentNode, text, textNode, data, dataLength;
               for ([parentNode, data] of getTextNodeMap(content).entries()) {
                 dataLength = data.length;
                 for (textNode of data) {
@@ -643,11 +666,11 @@
           Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
             const items = Lib.$q(".card-list__items");
             jumpTrigger(items, config);
-            let parentNode, textNode, data, dataLength;
             for ([parentNode, data] of getTextNodeMap(items).entries()) {
               dataLength = data.length;
               for (textNode of data) {
-                parseModify(items, parentNode, textNode.$text(), textNode, dataLength > 1);
+                text = textNode.$text();
+                parseModify(items, parentNode, text, textNode, dataLength > 1);
               }
             }
           });
@@ -1257,14 +1280,14 @@ statusText: ${text}`);
     CacheFetch,
     async TextToLink(...args) {
       const value = TextToLinkFactory().TextToLink;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
     async BetterPostCard(...args) {
       const func = await BetterPostCardFactory();
       const value = func.BetterPostCard;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
   };
   async function NewTabOpens({ newtab_active, newtab_insert }) {
@@ -1737,8 +1760,8 @@ statusText: ${text}`);
     CardZoom,
     async BetterThumbnail(...args) {
       const value = BetterThumbnailFactory().BetterThumbnail;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
     QuickPostToggle,
   };
@@ -2193,18 +2216,18 @@ statusText: ${text}`);
     VideoBeautify,
     async LinkBeautify(...args) {
       const value = LinkBeautifyFactory().LinkBeautify;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
     async OriginalImage(...args) {
       const value = OriginalImageFactory().OriginalImage;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
     async ExtraButton(...args) {
       const value = ExtraButtonFactory().ExtraButton;
-      Object.defineProperty(this, value.name, { value, writable: false });
       value(...args);
+      Object.defineProperty(this, value.name, { value, writable: false });
     },
     CommentFormat,
   };
