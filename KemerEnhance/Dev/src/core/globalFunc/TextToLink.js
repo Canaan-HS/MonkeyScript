@@ -94,7 +94,7 @@ const TextToLinkFactory = () => {
     async function parseModify(
         container, father, text, textNode = null, complex = false
     ) {
-        let modifyUrl, passwordDict = {};
+        let modifyUrl, passwordDict = {}, missingDict = {};
 
         // 單獨的 (frame embed)
         if (text === "(frame embed)") {
@@ -104,10 +104,15 @@ const TextToLinkFactory = () => {
             const href = a.href;
             if (!href) return;
 
-            if (href.includes("mega.nz/#P!")) {
+            if (href.includes("mega.nz")) {
                 mega ??= megaUtils(urlRegex);
-                passwordDict = mega.extractPasswords(container.$oHtml());
+                text = container.$oHtml();
+                missingDict = mega.extractMissingKey(text);
+                passwordDict = mega.extractPasswords(text);
             }
+
+            if (missingDict[href])
+                modifyUrl = mega.getCompleteUrl(href, missingDict[href]);
 
             if (passwordDict[href])
                 modifyUrl = await mega.getDecryptedUrl(href, passwordDict[href]);
@@ -135,10 +140,11 @@ const TextToLinkFactory = () => {
             // ? 用於提前退出, 與降低開始處理速度, 有時 AJAX 載入比較慢會導致沒處理到
             if (text.match(urlRegex).length === 0) return;
 
-            if (text.includes("mega.nz/#P!")) {
+            if (text.includes("mega.nz")) {
                 mega ??= megaUtils(urlRegex);
+                missingDict = mega.extractMissingKey(text);
                 passwordDict = mega.extractPasswords(text);
-            }
+            };
 
             let url, index, lastIndex = 0;
             const segments = [];
@@ -149,6 +155,10 @@ const TextToLinkFactory = () => {
                 if (index > lastIndex) segments.push(text.slice(lastIndex, index));
 
                 modifyUrl = decodeURIComponent(url).trim();
+
+                if (missingDict[url])
+                    modifyUrl = mega.getCompleteUrl(url, missingDict[url]);
+
                 if (passwordDict[url])
                     modifyUrl = await mega.getDecryptedUrl(url, passwordDict[url]);
 
@@ -171,6 +181,7 @@ const TextToLinkFactory = () => {
         async TextToLink(config) {
             if (!Page.isContent() && !Page.isAnnouncement()) return;
 
+            let parentNode, text, textNode, data, dataLength;
             if (Page.isContent()) {
                 Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
 
@@ -187,13 +198,13 @@ const TextToLinkFactory = () => {
                         }
                     } else if (content) {
                         jumpTrigger(content, config);
-                        let parentNode, text, textNode, data, dataLength;
                         for ([parentNode, data] of getTextNodeMap(content).entries()) {
                             dataLength = data.length;
 
                             for (textNode of data) {
                                 text = textNode.$text();
 
+                                // ? 後續測試是否需要
                                 if (text.startsWith("https://mega.nz")) {
                                     mega ??= megaUtils(urlRegex);
                                     text = await mega.getPassword(parentNode, text);
@@ -213,11 +224,11 @@ const TextToLinkFactory = () => {
                     const items = Lib.$q(".card-list__items");
                     jumpTrigger(items, config);
 
-                    let parentNode, textNode, data, dataLength;
                     for ([parentNode, data] of getTextNodeMap(items).entries()) {
                         dataLength = data.length;
                         for (textNode of data) {
-                            parseModify(items, parentNode, textNode.$text(), textNode, dataLength > 1);
+                            text = textNode.$text();
+                            parseModify(items, parentNode, text, textNode, dataLength > 1);
                         }
                     }
                 })
