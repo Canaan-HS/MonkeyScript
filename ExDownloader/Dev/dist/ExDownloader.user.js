@@ -47,6 +47,7 @@
   const Config = {
     Dev: true,
     ReTry: 10,
+    UseName: false,
     Original: false,
     ResetScope: true,
     CompleteClose: false,
@@ -270,18 +271,18 @@
             }
             async function processQueue() {
                 if (queue.length > 0) {
-                    const {index, url, time, delay} = queue.shift();
-                    FetchRequest(index, url, time, delay);
+                    const {index, url, name, time, delay} = queue.shift();
+                    FetchRequest(index, url, name, time, delay);
                     setTimeout(processQueue, delay);
-                } else {processing = false}
+                } else { processing = false }
             }
-            async function FetchRequest(index, url, time, delay) {
+            async function FetchRequest(index, url, name, time, delay) {
                 try {
                     const response = await fetch(url);
                     const html = await response.text();
-                    postMessage({index, url, html, time, delay, error: false});
+                    postMessage({index, url, name, html, time, delay, error: false});
                 } catch {
-                    postMessage({index, url, html: null, time, delay, error: true});
+                    postMessage({index, url, name, html: null, time, delay, error: true});
                 }
             }
         `);
@@ -330,11 +331,14 @@
         function parseLink(index, page) {
           try {
             const box = [];
+            const nameRegex = /[a-z0-9_\-\+]+/gi;
             for (const link of page.$qa("#gdt a")) {
-              const href = link.href;
-              if (processed.has(href)) continue;
-              processed.add(href);
-              box.push(href);
+              const url2 = link.href;
+              if (processed.has(url2)) continue;
+              processed.add(url2);
+              let name = link.$q("div[title]").title?.match(nameRegex);
+              name = name ? `${name[1] || index + 1} - ${name[2] || comicName}` : "";
+              box.push({ name, url: url2 });
             }
             homeData.set(index, box);
             const display = `[${++task}/${pages}]`;
@@ -366,22 +370,23 @@ ${JSON.stringify(box2, null, 4)}`,
       async function getImageData(homeDataList) {
         const pages = homeDataList.length;
         worker.onmessage = (e) => {
-          const { index, url: url2, html, time, delay, error } = e.data;
+          const { index, url: url2, name, html, time, delay, error } = e.data;
           error
             ? worker.postMessage({
                 index,
                 url: url2,
+                name,
                 time,
                 delay: dynamicParam(time, delay, null, DConfig.Image_ND),
               })
-            : parseLink(index, url2, Lib.domParse(html));
+            : parseLink(index, url2, name, Lib.domParse(html));
         };
-        for (const [index, url2] of homeDataList.entries()) {
-          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig.Image_ID });
+        for (const [index, { url: url2, name }] of homeDataList.entries()) {
+          worker.postMessage({ index, url: url2, name, time: Date.now(), delay: DConfig.Image_ID });
         }
         let task = 0;
         const imgData = [];
-        function parseLink(index, url2, page) {
+        function parseLink(index, url2, name, page) {
           try {
             const resample = Lib.$Q(page, "#img");
             const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
@@ -390,7 +395,7 @@ ${JSON.stringify(box2, null, 4)}`,
               throw new Error("Image not found");
             }
             const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
-            imgData.push({ Index: index, PageUrl: url2, ImgUrl: link });
+            imgData.push({ Index: index, Name: name, PageUrl: url2, ImgUrl: link });
             const display = `[${++task}/${pages}]`;
             Lib.title(display);
             button.$text(`${Transl("獲取連結")}: ${display}`);
@@ -405,31 +410,31 @@ ${JSON.stringify(box2, null, 4)}`,
           }
         }
       }
-      function reGetImageData(index, url2) {
-        function parseLink(index2, url3, page) {
+      function reGetImageData(index, name, url2) {
+        function parseLink(index2, url3, name2, page) {
           const resample = Lib.$Q(page, "#img");
           const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
           if (!resample) return false;
           const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
-          return { Index: index2, PageUrl: url3, ImgUrl: link };
+          return { Index: index2, Name: name2, PageUrl: url3, ImgUrl: link };
         }
         let token = Config.ReTry;
         return new Promise((resolve) => {
-          worker.postMessage({ index, url: url2, time: Date.now(), delay: DConfig.Image_ID });
           worker.onmessage = (e) => {
-            const { index: index2, url: url3, html, time, delay, error } = e.data;
+            const { index: index2, url: url3, name: name2, html, time, delay, error } = e.data;
             if (token <= 0) return resolve(false);
             if (error) {
-              worker.postMessage({ index: index2, url: url3, time, delay });
+              worker.postMessage({ index: index2, url: url3, name: name2, time, delay });
             } else {
-              const result = parseLink(index2, url3, Lib.domParse(html));
+              const result = parseLink(index2, url3, name2, Lib.domParse(html));
               if (result) resolve(result);
               else {
-                worker.postMessage({ index: index2, url: url3, time, delay });
+                worker.postMessage({ index: index2, url: url3, name: name2, time, delay });
               }
             }
             token--;
           };
+          worker.postMessage({ index, url: url2, name, time: Date.now(), delay: DConfig.Image_ID });
         });
       }
       function startTask(dataList) {
@@ -449,12 +454,9 @@ ${JSON.stringify(dataList, null, 4)}`,
         button.$text(Transl("開始下載"));
         Lib.log(
           {
-            ReTry: Config.ReTry,
-            Original: Config.Original,
-            ResetScope: Config.ResetScope,
-            CompleteClose: Config.CompleteClose,
+            ...Config,
             SortReverse: DConfig.SortReverse,
-            CompressMode: DConfig.CompressMode,
+            CompressMode: DConfig.CompressMode ?? false,
             CompressionLevel: DConfig.Compress_Level,
             DownloadData: dataMap,
           },
@@ -492,14 +494,14 @@ ${JSON.stringify(dataList, null, 4)}`,
             Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
-        function statusUpdate(time, index, iurl, blob, error = false) {
+        function statusUpdate(time, index, name, iurl, blob, error = false) {
           if (enforce) return;
           [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
           const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
           button?.$text(`${Transl("下載進度")}: ${display}`);
           Lib.title(display);
           if (!error && blob) {
-            zipper.file(`${comicName}/${Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
+            zipper.file(`${comicName}/${Config.UseName ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
             dataMap.delete(index);
           }
           if (progress === totalSize) {
@@ -515,7 +517,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           }
           --task;
         }
-        function request(index, iurl) {
+        function request(index, name, iurl) {
           if (enforce) return;
           ++task;
           let timeout = null,
@@ -530,47 +532,47 @@ ${JSON.stringify(dataList, null, 4)}`,
               onload: (response) => {
                 clearTimeout(timeout);
                 if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                  request(index, response.finalUrl);
+                  request(index, name, response.finalUrl);
                 } else {
-                  response.status == 200 ? statusUpdate(time, index, iurl, response.response) : statusUpdate(time, index, iurl, null, true);
+                  response.status == 200 ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
                 }
               },
               onerror: () => {
                 clearTimeout(timeout);
-                statusUpdate(time, index, iurl, null, true);
+                statusUpdate(time, index, name, iurl, null, true);
               },
             });
           } else {
             runClear();
             clearTimeout(timeout);
-            statusUpdate(time, index, iurl, null, true);
+            statusUpdate(time, index, name, iurl, null, true);
           }
           timeout = setTimeout(() => {
             gmRequest?.abort();
-            statusUpdate(time, index, iurl, null, true);
+            statusUpdate(time, index, name, iurl, null, true);
           }, 15e3);
         }
         async function start(dataMap2, reGet = false) {
           if (enforce) return;
           init();
-          for (const { Index, PageUrl, ImgUrl } of dataMap2.values()) {
+          for (const { Index, Name, PageUrl, ImgUrl } of dataMap2.values()) {
             if (enforce) break;
             if (reGet) {
               Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
-              const result = await reGetImageData(Index, PageUrl);
+              const result = await reGetImageData(Index, Name, PageUrl);
               Lib.log(result, { dev: Config.Dev, group: `${Transl("取得結果")} (${reTry})` });
               if (result) {
-                const { Index: Index2, ImgUrl: ImgUrl2 } = result;
-                request(Index2, ImgUrl2);
+                const { Index: Index2, Name: Name2, ImgUrl: ImgUrl2 } = result;
+                request(Index2, Name2, ImgUrl2);
               } else {
                 runClear();
-                request(Index, ImgUrl);
+                request(Index, Name, ImgUrl);
               }
             } else {
               while (task >= $thread) {
                 await Lib.sleep($delay);
               }
-              request(Index, ImgUrl);
+              request(Index, Name, ImgUrl);
             }
           }
         }
@@ -634,14 +636,14 @@ ${JSON.stringify(dataList, null, 4)}`,
             Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
-        async function request(index, purl, iurl, retry) {
+        async function request(index, name, purl, iurl, retry) {
           return new Promise((resolve, reject) => {
             if (typeof iurl !== "undefined") {
               const time = Date.now();
               ++task;
               GM_download({
                 url: iurl,
-                name: `${comicName}-${Lib.mantissa(index, fillValue, "0", iurl)}`,
+                name: `${comicName} - ${Config.UseName ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`,
                 onload: () => {
                   [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                   const display = `[${++progress}/${totalSize}]`;
@@ -657,9 +659,9 @@ ${JSON.stringify(dataList, null, 4)}`,
                     --task;
                     setTimeout(
                       () => {
-                        reGetImageData(index, purl)
-                          .then(({ Index, PageUrl, ImgUrl }) => {
-                            request(Index, PageUrl, ImgUrl, retry - 1);
+                        reGetImageData(index, name, purl)
+                          .then(({ Index, Name, PageUrl, ImgUrl }) => {
+                            request(Index, Name, PageUrl, ImgUrl, retry - 1);
                             reject();
                           })
                           .catch((err) => {
@@ -681,11 +683,11 @@ ${JSON.stringify(dataList, null, 4)}`,
             }
           });
         }
-        for (const { Index, PageUrl, ImgUrl } of dataMap.values()) {
+        for (const { Index, Name, PageUrl, ImgUrl } of dataMap.values()) {
           while (task >= $thread) {
             await Lib.sleep($delay);
           }
-          taskPromises.push(request(Index, PageUrl, ImgUrl, reTry));
+          taskPromises.push(request(Index, Name, PageUrl, ImgUrl, reTry));
         }
         await Promise.allSettled(taskPromises);
         button.$text(Transl("下載完成"));
