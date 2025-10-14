@@ -4,6 +4,7 @@ import { Lib } from '../services/client.js';
 const Config = {
     Dev: true,            // 開發模式 (會顯示除錯訊息)
     ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
+    UseName: false,        // 使用圖片名稱作為檔名
     Original: false,      // 是否下載原圖
     ResetScope: true,     // 下載完成後 重置範圍設置
     CompleteClose: false, // 下載完成自動關閉
