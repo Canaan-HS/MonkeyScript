@@ -10,7 +10,7 @@ const BetterPostCardFactory = async () => {
     // 數據轉移
     const oldRecord = Lib.getLocal(oldKey);
     if (oldRecord instanceof Array) {
-        const r = await Parame.Parame.DB.set(recordKey, new Map(oldRecord));
+        const r = await Parame.DB.set(recordKey, new Map(oldRecord));
         r === recordKey && Lib.delLocal(oldKey);
     };
 
