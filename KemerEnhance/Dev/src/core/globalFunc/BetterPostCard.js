@@ -269,7 +269,7 @@ const BetterPostCardFactory = async () => {
             });
 
             parent.replaceWith(
-                Lib.createElement(reTag, { innerHTML: parent.$iHtml() })
+                Lib.createElement(reTag, { html: parent.$iHtml() })
             );
         } catch {/* 防止動態監聽進行二次操作時的錯誤 (因為 DOM 已經被修改) */ }
     };
@@ -279,7 +279,7 @@ const BetterPostCardFactory = async () => {
             recordCache = await getRecord(); // 觸發時重新取得緩存
             // ! 暫時寫法, 該頁面更新時不會完整刷新, 所以要跳過檢查
             const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
-            for (const items of element.$qa(`a${checkFix ? ":not([fix])" : ""}`)) {
+            for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) {
                 searchFix(items);
             }
         }, { mark: "dynamic-fix", subtree: false, debounce: 50 });
@@ -505,7 +505,7 @@ const BetterPostCardFactory = async () => {
                     }, 300);
                 } else if (
                     // ! 以後在優化, 現在只是為了快速實現
-                    newtab && Lib.platform !== "Mobile" && (
+                    newtab && Lib.platform.desktop && (
                         tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE"
                         || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")
                     )
@@ -534,7 +534,7 @@ const BetterPostCardFactory = async () => {
             }, { capture: true, mark: "BetterPostCard" });
 
             // 監聽滑鼠移入事件
-            if (Lib.platform === "Desktop") {
+            if (Lib.platform.desktop) {
                 let currentBox, currentTarget;
 
                 Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
