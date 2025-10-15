@@ -2,7 +2,7 @@ import { Lib } from '../../services/client.js';
 
 /* 收縮側邊攔 */
 export default async function SidebarCollapse() {
-    if (Lib.platform === "Mobile") return;
+    if (Lib.platform.mobile) return;
 
     Lib.addStyle(`
         .global-sidebar {
