@@ -17,19 +17,19 @@ const Lib = (() => {
         get iW() { return window.innerWidth },
         get iH() { return window.innerHeight },
         get platform() {
-            let value;
+            const value = { desktop: false, mobile: false };
 
-            if (navigator.userAgentData?.mobile !== undefined) {
-                value = navigator.userAgentData.mobile ? "Mobile" : "Desktop";
+            if (navigator.userAgentData?.mobile != null) {
+                value[navigator.userAgentData.mobile ? "mobile" : "desktop"] = true;
             } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
-                value = "Mobile";
+                value.mobile = true;
             } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-                value = "Mobile";
+                value.mobile = true;
             } else {
-                value = "Desktop";
+                value.desktop = true;
             }
 
-            value && Object.defineProperty(this, "platform", { value, writable: false });
+            Object.defineProperty(this, "platform", { value, writable: false });
             return value;
         }
     };
