@@ -171,7 +171,7 @@ OriginalImage:
 3. BetterThumbnail 移除對 nekohouse 的支援
 4. BetterPostCard 保存數據轉移 [實驗性]
 5. TextToLink 添加，Mega 雲端連結自動解密 [實驗性]
-6. CacheFetch 實現修改，並加入長時緩存 [實驗性] (如果有記憶體的問題請反饋)
+6. CacheFetch 實現修改，並加入長時緩存 (如果有記憶體的問題請反饋) [實驗性]
 
 Mega 連結解析僅適用一些簡單的頁面格式，且只會對純文本生效，這是一個附加功能沒生效也不用在意
 
