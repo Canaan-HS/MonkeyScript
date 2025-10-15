@@ -2,7 +2,7 @@ import { Lib } from '../../services/client.js';
 import { Parame } from '../config.js';
 
 export default async function KeyScroll({ mode }) { /* 快捷自動滾動 */
-    if (Lib.platform === "Mobile" || Parame.Registered.has("KeyScroll")) return;
+    if (Lib.platform.mobile || Parame.Registered.has("KeyScroll")) return;
 
     // 滾動配置
     const scrollConfig = {
