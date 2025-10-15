@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.10.13-Beta
+// @version      2025.10.15-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -28,7 +28,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1676101/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -140,7 +140,7 @@
     return { ...userSet, color };
   })();
   async function SidebarCollapse() {
-    if (Lib.platform === "Mobile") return;
+    if (Lib.platform.mobile) return;
     Lib.addStyle(
       `
         .global-sidebar {
@@ -167,49 +167,49 @@
     Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 10 }).then((announcement) => announcement.remove());
   }
   async function KeyScroll({ mode }) {
-    if (Lib.platform === "Mobile" || Parame.Registered.has("KeyScroll")) return;
-    const Scroll_Requ = {
-      Scroll_Pixels: 2,
-      Scroll_Interval: 800,
+    if (Lib.platform.mobile || Parame.Registered.has("KeyScroll")) return;
+    const scrollConfig = {
+      scrollPixel: 2,
+      scrollInterval: 800,
     };
-    const UP_ScrollSpeed = Scroll_Requ.Scroll_Pixels * -1;
-    let Scroll,
-      Up_scroll = false,
-      Down_scroll = false;
-    const [TopDetected, BottomDetected] = [
+    const upScrollSpeed = scrollConfig.scrollPixel * -1;
+    let scrollFunc,
+      isUpScroll = false,
+      isDownScroll = false;
+    const [topDetected, bottomDetected] = [
       Lib.$throttle(() => {
-        Up_scroll = Lib.sY == 0 ? false : true;
+        isUpScroll = Lib.sY == 0 ? false : true;
       }, 600),
       Lib.$throttle(() => {
-        Down_scroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
+        isDownScroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
       }, 600),
     ];
     switch (mode) {
       case 2:
-        Scroll = (Move) => {
+        scrollFunc = (Move) => {
           const Interval = setInterval(() => {
-            if (!Up_scroll && !Down_scroll) {
+            if (!isUpScroll && !isDownScroll) {
               clearInterval(Interval);
             }
-            if (Up_scroll && Move < 0) {
+            if (isUpScroll && Move < 0) {
               window.scrollBy(0, Move);
-              TopDetected();
-            } else if (Down_scroll && Move > 0) {
+              topDetected();
+            } else if (isDownScroll && Move > 0) {
               window.scrollBy(0, Move);
-              BottomDetected();
+              bottomDetected();
             }
-          }, Scroll_Requ.Scroll_Interval);
+          }, scrollConfig.scrollInterval);
         };
       default:
-        Scroll = (Move) => {
-          if (Up_scroll && Move < 0) {
+        scrollFunc = (Move) => {
+          if (isUpScroll && Move < 0) {
             window.scrollBy(0, Move);
-            TopDetected();
-            requestAnimationFrame(() => Scroll(Move));
-          } else if (Down_scroll && Move > 0) {
+            topDetected();
+            requestAnimationFrame(() => scrollFunc(Move));
+          } else if (isDownScroll && Move > 0) {
             window.scrollBy(0, Move);
-            BottomDetected();
-            requestAnimationFrame(() => Scroll(Move));
+            bottomDetected();
+            requestAnimationFrame(() => scrollFunc(Move));
           }
         };
     }
@@ -221,22 +221,22 @@
         if (key == "ArrowUp") {
           event.stopImmediatePropagation();
           event.preventDefault();
-          if (Up_scroll) {
-            Up_scroll = false;
-          } else if (!Up_scroll || Down_scroll) {
-            Down_scroll = false;
-            Up_scroll = true;
-            Scroll(UP_ScrollSpeed);
+          if (isUpScroll) {
+            isUpScroll = false;
+          } else if (!isUpScroll || isDownScroll) {
+            isDownScroll = false;
+            isUpScroll = true;
+            scrollFunc(upScrollSpeed);
           }
         } else if (key == "ArrowDown") {
           event.stopImmediatePropagation();
           event.preventDefault();
-          if (Down_scroll) {
-            Down_scroll = false;
-          } else if (Up_scroll || !Down_scroll) {
-            Up_scroll = false;
-            Down_scroll = true;
-            Scroll(Scroll_Requ.Scroll_Pixels);
+          if (isDownScroll) {
+            isDownScroll = false;
+          } else if (isUpScroll || !isDownScroll) {
+            isUpScroll = false;
+            isDownScroll = true;
+            scrollFunc(scrollConfig.scrollPixel);
           }
         }
       }, 100),
@@ -696,9 +696,7 @@
       delete fetchRecord[url];
     };
     async function send(url, callback, { responseType = "json", headers = { Accept: "text/css" } } = {}) {
-      try {
-        fetchRecord[url]?.abort();
-      } catch {}
+      fetchRecord[url]?.abort();
       const controller = new AbortController();
       fetchRecord[url] = controller;
       return new Promise((resolve, reject) => {
@@ -721,6 +719,7 @@ statusText: ${text}`);
             callback?.(res);
           })
           .catch((error) => {
+            if (error.name === "AbortError") return;
             reject(error);
             Lib.log(error).error;
           })
@@ -736,7 +735,7 @@ statusText: ${text}`);
     const recordKey = "better_post_record";
     const oldRecord = Lib.getLocal(oldKey);
     if (oldRecord instanceof Array) {
-      const r = await Parame.Parame.DB.set(recordKey, new Map(oldRecord));
+      const r = await Parame.DB.set(recordKey, new Map(oldRecord));
       r === recordKey && Lib.delLocal(oldKey);
     }
     let recordCache;
@@ -918,7 +917,7 @@ statusText: ${text}`);
           tagEl: tag,
           appendTag: otherUrl ? "Post" : "",
         });
-        parent.replaceWith(Lib.createElement(reTag, { innerHTML: parent.$iHtml() }));
+        parent.replaceWith(Lib.createElement(reTag, { html: parent.$iHtml() }));
       } catch {}
     }
     async function dynamicFix(element) {
@@ -927,7 +926,7 @@ statusText: ${text}`);
         async () => {
           recordCache = await getRecord();
           const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
-          for (const items of element.$qa(`a${checkFix ? ":not([fix])" : ""}`)) {
+          for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) {
             searchFix(items);
           }
         },
@@ -1154,7 +1153,7 @@ statusText: ${text}`);
                   );
                 }, 50);
               }, 300);
-            } else if ((newtab && Lib.platform !== "Mobile" && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Page.isContent() && target.matches(".fancy-image__image"))) {
+            } else if ((newtab && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Page.isContent() && target.matches(".fancy-image__image"))) {
               event.preventDefault();
               event.stopImmediatePropagation();
               const url = target.$gAttr("jump");
@@ -1168,7 +1167,7 @@ statusText: ${text}`);
           },
           { capture: true, mark: "BetterPostCard" },
         );
-        if (Lib.platform === "Desktop") {
+        if (Lib.platform.desktop) {
           let currentBox, currentTarget;
           Lib.onEvent(
             Lib.body,
@@ -1303,7 +1302,7 @@ statusText: ${text}`);
     );
   }
   async function CardText({ mode }) {
-    if (Lib.platform === "Mobile") return;
+    if (Lib.platform.mobile) return;
     switch (mode) {
       case 2:
         Lib.addStyle(
@@ -2147,7 +2146,7 @@ statusText: ${text}`);
             const header = Lib.$q("header");
             toTopBtn = Lib.createElement(comments, "span", {
               id: "to-top-svg",
-              innerHTML: `
+              html: `
                             <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
                                 <style>svg{fill: ${Load.color}}</style>
                                 <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
@@ -2830,6 +2829,9 @@ statusText: ${text}`);
         } else if (id === "closure") {
           menuRequ.menuClose();
         }
+      });
+      Lib.onE(imageSetEl, "wheel", (event) => {
+        event.stopPropagation();
       });
     }
     return { menuInit, postViewInit };
