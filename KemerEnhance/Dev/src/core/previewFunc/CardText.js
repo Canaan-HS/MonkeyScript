@@ -2,7 +2,7 @@ import { Lib } from '../../services/client.js';
 
 /* 帖子說明文字效果 */
 export default async function CardText({ mode }) {
-    if (Lib.platform === "Mobile") return;
+    if (Lib.platform.mobile) return;
 
     switch (mode) {
         case 2:
