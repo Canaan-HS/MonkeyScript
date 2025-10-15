@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.10.13-Beta
+// @version      2025.10.15-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -28,7 +28,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1676101/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -146,7 +146,7 @@
         };
     })();
     async function SidebarCollapse() {
-        if (Lib.platform === "Mobile") return;
+        if (Lib.platform.mobile) return;
         Lib.addStyle(`
         .global-sidebar {
             opacity: 0;
@@ -174,45 +174,45 @@
     async function KeyScroll({
         mode
     }) {
-        if (Lib.platform === "Mobile" || Parame.Registered.has("KeyScroll")) return;
-        const Scroll_Requ = {
-            Scroll_Pixels: 2,
-            Scroll_Interval: 800
+        if (Lib.platform.mobile || Parame.Registered.has("KeyScroll")) return;
+        const scrollConfig = {
+            scrollPixel: 2,
+            scrollInterval: 800
         };
-        const UP_ScrollSpeed = Scroll_Requ.Scroll_Pixels * -1;
-        let Scroll, Up_scroll = false, Down_scroll = false;
-        const [TopDetected, BottomDetected] = [Lib.$throttle(() => {
-            Up_scroll = Lib.sY == 0 ? false : true;
+        const upScrollSpeed = scrollConfig.scrollPixel * -1;
+        let scrollFunc, isUpScroll = false, isDownScroll = false;
+        const [topDetected, bottomDetected] = [Lib.$throttle(() => {
+            isUpScroll = Lib.sY == 0 ? false : true;
         }, 600), Lib.$throttle(() => {
-            Down_scroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
+            isDownScroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
         }, 600)];
         switch (mode) {
             case 2:
-                Scroll = Move => {
+                scrollFunc = Move => {
                     const Interval = setInterval(() => {
-                        if (!Up_scroll && !Down_scroll) {
+                        if (!isUpScroll && !isDownScroll) {
                             clearInterval(Interval);
                         }
-                        if (Up_scroll && Move < 0) {
+                        if (isUpScroll && Move < 0) {
                             window.scrollBy(0, Move);
-                            TopDetected();
-                        } else if (Down_scroll && Move > 0) {
+                            topDetected();
+                        } else if (isDownScroll && Move > 0) {
                             window.scrollBy(0, Move);
-                            BottomDetected();
+                            bottomDetected();
                         }
-                    }, Scroll_Requ.Scroll_Interval);
+                    }, scrollConfig.scrollInterval);
                 };
 
             default:
-                Scroll = Move => {
-                    if (Up_scroll && Move < 0) {
+                scrollFunc = Move => {
+                    if (isUpScroll && Move < 0) {
                         window.scrollBy(0, Move);
-                        TopDetected();
-                        requestAnimationFrame(() => Scroll(Move));
-                    } else if (Down_scroll && Move > 0) {
+                        topDetected();
+                        requestAnimationFrame(() => scrollFunc(Move));
+                    } else if (isDownScroll && Move > 0) {
                         window.scrollBy(0, Move);
-                        BottomDetected();
-                        requestAnimationFrame(() => Scroll(Move));
+                        bottomDetected();
+                        requestAnimationFrame(() => scrollFunc(Move));
                     }
                 };
         }
@@ -221,22 +221,22 @@
             if (key == "ArrowUp") {
                 event.stopImmediatePropagation();
                 event.preventDefault();
-                if (Up_scroll) {
-                    Up_scroll = false;
-                } else if (!Up_scroll || Down_scroll) {
-                    Down_scroll = false;
-                    Up_scroll = true;
-                    Scroll(UP_ScrollSpeed);
+                if (isUpScroll) {
+                    isUpScroll = false;
+                } else if (!isUpScroll || isDownScroll) {
+                    isDownScroll = false;
+                    isUpScroll = true;
+                    scrollFunc(upScrollSpeed);
                 }
             } else if (key == "ArrowDown") {
                 event.stopImmediatePropagation();
                 event.preventDefault();
-                if (Down_scroll) {
-                    Down_scroll = false;
-                } else if (Up_scroll || !Down_scroll) {
-                    Up_scroll = false;
-                    Down_scroll = true;
-                    Scroll(Scroll_Requ.Scroll_Pixels);
+                if (isDownScroll) {
+                    isDownScroll = false;
+                } else if (isUpScroll || !isDownScroll) {
+                    isUpScroll = false;
+                    isDownScroll = true;
+                    scrollFunc(scrollConfig.scrollPixel);
                 }
             }
         }, 100), {
@@ -457,18 +457,36 @@
             };
         })();
         const getDecryptedUrl = async (url, password) => await megaPDecoder(url, password);
-        const passwordCleaner = text => text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
-        const extractRegex = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gisu;
+        const encryptedExtract = /(https?:\/\/mega\.nz\/#P![A-Za-z0-9_!F-]+).*?(?:Password|Pass|Key)\b[\s:]*(?:<[^>]+>)?([\p{L}\p{N}\p{P}_-]+)(?:<[^>]+>)?/gisu;
         function extractPasswords(data) {
             const result = {};
             if (typeof data === "string") {
                 let match;
-                while ((match = extractRegex.exec(data)) !== null) {
+                while ((match = encryptedExtract.exec(data)) !== null) {
                     result[match[1]] = match[2]?.trim() ?? "";
                 }
             }
             return result;
         }
+        const getCompleteUrl = (url, key) => {
+            const {
+                state,
+                href
+            } = parsePassword(url, key);
+            return state ? href : url;
+        };
+        const missingExtract = /((?:https?:\/\/)?mega\.nz\/(?:file|folder)\/)(?![A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))([A-Za-z0-9_-]{8}(?![A-Za-z0-9_-])|)(?:(?:(?!#?[A-Za-z0-9_-]{16,43}(?![A-Za-z0-9_-]))[\s\S])*?([A-Za-z0-9_-]{8}#[A-Za-z0-9_-]{16,43}|#?[A-Za-z0-9_-]{16,43})(?![A-Za-z0-9_-]))?/gi;
+        function extractMissingKey(data) {
+            const result = {};
+            if (typeof data === "string") {
+                let match;
+                while ((match = missingExtract.exec(data)) !== null) {
+                    result[match[1] + match[2]] = match[3] || "";
+                }
+            }
+            return result;
+        }
+        const passwordCleaner = text => text.match(/^(Password|Pass|Key)\s*:?\s*(.*)$/i)?.[2]?.trim() ?? "";
         function parsePassword(href, text) {
             let state = false;
             if (!text) return {
@@ -479,7 +497,7 @@
             if (text.startsWith("#")) {
                 state = true;
                 href += text;
-            } else if (/^[A-Za-z0-9_!F-]{16,43}$/.test(text)) {
+            } else if (/^[A-Za-z0-9_-]{16,43}$/.test(text)) {
                 state = true;
                 href += "#" + text;
             } else if (lowerText.startsWith("pass") || lowerText.startsWith("key")) {
@@ -516,8 +534,10 @@
         }
         return {
             getPassword: getPassword,
+            getCompleteUrl: getCompleteUrl,
             getDecryptedUrl: getDecryptedUrl,
-            extractPasswords: extractPasswords
+            extractPasswords: extractPasswords,
+            extractMissingKey: extractMissingKey
         };
     }
     const TextToLinkFactory = () => {
@@ -581,16 +601,19 @@
             return nodes;
         };
         async function parseModify(container, father, text, textNode = null, complex = false) {
-            let modifyUrl, passwordDict = {};
+            let modifyUrl, passwordDict = {}, missingDict = {};
             if (text === "(frame embed)") {
                 const a = father.closest("a");
                 if (!a) return;
                 const href = a.href;
                 if (!href) return;
-                if (href.includes("mega.nz/#P!")) {
+                if (href.includes("mega.nz")) {
                     mega ??= megaUtils(urlRegex);
-                    passwordDict = mega.extractPasswords(container.$oHtml());
+                    text = container.$oHtml();
+                    missingDict = mega.extractMissingKey(text);
+                    passwordDict = mega.extractPasswords(text);
                 }
+                if (missingDict[href]) modifyUrl = mega.getCompleteUrl(href, missingDict[href]);
                 if (passwordDict[href]) modifyUrl = await mega.getDecryptedUrl(href, passwordDict[href]);
                 if (modifyUrl && modifyUrl !== href) {
                     a.href = modifyUrl;
@@ -605,8 +628,9 @@
                 })));
             } else {
                 if (text.match(urlRegex).length === 0) return;
-                if (text.includes("mega.nz/#P!")) {
+                if (text.includes("mega.nz")) {
                     mega ??= megaUtils(urlRegex);
+                    missingDict = mega.extractMissingKey(text);
                     passwordDict = mega.extractPasswords(text);
                 }
                 let url, index, lastIndex = 0;
@@ -616,6 +640,7 @@
                     index = match.index;
                     if (index > lastIndex) segments.push(text.slice(lastIndex, index));
                     modifyUrl = decodeURIComponent(url).trim();
+                    if (missingDict[url]) modifyUrl = mega.getCompleteUrl(url, missingDict[url]);
                     if (passwordDict[url]) modifyUrl = await mega.getDecryptedUrl(url, passwordDict[url]);
                     segments.push(`<a href="${protocolParse(modifyUrl)}" rel="noopener noreferrer">${modifyUrl}</a>`);
                     lastIndex = index + url.length;
@@ -629,6 +654,7 @@
         return {
             async TextToLink(config) {
                 if (!Page.isContent() && !Page.isAnnouncement()) return;
+                let parentNode, text, textNode, data, dataLength;
                 if (Page.isContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
@@ -640,7 +666,6 @@
                             }
                         } else if (content) {
                             jumpTrigger(content, config);
-                            let parentNode, text, textNode, data, dataLength;
                             for ([parentNode, data] of getTextNodeMap(content).entries()) {
                                 dataLength = data.length;
                                 for (textNode of data) {
@@ -663,11 +688,11 @@
                     }).then(() => {
                         const items = Lib.$q(".card-list__items");
                         jumpTrigger(items, config);
-                        let parentNode, textNode, data, dataLength;
                         for ([parentNode, data] of getTextNodeMap(items).entries()) {
                             dataLength = data.length;
                             for (textNode of data) {
-                                parseModify(items, parentNode, textNode.$text(), textNode, dataLength > 1);
+                                text = textNode.$text();
+                                parseModify(items, parentNode, text, textNode, dataLength > 1);
                             }
                         }
                     });
@@ -698,9 +723,7 @@
                 Accept: "text/css"
             }
         } = {}) {
-            try {
-                fetchRecord[url]?.abort();
-            } catch { }
+            fetchRecord[url]?.abort();
             const controller = new AbortController();
             fetchRecord[url] = controller;
             return new Promise((resolve, reject) => {
@@ -723,6 +746,7 @@ statusText: ${text}`);
                     resolve(res);
                     callback?.(res);
                 }).catch(error => {
+                    if (error.name === "AbortError") return;
                     reject(error);
                     Lib.log(error).error;
                 }).finally(() => {
@@ -740,7 +764,7 @@ statusText: ${text}`);
         const recordKey = "better_post_record";
         const oldRecord = Lib.getLocal(oldKey);
         if (oldRecord instanceof Array) {
-            const r = await Parame.Parame.DB.set(recordKey, new Map(oldRecord));
+            const r = await Parame.DB.set(recordKey, new Map(oldRecord));
             r === recordKey && Lib.delLocal(oldKey);
         }
         let recordCache;
@@ -938,7 +962,7 @@ statusText: ${text}`);
                     appendTag: otherUrl ? "Post" : ""
                 });
                 parent.replaceWith(Lib.createElement(reTag, {
-                    innerHTML: parent.$iHtml()
+                    html: parent.$iHtml()
                 }));
             } catch { }
         }
@@ -946,7 +970,7 @@ statusText: ${text}`);
             Lib.$observer(element, async () => {
                 recordCache = await getRecord();
                 const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
-                for (const items of element.$qa(`a${checkFix ? ":not([fix])" : ""}`)) {
+                for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) {
                     searchFix(items);
                 }
             }, {
@@ -1166,7 +1190,7 @@ statusText: ${text}`);
                                 });
                             }, 50);
                         }, 300);
-                    } else if (newtab && Lib.platform !== "Mobile" && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Page.isContent() && target.matches(".fancy-image__image")) {
+                    } else if (newtab && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Page.isContent() && target.matches(".fancy-image__image")) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const url = target.$gAttr("jump");
@@ -1187,7 +1211,7 @@ statusText: ${text}`);
                     capture: true,
                     mark: "BetterPostCard"
                 });
-                if (Lib.platform === "Desktop") {
+                if (Lib.platform.desktop) {
                     let currentBox, currentTarget;
                     Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
                         let target = event.target;
@@ -1301,20 +1325,20 @@ statusText: ${text}`);
         CacheFetch: CacheFetch,
         async TextToLink(...args) {
             const value = TextToLinkFactory().TextToLink;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         },
         async BetterPostCard(...args) {
             const func = await BetterPostCardFactory();
             const value = func.BetterPostCard;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         }
     };
     async function NewTabOpens({
@@ -1337,7 +1361,7 @@ statusText: ${text}`);
     async function CardText({
         mode
     }) {
-        if (Lib.platform === "Mobile") return;
+        if (Lib.platform.mobile) return;
         switch (mode) {
             case 2:
                 Lib.addStyle(`
@@ -1816,11 +1840,11 @@ statusText: ${text}`);
         CardZoom: CardZoom,
         async BetterThumbnail(...args) {
             const value = BetterThumbnailFactory().BetterThumbnail;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         },
         QuickPostToggle: QuickPostToggle
     };
@@ -2227,7 +2251,7 @@ statusText: ${text}`);
                         const header = Lib.$q("header");
                         toTopBtn = Lib.createElement(comments, "span", {
                             id: "to-top-svg",
-                            innerHTML: `
+                            html: `
                             <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
                                 <style>svg{fill: ${Load.color}}</style>
                                 <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
@@ -2294,27 +2318,27 @@ statusText: ${text}`);
         VideoBeautify: VideoBeautify,
         async LinkBeautify(...args) {
             const value = LinkBeautifyFactory().LinkBeautify;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         },
         async OriginalImage(...args) {
             const value = OriginalImageFactory().OriginalImage;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         },
         async ExtraButton(...args) {
             const value = ExtraButtonFactory().ExtraButton;
+            value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
                 writable: false
             });
-            value(...args);
         },
         CommentFormat: CommentFormat
     };
@@ -2921,6 +2945,9 @@ statusText: ${text}`);
                 } else if (id === "closure") {
                     menuRequ.menuClose();
                 }
+            });
+            Lib.onE(imageSetEl, "wheel", event => {
+                event.stopPropagation();
             });
         }
         return {
