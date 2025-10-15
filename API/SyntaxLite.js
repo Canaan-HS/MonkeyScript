@@ -251,6 +251,7 @@ const Lib = (() => {
          * @param {string} arg4 - 插入位置
          * @param {string} [arg.class] - 元素類別
          * @param {string} [arg.text] - 元素內文
+         * @param {string} [arg.html] - 元素內部 html
          * @param {number} [arg.rows] - 行數
          * @param {number} [arg.cols] - 列數
          * @param {object} [arg.on] - 監聽事件
