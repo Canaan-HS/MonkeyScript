@@ -23,9 +23,7 @@ const Fetch = (() => {
         responseType = "json",
         headers = { "Accept": "text/css" }
     } = {}) {
-        try {
-            fetchRecord[url]?.abort();
-        } catch { }
+        fetchRecord[url]?.abort();
 
         const controller = new AbortController();
         fetchRecord[url] = controller;
@@ -47,6 +45,7 @@ const Fetch = (() => {
                     callback?.(res);
                 })
                 .catch(error => {
+                    if (error.name === "AbortError") return; // 忽略中斷錯誤
                     reject(error);
                     Lib.log(error).error;
                 })
