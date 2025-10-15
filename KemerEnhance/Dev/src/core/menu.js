@@ -571,6 +571,12 @@ const MenuFactory = (() => {
                 menuRequ.menuClose();
             }
         });
+
+        // 阻止滾動傳遞
+        Lib.onE(imageSetEl, "wheel", event => {
+            event.stopPropagation();
+        });
+
     };
 
     return { menuInit, postViewInit }
