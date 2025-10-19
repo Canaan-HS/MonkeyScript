@@ -37,7 +37,7 @@ export default async function CacheFetch() {
             return new Response(cached.body, {
                 status: cached.status,
                 headers: cached.headers
-            });
+            })
         }
 
         // 執行請求與非阻塞式快取
@@ -56,15 +56,10 @@ export default async function CacheFetch() {
 
                         // 檢查是否有實際內容
                         if (bodyText) {
-                            const headersObject = {};
-                            responseClone.headers.forEach((value, key) => {
-                                headersObject[key] = value;
-                            });
-
                             cache.set(url, {
                                 body: bodyText,
                                 status: responseClone.status,
-                                headers: headersObject
+                                headers: responseClone.headers
                             });
 
                             saveCache();
