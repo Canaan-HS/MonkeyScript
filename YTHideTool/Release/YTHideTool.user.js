@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      2025.09.25
+// @version      2025.10.22
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -22,7 +22,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -33,17 +33,17 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(function () {
+(function() {
     const Config = {
         Dev: false,
-        GlobalChange: true, // 全局同時修改
+        GlobalChange: true,
         HotKey: {
-            Adapt: k => k.key.toLowerCase(), // <- 適配大小寫差異
-            Title: k => k.altKey && Config.HotKey.Adapt(k) == "t", // 標題
-            MinimaList: k => k.ctrlKey && Config.HotKey.Adapt(k) == "z", // 極簡化
-            RecomViewing: k => k.altKey && Config.HotKey.Adapt(k) == "1", // 推薦觀看
-            Comment: k => k.altKey && Config.HotKey.Adapt(k) == "2", // 留言區
-            FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3" // 功能區
+            Adapt: k => k.key.toLowerCase(),
+            Title: k => k.altKey && Config.HotKey.Adapt(k) == "t",
+            MinimaList: k => k.ctrlKey && Config.HotKey.Adapt(k) == "z",
+            RecomViewing: k => k.altKey && Config.HotKey.Adapt(k) == "1",
+            Comment: k => k.altKey && Config.HotKey.Adapt(k) == "2",
+            FunctionBar: k => k.altKey && Config.HotKey.Adapt(k) == "3"
         }
     };
     const Match = {
@@ -225,8 +225,14 @@
                 .ytp-endscreen-content {
                     display: none;
                 }
+                .ytp-fullscreen-grid {
+                    display: none;
+                }
                 #movie_player:not(.ytp-fullscreen):hover .ytp-ce-element,
                 #movie_player:not(.ytp-fullscreen):hover .ytp-endscreen-content {
+                    display: block;
+                }
+                #movie_player:not(.ytp-fullscreen):hover .ytp-fullscreen-grid {
                     display: block;
                 }
                 .ytp-show-tiles .ytp-videowall-still {
@@ -236,39 +242,39 @@
                     overflow-x: hidden !important;
                 }
             `, "Youtube-Hide-Tool", false);
-                Lib.waitEl(["title", "#title h1", "#end", "#below", "#secondary.style-scope.ytd-watch-flexy", "#secondary-inner", "#related", "#comments", "#actions"], null, {
+                Lib.waitEl([ "title", "#title h1", "#end", "#below", "#secondary.style-scope.ytd-watch-flexy", "#secondary-inner", "#related", "#comments", "#actions" ], null, {
                     throttle: 80,
                     characterData: true,
                     timeoutResult: true
                 }).then(found => {
                     Tools.devPrint(Transl("隱藏元素"), found);
-                    const [title, h1, end, below, secondary, inner, related, comments, actions] = found;
+                    const [ title, h1, end, below, secondary, inner, related, comments, actions ] = found;
                     if (Lib.getV("Minimalist")) {
                         Tools.titleOb.observe(title, Tools.titleOp);
-                        Tools.styleTransform([document.body], "overflow", "hidden");
-                        Tools.styleTransform([h1, end, below, secondary, related], "display", "none").then(state => Tools.devTimePrint(Transl("極簡化"), state));
+                        Tools.styleTransform([ document.body ], "overflow", "hidden");
+                        Tools.styleTransform([ h1, end, below, secondary, related ], "display", "none").then(state => Tools.devTimePrint(Transl("極簡化"), state));
                         Lib.title("...");
                     } else {
                         if (Lib.getV("Title")) {
                             Tools.titleOb.observe(title, Tools.titleOp);
-                            Tools.styleTransform([h1], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏標題"), state));
+                            Tools.styleTransform([ h1 ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏標題"), state));
                             Lib.title("...");
                         }
                         if (Lib.getV("RecomViewing")) {
-                            Tools.styleTransform([secondary, related], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏推薦觀看"), state));
+                            Tools.styleTransform([ secondary, related ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏推薦觀看"), state));
                         }
                         if (Lib.getV("Comment")) {
-                            Tools.styleTransform([comments], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏留言區"), state));
+                            Tools.styleTransform([ comments ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏留言區"), state));
                         }
                         if (Lib.getV("FunctionBar")) {
-                            Tools.styleTransform([actions], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏功能選項"), state));
+                            Tools.styleTransform([ actions ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏功能選項"), state));
                         }
                     }
                     const modify = {
                         Title: (mode, save = "Title") => {
                             mode = save ? mode : !mode;
-                            Lib.title(mode ? (Tools.titleOb.disconnect(), Tools.titleFormat(h1)) : (Tools.titleOb.observe(title, Tools.titleOp),
-                                "..."));
+                            Lib.title(mode ? (Tools.titleOb.disconnect(), Tools.titleFormat(h1)) : (Tools.titleOb.observe(title, Tools.titleOp), 
+                            "..."));
                             Tools.hideJudgment(h1, save);
                         },
                         Minimalist: (mode, save = true) => {
@@ -276,13 +282,13 @@
                             if (mode) {
                                 modify.Title(false, false);
                                 save && Lib.setV("Minimalist", false);
-                                Tools.styleTransform([document.body], "overflow", "auto");
-                                Tools.styleTransform([end, below, secondary, related], "display", "block");
+                                Tools.styleTransform([ document.body ], "overflow", "auto");
+                                Tools.styleTransform([ end, below, secondary, related ], "display", "block");
                             } else {
                                 modify.Title(true, false);
                                 save && Lib.setV("Minimalist", true);
-                                Tools.styleTransform([document.body], "overflow", "hidden");
-                                Tools.styleTransform([end, below, secondary, related], "display", "none");
+                                Tools.styleTransform([ document.body ], "overflow", "hidden");
+                                Tools.styleTransform([ end, below, secondary, related ], "display", "none");
                             }
                         },
                         RecomViewing: (_, save = "RecomViewing") => {
@@ -323,7 +329,7 @@
                         capture: true
                     });
                     if (Config.GlobalChange) {
-                        Lib.storeListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], call => {
+                        Lib.storageListen([ "Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar" ], call => {
                             if (call.far) modify[call.key](call.nv, false);
                         });
                     }
