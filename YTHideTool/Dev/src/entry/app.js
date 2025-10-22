@@ -32,8 +32,14 @@ export default function Main() {
                 .ytp-endscreen-content {
                     display: none;
                 }
+                .ytp-fullscreen-grid {
+                    display: none;
+                }
                 #movie_player:not(.ytp-fullscreen):hover .ytp-ce-element,
                 #movie_player:not(.ytp-fullscreen):hover .ytp-endscreen-content {
+                    display: block;
+                }
+                #movie_player:not(.ytp-fullscreen):hover .ytp-fullscreen-grid {
                     display: block;
                 }
                 .ytp-show-tiles .ytp-videowall-still {
@@ -153,7 +159,7 @@ export default function Main() {
 
                 // 動態全局修改
                 if (Config.GlobalChange) {
-                    Lib.storeListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], call => {
+                    Lib.storageListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], call => {
                         if (call.far) modify[call.key](call.nv, false);
                     });
                 };
