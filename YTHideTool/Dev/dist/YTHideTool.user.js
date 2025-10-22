@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      2025.09.25
+// @version      2025.10.22
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -22,7 +22,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/487608/1661432/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -203,8 +203,14 @@
                 .ytp-endscreen-content {
                     display: none;
                 }
+                .ytp-fullscreen-grid {
+                    display: none;
+                }
                 #movie_player:not(.ytp-fullscreen):hover .ytp-ce-element,
                 #movie_player:not(.ytp-fullscreen):hover .ytp-endscreen-content {
+                    display: block;
+                }
+                #movie_player:not(.ytp-fullscreen):hover .ytp-fullscreen-grid {
                     display: block;
                 }
                 .ytp-show-tiles .ytp-videowall-still {
@@ -302,7 +308,7 @@
             { capture: true },
           );
           if (Config.GlobalChange) {
-            Lib.storeListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], (call) => {
+            Lib.storageListen(["Minimalist", "Title", "RecomViewing", "Comment", "FunctionBar"], (call) => {
               if (call.far) modify[call.key](call.nv, false);
             });
           }
