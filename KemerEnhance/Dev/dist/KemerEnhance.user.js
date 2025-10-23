@@ -325,14 +325,10 @@
               const responseClone = response.clone();
               const bodyText = await responseClone.text();
               if (bodyText) {
-                const headersObject = {};
-                responseClone.headers.forEach((value, key) => {
-                  headersObject[key] = value;
-                });
                 cache.set(url, {
                   body: bodyText,
                   status: responseClone.status,
-                  headers: headersObject,
+                  headers: responseClone.headers,
                 });
                 saveCache();
               }
@@ -634,7 +630,7 @@
     return {
       async TextToLink(config) {
         if (!Page.isContent() && !Page.isAnnouncement()) return;
-        let parentNode, text, textNode, data, dataLength;
+        let parentNode, text, textNode, data, isComplex;
         if (Page.isContent()) {
           Lib.waitEl(".post__body, .scrape__body", null).then(async (body) => {
             let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
@@ -647,14 +643,14 @@
             } else if (content) {
               jumpTrigger(content, config);
               for ([parentNode, data] of getTextNodeMap(content).entries()) {
-                dataLength = data.length;
+                isComplex = parentNode.childElementCount >= 1 || data.length > 1;
                 for (textNode of data) {
                   text = textNode.$text();
                   if (text.startsWith("https://mega.nz")) {
                     mega ??= megaUtils(urlRegex);
                     text = await mega.getPassword(parentNode, text);
                   }
-                  parseModify(content, parentNode, text, textNode, dataLength > 1);
+                  parseModify(content, parentNode, text, textNode, isComplex);
                 }
               }
             } else {
@@ -667,10 +663,10 @@
             const items = Lib.$q(".card-list__items");
             jumpTrigger(items, config);
             for ([parentNode, data] of getTextNodeMap(items).entries()) {
-              dataLength = data.length;
+              isComplex = parentNode.childElementCount >= 1 || data.length > 1;
               for (textNode of data) {
                 text = textNode.$text();
-                parseModify(items, parentNode, text, textNode, dataLength > 1);
+                parseModify(items, parentNode, text, textNode, isComplex);
               }
             }
           });
