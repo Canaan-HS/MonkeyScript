@@ -90,7 +90,14 @@ const TextToLinkFactory = () => {
         return nodes;
     };
 
-    // 解析後轉換網址 (上層容器, 文本父節點, 文本內容, 文本節點, 是否為複雜文本)
+    /**
+     * @description 解析後轉換網址
+     * @param {Element} container - 上層容器
+     * @param {Element} father - 文本父節點
+     * @param {String} text - 文本內容
+     * @param {Element|null} textNode - 文本節點
+     * @param {Boolean} complex - 是否為複雜文本
+     */
     async function parseModify(
         container, father, text, textNode = null, complex = false
     ) {
@@ -181,7 +188,7 @@ const TextToLinkFactory = () => {
         async TextToLink(config) {
             if (!Page.isContent() && !Page.isAnnouncement()) return;
 
-            let parentNode, text, textNode, data, dataLength;
+            let parentNode, text, textNode, data, isComplex;
             if (Page.isContent()) {
                 Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
 
@@ -199,8 +206,9 @@ const TextToLinkFactory = () => {
                     } else if (content) {
                         jumpTrigger(content, config);
                         for ([parentNode, data] of getTextNodeMap(content).entries()) {
-                            dataLength = data.length;
-
+                            // ? 實驗性判斷式, 可能不需要 data.length
+                            isComplex = parentNode.childElementCount >= 1 || data.length > 1;
+ 
                             for (textNode of data) {
                                 text = textNode.$text();
 
@@ -210,7 +218,7 @@ const TextToLinkFactory = () => {
                                     text = await mega.getPassword(parentNode, text);
                                 }
 
-                                parseModify(content, parentNode, text, textNode, dataLength > 1);
+                                parseModify(content, parentNode, text, textNode, isComplex);
                             }
                         }
                     } else {
@@ -225,10 +233,11 @@ const TextToLinkFactory = () => {
                     jumpTrigger(items, config);
 
                     for ([parentNode, data] of getTextNodeMap(items).entries()) {
-                        dataLength = data.length;
+                        isComplex = parentNode.childElementCount >= 1 || data.length > 1;
+
                         for (textNode of data) {
                             text = textNode.$text();
-                            parseModify(items, parentNode, text, textNode, dataLength > 1);
+                            parseModify(items, parentNode, text, textNode, isComplex);
                         }
                     }
                 })
