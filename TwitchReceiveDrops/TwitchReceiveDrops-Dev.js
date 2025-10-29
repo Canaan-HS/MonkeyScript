@@ -256,10 +256,10 @@
         }
 
         /* 主要運行 */
-        static async run() {
+        async run() {
             regMenu();
 
-            const self = new Detection(); // self = 靜態函數需要將自身類實例化
+            const self = this;
             const config = self.Config;
 
             const updateDisplay = config.UpdateDisplay;
@@ -277,7 +277,7 @@
             initData();
 
             /* 主要處理函數 */
-            const process = (token = 10) => {
+            const process = (token = 5) => {
                 campaigns ??= devTrace("Campaigns", document.querySelector(config.Campaigns));
                 inventory ??= devTrace("Inventory", document.querySelector(config.Inventory));
 
@@ -364,8 +364,8 @@
                     window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
                 }
-                /* 沒有 token & 處於支援頁面 */
-                else if (notHasToken && supportCheck()) {
+                /* 沒有 token & 紀錄不為 0 & 處於支援頁面 */
+                else if (notHasToken && record !== 0 && supportCheck()) {
                     location.assign(supportPage);
                 };
             };
@@ -655,12 +655,11 @@
     function devTrace(tag, element) {
         if (!Config.Dev) return element;
 
-        const record = traceRecord[tag];
         const isNodeList = element instanceof NodeList; // 只用於該腳本, 只會出現 NodeList 和 Element
         const recordKey = isNodeList ? getCompositeKey(element) : element;
 
-        if (record && record.has(recordKey)) return element;
-        traceRecord[tag] = new Map().set(recordKey, true); // 記錄
+        if (traceRecord[tag]?.has(recordKey)) return element;
+        traceRecord[tag] = new Map().set(recordKey, true); // 記錄已經找過的
 
         clearTimeout(cleaner); // GC 清理工作
         cleaner = setTimeout(() => {
@@ -802,7 +801,7 @@
 
     // 主運行調用
     const restartLive = new RestartLive();
-    if (supportCheck()) Detection.run();
+    if (supportCheck()) new Detection().run();
     else waitSupport();
 
 })();
