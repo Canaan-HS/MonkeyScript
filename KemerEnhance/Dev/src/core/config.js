@@ -14,12 +14,14 @@ const User_Config = {
             newtab_active: false, // 切換焦點到新選項卡
             newtab_insert: true, // 選項卡插入到當前選項卡的正後方
         },
-        BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
+        BetterPostCard: { // 修復名稱|自訂名稱|外部 TAG 跳轉|快速預覽內容
             enable: true,
+            previewAbove: true, // 快速預覽展示於帖子上方
+            enableNameTools: true, // 啟用名稱工具 (修復名稱|自訂名稱|外部 TAG 跳轉)
+            /* 以下配置僅在啟用名稱工具時生效 */
             newtab: true,
             newtab_active: true,
             newtab_insert: true,
-            previewAbove: true, // 快速預覽展示於帖子上方
         },
     },
     Preview: {
