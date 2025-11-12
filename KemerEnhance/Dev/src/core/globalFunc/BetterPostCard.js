@@ -461,8 +461,99 @@ const BetterPostCardFactory = async () => {
 
     return {
         /* 更好的 PostCard */
-        async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove }) {
+        async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove, enableNameTools }) {
             loadStyle();
+
+            // 監聽滑鼠移入事件
+            if (Lib.platform.desktop) {
+                let currentBox, currentTarget;
+
+                Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                    let target = event.target;
+                    const className = target.className;
+
+                    if (className === "fancy-image__image") {
+                        currentTarget = target.parentElement;
+                        currentBox = target.previousElementSibling;
+                    }
+                    else if (className === "fancy-image__picture") {
+                        currentTarget = target;
+                        currentBox = target.$q(".post-show-box");
+                        target = target.$q("img");
+                    } else return;
+
+                    if (!currentBox && target) {
+                        currentBox = Lib.createElement(target, "div", {
+                            text: "Loading...",
+                            style: "display: none;",
+                            class: "post-show-box",
+                            attr: { preview: previewAbove ? "above" : "below" },
+                            on: {
+                                wheel: event => {
+                                    event.preventDefault();
+                                    event.currentTarget.scrollLeft += event.deltaY;
+                                }
+                            }
+                        }, "beforebegin");
+
+                        // 目前暫時只有 discord 不支援, 就不用正則
+                        const url = target.$gAttr("jump") || target.closest("a.user-card").href;
+                        if (url && !url.includes("discord")) {
+                            const uri = new URL(url);
+                            const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                            Fetch.send(api, null, {
+                                responseType: Page.isNeko ? "document" : "json"
+                            })
+                                .then(data => {
+                                    if (Page.isNeko) data = data.$qa(".post-card__image");
+                                    currentBox.$text(""); // 清除載入文本
+
+                                    const srcBox = new Set();
+                                    for (const post of data) {
+                                        let src = "";
+
+                                        if (Page.isNeko) src = post.src ?? "";
+                                        else {
+                                            for (const { path } of [
+                                                post.file,
+                                                ...post?.attachments || []
+                                            ]) {
+                                                if (!path) continue;
+
+                                                const isImg = Parame.SupportImg.has(path.split(".")[1]);
+                                                if (!isImg) continue;
+
+                                                src = Parame.ThumbnailApi + path;
+                                                break;
+                                            }
+                                        }
+
+                                        if (!src) continue;
+                                        srcBox.add(src);
+                                    }
+
+                                    if (srcBox.size === 0) currentBox.$text("No Image");
+                                    else {
+                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
+                                        srcBox.clear();
+                                    }
+                                })
+                        } else currentBox.$text("Not Supported");
+                    }
+
+                    // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
+                    currentBox?.$sAttr("style", "display: block;");
+                }, 3e2), { passive: true, mark: "PostShow" });
+
+                Lib.onEvent(Lib.body, "mouseout", event => {
+                    if (!currentTarget) return;
+                    if (currentTarget.contains(event.relatedTarget)) return;
+                    currentTarget = null;
+                    currentBox?.$sAttr("style", "display: none;");
+                }, { passive: true, mark: "PostHide" });
+            };
+
+            if (!enableNameTools) return;
 
             // 監聽點擊事件
             const [active, insert] = [newtab_active, newtab_insert];
@@ -533,95 +624,6 @@ const BetterPostCardFactory = async () => {
                 }
             }, { capture: true, mark: "BetterPostCard" });
 
-            // 監聽滑鼠移入事件
-            if (Lib.platform.desktop) {
-                let currentBox, currentTarget;
-
-                Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
-                    let target = event.target;
-                    const tagName = target.tagName;
-
-                    if (tagName === "IMG" && target.$hAttr("jump")) {
-                        currentTarget = target.parentElement;
-                        currentBox = target.previousElementSibling;
-                    }
-                    else if (tagName === "PICTURE") {
-                        currentTarget = target;
-                        currentBox = target.$q(".post-show-box");
-                        target = target.$q("img");
-                    } else return;
-
-                    if (!currentBox && target) {
-                        currentBox = Lib.createElement(target, "div", {
-                            text: "Loading...",
-                            style: "display: none;",
-                            class: "post-show-box",
-                            attr: { preview: previewAbove ? "above" : "below" },
-                            on: {
-                                wheel: event => {
-                                    event.preventDefault();
-                                    event.currentTarget.scrollLeft += event.deltaY;
-                                }
-                            }
-                        }, "beforebegin")
-
-                        const url = target.$gAttr("jump");
-                        // 目前暫時只有 discord 不支援, 就不用正則
-                        if (url && !url.includes("discord")) {
-                            const uri = new URL(url);
-                            const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
-                            Fetch.send(api, null, {
-                                responseType: Page.isNeko ? "document" : "json"
-                            })
-                                .then(data => {
-                                    if (Page.isNeko) data = data.$qa(".post-card__image");
-                                    currentBox.$text(""); // 清除載入文本
-
-                                    const srcBox = new Set();
-                                    for (const post of data) {
-                                        let src = "";
-
-                                        if (Page.isNeko) src = post.src ?? "";
-                                        else {
-                                            for (const { path } of [
-                                                post.file,
-                                                ...post?.attachments || []
-                                            ]) {
-                                                if (!path) continue;
-
-                                                const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                                                if (!isImg) continue;
-
-                                                src = Parame.ThumbnailApi + path;
-                                                break;
-                                            }
-                                        }
-
-                                        if (!src) continue;
-                                        srcBox.add(src);
-                                    }
-
-                                    if (srcBox.size === 0) currentBox.$text("No Image");
-                                    else {
-                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
-                                        srcBox.clear();
-                                    }
-                                })
-                        } else currentBox.$text("Not Supported");
-                    }
-
-                    // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
-                    currentBox?.$sAttr("style", "display: block;");
-                }, 3e2), { passive: true, mark: "PostShow" });
-
-                Lib.onEvent(Lib.body, "mouseout", event => {
-                    if (!currentTarget) return;
-                    if (currentTarget.contains(event.relatedTarget)) return;
-                    currentTarget = null;
-                    currentBox?.$sAttr("style", "display: none;");
-                }, { passive: true, mark: "PostHide" });
-            }
-
             // 搜尋頁面, 與一些特殊預覽頁
             if (Page.isSearch()) {
                 Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
@@ -642,7 +644,6 @@ const BetterPostCardFactory = async () => {
                 ], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
                     otherFix(artist, title, artist.href, Lib.url, "fix_cont");
                 });
-
             }
             else { // 一般 預覽頁面
                 Lib.waitEl("span[itemprop='name']", null, { raf: true, timeout: 3 }).then(artist => {
