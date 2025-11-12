@@ -9,8 +9,8 @@
 // ==/UserScript==
 
 const Lib = (() => {
-    const $domParser = new DOMParser();
-    const $type = (object) => Object.prototype.toString.call(object).slice(8, -1);
+    const _domParser = new DOMParser();
+    const _type = (object) => Object.prototype.toString.call(object).slice(8, -1);
     const deviceCall = {
         get sX() { return window.scrollX },
         get sY() { return window.scrollY },
@@ -723,7 +723,7 @@ const Lib = (() => {
      * @example
      * 使用字串作為 mark，當出現新的元素，會自動清除舊的觀察器，再創建新的觀察器
      *
-     * $observer(document.body, () => {
+     * observer(document.body, () => {
      *     console.log("DOM發生變化");
      * }, {
      *     mark: "bodyObserver",
@@ -734,7 +734,7 @@ const Lib = (() => {
      * });
      */
     const observerRecord = new Map();
-    async function $observer(target, onFunc, options = {}, callback) {
+    async function observer(target, onFunc, options = {}, callback) {
         const {
             mark = "",
             debounce = 0,
@@ -755,8 +755,8 @@ const Lib = (() => {
         };
 
         const [rateFunc, delayMs] = debounce > 0
-            ? [$debounce, debounce]
-            : [$throttle, throttle];
+            ? [_debounce, debounce]
+            : [_throttle, throttle];
 
         const op = { subtree, childList, attributes, characterData }
         const ob = new MutationObserver(rateFunc(() => { onFunc() }, delayMs));
@@ -868,7 +868,7 @@ const Lib = (() => {
                     }, (1000 * timeout));
 
                 } else {
-                    const [rateFunc, delayMs] = throttle > 0 ? [$throttle, throttle] : [$debounce, debounce];
+                    const [rateFunc, delayMs] = throttle > 0 ? [_throttle, throttle] : [_debounce, debounce];
                     const observer = new MutationObserver(rateFunc(() => {
                         result = query(select, all);
 
@@ -971,7 +971,7 @@ const Lib = (() => {
     };
     // setter = localStorage.setItem, sessionStorage.setItem, GM_setValue
     function setStorage(setter, key, value, { space = 0, expireStr } = {}) {
-        const type = $type(value);
+        const type = _type(value);
         const pack = { type, data: storageSerialize[type]?.(value) ?? value };
         const expireTime = parseExpire(expireStr);
 
@@ -999,7 +999,7 @@ const Lib = (() => {
                 type = item.type ?? "Object";
                 value = item.data ?? item;
             } else { // 一般數據
-                type = $type(item);
+                type = _type(item);
                 value = item;
             };
 
@@ -1067,7 +1067,7 @@ const Lib = (() => {
                     if (compress) {
                         strCompress ??= createStrCompress(compressCode);
 
-                        const type = $type(value);
+                        const type = _type(value);
                         pack.type = type;
                         pack.data = await strCompress.compress( // 有壓縮的要特別處理
                             storageSerialize[type]?.(value) ?? value, { base64: false }
@@ -1117,7 +1117,7 @@ const Lib = (() => {
                                 strCompress ??= createStrCompress(compressCode);
                                 data = await strCompress.decompress(data);
 
-                                const type = item.type || $type(data);
+                                const type = item.type || _type(data);
                                 data = storageParse[type]?.(data) ?? data;
                             }
                         } else {
@@ -1164,17 +1164,17 @@ const Lib = (() => {
      * @returns {function}
      *
      * @example
-     * a = $throttle(()=> {}, 100);
+     * a = _throttle(()=> {}, 100);
      * a();
      *
      * function b(n) {
-     *      $throttle(b(n), 100);
+     *      _throttle(b(n), 100);
      * }
      *
-     * document.addEventListener("pointermove", $throttle(()=> {
+     * document.addEventListener("pointermove", _throttle(()=> {
      * }), 100)
      */
-    function $throttle(func, delay) {
+    function _throttle(func, delay) {
         let lastTime = 0;
         return (...args) => {
             const now = Date.now();
@@ -1192,9 +1192,9 @@ const Lib = (() => {
      * @returns {function}
      *
      * @example
-     * 使用方法同上, 改成 $debounce() 即可
+     * 使用方法同上, 改成 _debounce() 即可
      */
-    function $debounce(func, delay) {
+    function _debounce(func, delay) {
         let timer;
         return (...args) => {
             clearTimeout(timer);
@@ -1628,8 +1628,8 @@ const Lib = (() => {
         {
             ...addCall, ...storageCall, ...GM_storageCall,
             eventRecord, addRecord, observerRecord,
-            $type, onE, onEvent, offEvent, onUrlChange, log, delHead,
-            $observer, waitEl, openDB, $throttle, $debounce, createWorker, createStrCompress, outputJson,
+            type: _type, onE, onEvent, offEvent, onUrlChange, log, delHead,
+            observer, waitEl, openDB, throttle: _throttle, debounce: _debounce, createWorker, createStrCompress, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
 
             /**
@@ -1644,6 +1644,6 @@ const Lib = (() => {
              * @param {htnl} html - 要解析成 html 的文檔
              * @returns {htnl}    - html 文檔
              */
-            domParse: (html) => $domParser.parseFromString(html, "text/html"),
+            domParse: (html) => _domParser.parseFromString(html, "text/html"),
         });
 })();
