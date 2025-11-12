@@ -8,7 +8,7 @@ export default `
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.10.15-Beta
+// @version      2025.11.12
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
