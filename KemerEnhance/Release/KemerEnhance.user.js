@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.10.15-Beta
+// @version      2025.11.12
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -46,7 +46,6 @@
 // ==/UserScript==
 
 (async function () {
-    /* Data type checks are removed in user configuration; providing incorrect input may cause it to break */
     const User_Config = {
         Global: {
             BlockAds: true, // 阻擋廣告
@@ -60,12 +59,14 @@
                 newtab_active: false, // 切換焦點到新選項卡
                 newtab_insert: true, // 選項卡插入到當前選項卡的正後方
             },
-            BetterPostCard: { // 修復名稱|自訂名稱|外部TAG跳轉|快速預覽內容
+            BetterPostCard: { // 修復名稱|自訂名稱|外部 TAG 跳轉|快速預覽內容
                 enable: true,
+                previewAbove: true, // 快速預覽展示於帖子上方
+                enableNameTools: true, // 啟用名稱工具 (修復名稱|自訂名稱|外部 TAG 跳轉)
+                /* 以下配置僅在啟用名稱工具時生效 */
                 newtab: true,
                 newtab_active: true,
                 newtab_insert: true,
-                previewAbove: true, // 快速預覽展示於帖子上方
             },
         },
         Preview: {
@@ -327,14 +328,10 @@
                             const responseClone = response.clone();
                             const bodyText = await responseClone.text();
                             if (bodyText) {
-                                const headersObject = {};
-                                responseClone.headers.forEach((value, key) => {
-                                    headersObject[key] = value;
-                                });
                                 cache.set(url, {
                                     body: bodyText,
                                     status: responseClone.status,
-                                    headers: headersObject
+                                    headers: responseClone.headers
                                 });
                                 saveCache();
                             }
@@ -654,7 +651,7 @@
         return {
             async TextToLink(config) {
                 if (!Page.isContent() && !Page.isAnnouncement()) return;
-                let parentNode, text, textNode, data, dataLength;
+                let parentNode, text, textNode, data, isComplex;
                 if (Page.isContent()) {
                     Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
                         let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
@@ -667,14 +664,14 @@
                         } else if (content) {
                             jumpTrigger(content, config);
                             for ([parentNode, data] of getTextNodeMap(content).entries()) {
-                                dataLength = data.length;
+                                isComplex = parentNode.childElementCount >= 1 || data.length > 1;
                                 for (textNode of data) {
                                     text = textNode.$text();
                                     if (text.startsWith("https://mega.nz")) {
                                         mega ??= megaUtils(urlRegex);
                                         text = await mega.getPassword(parentNode, text);
                                     }
-                                    parseModify(content, parentNode, text, textNode, dataLength > 1);
+                                    parseModify(content, parentNode, text, textNode, isComplex);
                                 }
                             }
                         } else {
@@ -689,10 +686,10 @@
                         const items = Lib.$q(".card-list__items");
                         jumpTrigger(items, config);
                         for ([parentNode, data] of getTextNodeMap(items).entries()) {
-                            dataLength = data.length;
+                            isComplex = parentNode.childElementCount >= 1 || data.length > 1;
                             for (textNode of data) {
                                 text = textNode.$text();
-                                parseModify(items, parentNode, text, textNode, dataLength > 1);
+                                parseModify(items, parentNode, text, textNode, isComplex);
                             }
                         }
                     });
@@ -1152,9 +1149,87 @@ statusText: ${text}`);
                 newtab,
                 newtab_active,
                 newtab_insert,
-                previewAbove
+                previewAbove,
+                enableNameTools
             }) {
                 loadStyle();
+                if (Lib.platform.desktop) {
+                    let currentBox, currentTarget;
+                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                        let target = event.target;
+                        const className = target.className;
+                        if (className === "fancy-image__image") {
+                            currentTarget = target.parentElement;
+                            currentBox = target.previousElementSibling;
+                        } else if (className === "fancy-image__picture") {
+                            currentTarget = target;
+                            currentBox = target.$q(".post-show-box");
+                            target = target.$q("img");
+                        } else return;
+                        if (!currentBox && target) {
+                            currentBox = Lib.createElement(target, "div", {
+                                text: "Loading...",
+                                style: "display: none;",
+                                class: "post-show-box",
+                                attr: {
+                                    preview: previewAbove ? "above" : "below"
+                                },
+                                on: {
+                                    wheel: event2 => {
+                                        event2.preventDefault();
+                                        event2.currentTarget.scrollLeft += event2.deltaY;
+                                    }
+                                }
+                            }, "beforebegin");
+                            const url = target.$gAttr("jump") || target.closest("a.user-card").href;
+                            if (url && !url.includes("discord")) {
+                                const uri = new URL(url);
+                                const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                                Fetch.send(api, null, {
+                                    responseType: Page.isNeko ? "document" : "json"
+                                }).then(data => {
+                                    if (Page.isNeko) data = data.$qa(".post-card__image");
+                                    currentBox.$text("");
+                                    const srcBox = new Set();
+                                    for (const post of data) {
+                                        let src = "";
+                                        if (Page.isNeko) src = post.src ?? ""; else {
+                                            for (const {
+                                                path
+                                            } of [post.file, ...post?.attachments || []]) {
+                                                if (!path) continue;
+                                                const isImg = Parame.SupportImg.has(path.split(".")[1]);
+                                                if (!isImg) continue;
+                                                src = Parame.ThumbnailApi + path;
+                                                break;
+                                            }
+                                        }
+                                        if (!src) continue;
+                                        srcBox.add(src);
+                                    }
+                                    if (srcBox.size === 0) currentBox.$text("No Image"); else {
+                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
+                                        srcBox.clear();
+                                    }
+                                });
+                            } else currentBox.$text("Not Supported");
+                        }
+                        currentBox?.$sAttr("style", "display: block;");
+                    }, 300), {
+                        passive: true,
+                        mark: "PostShow"
+                    });
+                    Lib.onEvent(Lib.body, "mouseout", event => {
+                        if (!currentTarget) return;
+                        if (currentTarget.contains(event.relatedTarget)) return;
+                        currentTarget = null;
+                        currentBox?.$sAttr("style", "display: none;");
+                    }, {
+                        passive: true,
+                        mark: "PostHide"
+                    });
+                }
+                if (!enableNameTools) return;
                 const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
@@ -1211,82 +1286,6 @@ statusText: ${text}`);
                     capture: true,
                     mark: "BetterPostCard"
                 });
-                if (Lib.platform.desktop) {
-                    let currentBox, currentTarget;
-                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
-                        let target = event.target;
-                        const tagName = target.tagName;
-                        if (tagName === "IMG" && target.$hAttr("jump")) {
-                            currentTarget = target.parentElement;
-                            currentBox = target.previousElementSibling;
-                        } else if (tagName === "PICTURE") {
-                            currentTarget = target;
-                            currentBox = target.$q(".post-show-box");
-                            target = target.$q("img");
-                        } else return;
-                        if (!currentBox && target) {
-                            currentBox = Lib.createElement(target, "div", {
-                                text: "Loading...",
-                                style: "display: none;",
-                                class: "post-show-box",
-                                attr: {
-                                    preview: previewAbove ? "above" : "below"
-                                },
-                                on: {
-                                    wheel: event2 => {
-                                        event2.preventDefault();
-                                        event2.currentTarget.scrollLeft += event2.deltaY;
-                                    }
-                                }
-                            }, "beforebegin");
-                            const url = target.$gAttr("jump");
-                            if (url && !url.includes("discord")) {
-                                const uri = new URL(url);
-                                const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
-                                Fetch.send(api, null, {
-                                    responseType: Page.isNeko ? "document" : "json"
-                                }).then(data => {
-                                    if (Page.isNeko) data = data.$qa(".post-card__image");
-                                    currentBox.$text("");
-                                    const srcBox = new Set();
-                                    for (const post of data) {
-                                        let src = "";
-                                        if (Page.isNeko) src = post.src ?? ""; else {
-                                            for (const {
-                                                path
-                                            } of [post.file, ...post?.attachments || []]) {
-                                                if (!path) continue;
-                                                const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                                                if (!isImg) continue;
-                                                src = Parame.ThumbnailApi + path;
-                                                break;
-                                            }
-                                        }
-                                        if (!src) continue;
-                                        srcBox.add(src);
-                                    }
-                                    if (srcBox.size === 0) currentBox.$text("No Image"); else {
-                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
-                                        srcBox.clear();
-                                    }
-                                });
-                            } else currentBox.$text("Not Supported");
-                        }
-                        currentBox?.$sAttr("style", "display: block;");
-                    }, 300), {
-                        passive: true,
-                        mark: "PostShow"
-                    });
-                    Lib.onEvent(Lib.body, "mouseout", event => {
-                        if (!currentTarget) return;
-                        if (currentTarget.contains(event.relatedTarget)) return;
-                        currentTarget = null;
-                        currentBox?.$sAttr("style", "display: none;");
-                    }, {
-                        passive: true,
-                        mark: "PostHide"
-                    });
-                }
                 if (Page.isSearch()) {
                     Lib.waitEl(".card-list__items", null, {
                         raf: true,
