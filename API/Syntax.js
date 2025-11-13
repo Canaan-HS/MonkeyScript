@@ -424,7 +424,7 @@ const Lib = (() => {
      * offEvent(元素) // 移除該元素所有監聽器
      */
     async function offEvent(element, type, mark) {
-        if (element == null) {
+        if (element == null && type == null && mark == null) {
             for (const value of eventRecord.values()) {
                 for (const { element, type, listener } of value.values()) {
                     element.removeEventListener(type, listener);
