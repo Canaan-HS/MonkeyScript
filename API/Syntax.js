@@ -1404,7 +1404,7 @@ const Lib = (() => {
             }
         `);
 
-        const Uncompresslble = new Set([
+        const Uncompressible = new Set([
             // 影片 (大多數視頻編碼已經是高度壓縮)
             'mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm',
             'mpg', 'mpeg', 'm4v', 'ogv', '3gp', 'asf', 'ts',
@@ -1414,8 +1414,8 @@ const Lib = (() => {
             'zip', 'rar', '7z', 'gz', 'bz2',
 
             // 影像（JPEG、PNG 已壓縮格式）
-            '.pg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg',
-            '.eic', 'heif', 'raw', 'ico', 'psd',
+            'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'tif', 'svg',
+            'eic', 'heif', 'raw', 'ico', 'psd',
 
             // 音訊（幾乎不會再壓縮）
             'mp3', 'aac', 'flac', 'wav', 'ogg',
@@ -1459,7 +1459,7 @@ const Lib = (() => {
                     const filesWithOptions = {};
                     Object.entries(files).forEach(([name, data]) => {
                         const extension = (name.split(".").pop()).toLowerCase();
-                        const level = Uncompresslble.has(extension)
+                        const level = Uncompressible.has(extension)
                             ? 0 : (options.level || 5);
                         filesWithOptions[name] = { data, level };
                     });
