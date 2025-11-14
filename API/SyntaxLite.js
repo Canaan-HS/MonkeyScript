@@ -434,8 +434,7 @@ const Lib = (() => {
             return;
         };
 
-        typeof element === "string" && (element = selector(document, element));
-        const key = mark ?? element;
+        const key = mark ?? typeof element === "string" ? selector(document, element) : element;
         const listens = eventRecord.get(key);
 
         if (listens) {
