@@ -23,7 +23,7 @@
 // @grant        GM_addValueChangeListener
 // @grant        GM_removeValueChangeListener
 
-// @require      https://cdn.jsdelivr.net/npm/qmsg@1.4.0/dist/index.umd.min.js
+// @require      https://cdn.jsdelivr.net/npm/qmsg@1.6.0/dist/index.umd.min.js
 // @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
 
 // @run-at       document-start
@@ -89,6 +89,12 @@
         }
     ];
 
+    // Qmsg 配置 (避免意外無法自行關閉)
+    Qmsg.config({
+        showClose: true,
+        autoClose: true,
+    });
+
     const showStatus = {
         0: (name) => Qmsg.success(`${name} 簽到成功`),
         1: (name) => Qmsg.info(`${name} 已經簽到`),
@@ -99,7 +105,7 @@
     };
 
     // 建立簽到請求
-    function createRequest({Name, Method = "POST", Headers = {}, API, verifyStatus }) {
+    function createRequest({ Name, Method = "POST", Headers = {}, API, verifyStatus }) {
 
         const deBug = (result) => {
             console.table(Object.assign(
