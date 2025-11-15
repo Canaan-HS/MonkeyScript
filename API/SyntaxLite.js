@@ -11,6 +11,7 @@
 const Lib = (() => {
     const _domParser = new DOMParser();
     const _type = (object) => Object.prototype.toString.call(object).slice(8, -1);
+    // ? navigator.userAgentData.mobile 在平板容易誤判
     const deviceCall = {
         get sX() { return window.scrollX },
         get sY() { return window.scrollY },
@@ -19,13 +20,13 @@ const Lib = (() => {
         get platform() {
             const value = { desktop: false, mobile: false };
 
-            if (navigator.userAgentData?.mobile != null) {
-                value[navigator.userAgentData.mobile ? "mobile" : "desktop"] = true;
-            } else if (window.matchMedia?.("(max-width: 767px), (pointer: coarse)")?.matches) {
+            if (window.matchMedia?.('(pointer: coarse)')?.matches || window.matchMedia?.('(hover: none)')?.matches) {
                 value.mobile = true;
-            } else if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            }
+            else if (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
                 value.mobile = true;
-            } else {
+            }
+            else {
                 value.desktop = true;
             }
 
