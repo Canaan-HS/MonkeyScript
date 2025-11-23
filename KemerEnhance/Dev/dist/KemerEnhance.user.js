@@ -1105,88 +1105,94 @@ statusText: ${text}`);
     return {
       async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove, enableNameTools }) {
         loadStyle();
+        const isSearch = Page.isSearch();
         if (Lib.platform.desktop) {
-          let currentBox, currentTarget;
-          Lib.onEvent(
-            Lib.body,
-            "mouseover",
-            Lib.$debounce((event) => {
-              let target = event.target;
-              const className = target.className;
-              if (className === "fancy-image__image") {
-                currentTarget = target.parentElement;
-                currentBox = target.previousElementSibling;
-              } else if (className === "fancy-image__picture") {
-                currentTarget = target;
-                currentBox = target.$q(".post-show-box");
-                target = target.$q("img");
-              } else return;
-              if (!currentBox && target) {
-                currentBox = Lib.createElement(
-                  target,
-                  "div",
-                  {
-                    text: "Loading...",
-                    style: "display: none;",
-                    class: "post-show-box",
-                    attr: { preview: previewAbove ? "above" : "below" },
-                    on: {
-                      wheel: (event2) => {
-                        event2.preventDefault();
-                        event2.currentTarget.scrollLeft += event2.deltaY;
+          if (isSearch) {
+            let currentBox, currentTarget;
+            Lib.onEvent(
+              Lib.body,
+              "mouseover",
+              Lib.$debounce((event) => {
+                let target = event.target;
+                const className = target.className;
+                if (className === "fancy-image__image") {
+                  currentTarget = target.parentElement;
+                  currentBox = target.previousElementSibling;
+                } else if (className === "fancy-image__picture") {
+                  currentTarget = target;
+                  currentBox = target.$q(".post-show-box");
+                  target = target.$q("img");
+                } else return;
+                if (!currentBox && target) {
+                  currentBox = Lib.createElement(
+                    target,
+                    "div",
+                    {
+                      text: "Loading...",
+                      style: "display: none;",
+                      class: "post-show-box",
+                      attr: { preview: previewAbove ? "above" : "below" },
+                      on: {
+                        wheel: (event2) => {
+                          event2.preventDefault();
+                          event2.currentTarget.scrollLeft += event2.deltaY;
+                        },
                       },
                     },
-                  },
-                  "beforebegin",
-                );
-                const url = target.$gAttr("jump") || target.closest("a.user-card").href;
-                if (url && !url.includes("discord")) {
-                  const uri = new URL(url);
-                  const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
-                  Fetch.send(api, null, {
-                    responseType: Page.isNeko ? "document" : "json",
-                  }).then((data) => {
-                    if (Page.isNeko) data = data.$qa(".post-card__image");
-                    currentBox.$text("");
-                    const srcBox = new Set();
-                    for (const post of data) {
-                      let src = "";
-                      if (Page.isNeko) src = post.src ?? "";
-                      else {
-                        for (const { path } of [post.file, ...(post?.attachments || [])]) {
-                          if (!path) continue;
-                          const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                          if (!isImg) continue;
-                          src = Parame.ThumbnailApi + path;
-                          break;
+                    "beforebegin",
+                  );
+                  const url = target.$gAttr("jump") || target.closest("a.user-card").href;
+                  if (url && !url.includes("discord")) {
+                    const uri = new URL(url);
+                    const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                    Fetch.send(api, null, {
+                      responseType: Page.isNeko ? "document" : "json",
+                    }).then((data) => {
+                      if (Page.isNeko) data = data.$qa(".post-card__image");
+                      currentBox.$text("");
+                      const srcBox = new Set();
+                      for (const post of data) {
+                        let src = "";
+                        if (Page.isNeko) src = post.src ?? "";
+                        else {
+                          for (const { path } of [post.file, ...(post?.attachments || [])]) {
+                            if (!path) continue;
+                            const isImg = Parame.SupportImg.has(path.split(".")[1]);
+                            if (!isImg) continue;
+                            src = Parame.ThumbnailApi + path;
+                            break;
+                          }
                         }
+                        if (!src) continue;
+                        srcBox.add(src);
                       }
-                      if (!src) continue;
-                      srcBox.add(src);
-                    }
-                    if (srcBox.size === 0) currentBox.$text("No Image");
-                    else {
-                      currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
-                      srcBox.clear();
-                    }
-                  });
-                } else currentBox.$text("Not Supported");
-              }
-              currentBox?.$sAttr("style", "display: block;");
-            }, 300),
-            { passive: true, mark: "PostShow" },
-          );
-          Lib.onEvent(
-            Lib.body,
-            "mouseout",
-            (event) => {
-              if (!currentTarget) return;
-              if (currentTarget.contains(event.relatedTarget)) return;
-              currentTarget = null;
-              currentBox?.$sAttr("style", "display: none;");
-            },
-            { passive: true, mark: "PostHide" },
-          );
+                      if (srcBox.size === 0) currentBox.$text("No Image");
+                      else {
+                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
+                        srcBox.clear();
+                      }
+                    });
+                  } else currentBox.$text("Not Supported");
+                }
+                currentBox?.$sAttr("style", "display: block;");
+              }, 300),
+              { passive: true, mark: "PostShow" },
+            );
+            Lib.onEvent(
+              Lib.body,
+              "mouseout",
+              (event) => {
+                if (!currentTarget) return;
+                if (currentTarget.contains(event.relatedTarget)) return;
+                currentTarget = null;
+                currentBox?.$sAttr("style", "display: none;");
+              },
+              { passive: true, mark: "PostHide" },
+            );
+          } else {
+            Lib.offEvent(Lib.body, "mouseover", "PostShow");
+            Lib.offEvent(Lib.body, "mouseout", "PostHide");
+          }
         }
         if (!enableNameTools) return;
         const [active, insert] = [newtab_active, newtab_insert];
@@ -1248,7 +1254,7 @@ statusText: ${text}`);
           },
           { capture: true, mark: "BetterPostCard" },
         );
-        if (Page.isSearch()) {
+        if (isSearch) {
           Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then((card_items) => {
             if (Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url)) {
               const artist = Lib.$q("span[itemprop='name']");
