@@ -464,93 +464,101 @@ const BetterPostCardFactory = async () => {
         async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove, enableNameTools }) {
             loadStyle();
 
+            const isSearch = Page.isSearch();
+
             // 監聽滑鼠移入事件
             if (Lib.platform.desktop) {
-                let currentBox, currentTarget;
+                if (isSearch) {
+                    let currentBox, currentTarget;
 
-                Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
-                    let target = event.target;
-                    const className = target.className;
+                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                        let target = event.target;
+                        const className = target.className;
 
-                    if (className === "fancy-image__image") {
-                        currentTarget = target.parentElement;
-                        currentBox = target.previousElementSibling;
-                    }
-                    else if (className === "fancy-image__picture") {
-                        currentTarget = target;
-                        currentBox = target.$q(".post-show-box");
-                        target = target.$q("img");
-                    } else return;
+                        if (className === "fancy-image__image") {
+                            currentTarget = target.parentElement;
+                            currentBox = target.previousElementSibling;
+                        }
+                        else if (className === "fancy-image__picture") {
+                            currentTarget = target;
+                            currentBox = target.$q(".post-show-box");
+                            target = target.$q("img");
+                        } else return;
 
-                    if (!currentBox && target) {
-                        currentBox = Lib.createElement(target, "div", {
-                            text: "Loading...",
-                            style: "display: none;",
-                            class: "post-show-box",
-                            attr: { preview: previewAbove ? "above" : "below" },
-                            on: {
-                                wheel: event => {
-                                    event.preventDefault();
-                                    event.currentTarget.scrollLeft += event.deltaY;
+                        if (!currentBox && target) {
+                            currentBox = Lib.createElement(target, "div", {
+                                text: "Loading...",
+                                style: "display: none;",
+                                class: "post-show-box",
+                                attr: { preview: previewAbove ? "above" : "below" },
+                                on: {
+                                    wheel: event => {
+                                        event.preventDefault();
+                                        event.currentTarget.scrollLeft += event.deltaY;
+                                    }
                                 }
-                            }
-                        }, "beforebegin");
+                            }, "beforebegin");
 
-                        // 目前暫時只有 discord 不支援, 就不用正則
-                        const url = target.$gAttr("jump") || target.closest("a.user-card").href;
-                        if (url && !url.includes("discord")) {
-                            const uri = new URL(url);
-                            const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
-                            Fetch.send(api, null, {
-                                responseType: Page.isNeko ? "document" : "json"
-                            })
-                                .then(data => {
-                                    if (Page.isNeko) data = data.$qa(".post-card__image");
-                                    currentBox.$text(""); // 清除載入文本
+                            // 目前暫時只有 discord 不支援, 就不用正則
+                            const url = target.$gAttr("jump") || target.closest("a.user-card").href;
+                            if (url && !url.includes("discord")) {
+                                const uri = new URL(url);
+                                const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
+                                Fetch.send(api, null, {
+                                    responseType: Page.isNeko ? "document" : "json"
+                                })
+                                    .then(data => {
+                                        if (Page.isNeko) data = data.$qa(".post-card__image");
+                                        currentBox.$text(""); // 清除載入文本
 
-                                    const srcBox = new Set();
-                                    for (const post of data) {
-                                        let src = "";
+                                        const srcBox = new Set();
+                                        for (const post of data) {
+                                            let src = "";
 
-                                        if (Page.isNeko) src = post.src ?? "";
-                                        else {
-                                            for (const { path } of [
-                                                post.file,
-                                                ...post?.attachments || []
-                                            ]) {
-                                                if (!path) continue;
+                                            if (Page.isNeko) src = post.src ?? "";
+                                            else {
+                                                for (const { path } of [
+                                                    post.file,
+                                                    ...post?.attachments || []
+                                                ]) {
+                                                    if (!path) continue;
 
-                                                const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                                                if (!isImg) continue;
+                                                    const isImg = Parame.SupportImg.has(path.split(".")[1]);
+                                                    if (!isImg) continue;
 
-                                                src = Parame.ThumbnailApi + path;
-                                                break;
+                                                    src = Parame.ThumbnailApi + path;
+                                                    break;
+                                                }
                                             }
+
+                                            if (!src) continue;
+                                            srcBox.add(src);
                                         }
 
-                                        if (!src) continue;
-                                        srcBox.add(src);
-                                    }
+                                        if (srcBox.size === 0) currentBox.$text("No Image");
+                                        else {
+                                            currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
+                                            srcBox.clear();
+                                        }
+                                    })
+                            } else currentBox.$text("Not Supported");
+                        }
 
-                                    if (srcBox.size === 0) currentBox.$text("No Image");
-                                    else {
-                                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
-                                        srcBox.clear();
-                                    }
-                                })
-                        } else currentBox.$text("Not Supported");
-                    }
+                        // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
+                        currentBox?.$sAttr("style", "display: block;");
+                    }, 3e2), { passive: true, mark: "PostShow" });
 
-                    // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
-                    currentBox?.$sAttr("style", "display: block;");
-                }, 3e2), { passive: true, mark: "PostShow" });
-
-                Lib.onEvent(Lib.body, "mouseout", event => {
-                    if (!currentTarget) return;
-                    if (currentTarget.contains(event.relatedTarget)) return;
-                    currentTarget = null;
-                    currentBox?.$sAttr("style", "display: none;");
-                }, { passive: true, mark: "PostHide" });
+                    Lib.onEvent(Lib.body, "mouseout", event => {
+                        if (!currentTarget) return;
+                        if (currentTarget.contains(event.relatedTarget)) return;
+                        currentTarget = null;
+                        currentBox?.$sAttr("style", "display: none;");
+                    }, { passive: true, mark: "PostHide" });
+                }
+                else {
+                    Lib.offEvent(Lib.body, "mouseover", "PostShow");
+                    Lib.offEvent(Lib.body, "mouseout", "PostHide");
+                }
             };
 
             if (!enableNameTools) return;
@@ -625,7 +633,7 @@ const BetterPostCardFactory = async () => {
             }, { capture: true, mark: "BetterPostCard" });
 
             // 搜尋頁面, 與一些特殊預覽頁
-            if (Page.isSearch()) {
+            if (isSearch) {
                 Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then(card_items => {
                     if (Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url)) {
                         // 特定頁面的 名稱修復
