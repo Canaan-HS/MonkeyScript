@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.09.03-Beta
+// @version      2025.12.08-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -26,7 +26,9 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @require      https://update.greasyfork.org/scripts/495339/1659705/Syntax_min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+
+// @require      https://update.greasyfork.org/scripts/495339/1709491/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
@@ -38,6 +40,7 @@
 // @grant        GM_download
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
@@ -46,12 +49,12 @@
 
 (function () {
     const General = {
-        Dev: false, // 顯示請求資訊, 與錯誤資訊
-        IncludeExtras: false, // 下載時包含 影片 與 其他附加檔案
-        CompleteClose: false, // 下載完成後關閉
-        ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
+        Dev: false,            // 顯示請求資訊, 與錯誤資訊
+        IncludeExtras: false,  // 下載時包含 影片 與 其他附加檔案
+        CompleteClose: false,  // 下載完成後關閉
+        ConcurrentDelay: 500,  // 下載線程延遲 (ms) [壓縮下載]
         ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
-        BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
+        BatchOpenDelay: 500,   // 一鍵開啟帖子的延遲 (ms)
     };
     /** ---------------------
      * 暫時的 檔名修改方案
@@ -63,19 +66,21 @@
      *
      * {Time} 發表時間
      * {Title} 標題
-     * {Artist} 作者 | 繪師 ...
+     * {UserId} 作者 ID
+     * {PostId} 帖子 ID
+     * {Artist} 作者 名稱
      * {Source} 來源 => (Pixiv Fanbox) 之類的標籤
      *
      * {Fill} 填充 => ! 只適用於檔名, 位置隨意 但 必須存在該值, 不然會出錯
      */
     const FileName = {
         FillValue: {
-            Filler: "0", // 填充元素 / 填料
+            Filler: "0",    // 填充元素 / 填料
             Amount: "Auto", // 填充數量 [輸入 auto 或 任意數字]
         },
         CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
-        FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
-        FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
+        FolderName: "{Title}",              // 資料夾名稱 (用空字串, 就直接沒資料夾)
+        FillName: "{Title} {Fill}",         // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
     };
     /** ---------------------
      * 設置 FetchData 輸出格式
@@ -96,20 +101,20 @@
      * 外部連結: "ExternalLink" (Only AdvancedFetch)
      */
     const FetchSet = {
-        Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
-        AdvancedFetch: true, // 進階獲取 (只需要 一般媒體連結, 關閉該功能獲取會快很多) [ nekohouse 不適用]
+        Delay: 100,       // 獲取延遲 (ms) [太快會被 BAN]
         ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
-        FilterExts: [], // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
+        FilterExts: [],   // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
         UseFormat: false, // 這裡為 false 下面兩項就不生效
         Mode: "FilterMode",
         Format: ["Timestamp", "TypeTag"],
     };
+    /* 不懂不要改 */
     const Process = {
         IsNeko: Lib.$domain.startsWith("nekohouse"),
-        ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr2", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "dng", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
+        ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
         VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"],
         Lock: false,
-        dynamicParam: Lib.createNnetworkObserver({
+        dynamicParam: Lib.createNetworkObserver({
             MAX_Delay: 1500,
             MIN_CONCURRENCY: 5,
             MAX_CONCURRENCY: 10,
@@ -359,6 +364,43 @@
             Transl: Str => Matcher[Str] ?? Str
         };
     })();
+    const Parse = (() => {
+        const infoF1 = /\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)(?:\/post\/([^\/?]+))?/;
+        const infoF2 = /\/([^\/]+)\/([^\/]+)$/;
+        const infoF3 = /^https?:\/\/([^.]+)\.([^.]+)\./;
+        const specialServer = {
+            x: "twitter",
+            maker_id: "dlsite"
+        };
+        const supportServer = /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans|Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/i;
+        const protocolF1 = /^[a-zA-Z][\w+.-]*:\/\//;
+        const protocolF2 = /^[a-zA-Z][\w+.-]*:/;
+        const protocolF3 = /^([\w-]+\.)+[a-z]{2,}(\/|$)/i;
+        const protocolF4 = /^\/\//;
+        return {
+            getUrlInfo(uri) {
+                uri = uri.match(infoF1) || uri.match(infoF2) || uri.match(infoF3);
+                if (!uri) return;
+                return uri.splice(1).reduce((acc, str, idx) => {
+                    if (supportServer.test(str)) {
+                        const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
+                        acc.server = specialServer[cleanStr] ?? cleanStr;
+                    } else if (idx === 2) {
+                        acc.post = str;
+                    } else {
+                        acc.user = str;
+                    }
+                    return acc;
+                }, {});
+            },
+            getProtocol(uri) {
+                if (protocolF1.test(uri) || protocolF2.test(uri)) return uri;
+                if (protocolF3.test(uri)) return "https://" + uri;
+                if (protocolF4.test(uri)) return "https:" + uri;
+                return uri;
+            }
+        };
+    })();
     class FetchData {
         static Try_Again_Promise = null;
         constructor() {
@@ -384,7 +426,6 @@
             this.onlyMode = false;
             this.fetchDelay = FetchSet.Delay;
             this.toLinkTxt = FetchSet.ToLinkTxt;
-            this.advancedFetch = FetchSet.AdvancedFetch;
             const apiInterface = "api/v1";
             this.getPostURL = ({
                 service,
@@ -410,7 +451,7 @@
             this.getPreviewAPI = url => /[?&]o=/.test(url) ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(/([?&]o=)/, `${append}$1`) : this.queryValue ? url.replace(this.host, `${this.host}/${apiInterface}`).replace(this.queryValue, `${append}${this.queryValue}`) : url.replace(this.host, `${this.host}/${apiInterface}`) + append;
             this.getValidValue = value => {
                 if (!value) return null;
-                const type = Lib.$type(value);
+                const type = Lib.type(value);
                 if (type === "Array") return value.length > 0 && value.some(item => item !== "") ? value : null;
                 if (type === "Object") {
                     const values = Object.values(value);
@@ -504,16 +545,10 @@
             };
             const allowType = new Set(["A", "P", "STRONG", "BODY"]);
             const pFilter = new Set(["mega.nz"]);
-            const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/g;
+            const urlRegex = /(?:(?:https?|ftp|mailto|file|data|blob|ws|wss|ed2k|thunder):\/\/|(?:[-\w]+\.)+[a-zA-Z]{2,}(?:\/|$)|\w+@[-\w]+\.[a-zA-Z]{2,})[^\s]*?(?=[{}「」『』【】\[\]（）()<>、"'，。！？；：…—～~]|$|\s)/gi;
             const safeInclud = (target, checkStr) => {
                 if (typeof target !== "string") return false;
                 return target?.includes(checkStr || "");
-            };
-            const protocolParse = url => {
-                if (/^[a-zA-Z][\w+.-]*:\/\//.test(url) || /^[a-zA-Z][\w+.-]*:/.test(url)) return url;
-                if (/^([\w-]+\.)+[a-z]{2,}(\/|$)/i.test(url)) return "https://" + url;
-                if (/^\/\//.test(url)) return "https:" + url;
-                return url;
             };
             const checkProcessableLink = link => {
                 return link.toLowerCase().startsWith("https://mega.nz") && (!safeInclud(link, "#") || safeInclud(link, "#P!"));
@@ -648,7 +683,7 @@
                         } else if (tag === "P") {
                             const url = node.$text().match(urlRegex);
                             if (url && !pFilter.has(url[0])) {
-                                href = protocolParse(url[0]);
+                                href = Parse.getProtocol(url[0]);
                             }
                         } else if (tag === "STRONG") {
                             const parentElement = node.parentElement;
@@ -668,9 +703,7 @@
                                         name = linesBefore[linesBefore.length - 2].trim();
                                     }
                                 }
-                                if (name.match(urlRegex)) {
-                                    name = "";
-                                }
+                                if (name.match(urlRegex)) name = "";
                                 if (checkProcessableLink(url)) {
                                     const after = fullText.slice(offset + url.length);
                                     const linesAfter = after.split(/\r?\n/);
@@ -687,7 +720,7 @@
                                         }
                                     }
                                 }
-                                parseAdd(name, protocolParse(url), pass);
+                                parseAdd(name, Parse.getProtocol(url), pass);
                             });
                             endAdd = false;
                         }
@@ -749,36 +782,36 @@
                 return promiseLock;
             };
             this.worker = Lib.createWorker(`
-                let queue = [], processing=false;
-                onmessage = function(e) {
-                    queue.push(e.data);
-                    !processing && (processing=true, processQueue());
-                }
-                async function processQueue() {
-                    if (queue.length > 0) {
-                        const {index, title, url, time, delay} = queue.shift();
-                        FetchRequest(index, title, url, time, delay);
-                        processQueue();
-                    } else {processing = false}
-                }
-                async function FetchRequest(index, title, url, time, delay) {
-                    fetch(url, {
-                        headers: {
-                            "Accept": "text/css",
-                        }
-                    }).then(response => {
-                        if (response.ok) {
-                            response.text().then(content => {
-                                postMessage({ index, title, url, content, time, delay, error: false });
-                            });
-                        } else {
-                            postMessage({ index, title, url, content: "", time, delay, error: true });
-                        }
-                    }).catch(error => {
+            let queue = [], processing=false;
+            onmessage = function(e) {
+                queue.push(e.data);
+                !processing && (processing=true, processQueue());
+            }
+            async function processQueue() {
+                if (queue.length > 0) {
+                    const {index, title, url, time, delay} = queue.shift();
+                    FetchRequest(index, title, url, time, delay);
+                    processQueue();
+                } else {processing = false}
+            }
+            async function FetchRequest(index, title, url, time, delay) {
+                fetch(url, {
+                    headers: {
+                        "Accept": "text/css",
+                    }
+                }).then(response => {
+                    if (response.ok) {
+                        response.text().then(content => {
+                            postMessage({ index, title, url, content, time, delay, error: false });
+                        });
+                    } else {
                         postMessage({ index, title, url, content: "", time, delay, error: true });
-                    });
-                }
-            `);
+                    }
+                }).catch(error => {
+                    postMessage({ index, title, url, content: "", time, delay, error: true });
+                });
+            }
+        `);
             FetchSet.UseFormat && this._fetchConfig(FetchSet.Mode, FetchSet.Format);
             Lib.log({
                 Title: this.titleCache,
@@ -835,30 +868,14 @@
                 return;
             }
             Process.Lock = true;
-            const parseUrlInfo = uri => {
-                uri = uri.match(/\/([^\/]+)\/(?:user|server|creator|fanclubs)\/([^\/?]+)/) || uri.match(/\/([^\/]+)\/([^\/]+)$/);
-                uri = uri.splice(1);
-                let server = uri[0].replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
-                let user2 = uri[1];
-                server = {
-                    x: "twitter",
-                    maker_id: "dlsite"
-                }[server] ?? server;
-                return uri ? {
-                    server: server,
-                    user: user2
-                } : {
-                    uri: uri
-                };
-            };
             const {
-                service,
+                server,
                 user
-            } = parseUrlInfo(this.sourceURL);
+            } = Parse.getUrlInfo(this.sourceURL);
             const pack = {
                 id: id,
                 user: user,
-                service: service,
+                service: server,
                 title: this.titleCache
             };
             Lib.log(pack, {
@@ -969,13 +986,11 @@
                 });
                 await this._fetchContent(homeData);
             }
-            this.currentPage++;
-            this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
+            ++this.currentPage <= this.finalPage ? this._fetchPage(null, this.getNextPageURL(url)) : this.toLinkTxt ? this._toTxt() : this._toJson();
         }
         async _fetchContent(homeData) {
             this.progress = 0;
             const {
-                url,
                 content
             } = homeData;
             Lib.log(homeData, {
@@ -997,7 +1012,7 @@
                     const {
                         index,
                         title,
-                        url: url2,
+                        url,
                         content: content2,
                         time,
                         delay,
@@ -1005,15 +1020,14 @@
                     } = e.data;
                     if (!error) {
                         const {
-                            resolve,
-                            reject
+                            resolve
                         } = resolvers.get(index);
                         this.fetchDelay = Process.dynamicParam(time, delay);
                         const standardTitle = this.normalizeName(title, index);
                         const postDom = Lib.domParse(content2);
                         const classifiedFiles = this.nekoCategorize(standardTitle, [...postDom.$qa(".fileThumb"), ...postDom.$qa(".scrape__attachments a")]);
                         const generatedData = this.fetchGenerate({
-                            PostLink: url2,
+                            PostLink: url,
                             Timestamp: postDom.$q(".timestamp").$text(),
                             ImgLink: classifiedFiles.img,
                             VideoLink: classifiedFiles.video,
@@ -1027,7 +1041,7 @@
                         Lib.log({
                             index: index,
                             title: standardTitle,
-                            url: url2,
+                            url: url,
                             data: generatedData
                         }, {
                             dev: General.Dev,
@@ -1035,11 +1049,11 @@
                             collapsed: false
                         });
                     } else {
-                        await this.tooManyTryAgain(url2);
+                        await this.tooManyTryAgain(url);
                         this.worker.postMessage({
                             index: index,
                             title: title,
-                            url: url2,
+                            url: url,
                             time: time,
                             delay: delay
                         });
@@ -1048,7 +1062,7 @@
                 for (const {
                     index,
                     title,
-                    url: url2
+                    url
                 } of content) {
                     tasks.push(new Promise((resolve, reject) => {
                         resolvers.set(index, {
@@ -1058,7 +1072,7 @@
                         this.worker.postMessage({
                             index: index,
                             title: title,
-                            url: url2,
+                            url: url,
                             time: Date.now(),
                             delay: this.fetchDelay
                         });
@@ -1080,24 +1094,24 @@
                             profile = await new Promise((resolve, reject) => {
                                 this.worker.onmessage = async e => {
                                     const {
-                                        url: url2,
+                                        url,
                                         content: content2,
                                         error
                                     } = e.data;
                                     if (!error) resolve(JSON.parse(content2)); else {
-                                        Lib.log(url2, {
+                                        Lib.log(url, {
                                             dev: General.Dev,
                                             collapsed: false
                                         }).error;
-                                        await this.tooManyTryAgain(url2);
+                                        await this.tooManyTryAgain(url);
                                         this.worker.postMessage({
-                                            url: url2
+                                            url: url
                                         });
                                     }
                                 };
                             });
                         } else {
-                            this.finalPage = "1000";
+                            this.finalPage = Math.min(this.finalPage, 1e3);
                             profile["post_count"] = homeJson.true_count;
                         }
                         this.metaDict.set(Transl("作者"), profile.name);
@@ -1109,104 +1123,101 @@
                             group: "Meta Data"
                         });
                     }
-                    {
-                        const tasks = [];
-                        const resolvers = new Map();
-                        this.worker.onmessage = async e => {
-                            const {
-                                index,
-                                title,
-                                url: url2,
-                                content: content2,
-                                time,
-                                delay,
-                                error
-                            } = e.data;
-                            try {
-                                if (!error) {
-                                    const {
-                                        resolve,
-                                        reject
-                                    } = resolvers.get(index);
-                                    this.fetchDelay = Process.dynamicParam(time, delay);
-                                    const contentJson = JSON.parse(content2);
-                                    if (contentJson) {
-                                        const post = contentJson.post;
-                                        const previews = contentJson.previews || [];
-                                        const attachments = contentJson.attachments || [];
-                                        const standardTitle = this.normalizeName(post.title, index);
-                                        const classifiedFiles = this.kemerCategorize({
-                                            title: standardTitle,
-                                            data: [...previews, ...attachments],
-                                            fillValue: Lib.getFill(previews?.length || 1)
-                                        });
-                                        const generatedData = this.fetchGenerate({
-                                            PostLink: this.getPostURL(post),
-                                            Timestamp: this.normalizeTimestamp(post),
-                                            TypeTag: post.tags,
-                                            ImgLink: classifiedFiles.img,
-                                            VideoLink: classifiedFiles.video,
-                                            DownloadLink: classifiedFiles.other,
-                                            ExternalLink: this.specialLinkParse(post.content)
-                                        });
-                                        if (Object.keys(generatedData).length !== 0) {
-                                            this.dataDict.set(standardTitle, generatedData);
-                                        }
-                                        resolve();
-                                        Lib.title(`（${this.currentPage} - ${++this.progress}）`);
-                                        Lib.log({
-                                            index: index,
-                                            title: standardTitle,
-                                            url: url2,
-                                            data: generatedData
-                                        }, {
-                                            dev: General.Dev,
-                                            group: "Request Successful",
-                                            collapsed: false
-                                        });
-                                    } else throw new Error("Json Parse Failed");
-                                } else {
-                                    throw new Error("Request Failed");
-                                }
-                            } catch (error2) {
-                                Lib.log({
-                                    index: index,
-                                    title: title,
-                                    url: url2,
-                                    error: error2
-                                }, {
-                                    dev: General.Dev,
-                                    collapsed: false
-                                }).error;
-                                await this.tooManyTryAgain(url2);
-                                this.worker.postMessage({
-                                    index: index,
-                                    title: title,
-                                    url: url2,
-                                    time: time,
-                                    delay: delay
-                                });
+                    const tasks = [];
+                    const resolvers = new Map();
+                    this.worker.onmessage = async e => {
+                        const {
+                            index,
+                            title,
+                            url,
+                            content: content2,
+                            time,
+                            delay,
+                            error
+                        } = e.data;
+                        try {
+                            if (!error) {
+                                const {
+                                    resolve
+                                } = resolvers.get(index);
+                                this.fetchDelay = Process.dynamicParam(time, delay);
+                                const contentJson = JSON.parse(content2);
+                                if (contentJson) {
+                                    const post = contentJson.post;
+                                    const previews = contentJson.previews || [];
+                                    const attachments = contentJson.attachments || [];
+                                    const standardTitle = this.normalizeName(post.title, index);
+                                    const classifiedFiles = this.kemerCategorize({
+                                        title: standardTitle,
+                                        data: [...previews, ...attachments],
+                                        fillValue: Lib.getFill(previews?.length || 1)
+                                    });
+                                    const generatedData = this.fetchGenerate({
+                                        PostLink: this.getPostURL(post),
+                                        Timestamp: this.normalizeTimestamp(post),
+                                        TypeTag: post.tags,
+                                        ImgLink: classifiedFiles.img,
+                                        VideoLink: classifiedFiles.video,
+                                        DownloadLink: classifiedFiles.other,
+                                        ExternalLink: this.specialLinkParse(post.content)
+                                    });
+                                    if (Object.keys(generatedData).length !== 0) {
+                                        this.dataDict.set(standardTitle, generatedData);
+                                    }
+                                    resolve();
+                                    Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+                                    Lib.log({
+                                        index: index,
+                                        title: standardTitle,
+                                        url: url,
+                                        data: generatedData
+                                    }, {
+                                        dev: General.Dev,
+                                        group: "Request Successful",
+                                        collapsed: false
+                                    });
+                                } else throw new Error("Json Parse Failed");
+                            } else {
+                                throw new Error("Request Failed");
                             }
-                        };
-                        homeJson = this.isPost ? homeJson : homeJson.posts;
-                        for (const [index, post] of homeJson.entries()) {
-                            tasks.push(new Promise((resolve, reject) => {
-                                resolvers.set(index, {
-                                    resolve: resolve,
-                                    reject: reject
-                                });
-                                this.worker.postMessage({
-                                    index: index,
-                                    title: post.title,
-                                    url: this.getPostAPI(post),
-                                    time: Date.now(),
-                                    delay: this.fetchDelay
-                                });
-                            }));
-                            await Lib.sleep(this.fetchDelay);
+                        } catch (error2) {
+                            Lib.log({
+                                index: index,
+                                title: title,
+                                url: url,
+                                error: error2
+                            }, {
+                                dev: General.Dev,
+                                collapsed: false
+                            }).error;
+                            await this.tooManyTryAgain(url);
+                            this.worker.postMessage({
+                                index: index,
+                                title: title,
+                                url: url,
+                                time: time,
+                                delay: delay
+                            });
                         }
-                        await Promise.allSettled(tasks);
+                    };
+                    homeJson = this.isPost ? homeJson : homeJson.posts;
+                    for (const [index, post] of homeJson.entries()) {
+                        tasks.push(new Promise((resolve, reject) => {
+                            resolvers.set(index, {
+                                resolve: resolve,
+                                reject: reject
+                            });
+                            this.worker.postMessage({
+                                index: index,
+                                title: post.title,
+                                url: this.getPostAPI(post),
+                                time: Date.now(),
+                                delay: this.fetchDelay
+                            });
+                        }));
+                        await Lib.sleep(this.fetchDelay);
                     }
+                    await Promise.allSettled(tasks);
                     await Lib.sleep(this.fetchDelay);
                 }
             }
@@ -1247,7 +1258,7 @@
         }
     }
     function Downloader() {
-        const zipper = Lib.createCompressor();
+        const zipper = Lib.createZip(GM_getResourceText("fflate"));
         return class Download {
             constructor(compressMode, modeDisplay, button) {
                 this.button = button;
@@ -1290,7 +1301,7 @@
             `) : null;
             }
             _nameAnalysis(format) {
-                if (typeof format == "string") {
+                if (typeof format === "string") {
                     return format.split(/{([^}]+)}/g).filter(Boolean).map(data => {
                         const lowerData = data.toLowerCase().trim();
                         const isWord = /^[a-zA-Z]+$/.test(lowerData);
@@ -1308,11 +1319,18 @@
                     Process.Lock = true;
                     this.button.disabled = true;
                     const downloadData = new Map();
+                    const {
+                        server,
+                        user,
+                        post
+                    } = Parse.getUrlInfo(Lib.url);
                     this.namedData = {
                         fill: () => "fill",
+                        userid: () => user,
+                        postid: () => post,
                         title: () => title.$q("span").$text().replaceAll("/", "／"),
                         artist: () => artist.$text(),
-                        source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
+                        source: () => server.charAt(0).toUpperCase() + server.slice(1),
                         time: () => {
                             if (Process.IsNeko) {
                                 return Lib.$q(".timestamp").$text() || "";
@@ -1335,6 +1353,7 @@
                     }
                     if (downloadData.size == 0) General.Dev = true;
                     Lib.log({
+                        CompressName: compressName,
                         FolderName: folderName,
                         DownloadData: downloadData
                     }, {
@@ -1632,27 +1651,20 @@
                         return false;
                     });
                     if (Pointer.length === 0) return;
-                    const CompressMode = Lib.local("Compression", {
-                        error: true
-                    });
+                    const CompressMode = Lib.getLocal("Compression", true);
                     const ModeDisplay = CompressMode ? Transl("壓縮下載") : Transl("單獨下載");
                     download ??= Downloader();
                     Pointer.forEach((pointer, index) => {
                         Lib.createElement(pointer, "span", {
                             id: `Button-Container-${index}`,
                             on: {
-                                type: "click",
-                                listener: event => {
+                                click: event => {
                                     const target = event.target;
                                     if (target.tagName === "BUTTON") {
                                         new download(CompressMode, ModeDisplay, target).trigger(target.closest("h2").id);
                                     } else if (target.closest("svg")) {
                                         alert("Currently Invalid");
                                     }
-                                },
-                                add: {
-                                    capture: true,
-                                    passive: true
                                 }
                             },
                             innerHTML: `
@@ -1680,13 +1692,7 @@
                 alert(Transl("下載中鎖定"));
                 return;
             }
-            Lib.local("Compression", {
-                error: true
-            }) ? Lib.local("Compression", {
-                value: false
-            }) : Lib.local("Compression", {
-                value: true
-            });
+            Lib.getLocal("Compression", true) ? Lib.setLocal("Compression", false) : Lib.setLocal("Compression", true);
             buttonCreation();
         }
         async function registerMenu(Page) {
