@@ -7,7 +7,7 @@ const General = {
     ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
     ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
     BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
-    ...Lib.getJV("General__REMOVE_ON_BUILD__", {}),
+    ...Lib.getV("General__REMOVE_ON_BUILD__", {}),
 };
 
 /** ---------------------
@@ -20,7 +20,9 @@ const General = {
  *
  * {Time} 發表時間
  * {Title} 標題
- * {Artist} 作者 | 繪師 ...
+ * {UserId} 作者 ID
+ * {PostId} 帖子 ID
+ * {Artist} 作者 名稱
  * {Source} 來源 => (Pixiv Fanbox) 之類的標籤
  *
  * {Fill} 填充 => ! 只適用於檔名, 位置隨意 但 必須存在該值, 不然會出錯
@@ -33,7 +35,7 @@ const FileName = {
     CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
     FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
     FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
-    ...Lib.getJV("FileName__REMOVE_ON_BUILD__", {}),
+    ...Lib.getV("FileName__REMOVE_ON_BUILD__", {}),
 };
 
 /** ---------------------
@@ -56,13 +58,12 @@ const FileName = {
  */
 const FetchSet = {
     Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
-    AdvancedFetch: true, // 進階獲取 (只需要 一般媒體連結, 關閉該功能獲取會快很多) [ nekohouse 不適用]
     ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
     FilterExts: [], // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
     UseFormat: false, // 這裡為 false 下面兩項就不生效
     Mode: "FilterMode",
     Format: ["Timestamp", "TypeTag"],
-    ...Lib.getJV("FetchSet__REMOVE_ON_BUILD__", {}),
+    ...Lib.getV("FetchSet__REMOVE_ON_BUILD__", {}),
 };
 
 // 不要修改
@@ -85,14 +86,14 @@ const Process = {
         "mxf", "ogg",
     ],
     Lock: false,
-    dynamicParam: Lib.createNnetworkObserver({
+    dynamicParam: Lib.createNetworkObserver({
         MAX_Delay: 1500,
         MIN_CONCURRENCY: 5,
         MAX_CONCURRENCY: 10,
         Good_Network_THRESHOLD: 200,
         Poor_Network_THRESHOLD: 400,
     }),
-    ...Lib.getJV("__REMOVE_ON_BUILD__", {}),
+    ...Lib.getV("__REMOVE_ON_BUILD__", {}),
 };
 
 export { General, FileName, FetchSet, Process };
