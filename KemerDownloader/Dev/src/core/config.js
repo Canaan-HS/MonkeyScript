@@ -1,12 +1,12 @@
 import { Lib } from "../services/client.js";
 
 const General = {
-    Dev: false, // 顯示請求資訊, 與錯誤資訊
-    IncludeExtras: false, // 下載時包含 影片 與 其他附加檔案
-    CompleteClose: false, // 下載完成後關閉
-    ConcurrentDelay: 500, // 下載線程延遲 (ms) [壓縮下載]
+    Dev: false,            // 顯示請求資訊, 與錯誤資訊
+    IncludeExtras: false,  // 下載時包含 影片 與 其他附加檔案
+    CompleteClose: false,  // 下載完成後關閉
+    ConcurrentDelay: 500,  // 下載線程延遲 (ms) [壓縮下載]
     ConcurrentQuantity: 5, // 下載線程數量 [壓縮下載]
-    BatchOpenDelay: 500, // 一鍵開啟帖子的延遲 (ms)
+    BatchOpenDelay: 500,   // 一鍵開啟帖子的延遲 (ms)
     ...Lib.getV("General__REMOVE_ON_BUILD__", {}),
 };
 
@@ -29,12 +29,12 @@ const General = {
  */
 const FileName = {
     FillValue: {
-        Filler: "0", // 填充元素 / 填料
+        Filler: "0",    // 填充元素 / 填料
         Amount: "Auto", // 填充數量 [輸入 auto 或 任意數字]
     },
     CompressName: "({Artist}) {Title}", // 壓縮檔案名稱
-    FolderName: "{Title}", // 資料夾名稱 (用空字串, 就直接沒資料夾)
-    FillName: "{Title} {Fill}", // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
+    FolderName: "{Title}",              // 資料夾名稱 (用空字串, 就直接沒資料夾)
+    FillName: "{Title} {Fill}",         // 檔案名稱 [! 可以移動位置, 但不能沒有 {Fill}]
     ...Lib.getV("FileName__REMOVE_ON_BUILD__", {}),
 };
 
@@ -57,16 +57,16 @@ const FileName = {
  * 外部連結: "ExternalLink" (Only AdvancedFetch)
  */
 const FetchSet = {
-    Delay: 100, // 獲取延遲 (ms) [太快會被 BAN]
+    Delay: 100,       // 獲取延遲 (ms) [太快會被 BAN]
     ToLinkTxt: false, // 啟用後輸出為只有連結的 txt, 用於 IDM 導入下載, 理論上也支援 aria2 格式
-    FilterExts: [], // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
+    FilterExts: [],   // 自訂過濾的檔案類型, 過濾的檔案會被排除, 全小寫 例: ["ai", "psd"]
     UseFormat: false, // 這裡為 false 下面兩項就不生效
     Mode: "FilterMode",
     Format: ["Timestamp", "TypeTag"],
     ...Lib.getV("FetchSet__REMOVE_ON_BUILD__", {}),
 };
 
-// 不要修改
+/* 不懂不要改 */
 const Process = {
     IsNeko: Lib.$domain.startsWith("nekohouse"),
     ImageExts: [
