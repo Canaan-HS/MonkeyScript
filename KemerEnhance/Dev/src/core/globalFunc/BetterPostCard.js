@@ -56,7 +56,11 @@ const BetterPostCardFactory = async () => {
     const uriFormat3 = /^https?:\/\/([^.]+)\.([^.]+)\./;
     const specialServer = { x: "twitter", maker_id: "dlsite" };
     const supportServer = /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans|Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/i;
-    // 解析所有內部網址, 與作者外部網址
+    /**
+     * @description 解析所有內部網址, 與作者外部網址
+     * @param {String} uri - 要解析的網址
+     * @returns {Object} { server, user } - 網址解析結果
+     */
     const parseUrlInfo = (uri) => {
         uri = uri.match(uriFormat1) || uri.match(uriFormat2) || uri.match(uriFormat3);
         if (!uri) return;
