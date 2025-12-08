@@ -1,18 +1,13 @@
 import { monkeyWindow, Lib, saveAs } from "../services/client.js";
 import { General, FileName, Process } from "./config.js";
+
+import Parse from "../utils/parse.js";
 import Transl from "../shared/language.js";
 
 export default function Downloader() {
     const zipper = import.meta.hot
-        ? (() => {
-            const workerKey = "zipper";
-            let oldWorker = monkeyWindow[workerKey];
-            if (!oldWorker) {
-                oldWorker = monkeyWindow[workerKey] = Lib.createCompressor();
-            }
-            return oldWorker;
-        })()
-        : Lib.createCompressor();
+        ? monkeyWindow["zipper"] ??= Lib.createZip(GM_getResourceText("fflate"))
+        : Lib.createZip(GM_getResourceText("fflate"));
 
     return class Download {
         constructor(compressMode, modeDisplay, button) {
@@ -64,7 +59,7 @@ export default function Downloader() {
 
         /* 解析名稱格式 */
         _nameAnalysis(format) {
-            if (typeof format == "string") {
+            if (typeof format === "string") {
                 return format.split(/{([^}]+)}/g).filter(Boolean).map(data => {
                     const lowerData = data.toLowerCase().trim();
                     const isWord = /^[a-zA-Z]+$/.test(lowerData);
@@ -92,11 +87,15 @@ export default function Downloader() {
                 this.button.disabled = true;
                 const downloadData = new Map();
 
-                this.namedData = { // 建立數據
+                const { server, user, post } = Parse.getUrlInfo(Lib.url);
+
+                this.namedData = { // 建立數據 (key 需要為全小寫, _nameAnalysis 會自動轉換)
                     fill: () => "fill",
+                    userid: () => user,
+                    postid: () => post,
                     title: () => title.$q("span").$text().replaceAll("/", "／"),
                     artist: () => artist.$text(),
-                    source: () => new Date(title.$q(":nth-child(2)").$text()).toLocaleString(),
+                    source: () => server.charAt(0).toUpperCase() + server.slice(1),
                     time: () => {
                         if (Process.IsNeko) {
                             return Lib.$q(".timestamp").$text() || "";
@@ -139,6 +138,7 @@ export default function Downloader() {
                 if (downloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
                 Lib.log({
+                    CompressName: compressName,
                     FolderName: folderName,
                     DownloadData: downloadData
                 }, { dev: General.Dev, group: "Get Data", collapsed: false });
