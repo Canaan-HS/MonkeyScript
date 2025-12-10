@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      0.0.1-Beta3
+// @version      2025.12.10
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
@@ -124,6 +124,7 @@
             Dict = Translated
                 ? (
                     Translated = false,
+                    this.RefreshReverse(),
                     this.ReverseDict
                 ) : (
                     Translated = true,
@@ -132,7 +133,7 @@
         },
         DisplayMemory() {
             const [NormalSize, ReverseSize] = [getObjectSize(this.NormalDict), getObjectSize(this.ReverseDict)];
-            const ExactMB = (
+            const fullMB = (
                 Dict === this.NormalDict
                     ? NormalSize.MB
                     : NormalSize.MB + getObjectSize(Dict).MB
@@ -141,7 +142,7 @@
             alert(`字典緩存大小
                 \r一般字典大小: ${NormalSize.MB} MB
                 \r反轉字典大小: ${ReverseSize.MB} MB
-                \r全部緩存大小: ${ExactMB} MB
+                \r全部緩存大小: ${fullMB.toFixed(2)} MB
             `);
         },
         ReleaseMemory() { // 釋放翻譯字典緩存 (不包含自定)
@@ -159,7 +160,6 @@
         Init() { // 初始化 (重新獲取完整字典, 並刷新兩種不同狀態的緩存)
             Object.assign(Dict, Customize);
             this.RefreshNormal();
-            this.RefreshReverse();
         }
     };
     Dictionary.Init();
@@ -167,17 +167,16 @@
     WaitElem("body", () => { // 等待頁面載入
         const Transl = TranslationFactory(); // 翻譯工廠
 
+        const processedNodes = new WeakSet();
         const observer = new MutationObserver(DebounceCollect((mutations) => {
-            const toProcess = [];
-            const processedNodes = new WeakSet();
 
+            const toProcess = [];
             for (const mutation of mutations) {
                 if (mutation.type === "characterData" && mutation.target.parentElement) {
                     // 如果是文字節點
                     const node = mutation.target.parentElement;
                     if (!processedNodes.has(node)) {
                         processedNodes.add(node);
-                        toProcess.push(node);
                     }
                 }
                 else if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
@@ -200,9 +199,7 @@
             }
 
             if (toProcess.length > 0) {
-                for (const node of toProcess) {
-                    Transl.Trigger(node);
-                }
+                for (const node of toProcess) Transl.Trigger(node);
             }
         }, 600));
 
@@ -764,7 +761,7 @@
         const alignSize = (size) => Math.ceil(size / 8) * 8;
 
         // 類型檢測
-        const Type = (obj) => {
+        const _type = (obj) => {
             if (obj === null) return 'Null';
             if (obj === undefined) return 'Undefined';
             return Object.prototype.toString.call(obj).slice(8, -1);
@@ -781,10 +778,10 @@
 
             for (const item of iteratee(value)) {
                 if (item[0] !== undefined) {
-                    bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
+                    bytes += Calculate[_type(item[0])]?.(item[0], cache) ?? 0;
                 }
                 if (item[1] !== undefined) {
-                    bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+                    bytes += Calculate[_type(item[1])]?.(item[1], cache) ?? 0;
                 }
             }
 
@@ -871,7 +868,7 @@
                 for (const key of props) {
                     bytes += calculateStringSize(key); // 鍵名開銷
                     const propValue = value[key];
-                    bytes += Calculate[Type(propValue)]?.(propValue, cache) ?? 0;
+                    bytes += Calculate[_type(propValue)]?.(propValue, cache) ?? 0;
                 }
 
                 // Symbol 屬性
@@ -881,7 +878,7 @@
                 for (const sym of symbols) {
                     bytes += Calculate.Symbol(sym);
                     const symValue = value[sym];
-                    bytes += Calculate[Type(symValue)]?.(symValue, cache) ?? 0;
+                    bytes += Calculate[_type(symValue)]?.(symValue, cache) ?? 0;
                 }
 
                 return alignSize(bytes);
@@ -903,17 +900,16 @@
         };
 
         // 開始計算
-        const type = Type(object);
+        const type = _type(object);
         const calculator = Calculate[type] || Calculate.Object;
         const bytes = calculator(object, visited);
 
         // 返回數字格式的結果
-        return {
-            bytes: bytes,
-            KB: Number((bytes / 1024).toFixed(2)),
-            MB: Number((bytes / 1024 / 1024).toFixed(2)),
-            GB: Number((bytes / 1024 / 1024 / 1024).toFixed(2))
-        };
+        const units = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+        return units.reduce((acc, unit, i) => {
+            acc[unit] = Number(i === 0 ? bytes : (bytes / 1024 ** i).toFixed(2));
+            return acc;
+        }, {});
     };
 
     function DebounceCollect(func, delay) {
