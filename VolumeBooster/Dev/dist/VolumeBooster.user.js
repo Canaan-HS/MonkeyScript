@@ -19,7 +19,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1676101/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1709492/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -753,7 +753,7 @@
             panel.classList.add("active");
           }
         } else if (target.id === "Booster-Sound-Save") {
-          Lib.setV(Lib.domain, Share.Parame);
+          Lib.setV(Lib.$domain, Share.Parame);
           deleteMenu();
         } else if (target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu") {
           deleteMenu();
@@ -776,8 +776,8 @@
             items[type].value = value;
           });
         };
-        const findMedia = Lib.$debounce((func) => {
-          const media = [];
+        const media = new Set();
+        const findMedia = (func) => {
           const tree = document.createTreeWalker(Lib.body, NodeFilter.SHOW_ELEMENT, {
             acceptNode: (node) => {
               const tag = node.tagName;
@@ -788,20 +788,23 @@
             },
           });
           while (tree.nextNode()) {
-            media.push(tree.currentNode);
+            media.add(tree.currentNode);
           }
-          media.length > 0 && func(media);
-        }, 50);
-        Lib.$observer(
+          if (media.size > 0) {
+            func(media);
+            media.clear();
+          }
+        };
+        Lib.observer(
           Lib.body,
           () => {
             if (Share.ProcessLock) return;
-            findMedia((media) => {
+            findMedia((media2) => {
               Share.ProcessLock = true;
-              Booster.trigger(media);
+              Booster.trigger(media2);
             });
           },
-          { mark: "Media-Booster", attributes: false, throttle: 200 },
+          { mark: "Media-Booster", attributes: false, throttle: 500 },
           ({ ob }) => {
             regMenu(Transl("❌ 禁用網域"));
           },
