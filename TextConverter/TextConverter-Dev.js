@@ -753,163 +753,142 @@
         }
     };
 
-    /* 獲取對象大小 (估算 誤差大概 1~5% 以內) */
+    /* 獲取對象大小 (據有誤差) */
     function getObjectSize(object) {
-        const visited = new WeakSet();
+        const seenObjects = new WeakSet();
+        const seenStrings = new Set();
 
-        // V8 內存對齊
-        const alignSize = (size) => Math.ceil(size / 8) * 8;
+        // V8 Pointer Compression: 指針 4 bytes, 標頭 12 bytes
+        const bytesPerPointer = 4;
+        const headerSize = 12;
 
-        // 類型檢測
-        const _type = (obj) => {
+        const align = (n) => Math.ceil(n / 8) * 8;
+
+        const getType = (obj) => {
             if (obj === null) return 'Null';
             if (obj === undefined) return 'Undefined';
             return Object.prototype.toString.call(obj).slice(8, -1);
         };
 
-        // 計算集合類型大小
-        const calculateCollectionSize = (value, cache, iteratee) => {
-            if (!value || cache.has(value)) return 0;
-            cache.add(value);
+        const calcString = (str) => {
+            if (seenStrings.has(str)) return 0;
+            seenStrings.add(str);
 
-            let bytes = 16; // 集合對象基礎開銷
-            const size = value.size || value.length || 0;
-            bytes += size * 8; // 索引/鍵的指針開銷
-
-            for (const item of iteratee(value)) {
-                if (item[0] !== undefined) {
-                    bytes += Calculate[_type(item[0])]?.(item[0], cache) ?? 0;
-                }
-                if (item[1] !== undefined) {
-                    bytes += Calculate[_type(item[1])]?.(item[1], cache) ?? 0;
+            let isTwoByte = false;
+            for (let i = 0; i < str.length; i++) {
+                if (str.charCodeAt(i) > 0xFF) {
+                    isTwoByte = true;
+                    break;
                 }
             }
-
-            return alignSize(bytes);
+            return align(headerSize + str.length * (isTwoByte ? 2 : 1));
         };
 
-        // 計算字符串實際佔用
-        const calculateStringSize = (value) => {
-            let bytes = 12; // 字符串對象開銷
-
-            for (let i = 0; i < value.length; i++) {
-                const code = value.charCodeAt(i);
-                if (code < 0x80) bytes += 1;
-                else if (code < 0x800) bytes += 2;
-                else if (code < 0x10000) bytes += 3;
-                else bytes += 4;
+        const getSizeRec = (value) => {
+            const type = getType(value);
+            if (type === 'Boolean') return 4;
+            if (type === 'Number') {
+                if (Number.isSafeInteger(value) && value >= -2147483648 && value <= 2147483647) return 0;
+                return 12;
             }
+            if (type === 'String') return calcString(value);
+            if (type === 'Symbol') return value.description ? calcString(value.description) : 0;
+            if (type === 'Null' || type === 'Undefined') return 0;
 
-            return alignSize(bytes);
+            if (seenObjects.has(value)) return 0;
+            seenObjects.add(value);
+
+            return handlers[type] ? handlers[type](value) : handlers.Object(value);
         };
 
-        // 主計算邏輯
-        const Calculate = {
-            // 基礎類型
-            Undefined: () => 0,
-            Null: () => 0,
-            Boolean: () => 4,
-            Number: () => 8,
-            BigInt: (value) => alignSize(Math.ceil(value.toString(2).length / 8) + 8),
-            String: calculateStringSize,
-            Symbol: (value) => alignSize((value.description || '').length * 2 + 8),
-
-            // 日期和正則
-            Date: () => 8,
-            RegExp: (value) => alignSize(value.toString().length * 2 + 8),
-
-            // 函數
-            Function: (value) => alignSize(value.toString().length * 2 + 16),
-
-            // ArrayBuffer 和 TypedArray
-            ArrayBuffer: (value) => alignSize(value.byteLength + 16),
-            DataView: (value) => alignSize(value.byteLength + 24),
-            Int8Array: (value) => alignSize(value.byteLength + 24),
-            Uint8Array: (value) => alignSize(value.byteLength + 24),
-            Uint8ClampedArray: (value) => alignSize(value.byteLength + 24),
-            Int16Array: (value) => alignSize(value.byteLength + 24),
-            Uint16Array: (value) => alignSize(value.byteLength + 24),
-            Int32Array: (value) => alignSize(value.byteLength + 24),
-            Uint32Array: (value) => alignSize(value.byteLength + 24),
-            Float32Array: (value) => alignSize(value.byteLength + 24),
-            Float64Array: (value) => alignSize(value.byteLength + 24),
-            BigInt64Array: (value) => alignSize(value.byteLength + 24),
-            BigUint64Array: (value) => alignSize(value.byteLength + 24),
-
+        const handlers = {
             // 集合類型
-            Array: (value, cache) => calculateCollectionSize(value, cache, function* (arr) {
-                for (let i = 0; i < arr.length; i++) {
-                    yield [arr[i]];
+            Array: (val) => {
+                let bytes = headerSize + (val.length * bytesPerPointer);
+                for (const item of val) bytes += getSizeRec(item);
+                return align(bytes);
+            },
+            Object: (val) => {
+                let bytes = headerSize;
+                const keys = Object.keys(val);
+                const symKeys = Object.getOwnPropertySymbols(val);
+
+                // 屬性存儲結構開銷
+                bytes += (keys.length + symKeys.length) * bytesPerPointer;
+
+                for (const key of keys) {
+                    bytes += calcString(key);
+                    bytes += getSizeRec(val[key]);
                 }
-            }),
-
-            Set: (value, cache) => calculateCollectionSize(value, cache, function* (set) {
-                for (const item of set) {
-                    yield [item];
+                for (const sym of symKeys) {
+                    bytes += (sym.description || '').length * 2;
+                    bytes += getSizeRec(val[sym]);
                 }
-            }),
-
-            Map: (value, cache) => calculateCollectionSize(value, cache, function* (map) {
-                for (const [key, val] of map) {
-                    yield [key, val];
+                return align(bytes);
+            },
+            Set: (val) => {
+                // Set 的底層實現比 Array 複雜，這裡估算 Table 結構開銷
+                let bytes = headerSize + (val.size * bytesPerPointer * 2);
+                for (const item of val) bytes += getSizeRec(item);
+                return align(bytes);
+            },
+            Map: (val) => {
+                let bytes = headerSize + (val.size * bytesPerPointer * 4);
+                for (const [k, v] of val) {
+                    bytes += getSizeRec(k) + getSizeRec(v);
                 }
-            }),
-
-            Object(value, cache) {
-                if (!value || cache.has(value)) return 0;
-                cache.add(value);
-
-                let bytes = 16; // 對象基礎開銷
-
-                // 計算自有屬性
-                const props = Object.getOwnPropertyNames(value);
-                bytes += props.length * 8; // 屬性指針開銷
-
-                for (const key of props) {
-                    bytes += calculateStringSize(key); // 鍵名開銷
-                    const propValue = value[key];
-                    bytes += Calculate[_type(propValue)]?.(propValue, cache) ?? 0;
-                }
-
-                // Symbol 屬性
-                const symbols = Object.getOwnPropertySymbols(value);
-                bytes += symbols.length * 8;
-
-                for (const sym of symbols) {
-                    bytes += Calculate.Symbol(sym);
-                    const symValue = value[sym];
-                    bytes += Calculate[_type(symValue)]?.(symValue, cache) ?? 0;
-                }
-
-                return alignSize(bytes);
+                return align(bytes);
             },
 
-            // WeakMap 和 WeakSet 無法準確計算
-            WeakMap: () => 32,
-            WeakSet: () => 24,
+            // 特殊對象
+            Date: () => align(headerSize + 8),
 
-            // 其他類型
-            Error(value) {
-                let bytes = 32; // Error 對象基礎開銷
-                bytes += calculateStringSize(value.message || '');
-                bytes += calculateStringSize(value.stack || '');
-                return alignSize(bytes);
+            RegExp: (val) => {
+                // 正則是源碼字串 + 編譯後的機器碼(無法獲取)，這裡只算源碼
+                return align(headerSize + 4 + calcString(val.toString()));
             },
 
-            Promise: () => 64, // Promise 對象估算
+            BigInt: (val) => {
+                // BigInt 是對象，需計算具體位數
+                const hexLen = val.toString(16).length;
+                return align(headerSize + Math.ceil(hexLen / 2));
+            },
+
+            Error: (val) => {
+                let bytes = headerSize;
+                if (val.message) bytes += calcString(val.message);
+                if (val.stack) bytes += calcString(val.stack);
+                return align(bytes);
+            },
+
+            Promise: () => align(headerSize + (bytesPerPointer * 3)), // 狀態+結果+反應鏈
+
+            // 只能算殼，無法遍歷內容
+            WeakMap: () => align(headerSize + 32),
+            WeakSet: () => align(headerSize + 24),
+
+            // Binary 數據
+            ArrayBuffer: (val) => align(headerSize + val.byteLength),
+            DataView: () => align(headerSize + 24),
+            Function: (val) => align(headerSize + val.toString().length),
         };
 
-        // 開始計算
-        const type = _type(object);
-        const calculator = Calculate[type] || Calculate.Object;
-        const bytes = calculator(object, visited);
+        [
+            'Int8Array', 'Uint8Array', 'Uint8ClampedArray', 'Int16Array',
+            'Uint16Array', 'Int32Array', 'Uint32Array', 'Float32Array',
+            'Float64Array', 'BigInt64Array', 'BigUint64Array'
+        ].forEach(type => {
+            // 只算 View 對象本身，Buffer 會單獨算
+            handlers[type] = () => align(headerSize + 24);
+        });
 
-        // 返回數字格式的結果
-        const units = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+        const totalBytes = getSizeRec(object);
+
+        const units = ["Bytes", "KB", "MB", "GB"];
         return units.reduce((acc, unit, i) => {
-            acc[unit] = Number(i === 0 ? bytes : (bytes / 1024 ** i).toFixed(2));
+            acc[unit] = Number(i === 0 ? totalBytes : (totalBytes / 1024 ** i).toFixed(2));
             return acc;
-        }, {});
+        }, {})
     };
 
     function DebounceCollect(func, delay) {
