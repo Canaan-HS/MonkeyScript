@@ -24,9 +24,7 @@ export default function Main() {
             };
 
             // 查找媒體元素
-            const findMedia = Lib.$debounce((func) => {
-                const media = [];
-
+            const findMedia = (func) => {
                 const tree = document.createTreeWalker(
                     Lib.body,
                     NodeFilter.SHOW_ELEMENT,
@@ -44,15 +42,16 @@ export default function Main() {
                     }
                 );
 
+                const media = [];
                 while (tree.nextNode()) {
                     media.push(tree.currentNode);
                 };
 
                 media.length > 0 && func(media);
-            }, 50);
+            };
 
             // 觀察者持續觸發查找
-            Lib.$observer(Lib.body, () => {
+            Lib.observer(Lib.body, () => {
                 if (Share.ProcessLock) return;
 
                 findMedia(media => {
@@ -60,7 +59,7 @@ export default function Main() {
                     Booster.trigger(media);
                 })
 
-            }, { mark: "Media-Booster", attributes: false, throttle: 200 }, ({ ob }) => {
+            }, { mark: "Media-Booster", attributes: false, throttle: 500 }, ({ ob }) => {
                 if (import.meta.hot) monkeyWindow.ob = ob;
                 regMenu(Transl("❌ 禁用網域"));
             });
