@@ -59,7 +59,7 @@ export default function Main() {
                         Booster.trigger(media);
                     })
                 }
-            }, { mark: "Media-Booster", attributes: false, throttle: 800 }, ({ ob }) => {
+            }, { mark: "Media-Booster", attributes: false, throttle: 1300 }, ({ ob }) => {
                 if (import.meta.hot) monkeyWindow.ob = ob;
                 regMenu(Transl("❌ 禁用網域"));
             });
