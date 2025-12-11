@@ -26,7 +26,7 @@ export default function Main() {
             // 查找媒體元素
             const findMedia = (func) => {
                 const tree = document.createTreeWalker(
-                    Lib.body,
+                    Lib.body, // 如果只使用新增節點會有意外
                     NodeFilter.SHOW_ELEMENT,
                     {
                         acceptNode: (node) => {
@@ -51,15 +51,19 @@ export default function Main() {
             };
 
             // 觀察者持續觸發查找
-            Lib.observer(Lib.body, () => {
+            Lib.observer(Lib.body, mutationsList => {
                 if (Share.ProcessLock) return;
 
-                findMedia(media => {
-                    Share.ProcessLock = true;
-                    Booster.trigger(media);
-                })
+                for (const mutation of mutationsList) {
+                    if (mutation.type === "childList") {
+                        findMedia(media => {
+                            Share.ProcessLock = true;
+                            Booster.trigger(media);
+                        })
+                    }
+                }
 
-            }, { mark: "Media-Booster", attributes: false, throttle: 500 }, ({ ob }) => {
+            }, { mark: "Media-Booster", attributes: false, throttle: 800 }, ({ ob }) => {
                 if (import.meta.hot) monkeyWindow.ob = ob;
                 regMenu(Transl("❌ 禁用網域"));
             });
