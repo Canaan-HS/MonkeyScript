@@ -1913,11 +1913,7 @@ const Lib = (() => {
             reset = false
         } = options || {};
 
-        if (reset) {
-            [...registerMenu].map(id => GM_unregisterMenuCommand(id));
-            registerMenu.clear();
-        };
-
+        if (reset) unMenu();
         for (let [show, item] of Object.entries(items)) {
             const id = `${name}-${index++}`;
 
@@ -1944,9 +1940,9 @@ const Lib = (() => {
      * unMenu("ID"); // 單一移除
      * unMenu(["ID1", "ID2"]); // 批量移除
      */
-    async function unMenu(id) {
+    function unMenu(id) {
         if (id == null) {
-            [...registerMenu].map(id => GM_unregisterMenuCommand(id));
+            for (const key of registerMenu) GM_unregisterMenuCommand(key);
             registerMenu.clear();
         } else if (Array.isArray(id)) {
             id.forEach(item => {
