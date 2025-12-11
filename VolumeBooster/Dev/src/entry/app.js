@@ -53,16 +53,12 @@ export default function Main() {
             // 觀察者持續觸發查找
             Lib.observer(Lib.body, mutationsList => {
                 if (Share.ProcessLock) return;
-
-                for (const mutation of mutationsList) {
-                    if (mutation.type === "childList") {
-                        findMedia(media => {
-                            Share.ProcessLock = true;
-                            Booster.trigger(media);
-                        })
-                    }
+                if (mutationsList.some(m => m.type === "childList")) {
+                    findMedia(media => {
+                        Share.ProcessLock = true;
+                        Booster.trigger(media);
+                    })
                 }
-
             }, { mark: "Media-Booster", attributes: false, throttle: 800 }, ({ ob }) => {
                 if (import.meta.hot) monkeyWindow.ob = ob;
                 regMenu(Transl("❌ 禁用網域"));
