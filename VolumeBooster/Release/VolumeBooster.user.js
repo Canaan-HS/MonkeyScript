@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.10.12-Beta
+// @version      2025.12.11-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -19,7 +19,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1676101/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711589/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -31,7 +31,7 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(function () {
+(function() {
     const Default = {
         Gain: 1,
         LowFilterGain: 1.2,
@@ -135,7 +135,7 @@
             isEnabled: callback => callback(!excludeStatus),
             addBanned: async () => {
                 excludeStatus ? banned.delete(Lib.$domain) : banned.add(Lib.$domain);
-                Lib.setV("Banned", [...banned]);
+                Lib.setV("Banned", [ ...banned ]);
                 location.reload();
             }
         };
@@ -295,9 +295,9 @@
                             capture: true,
                             mark: "Media-Booster-Hotkey"
                         });
-                        Lib.storageListen([Lib.$domain], call => {
+                        Lib.storageListen([ Lib.$domain ], call => {
                             if (call.far && call.key === Lib.$domain) {
-                                Object.entries(call.nv).forEach(([type, value]) => {
+                                Object.entries(call.nv).forEach(([ type, value ]) => {
                                     Share.SetControl(type, value);
                                 });
                             }
@@ -679,7 +679,7 @@
                         </span>
                         <input type="range" id="Gain" class="Booster-Slider" min="0" max="20.0" value="${Share.Parame.Gain}" step="0.1">
                     </div>
-            ${generateOtherTemplate("低頻設定", [{
+            ${generateOtherTemplate("低頻設定", [ {
                 label: "增益",
                 id: "LowFilterGain",
                 min: "-12",
@@ -691,8 +691,8 @@
                 min: "20",
                 max: "1000",
                 step: "20"
-            }])}
-            ${generateOtherTemplate("中頻設定", [{
+            } ])}
+            ${generateOtherTemplate("中頻設定", [ {
                 label: "增益",
                 id: "MidFilterGain",
                 min: "-12",
@@ -710,8 +710,8 @@
                 min: "0.5",
                 max: "5",
                 step: "0.1"
-            }])}
-            ${generateOtherTemplate("高頻設定", [{
+            } ])}
+            ${generateOtherTemplate("高頻設定", [ {
                 label: "增益",
                 id: "HighFilterGain",
                 min: "-12",
@@ -723,8 +723,8 @@
                 min: "2000",
                 max: "22000",
                 step: "500"
-            }])}
-            ${generateOtherTemplate("動態壓縮", [{
+            } ])}
+            ${generateOtherTemplate("動態壓縮", [ {
                 label: "壓縮率",
                 id: "CompressorRatio",
                 min: "1",
@@ -754,7 +754,7 @@
                 min: "0.01",
                 max: "2",
                 step: "0.01"
-            }])}
+            } ])}
                     <div class="Booster-Buttons">
                         <button class="Booster-Modal-Button" id="Booster-Menu-Close">${Transl("關閉")}</button>
                         <button class="Booster-Modal-Button" id="Booster-Sound-Save">${Transl("保存")}</button>
@@ -773,7 +773,7 @@
                 }, 800);
             }
             const displayMap = {
-                ...Object.fromEntries([...shadowGate.querySelectorAll(".Booster-Label")].map(el => [el.id, el]))
+                ...Object.fromEntries([ ...shadowGate.querySelectorAll(".Booster-Label") ].map(el => [ el.id, el ]))
             };
             function updateControl(id, value) {
                 displayMap[`${id}-Label`].textContent = value;
@@ -844,7 +844,7 @@
                         panel.classList.add("active");
                     }
                 } else if (target.id === "Booster-Sound-Save") {
-                    Lib.setV(Lib.domain, Share.Parame);
+                    Lib.setV(Lib.$domain, Share.Parame);
                     deleteMenu();
                 } else if (target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu") {
                     deleteMenu();
@@ -867,8 +867,7 @@
                         items[type].value = value;
                     });
                 };
-                const findMedia = Lib.$debounce(func => {
-                    const media = [];
+                const findMedia = func => {
                     const tree = document.createTreeWalker(Lib.body, NodeFilter.SHOW_ELEMENT, {
                         acceptNode: node => {
                             const tag = node.tagName;
@@ -878,21 +877,26 @@
                             return NodeFilter.FILTER_SKIP;
                         }
                     });
+                    const media = [];
                     while (tree.nextNode()) {
                         media.push(tree.currentNode);
                     }
                     media.length > 0 && func(media);
-                }, 50);
-                Lib.$observer(Lib.body, () => {
+                };
+                Lib.observer(Lib.body, mutationsList => {
                     if (Share.ProcessLock) return;
-                    findMedia(media => {
-                        Share.ProcessLock = true;
-                        Booster.trigger(media);
-                    });
+                    for (const mutation of mutationsList) {
+                        if (mutation.type === "childList") {
+                            findMedia(media => {
+                                Share.ProcessLock = true;
+                                Booster.trigger(media);
+                            });
+                        }
+                    }
                 }, {
                     mark: "Media-Booster",
                     attributes: false,
-                    throttle: 200
+                    throttle: 800
                 }, ({
                     ob
                 }) => {
