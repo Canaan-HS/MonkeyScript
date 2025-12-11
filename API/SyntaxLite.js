@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2025.12.08
+// @version      2025.12.11
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -759,7 +759,9 @@ const Lib = (() => {
             : [_throttle, throttle];
 
         const op = { subtree, childList, attributes, characterData }
-        const ob = new MutationObserver(rateFunc(() => { onFunc() }, delayMs));
+        const ob = new MutationObserver((mutations, observer) =>
+            rateFunc(() => onFunc(mutations, observer), delayMs)()
+        );
 
         ob.observe(target, op);
         mark && observerRecord.set(mark, { target, ob });
