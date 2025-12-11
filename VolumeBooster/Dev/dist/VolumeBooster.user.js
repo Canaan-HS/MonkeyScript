@@ -796,13 +796,11 @@
           Lib.body,
           (mutationsList) => {
             if (Share.ProcessLock) return;
-            for (const mutation of mutationsList) {
-              if (mutation.type === "childList") {
-                findMedia((media) => {
-                  Share.ProcessLock = true;
-                  Booster.trigger(media);
-                });
-              }
+            if (mutationsList.some((m) => m.type === "childList")) {
+              findMedia((media) => {
+                Share.ProcessLock = true;
+                Booster.trigger(media);
+              });
             }
           },
           { mark: "Media-Booster", attributes: false, throttle: 800 },
