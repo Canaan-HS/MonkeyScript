@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.10.12-Beta
+// @version      2025.12.11-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -19,7 +19,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1709492/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711589/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -776,7 +776,6 @@
             items[type].value = value;
           });
         };
-        const media = new Set();
         const findMedia = (func) => {
           const tree = document.createTreeWalker(Lib.body, NodeFilter.SHOW_ELEMENT, {
             acceptNode: (node) => {
@@ -787,24 +786,26 @@
               return NodeFilter.FILTER_SKIP;
             },
           });
+          const media = [];
           while (tree.nextNode()) {
-            media.add(tree.currentNode);
+            media.push(tree.currentNode);
           }
-          if (media.size > 0) {
-            func(media);
-            media.clear();
-          }
+          media.length > 0 && func(media);
         };
         Lib.observer(
           Lib.body,
-          () => {
+          (mutationsList) => {
             if (Share.ProcessLock) return;
-            findMedia((media2) => {
-              Share.ProcessLock = true;
-              Booster.trigger(media2);
-            });
+            for (const mutation of mutationsList) {
+              if (mutation.type === "childList") {
+                findMedia((media) => {
+                  Share.ProcessLock = true;
+                  Booster.trigger(media);
+                });
+              }
+            }
           },
-          { mark: "Media-Booster", attributes: false, throttle: 500 },
+          { mark: "Media-Booster", attributes: false, throttle: 800 },
           ({ ob }) => {
             regMenu(Transl("❌ 禁用網域"));
           },
