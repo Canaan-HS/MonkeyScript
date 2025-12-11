@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.12.11-Beta
+// @version      2025.12.11-Beta1
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -19,7 +19,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1711589/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -894,7 +894,7 @@
                 }, {
                     mark: "Media-Booster",
                     attributes: false,
-                    throttle: 800
+                    throttle: 1300
                 }, ({
                     ob
                 }) => {
