@@ -492,7 +492,7 @@ const CreateMenu = () => {
                 }
 
             } else if (target.id === "Booster-Sound-Save") {
-                Lib.setV(Lib.domain, Share.Parame);
+                Lib.setV(Lib.$domain, Share.Parame);
                 deleteMenu();
             } else if (
                 target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu"
