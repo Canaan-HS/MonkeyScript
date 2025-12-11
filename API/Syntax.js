@@ -749,9 +749,9 @@ const Lib = (() => {
             : [_throttle, throttle];
 
         const op = { subtree, childList, attributes, characterData }
-        const ob = new MutationObserver((mutations, observer) =>
-            rateFunc(() => onFunc(mutations, observer), delayMs)()
-        );
+        const ob = new MutationObserver(rateFunc((mutations, observer) => {
+            onFunc(mutations, observer);
+        }, delayMs));
 
         ob.observe(target, op);
         mark && observerRecord.set(mark, { target, ob });
