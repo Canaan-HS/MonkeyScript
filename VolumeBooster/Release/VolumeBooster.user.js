@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.12.11-Beta1
+// @version      2025.12.12-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -867,7 +867,7 @@
                         items[type].value = value;
                     });
                 };
-                const findMedia = func => {
+                const findMedia = () => {
                     const tree = document.createTreeWalker(Lib.body, NodeFilter.SHOW_ELEMENT, {
                         acceptNode: node => {
                             const tag = node.tagName;
@@ -881,16 +881,14 @@
                     while (tree.nextNode()) {
                         media.push(tree.currentNode);
                     }
-                    media.length > 0 && func(media);
+                    if (media.length > 0) {
+                        Share.ProcessLock = true;
+                        Booster.trigger(media);
+                    }
                 };
                 Lib.observer(Lib.body, mutationsList => {
                     if (Share.ProcessLock) return;
-                    if (mutationsList.some(m => m.type === "childList")) {
-                        findMedia(media => {
-                            Share.ProcessLock = true;
-                            Booster.trigger(media);
-                        });
-                    }
+                    if (mutationsList.some(m => m.type === "childList")) findMedia();
                 }, {
                     mark: "Media-Booster",
                     attributes: false,
