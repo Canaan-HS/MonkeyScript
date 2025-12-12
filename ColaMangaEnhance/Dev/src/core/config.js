@@ -54,7 +54,7 @@ const Param = {
     Down_scroll: false, // 向下滾動判斷值
     IsFinalPage: false, // 最終頁判斷值
     IsMangaPage: Lib.$url.endsWith("html"), // 判斷是否是漫畫頁面
-    IsMainPage: (window.self === window.parent), // 判斷是否是 iframe
+    IsMainPage: window.top === window.self, // 判斷是否是 iframe
     ...Lib.getV("__REMOVE_ON_BUILD__", {}),
 };
 
