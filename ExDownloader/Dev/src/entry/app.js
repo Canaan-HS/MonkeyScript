@@ -3,12 +3,13 @@ import { DConfig } from '../core/config.js';
 
 import Transl from '../shared/language.js';
 import Downloader from '../core/downloader.js';
+import Dialog from '../utils/dialog.js';
 
 export default function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
 
-    let Download;
+    let Download, downloadButton;
     let Url = Lib.url.split("?p=")[0]; // 獲取網址
 
     /* 初始化按鈕樣式 */
@@ -28,9 +29,9 @@ export default function Main() {
         `;
         const eStyle = `
             .Download_Button {
-            color: #5C0D12;
-            border: 2px solid #9a7c7e;
-            background-color: #EDEADA;
+                color: #5C0D12;
+                border: 2px solid #9a7c7e;
+                background-color: #EDEADA;
             }
             .Download_Button:hover {
                 color: #8f4701;
@@ -40,7 +41,7 @@ export default function Main() {
                 color: #B5A4A4;
                 border: 2px dashed #B5A4A4;
                 cursor: default;
-                    }
+            }
         `;
         const exStyle = `
             .Download_Button {
@@ -60,22 +61,22 @@ export default function Main() {
         `;
 
         const style = Lib.$domain === "e-hentai.org" ? eStyle : exStyle;
-        Lib.addStyle(`${position}${style}`, "Button-Style");
+        Lib.addStyle(`${position}${style}`, "Downloader-Button-Style");
     };
 
     /* 下載範圍設置 */
     async function downloadRangeSetting() {
-        const scope = prompt(Transl("範圍設置"));
+        const scope = await Dialog.prompt(Transl("範圍設置"));
         if (scope == null) return;
 
-        const yes = confirm(`${Transl("確認設置範圍")}:\n${scope}`);
+        const yes = await Dialog.confirm(`${Transl("確認設置範圍")}:\n${scope}`);
         if (yes) DConfig.Scope = scope;
     };
 
     /* 下載模式切換 */
     async function downloadModeSwitch() {
         if (DConfig.Lock) {
-            alert(Transl("下載中鎖定"));
+            Dialog.alert(Transl("下載中鎖定"));
             return;
         };
 
@@ -83,7 +84,7 @@ export default function Main() {
             ? Lib.setV("CompressedMode", false)
             : Lib.setV("CompressedMode", true);
 
-        Lib.$q("#ExDB")?.remove();
+        downloadButton?.remove();
         buttonCreation();
     };
 
@@ -94,7 +95,7 @@ export default function Main() {
             DConfig.CompressMode = Lib.getV("CompressedMode", true);
             DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
 
-            const downloadButton = Lib.createElement(gd2, "button", {
+            downloadButton = Lib.createElement(gd2, "button", {
                 id: "ExDB",
                 class: "Download_Button",
                 text: DConfig.ModeDisplay,
@@ -140,8 +141,8 @@ export default function Main() {
     if (import.meta.hot) {
         return function () {
             Lib.title(DConfig.TitleCache);
-            Lib.$q("#ExDB")?.remove();
-            Lib.$q("#Button-Style")?.remove();
+            downloadButton?.remove();
+            Lib.delHead("Downloader-Button-Style");
         }
     };
 };
