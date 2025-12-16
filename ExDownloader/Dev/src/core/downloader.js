@@ -325,7 +325,7 @@ export default function Downloader() {
             function runClear() {
                 if (!clearCache) {
                     clearCache = true;
-                    sessionStorage.removeItem(DConfig.GetKey()); // 清除緩存
+                    Lib.delSession(DConfig.GetKey()); // 清除緩存
                     Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
                 }
             };
@@ -494,7 +494,7 @@ export default function Downloader() {
             function runClear() {
                 if (!clearCache) {
                     clearCache = true;
-                    sessionStorage.removeItem(DConfig.GetKey()); // 清除緩存
+                    Lib.delSession(DConfig.GetKey()); // 清除緩存
                     Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
                 }
             };
