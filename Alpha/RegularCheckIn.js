@@ -108,10 +108,13 @@
     function createRequest({ Name, Method = "POST", Headers = {}, API, verifyStatus }) {
 
         const deBug = (result) => {
-            console.table(Object.assign(
-                { name: Name },
-                result?.constructor === Object ? result : { result }
-            ));
+            Lib.log(
+                Object.assign({ name: Name },
+                    result?.constructor === Object
+                        ? result
+                        : { result }
+                )
+            ).table;
 
             return result;
         };
@@ -193,12 +196,13 @@
         async function changeListener(name) {
             Lib.storageListen([name], Lib.debounce(({ nv, far }) => {
                 if (far) {
+                    // 有新的註冊
                     if (nv !== taskId && registered) {
                         destroyReset();
-                        console.log("舊詢輪已被停止");
+                        Lib.log("舊詢輪已被停止");
                     }
+                    // 新註冊頁面離開 (查找並觸發恢復)
                     else if (nv === "leave") {
-                        // ! 實驗性
                         GM_getTabs(data => {
                             const tabs = Object.values(data).reverse();
                             for (const { ID, Role } of tabs) {
@@ -209,9 +213,10 @@
                         })
                     }
                 }
+                // 恢復註冊
                 else if (nv === taskId) {
                     register();
-                    console.log("詢輪已被恢復");
+                    Lib.log("詢輪已被恢復");
                 }
             }, 10))
         };
@@ -235,7 +240,7 @@
                     Math.floor((ms % seconds_ms) / 1e3)
                 ];
 
-            console.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`);
+            Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`, { dev: Config.Dev });
         };
 
         // 格式化時間
@@ -290,9 +295,7 @@
             if (!Array.isArray(enabledTaskList)) {
                 Lib.setV(Config.TaskKey, []);
 
-                Lib.log(null, "錯誤的任務列表, 詢輪已被停止", {
-                    dev: Config.Dev, type: "error"
-                });
+                Lib.log("錯誤的任務列表, 詢輪已被停止", { dev: Config.Dev }).error;
                 return;
             };
 
@@ -303,9 +306,7 @@
                 Lib.delV(Config.RegisterKey);
 
                 destroyReset();
-                Lib.log(null, "沒有任務, 詢輪已被停止", {
-                    dev: Config.Dev, type: "error"
-                });
+                Lib.log("沒有任務, 詢輪已被停止", { dev: Config.Dev }).warn;
                 return;
             };
 
@@ -323,7 +324,7 @@
                         destroyReset(false); // 簽到時停止詢輪
 
                         // ! 暫時檢測
-                        console.log({
+                        Lib.log({
                             "網路狀態": navigator.onLine,
                             "當前時間": timeFormat(newDate),
                             "簽到觸發": newDate > new Date(checkInDate),
