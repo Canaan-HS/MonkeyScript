@@ -24,7 +24,7 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.6.0/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1652116/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
@@ -89,7 +89,7 @@
         }
     ];
 
-    // Qmsg 配置 (避免意外無法自行關閉)
+    // Qmsg 配置 (避免意外無法自行關閉, 某些網站依舊會無法自動關閉)
     Qmsg.config({
         showClose: true,
         autoClose: true,
@@ -191,7 +191,7 @@
 
         // 註冊變化監聽器
         async function changeListener(name) {
-            Lib.storeListen([name], Lib.$debounce(({ nv, far }) => {
+            Lib.storageListen([name], Lib.debounce(({ nv, far }) => {
                 if (far) {
                     if (nv !== taskId && registered) {
                         destroyReset();
