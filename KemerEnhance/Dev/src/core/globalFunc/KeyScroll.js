@@ -14,11 +14,11 @@ export default async function KeyScroll({ mode }) { /* 快捷自動滾動 */
     let scrollFunc, isUpScroll = false, isDownScroll = false;
 
     const [topDetected, bottomDetected] = [ // 到頂 和 到底 的檢測
-        Lib.$throttle(() => {
+        Lib.throttle(() => {
             isUpScroll = Lib.sY == 0
                 ? false : true
         }, 600),
-        Lib.$throttle(() => {
+        Lib.throttle(() => {
             isDownScroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight
                 ? false : true
         }, 600)
@@ -55,7 +55,7 @@ export default async function KeyScroll({ mode }) { /* 快捷自動滾動 */
             }
     }
 
-    Lib.onEvent(window, "keydown", Lib.$throttle(event => {
+    Lib.onEvent(window, "keydown", Lib.throttle(event => {
         const key = event.key;
         if (key == "ArrowUp") {
             event.stopImmediatePropagation();
