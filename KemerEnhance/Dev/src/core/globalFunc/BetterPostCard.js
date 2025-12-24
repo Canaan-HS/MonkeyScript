@@ -26,7 +26,7 @@ const BetterPostCardFactory = async () => {
         await Parame.DB.set(recordKey, new Map([...await getRecord(), ...save]));
         fixCache.clear();
     };
-    const saveWork = Lib.$debounce(() => saveRecord(fixCache), 1e3);
+    const saveWork = Lib.debounce(() => saveRecord(fixCache), 1e3);
 
     /* ===== 外部數據請求 ===== */
     const fixRequest = async (url, headers = {}) => {
@@ -279,7 +279,7 @@ const BetterPostCardFactory = async () => {
     };
     // 需要動態監聽變化的頁面
     async function dynamicFix(element) {
-        Lib.$observer(element, async () => {
+        Lib.observer(element, async () => {
             recordCache = await getRecord(); // 觸發時重新取得緩存
             // ! 暫時寫法, 該頁面更新時不會完整刷新, 所以要跳過檢查
             const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
@@ -475,7 +475,7 @@ const BetterPostCardFactory = async () => {
                 if (isSearch) {
                     let currentBox, currentTarget;
 
-                    Lib.onEvent(Lib.body, "mouseover", Lib.$debounce(event => {
+                    Lib.onEvent(Lib.body, "mouseover", Lib.debounce(event => {
                         let target = event.target;
                         const className = target.className;
 
