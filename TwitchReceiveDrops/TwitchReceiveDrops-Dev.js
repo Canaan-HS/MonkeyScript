@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             2025.10.12-Beta
+// @version             2025.12.24-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -233,14 +233,14 @@
             /* 查找過期的項目將其刪除 */
             this.expiredCleanup = (element, adapter, timestamp, callback) => {
                 const targetTime = adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime;
-                this.currentTime > targetTime ? (this.Config.ClearExpiration && element.remove()) : callback(element);
+                this.currentTime > targetTime ? (this.config.ClearExpiration && element.remove()) : callback(element);
             };
 
             this.progressStr; // 保存進度值字串
             this.titleObserver; // 標題觀察者
 
             /* 初始化數據 */
-            this.Config = {
+            this.config = {
                 ...Config,
                 EndLine: "p a[href='/drops/campaigns']", // 斷開觀察者的終止線
                 Campaigns: "a[href='/drops/campaigns']",
@@ -259,9 +259,7 @@
         async run() {
             regMenu();
 
-            const self = this;
-            const config = self.Config;
-
+            const config = this.config;
             const updateDisplay = config.UpdateDisplay;
 
             let campaigns, inventory, adapter; // 頁面按鈕, 適配器
@@ -269,7 +267,7 @@
 
             // 初始化數據
             const initData = () => {
-                self.progressStr = "Twitch";
+                this.progressStr = "Twitch";
 
                 taskCount = 0, currentProgress = 0, inProgressIndex = 0;
                 progressInfo = {};
@@ -286,11 +284,11 @@
 
                 if (allProgress?.length > 0) {
                     let activityTime, progressBar;
-                    adapter ??= self.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (載入完成才找的到 lang, 不能提前宣告)
+                    adapter ??= this.adapter[document.documentElement.lang]; // 根據網站語言, 獲取適配器 (載入完成才找的到 lang, 不能提前宣告)
 
                     allProgress.forEach(data => { // 顯示進度, 重啟直播, 刪除過期, 都需要這邊的處理
                         activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
-                        self.expiredCleanup(
+                        this.expiredCleanup(
                             data, // 物件整體
                             adapter, // 適配器
                             activityTime?.textContent, // 時間戳
@@ -304,9 +302,9 @@
                         )
                     });
 
-                    const oldTask = self.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
+                    const oldTask = this.storage("Task") ?? {}; // 嘗試獲取舊任務紀錄
                     const newTask = Object.fromEntries( // 獲取新任務數據
-                        Object.entries(progressInfo).map(([key, value]) => [key, self.progressParse(value)])
+                        Object.entries(progressInfo).map(([key, value]) => [key, this.progressParse(value)])
                     );
 
                     // 開始找到當前運行的任務
@@ -330,13 +328,13 @@
                         currentProgress = newProgress;
                     };
 
-                    self.storage("Task", newTask); // 保存新任務狀態
+                    this.storage("Task", newTask); // 保存新任務狀態
                 };
 
                 if (currentProgress > 0) { // 找到進度
                     if (config.ProgressDisplay) { // 啟用進度顯示
-                        self.progressStr = `${currentProgress}%`; // 賦予進度值
-                        !updateDisplay && self.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
+                        this.progressStr = `${currentProgress}%`; // 賦予進度值
+                        !updateDisplay && this.showProgress() // 沒有啟用更新倒數, 由 showProgress 動態展示
                     }
                 } else if (token > 0 && supportCheck()) { // 沒找到進度, 且有 token, 並處於支援頁面
                     setTimeout(() => { process(token - 1) }, 2e3); // 等待重試
@@ -344,8 +342,8 @@
                 };
 
                 // 重啟直播與自動關閉, 都需要紀錄判斷, 所以無論如何都會存取紀錄
-                const [record, timestamp] = self.storage("Record") ?? [0, self.getTime()]; // 進度值, 時間戳
-                const diffInterval = ~~((self.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
+                const [record, timestamp] = this.storage("Record") ?? [0, this.getTime()]; // 進度值, 時間戳
+                const diffInterval = ~~((this.currentTime - new Date(timestamp)) / (1e3 * 60)); // 捨棄小數後取整, ~~ 最多限制 32 位整數
 
                 const notHasToken = token === 0;
                 const hasProgress = currentProgress > 0;
@@ -353,11 +351,11 @@
                 /* 差異大於檢測間隔 & 有進度 & 進度與紀錄相同 */
                 if (diffInterval >= config.JudgmentInterval && hasProgress && currentProgress === record) {
                     config.RestartLive && restartLive.run(inProgressIndex); // 最大進度對象, 進行重啟
-                    self.storage("Record", [currentProgress, self.getTime()]);
+                    this.storage("Record", [currentProgress, this.getTime()]);
                 }
                 /* 有進度 & 進度與紀錄不相同 */
                 else if (hasProgress && currentProgress !== record) { // 進度為 0 時不被紀錄 (紀錄了會導致 自動關閉無法運作)
-                    self.storage("Record", [currentProgress, self.getTime()]);
+                    this.storage("Record", [currentProgress, this.getTime()]);
                 }
                 /* 啟用了自動關閉 & 沒 token & 沒找到進度 & 紀錄不為 0 */
                 else if (config.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
@@ -387,7 +385,7 @@
             };
 
             const monitor = () => { // 後續變更監聽
-                self.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
+                this.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
                     initData();
 
                     if (!supportCheck()) {
@@ -473,7 +471,7 @@
                 })
             };
 
-            this.Config = {
+            this.config = {
                 ...Config,
                 Offline: ".home-carousel-info strong", // 離線的直播 (離線標籤)
                 Online: "[data-a-target='animated-channel-viewers-count']", // 正在觀看直播人數標籤 (觀看人數)
@@ -488,7 +486,7 @@
         async run(maxIndex) { // 傳入對應的頻道索引
             window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close(); // 將查找標籤合併成正則
             const self = this;
-            const config = self.Config;
+            const config = self.config;
 
             let newWindow;
             let channel = document.querySelectorAll(config.ActivityLink2)[maxIndex];
@@ -793,7 +791,7 @@
     function waitSupport() {
         const { off } = onUrlChange(uri => {
             if (supportCheck(uri.url)) {
-                Detection.run();
+                new Detection().run();
                 off();
             }
         })
