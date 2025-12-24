@@ -7,7 +7,7 @@ export default async function CacheFetch() {
 
     const cacheKey = "fetch_cache_data";
     const cache = await Parame.DB.get(cacheKey, new Map());
-    const saveCache = Lib.$debounce(() => {
+    const saveCache = Lib.debounce(() => {
         Parame.DB.set(cacheKey, cache, { expireStr: "5m" }); // 有效 5 分鐘緩存 (每次都刷新)
     }, 1e3);
 
