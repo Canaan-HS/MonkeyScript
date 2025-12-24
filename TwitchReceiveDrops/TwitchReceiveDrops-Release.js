@@ -6,7 +6,7 @@
 // @name:ja             Twitch 自動ドロップ受け取り
 // @name:ko             Twitch 자동 드롭 수령
 // @name:ru             Twitch Автоматическое получение дропов
-// @version             2025.10.12-Beta
+// @version             2025.12.24-Beta
 // @author              Canaan HS
 // @description         Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
 // @description:zh-TW   Twitch 自動領取 (掉寶/Drops) , 窗口標籤顯示進度 , 直播結束時還沒領完 , 會自動尋找任意掉寶直播 , 並開啟後繼續掛機 , 代碼自訂義設置
@@ -92,9 +92,7 @@
                     return new Date(`${convert} ${currentYear}`);
                 },
                 "de-DE": (timeStamp, currentYear) => {
-                    const ISO = {
-                        jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun"
-                    };
+                    const ISO = { jan: "Jan", feb: "Feb", "mär": "Mar", apr: "Apr", mai: "May", jun: "Jun", jul: "Jul", aug: "Aug", sep: "Sep", okt: "Oct", nov: "Nov", dez: "Dec", mo: "Mon", di: "Tue", mi: "Wed", do: "Thu", fr: "Fri", sa: "Sat", so: "Sun" };
                     const convert = timeStamp.replace(/(jan|feb|mär|apr|mai|jun|jul|aug|sep|okt|nov|dez|mo|di|mi|do|fr|sa|so)/gi, match => ISO[match.toLowerCase()]);
                     return new Date(`${convert} ${currentYear}`);
                 },
@@ -167,11 +165,11 @@
             };
             this.expiredCleanup = (element, adapter, timestamp, callback) => {
                 const targetTime = adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime;
-                this.currentTime > targetTime ? this.Config.ClearExpiration && element.remove() : callback(element);
+                this.currentTime > targetTime ? this.config.ClearExpiration && element.remove() : callback(element);
             };
             this.progressStr;
             this.titleObserver;
-            this.Config = {
+            this.config = {
                 ...Config,
                 EndLine: "p a[href='/drops/campaigns']",
                 Campaigns: "a[href='/drops/campaigns']",
@@ -184,29 +182,28 @@
         get currentTime() {
             return new Date();
         }
-        static async run() {
+        async run() {
             regMenu();
-            const self = new Detection();
-            const config = self.Config;
+            const config = this.config;
             const updateDisplay = config.UpdateDisplay;
             let campaigns, inventory, adapter;
             let taskCount, currentProgress, inProgressIndex, progressInfo;
             const initData = () => {
-                self.progressStr = "Twitch";
+                this.progressStr = "Twitch";
                 taskCount = 0, currentProgress = 0, inProgressIndex = 0;
                 progressInfo = {};
             };
             initData();
-            const process = (token = 10) => {
+            const process = (token = 5) => {
                 campaigns ??= devTrace("Campaigns", document.querySelector(config.Campaigns));
                 inventory ??= devTrace("Inventory", document.querySelector(config.Inventory));
                 const allProgress = devTrace("AllProgress", document.querySelectorAll(config.allProgress));
                 if (allProgress?.length > 0) {
                     let activityTime, progressBar;
-                    adapter ??= self.adapter[document.documentElement.lang];
+                    adapter ??= this.adapter[document.documentElement.lang];
                     allProgress.forEach(data => {
                         activityTime = devTrace("ActivityTime", data.querySelector(config.ActivityTime));
-                        self.expiredCleanup(data, adapter, activityTime?.textContent, notExpired => {
+                        this.expiredCleanup(data, adapter, activityTime?.textContent, notExpired => {
                             notExpired.querySelectorAll("button").forEach(draw => {
                                 draw.click();
                             });
@@ -214,8 +211,8 @@
                             progressInfo[taskCount++] = [...progressBar].map(progress => +progress.textContent);
                         });
                     });
-                    const oldTask = self.storage("Task") ?? {};
-                    const newTask = Object.fromEntries(Object.entries(progressInfo).map(([key, value]) => [key, self.progressParse(value)]));
+                    const oldTask = this.storage("Task") ?? {};
+                    const newTask = Object.fromEntries(Object.entries(progressInfo).map(([key, value]) => [key, this.progressParse(value)]));
                     let taskIndex, newProgress;
                     const taskEntries = Object.entries(newTask);
                     for ([taskIndex, newProgress] of taskEntries) {
@@ -231,12 +228,12 @@
                         inProgressIndex = taskIndex;
                         currentProgress = newProgress;
                     }
-                    self.storage("Task", newTask);
+                    this.storage("Task", newTask);
                 }
                 if (currentProgress > 0) {
                     if (config.ProgressDisplay) {
-                        self.progressStr = `${currentProgress}%`;
-                        !updateDisplay && self.showProgress();
+                        this.progressStr = `${currentProgress}%`;
+                        !updateDisplay && this.showProgress();
                     }
                 } else if (token > 0 && supportCheck()) {
                     setTimeout(() => {
@@ -244,19 +241,19 @@
                     }, 2e3);
                     return;
                 }
-                const [record, timestamp] = self.storage("Record") ?? [0, self.getTime()];
-                const diffInterval = ~~((self.currentTime - new Date(timestamp)) / (1e3 * 60));
+                const [record, timestamp] = this.storage("Record") ?? [0, this.getTime()];
+                const diffInterval = ~~((this.currentTime - new Date(timestamp)) / (1e3 * 60));
                 const notHasToken = token === 0;
                 const hasProgress = currentProgress > 0;
                 if (diffInterval >= config.JudgmentInterval && hasProgress && currentProgress === record) {
                     config.RestartLive && restartLive.run(inProgressIndex);
-                    self.storage("Record", [currentProgress, self.getTime()]);
+                    this.storage("Record", [currentProgress, this.getTime()]);
                 } else if (hasProgress && currentProgress !== record) {
-                    self.storage("Record", [currentProgress, self.getTime()]);
+                    this.storage("Record", [currentProgress, this.getTime()]);
                 } else if (config.EndAutoClose && notHasToken && !hasProgress && record !== 0) {
                     window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
                     window.close();
-                } else if (notHasToken && supportCheck()) {
+                } else if (notHasToken && record !== 0 && supportCheck()) {
                     location.assign(supportPage);
                 }
             };
@@ -273,7 +270,7 @@
                 });
             };
             const monitor = () => {
-                self.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
+                this.pageRefresh(updateDisplay, config.UpdateInterval, async () => {
                     initData();
                     if (!supportCheck()) {
                         waitSupport();
@@ -353,7 +350,7 @@
                     animationFrame = requestAnimationFrame(query);
                 });
             };
-            this.Config = {
+            this.config = {
                 ...Config,
                 Offline: ".home-carousel-info strong",
                 Online: "[data-a-target='animated-channel-viewers-count']",
@@ -367,7 +364,7 @@
         async run(maxIndex) {
             window.open("", "NewWindow", "top=0,left=0,width=1,height=1").close();
             const self = this;
-            const config = self.Config;
+            const config = self.config;
             let newWindow;
             let channel = document.querySelectorAll(config.ActivityLink2)[maxIndex];
             if (channel) {
@@ -505,10 +502,9 @@
     }
     function devTrace(tag, element) {
         if (!Config.Dev) return element;
-        const record = traceRecord[tag];
         const isNodeList = element instanceof NodeList;
         const recordKey = isNodeList ? getCompositeKey(element) : element;
-        if (record && record.has(recordKey)) return element;
+        if (traceRecord[tag]?.has(recordKey)) return element;
         traceRecord[tag] = new Map().set(recordKey, true);
         clearTimeout(cleaner);
         cleaner = setTimeout(() => {
@@ -627,11 +623,11 @@
             off
         } = onUrlChange(uri => {
             if (supportCheck(uri.url)) {
-                Detection.run();
+                new Detection().run();
                 off();
             }
         });
     }
     const restartLive = new RestartLive();
-    if (supportCheck()) Detection.run(); else waitSupport();
+    if (supportCheck()) new Detection().run(); else waitSupport();
 })();
