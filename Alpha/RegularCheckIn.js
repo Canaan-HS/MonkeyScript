@@ -31,42 +31,12 @@
 
 (async () => {
 
-    /*
-        Todo - 待測試
-        Jkf 每日簽到任務領取 (POST)
-        https://jkforum.net/api/jkf-dailyTask-api/v1/DailyTask/CompleteTask?taskId=614115862249472
-
-        code
-        200000 = Success
-
-        進行每日簽到 (只領這個任務的獎勵)
-        taskId=614115862249472
-
-        觀看任一篇文章
-        taskId=614116038410241
-
-        Jkf 每日簽到任務額外獎勵 (Post)
-        https://jkforum.net/api/jkf-dailyTask-api/v1/DailyStage/CompleteStage?stageId=370080837533734
-
-        code
-        201000 = Success
-
-        古代銀幣 (只領這個任務的獎勵)
-        stageId=370080837533734
-
-        勇氣之羽
-        stageId=370081890304039
-
-        小型體力藥水
-        stageId=370081911275560
-    */
-
     /**
      * 任務列表
      * @example
      * {
      *      Name: "任務名",
-     *      Method: "GET" | "POST", // 選填
+     *      Method: "POST", // 選填
      *      API: "簽到 API 網址",
      *      Page: "簽到網址", // 選填
      *      Headers: Object | Function, // 選填
@@ -77,17 +47,42 @@
 
     const taskList = [
         {
+            Name: "JKF 論壇",
+            Method: "PUT",
+            API: "https://jkforum.net/api/jkf-dailysign/v1/DailySign",
+            Page: "https://jkforum.net/",
+            Headers: {
+                "Content-Type": "application/json",
+            },
+            Data: JSON.stringify({
+                "moodStickerId": Math.floor(Math.random() * 9) + 1,
+                "message": "簽到"
+            }),
+            verifyStatus: (response) => {
+                console.log("狀態", response);
+                return 0
+            }
+        },
+        {
+            Name: "JKF 論壇簽到任務",
+            Method: "POST",
+            API: "https://jkforum.net/api/jkf-dailyTask-api/v1/DailyTask/CompleteTask",
+            Page: "https://jkforum.net/",
+            Headers: { "Content-Type": "application/json" },
+            Data: JSON.stringify({ "taskId": "614115862249472" }),
+            verifyStatus: (response) => response === undefined ? 1 : 0
+        },
+        {
             Name: "Android 台灣中文網",
             Method: "GET",
-            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=ae746a25&inajax=1", // 似乎每過一段時間就會變更
+            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=e7ffa4a2&inajax=1", // 似乎每過一段時間就會變更 (改 formhash=後面這串)
             Page: "https://apk.tw/forum.php",
             verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
         },
         {
-            Name: "GenshInimpact", // 任務名
-            Method: "POST", // 請求方法
-            API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481", // 簽到 API
-            Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
+            Name: "GenshInimpact",
+            API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481",
+            Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481",
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
@@ -173,7 +168,8 @@
                     onload(response) {
                         checkIn?.close();
 
-                        if (response.status !== 200) {
+                        console.log(response);
+                        if (response.status < 200 || response.status > 300) {
                             showStatus[2](Name);
                             return;
                         }
@@ -186,7 +182,7 @@
                             status = verifyStatus(deBug(Name, response.response));
                         }
 
-                        status
+                        status != null
                             ? showStatus[status](Name)
                             : showStatus[2](Name);
                     },
