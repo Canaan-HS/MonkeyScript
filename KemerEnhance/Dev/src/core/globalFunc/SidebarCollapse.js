@@ -17,8 +17,8 @@ export default async function SidebarCollapse() {
             flex-direction: column;
             transform: translateX(-9rem);
         }
-        .global-sidebar:hover {opacity: 1; transform: translateX(0rem);}
-        .content-wrapper.shifted {transition: 0.7s; margin-left: 0rem;}
-        .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
+        .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
+        .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
+        .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
     `, "Collapse-Effects", false);
 };
