@@ -1424,13 +1424,22 @@ const Lib = (() => {
      * @returns {object} - 匹配到的字詞
      * @example
      * 需要是對照的 Key, 沒有就會找到預設翻譯
-     * const Word = {
+     * const word = {
      *      Traditional: {},
      *      Simplified: {},
      *      Japan: {},
      *      Russia: {},
      *      English: {}
      * }
+     *
+     * const { transl } = (() => {
+     *       const matcher = translMatcher(word, "zh-TW");
+     *       return {
+     *           transl: str => matcher[str] ?? str,
+     *       }
+     * })();
+     *
+     * console.log(transl("Hello"));
      */
     const translUtils = {
         'ko': 'Korea',
