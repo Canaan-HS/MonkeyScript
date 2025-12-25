@@ -36,13 +36,14 @@
      * @example
      * {
      *      Name: "任務名",
-     *      Method: "POST", // 選填
-     *      API: "簽到 API 網址",
-     *      Page: "簽到網址", // 選填
-     *      Headers: Object | Function, // 選填
-     *      Data: Object | Function, // 選填
-     *      Cookie: Object | Function, // 選填
-     *      verifyStatus: (response) => { // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed }
+     *      Method: "POST", // 必要
+     *      API: "簽到 API 網址", // 必要
+     *      Page: "簽到網址",
+     *      AutoOpen: Boolean, // 依賴 Page 參數 (以開啟對應 Page 來觸發簽到)
+     *      Headers: Object | Function,
+     *      Data: Object | Function,
+     *      Cookie: Object | Function,
+     *      verifyStatus: (response) => { // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed } // 必要
      */
 
     const taskList = [
@@ -51,6 +52,7 @@
             Method: "PUT",
             API: "https://jkforum.net/api/jkf-dailysign/v1/DailySign",
             Page: "https://jkforum.net/",
+            AutoOpen: true,
             Headers: {
                 "Content-Type": "application/json",
             },
@@ -58,10 +60,7 @@
                 "moodStickerId": Math.floor(Math.random() * 9) + 1,
                 "message": "簽到"
             }),
-            verifyStatus: (response) => {
-                console.log("狀態", response);
-                return 0
-            }
+            verifyStatus: (response) => response === undefined ? 1 : 0
         },
         {
             Name: "JKF 論壇簽到任務",
@@ -143,9 +142,8 @@
         };
 
         const deBug = (name, result) => {
-            const _type = Lib.type(result);
             Lib.log(
-                Object.assign({ name }, _type === "Object" ? result : { response: result })
+                Object.assign({ name }, Lib.type(result) === "Object" ? result : { response: result })
             ).table;
             return result;
         };
@@ -370,7 +368,6 @@
                     ) { // 執行簽到
                         destroyReset(false); // 簽到時停止詢輪
 
-                        // ! 暫時檢測
                         Lib.log({
                             "網路狀態": navigator.onLine,
                             "當前時間": timeUtils.getFormat(newDate),
@@ -385,6 +382,20 @@
                         for (const task of taskList) {
                             if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
                             if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
+
+                            // ? 實驗性
+                            if (task.AutoOpen && task.Page) {
+                                try {
+                                    if (Lib.domain !== new URL(task.Page).hostname) {
+                                        window.open(task.Page);
+                                        return;
+                                    }
+                                } catch {
+                                    // 失敗當作成功 靜默處理
+                                    Lib.setV(`${task.Name}-CheckIn`, true);
+                                    continue;
+                                }
+                            };
 
                             setTimeout(() => {
                                 requestTask.send(task);
