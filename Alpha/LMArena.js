@@ -63,12 +63,28 @@
 
     // 監聽點擊
     const getContainer = (target) => target.closest(".bg-surface-primary, .bg-surface-secondary");
+    const operate = {
+        // 刪除按鈕
+        "chhs-delete-btn": (target) => getContainer(target)?.remove(),
+        // 跳轉到底部按鈕
+        "chhs-jump-bottom-btn": (target) => getContainer(target)?.scrollIntoView({ block: 'end' }),
+        // 回到頂部按鈕
+        "chhs-back-top-btn": (target) => getContainer(target)?.scrollIntoView({ block: 'start' }),
+    };
+
     document.body.addEventListener("click", event => {
         const target = event.target;
         const className = target.className;
 
+        const action = operate[className];
+        if (action) {
+            event.preventDefault();
+            action(target);
+        }
         // 收合按鈕
-        if (className.includes("chhs-toggle-collapse-btn")) {
+        else if (className.includes("chhs-toggle-collapse-btn")) {
+            event.preventDefault();
+
             const container = getContainer(target);
             container.classList.toggle('collapsed');
 
@@ -79,21 +95,6 @@
                 target.textContent = '➖ 收合';
                 target.classList.remove('collapsed');
             }
-        }
-        // 刪除按鈕
-        else if (className === "chhs-delete-btn") {
-            const container = getContainer(target);
-            container.remove();
-        }
-        // 跳轉到底部按鈕
-        else if (className === "chhs-jump-bottom-btn") {
-            const container = getContainer(target);
-            container.scrollIntoView({ block: 'end' });
-        }
-        // 回到頂部按鈕
-        else if (className === "chhs-back-top-btn") {
-            const container = getContainer(target);
-            container.scrollIntoView({ block: 'start' });
         }
     });
 
