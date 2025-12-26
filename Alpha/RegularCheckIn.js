@@ -128,6 +128,7 @@
         TaskKey: "RunTasks", // 任務列表 Key
         TimerKey: "TaskTimer", // 時間戳 Key
         RegisterKey: "LeaderId", // 當前註冊 Key
+        QueryInterval: 3e4, // 詢輪間隔 (毫秒 | 預設 30 秒), 重置簽到任務存活狀態
     };
 
     const requestTask = (() => {
@@ -213,33 +214,31 @@
 
     const timeUtils = {
         // 判斷是否是前一天
-        isPrevious(newDate, oldDate) {
-            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
-            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-            return oldMs < newMs;
+        isPrevious(currentTime, checkInTime) {
+            const checkInMs = Date.UTC(checkInTime.getFullYear(), checkInTime.getMonth(), checkInTime.getDate());
+            const currentMs = Date.UTC(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
+            return checkInMs < currentMs;
         },
         // 計算簽到時間
-        getCheckInTime(newDate) {
+        getCheckInTime(currentTime) {
             const tomorrow = new Date();
-            tomorrow.setDate(newDate.getDate() + 1); // 設置隔天時間
+            tomorrow.setDate(currentTime.getDate() + 1); // 設置隔天時間
             tomorrow.setHours(0, 0, 1, 0); // 00:01 (暫時統一時間)
             return tomorrow;
         },
         // 格式化時間
-        getFormat(time) {
-            const year = time.getFullYear();
-            const month = `${time.getMonth() + 1}`.padStart(2, "0");
-            const date = `${time.getDate()}`.padStart(2, "0");
-            const hour = `${time.getHours()}`.padStart(2, "0");
-            const minute = `${time.getMinutes()}`.padStart(2, "0");
-            const second = `${time.getSeconds()}`.padStart(2, "0");
+        getFormat(currentTime) {
+            const year = currentTime.getFullYear();
+            const month = `${currentTime.getMonth() + 1}`.padStart(2, "0");
+            const date = `${currentTime.getDate()}`.padStart(2, "0");
+            const hour = `${currentTime.getHours()}`.padStart(2, "0");
+            const minute = `${currentTime.getMinutes()}`.padStart(2, "0");
+            const second = `${currentTime.getSeconds()}`.padStart(2, "0");
             return `${year}/${month}/${date} ${hour}:${minute}:${second}`;
         },
         // 顯示觸發時間
-        showTriggerTime(newDate, checkInDate) {
-            if (!config.Dev) return;
-
-            const ms = checkInDate - newDate;
+        getTriggerTime(currentTime, checkInTime) {
+            const ms = checkInTime - currentTime;
             const [
                 day_ms, minute_ms, seconds_ms
             ] = [
@@ -254,7 +253,7 @@
                     Math.floor((ms % seconds_ms) / 1e3)
                 ];
 
-            Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`, { dev: config.Dev });
+            return { hour, minute, seconds, ms };
         },
     };
 
@@ -262,18 +261,20 @@
         const taskId = crypto.randomUUID();
 
         let stop = false;
-        let timers = null;
         let registered = false;
+
+        let queryTimer = null;
+        let checkInTimer = null;
 
         function setTab(role = "Leader") {
             GM_saveTab({ ID: taskId, Role: role, Name: Lib.title() });
         };
 
         // 更新記錄
-        function setTimestamp(newDate) {
+        function setTimestamp(currentTime) {
             Lib.setV(config.TimerKey, {
-                RecordTime: timeUtils.getFormat(newDate),
-                CheckInTime: timeUtils.getFormat(timeUtils.getCheckInTime(newDate))
+                RecordTime: timeUtils.getFormat(currentTime),
+                CheckInTime: timeUtils.getFormat(timeUtils.getCheckInTime(currentTime))
             })
         };
 
@@ -281,7 +282,8 @@
         async function destroyReset(recover = true) {
             stop = true;
             setTab("Member");
-            clearTimeout(timers);
+            clearTimeout(queryTimer);
+            clearTimeout(checkInTimer);
             Lib.offEvent(window, "beforeunload");
             Lib.offEvent(document, "visibilitychange");
 
@@ -323,7 +325,7 @@
         };
 
         // 任務詢輪
-        function taskQuery(newDate = new Date()) {
+        function taskQuery(currentTime = new Date()) {
             /*
                 ! 未實現
                 Todo: 將 RecordTime 紀錄移除, 保留 CheckInTime
@@ -359,21 +361,22 @@
                 const taskTimer = Lib.getV(config.TimerKey); // 取得時間戳
 
                 if (taskTimer) {
-                    const checkInDate = taskTimer['CheckInTime']; // 主要驗證
-                    const recordDate = taskTimer['RecordTime']; // 附加驗證 (非必要)
+                    clearTimeout(checkInTimer);
 
-                    if (
-                        navigator.onLine && newDate > new Date(checkInDate) // 有網路時, 當前時間 > 簽到時間
-                        || recordDate && timeUtils.isPrevious(newDate, new Date(recordDate)) // 判斷紀錄時間是前一天
-                    ) { // 執行簽到
+                    const checkInTime = taskTimer['CheckInTime']; // 主要驗證
+                    const recordTime = taskTimer['RecordTime']; // 附加驗證 (非必要)
+
+                    // 執行簽到工作
+                    const checkInWork = () => {
+                        if (!navigator.onLine) return; // 離線不執行
                         destroyReset(false); // 簽到時停止詢輪
 
+                        currentTime = new Date(); // 更新當前時間
                         Lib.log({
-                            "網路狀態": navigator.onLine,
-                            "當前時間": timeUtils.getFormat(newDate),
-                            "簽到觸發": newDate > new Date(checkInDate),
-                            "紀錄時間": recordDate,
-                            "前一天": timeUtils.isPrevious(newDate, new Date(recordDate))
+                            "當前時間": timeUtils.getFormat(currentTime),
+                            "簽到觸發": currentTime > new Date(checkInTime),
+                            "紀錄時間": recordTime,
+                            "前一天": timeUtils.isPrevious(currentTime, new Date(recordTime))
                         });
 
                         let index = 0;
@@ -409,7 +412,7 @@
 
                         if (allCheckIn || retryCount >= 4) {
                             enabledTask.clear();
-                            setTimestamp(newDate); // 更新時間戳
+                            setTimestamp(currentTime); // 更新時間戳
 
                             Lib.delV("ReTry-Count");
                             enabledTaskList.forEach(name => { // 清除簽到記錄
@@ -418,15 +421,26 @@
                         } else {
                             Lib.setV("ReTry-Count", retryCount + 1);
                         };
-                    } else timeUtils.showTriggerTime(newDate, new Date(checkInDate));
+                    };
+
+                    if (
+                        currentTime > new Date(checkInTime) // 當前時間 > 簽到時間
+                        || recordTime && timeUtils.isPrevious(currentTime, new Date(recordTime)) // 判斷紀錄時間是前一天
+                    ) checkInWork();
+                    else {
+                        const { hour, minute, seconds, ms } = timeUtils.getTriggerTime(currentTime, new Date(checkInTime));
+
+                        Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒 | 共 ${ms} 毫秒`, { dev: config.Dev });
+                        checkInTimer = setTimeout(checkInWork, ms);
+                    }
 
                 } else throw new Error("沒有時間戳記錄");
             } catch {
-                setTimestamp(newDate);
+                setTimestamp(currentTime);
             };
 
             if (stop) return;
-            timers = setTimeout(taskQuery, 1e4); // 10 秒詢輪
+            queryTimer = setTimeout(taskQuery, config.QueryInterval);
         };
 
         // 註冊任務
@@ -444,7 +458,7 @@
             });
             Lib.onEvent(document, "visibilitychange", () => { // 切換頁面時執行
                 if (document.visibilityState === "visible") {
-                    clearTimeout(timers);
+                    clearTimeout(queryTimer);
                     taskQuery();
                 }
             });
