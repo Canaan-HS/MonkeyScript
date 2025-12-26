@@ -167,7 +167,6 @@
                     onload(response) {
                         checkIn?.close();
 
-                        console.log(response);
                         if (response.status < 200 || response.status > 300) {
                             showStatus[2](Name);
                             return;
