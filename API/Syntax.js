@@ -1979,7 +1979,7 @@ const Lib = (() => {
      * setJV("存儲鍵", "可轉換成 Json 的數據", { space: 2, expireStr: "1d" }) // 儲存 JSON 數據
      * getJV("存儲鍵", "錯誤回傳", true) // 取得 JSON 格式數據
      */
-    const GM_storageVerify = val => val || undefined;
+    const GM_storageVerify = val => val ?? undefined;
     const GM_storageCall = {
         delV: key => GM_deleteValue(key),
         allV: () => GM_storageVerify(GM_listValues()),
