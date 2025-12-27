@@ -594,10 +594,10 @@ const Lib = (() => {
                 giveFirst();
             } else if (firstIsObject && lastIsObject) {
                 const defaultKey = new Set(Object.keys(defaultOptions));
-                const Fsimilarity = Object.keys(firstArg).filter(k => defaultKey.has(k)).length;
-                const Lsimilarity = Object.keys(lastArg).filter(k => defaultKey.has(k)).length;
+                const firstMatchCount = Object.keys(firstArg).filter(k => defaultKey.has(k)).length;
+                const lastMatchCount = Object.keys(lastArg).filter(k => defaultKey.has(k)).length;
 
-                if (Lsimilarity > Fsimilarity) {
+                if (lastMatchCount > firstMatchCount) {
                     giveLast();
                 } else {
                     giveFirst();
@@ -971,8 +971,8 @@ const Lib = (() => {
         setter(key, JSON.stringify(pack, null, space));
     };
     // getter = localStorage.getItem, sessionStorage.getItem, GM_getValue
-    // removeer = localStorage.removeItem, sessionStorage.removeItem, GM_deleteValue
-    function getStorage(getter, key, error, { autoRemove = false, removeer } = {}) {
+    // remover = localStorage.removeItem, sessionStorage.removeItem, GM_deleteValue
+    function getStorage(getter, key, error, { autoRemove = false, remover } = {}) {
         let item = getter(key);
         if (item == null) return error;
 
@@ -981,7 +981,7 @@ const Lib = (() => {
 
             const isObject = item instanceof Object;
             if (isObject && item.expire && Date.now() > item.expire * 1000) {
-                removeer(key);
+                remover(key);
                 return error;
             };
 
@@ -996,7 +996,7 @@ const Lib = (() => {
             };
 
             const unPack = storageParse[type]?.(value) ?? value;
-            autoRemove && removeer(key);
+            autoRemove && remover(key);
 
             return unPack;
         }
@@ -1015,10 +1015,10 @@ const Lib = (() => {
     const storageCall = {
         delLocal: (key) => delLocal(key),
         setLocal: (key, value, expireStr) => setStorage(setLocal, key, value, { expireStr }),
-        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, removeer: delLocal }),
+        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, remover: delLocal }),
         delSession: (key) => delSession(key),
         setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
-        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, removeer: delSession })
+        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, remover: delSession })
     };
 
     /**
@@ -1786,7 +1786,7 @@ const Lib = (() => {
     /**
      * @description 獲取運行經過時間
      * @param {performance.now() | null} time - 傳入 performance.now() 或 空值
-     * @param {string} {lable} - 打印的說明文字
+     * @param {string} {label} - 打印的說明文字
      * @param {boolean} {log} - 是否直接打印
      * @param {boolean} {format} - 使用格式轉換為秒數
      * @param {string} {style} - 打印的風格
@@ -1801,14 +1801,14 @@ const Lib = (() => {
      * let start = runTime();
      * runTime(start);
      */
-    function runTime(time, { lable = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
+    function runTime(time, { label = "Elapsed Time:", log = true, format = true, style = "\x1b[1m\x1b[36m%s\x1b[0m" } = {}) {
         if (!time) return performance.now();
 
         const result = format
             ? `${((performance.now() - time) / 1e3).toPrecision(3)}s`
             : performance.now() - time;
 
-        return log ? console.log(style, `${lable} ${result}`) : result;
+        return log ? console.log(style, `${label} ${result}`) : result;
     };
 
     /**
@@ -1986,7 +1986,7 @@ const Lib = (() => {
         setV: (key, value) => GM_setValue(key, value),
         getV: (key, error) => GM_storageVerify(GM_getValue(key, error)),
         setJV: (key, value, { space, expireStr } = {}) => setStorage(GM_setValue, key, value, { space, expireStr }),
-        getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, removeer: GM_deleteValue }),
+        getJV: (key, error, autoRemove) => getStorage(GM_getValue, key, error, { autoRemove, remover: GM_deleteValue }),
     };
 
     /**
@@ -2070,8 +2070,8 @@ const Lib = (() => {
 
             /**
              * @description 解析請求後的頁面, 為 dom 文件
-             * @param {htnl} html - 要解析成 html 的文檔
-             * @returns {htnl}    - html 文檔
+             * @param {html} html - 要解析成 html 的文檔
+             * @returns {html}    - html 文檔
              */
             domParse: (html) => _domParser.parseFromString(html, "text/html"),
 
