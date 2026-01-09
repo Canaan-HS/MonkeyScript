@@ -8,7 +8,7 @@ export default async function SidebarCollapse() {
         .global-sidebar {
             opacity: 0;
             height: 100%;
-            width: 10rem;
+            width: 12rem;
             display: flex;
             position: fixed;
             padding: 0.5em 0;
