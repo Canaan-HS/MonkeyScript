@@ -28,7 +28,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -147,7 +147,7 @@
         .global-sidebar {
             opacity: 0;
             height: 100%;
-            width: 10rem;
+            width: 12rem;
             display: flex;
             position: fixed;
             padding: 0.5em 0;
@@ -156,9 +156,9 @@
             flex-direction: column;
             transform: translateX(-9rem);
         }
-        .global-sidebar:hover {opacity: 1; transform: translateX(0rem);}
-        .content-wrapper.shifted {transition: 0.7s; margin-left: 0rem;}
-        .global-sidebar:hover + .content-wrapper.shifted {margin-left: 10rem;}
+        .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
+        .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
+        .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
     `,
       "Collapse-Effects",
       false,
@@ -178,10 +178,10 @@
       isUpScroll = false,
       isDownScroll = false;
     const [topDetected, bottomDetected] = [
-      Lib.$throttle(() => {
+      Lib.throttle(() => {
         isUpScroll = Lib.sY == 0 ? false : true;
       }, 600),
-      Lib.$throttle(() => {
+      Lib.throttle(() => {
         isDownScroll = Lib.sY + Lib.iH >= Lib.html.scrollHeight ? false : true;
       }, 600),
     ];
@@ -217,7 +217,7 @@
     Lib.onEvent(
       window,
       "keydown",
-      Lib.$throttle((event) => {
+      Lib.throttle((event) => {
         const key = event.key;
         if (key == "ArrowUp") {
           event.stopImmediatePropagation();
@@ -296,7 +296,7 @@
     if (Page.isNeko || Parame.Registered.has("CacheFetch")) return;
     const cacheKey = "fetch_cache_data";
     const cache = await Parame.DB.get(cacheKey, new Map());
-    const saveCache = Lib.$debounce(() => {
+    const saveCache = Lib.debounce(() => {
       Parame.DB.set(cacheKey, cache, { expireStr: "5m" });
     }, 1e3);
     const originalFetch = { Sandbox: window.fetch, Window: unsafeWindow.fetch };
@@ -745,7 +745,7 @@ statusText: ${text}`);
       await Parame.DB.set(recordKey, new Map([...(await getRecord()), ...save]));
       fixCache.clear();
     };
-    const saveWork = Lib.$debounce(() => saveRecord(fixCache), 1e3);
+    const saveWork = Lib.debounce(() => saveRecord(fixCache), 1e3);
     const fixRequest = async (url, headers = {}) => {
       return new Promise((resolve) => {
         GM_xmlhttpRequest({
@@ -918,7 +918,7 @@ statusText: ${text}`);
       } catch {}
     }
     async function dynamicFix(element) {
-      Lib.$observer(
+      Lib.observer(
         element,
         async () => {
           recordCache = await getRecord();
@@ -1112,7 +1112,7 @@ statusText: ${text}`);
             Lib.onEvent(
               Lib.body,
               "mouseover",
-              Lib.$debounce((event) => {
+              Lib.debounce((event) => {
                 let target = event.target;
                 const className = target.className;
                 if (className === "fancy-image__image") {
@@ -1718,7 +1718,7 @@ statusText: ${text}`);
           }, {});
           const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
           Fetch.send(api, (data) => {
-            if (Lib.$type(data) === "Object") data = data?.posts || [];
+            if (Lib.type(data) === "Object") data = data?.posts || [];
             for (const post of data) {
               const { img, footer } = postData[post?.id] || {};
               if (!img && !footer) continue;
@@ -1869,7 +1869,7 @@ statusText: ${text}`);
           );
           for (const li of parents) {
             const waitLoad = new MutationObserver(
-              Lib.$debounce(() => {
+              Lib.debounce(() => {
                 waitLoad.disconnect();
                 let [video, summary] = [li.$q("video"), li.$q("summary")];
                 if (!video || !summary) return;
