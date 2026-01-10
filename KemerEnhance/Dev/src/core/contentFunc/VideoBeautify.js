@@ -28,7 +28,7 @@ export default async function VideoBeautify({ mode }) {
 
                 for (const li of parents) {
 
-                    const waitLoad = new MutationObserver(Lib.$debounce(() => {
+                    const waitLoad = new MutationObserver(Lib.debounce(() => {
                         waitLoad.disconnect();
 
                         let [video, summary] = [
