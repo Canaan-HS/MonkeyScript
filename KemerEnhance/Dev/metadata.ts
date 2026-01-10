@@ -30,7 +30,7 @@ export default `
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
