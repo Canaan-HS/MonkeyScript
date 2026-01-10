@@ -71,7 +71,7 @@ const BetterThumbnailFactory = () => {
                 const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
                 Fetch.send(api, data => {
                     // ! 不特別處理 API 格式修改, 會導致報錯的問題
-                    if (Lib.$type(data) === "Object") data = data?.posts || [];
+                    if (Lib.type(data) === "Object") data = data?.posts || [];
 
                     for (const post of data) {
                         const { img, footer } = postData[post?.id] || {};
