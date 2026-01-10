@@ -31,20 +31,63 @@
 
 (async () => {
 
-    const Config = {
-        Dev: false,
-        TaskKey: "RunTasks", // 任務列表 Key
-        TimerKey: "TaskTimer", // 時間戳 Key
-        RegisterKey: "LeaderId", // 當前註冊 Key
-    };
+    /*
+        Todo - 待測試
+        Jkf 每日簽到任務領取 (POST)
+        https://jkforum.net/api/jkf-dailyTask-api/v1/DailyTask/CompleteTask?taskId=614115862249472
+
+        code
+        200000 = Success
+
+        進行每日簽到 (只領這個任務的獎勵)
+        taskId=614115862249472
+
+        觀看任一篇文章
+        taskId=614116038410241
+
+        Jkf 每日簽到任務額外獎勵 (Post)
+        https://jkforum.net/api/jkf-dailyTask-api/v1/DailyStage/CompleteStage?stageId=370080837533734
+
+        code
+        201000 = Success
+
+        古代銀幣 (只領這個任務的獎勵)
+        stageId=370080837533734
+
+        勇氣之羽
+        stageId=370081890304039
+
+        小型體力藥水
+        stageId=370081911275560
+    */
+
+    /**
+     * 任務列表
+     * @example
+     * {
+     *      Name: "任務名",
+     *      Method: "GET" | "POST", // 選填
+     *      API: "簽到 API 網址",
+     *      Page: "簽到網址", // 選填
+     *      Headers: Object | Function, // 選填
+     *      Data: Object | Function, // 選填
+     *      Cookie: Object | Function, // 選填
+     *      verifyStatus: (response) => { // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed }
+     */
 
     const taskList = [
+        {
+            Name: "Android 台灣中文網",
+            Method: "GET",
+            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=ae746a25&inajax=1", // 似乎每過一段時間就會變更
+            Page: "https://apk.tw/forum.php",
+            verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
+        },
         {
             Name: "GenshInimpact", // 任務名
             Method: "POST", // 請求方法
             API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481", // 簽到 API
             Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481", // 簽到網址
-            // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
@@ -63,9 +106,7 @@
             Name: "ZenlessZoneZero",
             API: "https://sg-public-api.hoyolab.com/event/luna/zzz/os/sign?act_id=e202406031448091",
             Page: "https://act.hoyolab.com/bbs/event/signin/zzz/e202406031448091.html?act_id=e202406031448091",
-            Headers: {
-                "x-rpc-signgame": "zzz",
-            },
+            Headers: { "x-rpc-signgame": "zzz" },
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
@@ -79,13 +120,6 @@
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyStageCheckIn?task_id=58",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/sign-in",
             verifyStatus: ({ code }) => code === 0 ? 0 : code === 1001009 || code === 1002007 ? 1 : 2
-        },
-        {
-            Name: "Android 台灣中文網",
-            Method: "GET",
-            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=ae746a25&inajax=1", // 待測試
-            Page: "https://apk.tw/forum.php",
-            verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
         }
     ];
 
@@ -95,43 +129,48 @@
         autoClose: true,
     });
 
-    const showStatus = {
-        0: (name) => Qmsg.success(`${name} 簽到成功`),
-        1: (name) => Qmsg.info(`${name} 已經簽到`),
-        2: (name) => {
-            Qmsg.error(`${name} 簽到失敗`);
-            Lib.delV(`${name}-CheckIn`); // 刪除簽到成功標籤
-        }
+    const config = {
+        Dev: false,
+        TaskKey: "RunTasks", // 任務列表 Key
+        TimerKey: "TaskTimer", // 時間戳 Key
+        RegisterKey: "LeaderId", // 當前註冊 Key
     };
 
-    // 建立簽到請求
-    function createRequest({ Name, Method = "POST", Headers = {}, API, verifyStatus }) {
+    const requestTask = (() => {
 
-        const deBug = (result) => {
+        const showStatus = {
+            0: (name) => Qmsg.success(`${name} 簽到成功`),
+            1: (name) => Qmsg.info(`${name} 已經簽到`),
+            2: (name) => {
+                Qmsg.error(`${name} 簽到失敗`);
+                Lib.delV(`${name}-CheckIn`); // 刪除簽到成功標籤
+            }
+        };
+
+        const deBug = (name, result) => {
+            const _type = Lib.type(result);
             Lib.log(
-                Object.assign({ name: Name },
-                    result?.constructor === Object
-                        ? result
-                        : { result }
-                )
+                Object.assign({ name }, _type === "Object" ? result : { response: result })
             ).table;
-
             return result;
         };
 
+        const objectVerify = (obj) =>
+            typeof obj === "function"
+                ? obj() : obj;
+
         return {
-            send: () => {
+            send({ API, Method = "POST", Headers, Cookie, Data, Name, verifyStatus }) {
                 let checkIn = undefined;
 
                 try {
                     checkIn = Qmsg.loading(`${Name} 簽到中`);
                 } catch (error) { }
 
-                GM_xmlhttpRequest({
-                    method: Method,
+                const params = {
                     url: API,
-                    headers: Headers,
-                    onload: (response) => {
+                    method: Method,
+                    onload(response) {
                         checkIn?.close();
 
                         if (response.status !== 200) {
@@ -142,27 +181,87 @@
                         let status = undefined;
 
                         try {
-                            status = verifyStatus(deBug(JSON.parse(response.response)));
+                            status = verifyStatus(deBug(Name, JSON.parse(response.response)));
                         } catch {
-                            status = verifyStatus(deBug(response.response));
+                            status = verifyStatus(deBug(Name, response.response));
                         }
 
-                        showStatus[status](Name);
+                        status
+                            ? showStatus[status](Name)
+                            : showStatus[2](Name);
                     },
-                    onerror: (response) => {
+                    onerror(response) {
                         checkIn?.close();
 
                         try {
-                            deBug(JSON.parse(response.response));
+                            deBug(Name, JSON.parse(response.response));
                         } catch {
-                            deBug(response.response);
+                            deBug(Name, response.response);
                         } finally {
                             showStatus[2](Name);
                         }
                     }
-                })
+                };
+
+                // 確保參數不為空, 才傳參數
+                const data = objectVerify(Data);
+                const cookie = objectVerify(Cookie);
+                const headers = objectVerify(Headers);
+
+                if (data != null) params.data = data;
+                if (cookie != null) params.cookie = cookie;
+                if (headers != null) params.headers = headers;
+
+                GM_xmlhttpRequest(params);
             }
         }
+    })();
+
+    const timeUtils = {
+        // 判斷是否是前一天
+        isPrevious(newDate, oldDate) {
+            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
+            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
+            return oldMs < newMs;
+        },
+        // 計算簽到時間
+        getCheckInTime(newDate) {
+            const tomorrow = new Date();
+            tomorrow.setDate(newDate.getDate() + 1); // 設置隔天時間
+            tomorrow.setHours(0, 0, 1, 0); // 00:01 (暫時統一時間)
+            return tomorrow;
+        },
+        // 格式化時間
+        getFormat(time) {
+            const year = time.getFullYear();
+            const month = `${time.getMonth() + 1}`.padStart(2, "0");
+            const date = `${time.getDate()}`.padStart(2, "0");
+            const hour = `${time.getHours()}`.padStart(2, "0");
+            const minute = `${time.getMinutes()}`.padStart(2, "0");
+            const second = `${time.getSeconds()}`.padStart(2, "0");
+            return `${year}/${month}/${date} ${hour}:${minute}:${second}`;
+        },
+        // 顯示觸發時間
+        showTriggerTime(newDate, checkInDate) {
+            if (!config.Dev) return;
+
+            const ms = checkInDate - newDate;
+            const [
+                day_ms, minute_ms, seconds_ms
+            ] = [
+                    (8.64e7), (3.6e6), (6e4)
+                ];
+
+            const [
+                hour, minute, seconds,
+            ] = [
+                    Math.floor((ms % day_ms) / minute_ms),
+                    Math.floor((ms % minute_ms) / seconds_ms),
+                    Math.floor((ms % seconds_ms) / 1e3)
+                ];
+
+            Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`, { dev: config.Dev });
+        },
     };
 
     const createTask = (() => {
@@ -174,6 +273,14 @@
 
         function setTab(role = "Leader") {
             GM_saveTab({ ID: taskId, Role: role, Name: Lib.title() });
+        };
+
+        // 更新記錄
+        function setTimestamp(newDate) {
+            Lib.setV(config.TimerKey, {
+                RecordTime: timeUtils.getFormat(newDate),
+                CheckInTime: timeUtils.getFormat(timeUtils.getCheckInTime(newDate))
+            })
         };
 
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
@@ -207,7 +314,7 @@
                             const tabs = Object.values(data).reverse();
                             for (const { ID, Role } of tabs) {
                                 if (Role === "Leader") continue;
-                                Lib.setV(Config.RegisterKey, ID);
+                                Lib.setV(config.RegisterKey, ID);
                                 break;
                             }
                         })
@@ -219,62 +326,6 @@
                     Lib.log("詢輪已被恢復");
                 }
             }, 10))
-        };
-
-        // 顯示觸發時間
-        function displayTriggerTime(newDate, checkInDate) {
-            if (!Config.Dev) return;
-
-            const ms = checkInDate - newDate;
-            const [
-                day_ms, minute_ms, seconds_ms
-            ] = [
-                    (8.64e7), (3.6e6), (6e4)
-                ];
-
-            const [
-                hour, minute, seconds,
-            ] = [
-                    Math.floor((ms % day_ms) / minute_ms),
-                    Math.floor((ms % minute_ms) / seconds_ms),
-                    Math.floor((ms % seconds_ms) / 1e3)
-                ];
-
-            Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒`, { dev: Config.Dev });
-        };
-
-        // 格式化時間
-        function timeFormat(time) {
-            const year = time.getFullYear();
-            const month = `${time.getMonth() + 1}`.padStart(2, "0");
-            const date = `${time.getDate()}`.padStart(2, "0");
-            const hour = `${time.getHours()}`.padStart(2, "0");
-            const minute = `${time.getMinutes()}`.padStart(2, "0");
-            const second = `${time.getSeconds()}`.padStart(2, "0");
-            return `${year}/${month}/${date} ${hour}:${minute}:${second}`;
-        };
-
-        // 判斷是否是前一天
-        function isPrevious(newDate, oldDate) {
-            const oldMs = Date.UTC(oldDate.getFullYear(), oldDate.getMonth(), oldDate.getDate());
-            const newMs = Date.UTC(newDate.getFullYear(), newDate.getMonth(), newDate.getDate());
-            return oldMs < newMs;
-        };
-
-        // 計算簽到時間
-        function getCheckInTime(newDate) {
-            const tomorrow = new Date();
-            tomorrow.setDate(newDate.getDate() + 1); // 設置隔天時間
-            tomorrow.setHours(0, 0, 3, 0); // 00:03
-            return tomorrow;
-        };
-
-        // 更新記錄
-        function setTimestamp(newDate) {
-            Lib.setV(Config.TimerKey, {
-                RecordTime: timeFormat(newDate),
-                CheckInTime: timeFormat(getCheckInTime(newDate))
-            })
         };
 
         // 任務詢輪
@@ -289,29 +340,29 @@
                 * 可能的定義與解析: const time = "01:05:30".split(":").map(value => parseInt(value));
             */
             if (stop) return;
-            const enabledTaskList = Lib.getV(Config.TaskKey, []); // 取得任務列表
+            const enabledTaskList = Lib.getV(config.TaskKey, []); // 取得任務列表
 
             // 料表類型錯誤, 直接複寫空陣列
             if (!Array.isArray(enabledTaskList)) {
-                Lib.setV(Config.TaskKey, []);
+                Lib.setV(config.TaskKey, []);
 
-                Lib.log("錯誤的任務列表, 詢輪已被停止", { dev: Config.Dev }).error;
+                Lib.log("錯誤的任務列表, 詢輪已被停止", { dev: config.Dev }).error;
                 return;
             };
 
             // 沒有任務不執行 (並清除不需要的值)
             if (enabledTaskList.length === 0) {
-                Lib.delV(Config.TaskKey);
-                Lib.delV(Config.TimerKey);
-                Lib.delV(Config.RegisterKey);
+                Lib.delV(config.TaskKey);
+                Lib.delV(config.TimerKey);
+                Lib.delV(config.RegisterKey);
 
                 destroyReset();
-                Lib.log("沒有任務, 詢輪已被停止", { dev: Config.Dev }).warn;
+                Lib.log("沒有任務, 詢輪已被停止", { dev: config.Dev }).warn;
                 return;
             };
 
             try {
-                const taskTimer = Lib.getV(Config.TimerKey); // 取得時間戳
+                const taskTimer = Lib.getV(config.TimerKey); // 取得時間戳
 
                 if (taskTimer) {
                     const checkInDate = taskTimer['CheckInTime']; // 主要驗證
@@ -319,17 +370,17 @@
 
                     if (
                         navigator.onLine && newDate > new Date(checkInDate) // 有網路時, 當前時間 > 簽到時間
-                        || recordDate && isPrevious(newDate, new Date(recordDate)) // 判斷紀錄時間是前一天
+                        || recordDate && timeUtils.isPrevious(newDate, new Date(recordDate)) // 判斷紀錄時間是前一天
                     ) { // 執行簽到
                         destroyReset(false); // 簽到時停止詢輪
 
                         // ! 暫時檢測
                         Lib.log({
                             "網路狀態": navigator.onLine,
-                            "當前時間": timeFormat(newDate),
+                            "當前時間": timeUtils.getFormat(newDate),
                             "簽到觸發": newDate > new Date(checkInDate),
                             "紀錄時間": recordDate,
-                            "前一天": isPrevious(newDate, new Date(recordDate))
+                            "前一天": timeUtils.isPrevious(newDate, new Date(recordDate))
                         });
 
                         let index = 0;
@@ -340,7 +391,7 @@
                             if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
 
                             setTimeout(() => {
-                                createRequest(task).send();
+                                requestTask.send(task);
                                 Lib.setV(`${task.Name}-CheckIn`, true);
                             }, Math.max(index++ * 2000)); // 每個任務間隔 2 秒
                         }
@@ -360,7 +411,7 @@
                         } else {
                             Lib.setV("ReTry-Count", retryCount + 1);
                         };
-                    } else displayTriggerTime(newDate, new Date(checkInDate));
+                    } else timeUtils.showTriggerTime(newDate, new Date(checkInDate));
 
                 } else throw new Error("沒有時間戳記錄");
             } catch {
@@ -377,12 +428,12 @@
             registered = true;
 
             setTab();
-            Lib.setV(Config.RegisterKey, taskId); // 紀錄註冊時間
-            changeListener(Config.RegisterKey); // 監聽註冊時間變化
+            Lib.setV(config.RegisterKey, taskId); // 紀錄註冊時間
+            changeListener(config.RegisterKey); // 監聽註冊時間變化
 
             taskQuery(); // 開始檢測
             Lib.onEvent(window, "beforeunload", () => { // 離開時執行
-                Lib.setV(Config.RegisterKey, "leave");
+                Lib.setV(config.RegisterKey, "leave");
             });
             Lib.onEvent(document, "visibilitychange", () => { // 切換頁面時執行
                 if (document.visibilityState === "visible") {
@@ -395,8 +446,8 @@
         return { register };
     })();
 
-    (() => {
-
+    // 透過菜單註冊任務
+    const enableTask = (() => {
         // 判斷是否為 url
         function isValidURL(string) {
             try {
@@ -438,17 +489,13 @@
         };
 
         // 取得任務列表
-        const enabledTask = new Set(Lib.getV(Config.TaskKey, []));
+        const enabledTask = new Set(Lib.getV(config.TaskKey, []));
         // 根據版本號判斷菜單是否自動關閉
         const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
-        // 透過菜單啟用任務
-        async function enableTask() {
-
+        function run() {
             // 有任務時註冊
-            if (enabledTask.size > 0) {
-                createTask.register();
-            };
+            if (enabledTask.size > 0) createTask.register();
 
             for (const [index, task] of taskList.entries()) {
                 const icon = enabledTask.has(task.Name) ? "🟢" : "🔴";
@@ -465,8 +512,8 @@
                         ? enabledTask.delete(task.Name)
                         : enabledTask.add(task.Name);
 
-                    Lib.setV(Config.TaskKey, [...enabledTask]);
-                    enableTask(); // 遞迴更新狀態
+                    Lib.setV(config.TaskKey, [...enabledTask]);
+                    run(); // 遞迴更新狀態
                 }, 200), {
                     id: `CheckIn-${index}`,
                     autoClose
@@ -475,9 +522,10 @@
             }
         };
 
-        if (document.visibilityState === "hidden") {
-            Lib.onE(document, "visibilitychange", () => enableTask(), { once: true });
-        } else enableTask();
+        return { run };
     })();
 
+    if (document.visibilityState === "hidden") {
+        Lib.onE(document, "visibilitychange", () => enableTask.run(), { once: true });
+    } else enableTask.run();
 })();
