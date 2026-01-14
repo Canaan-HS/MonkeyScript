@@ -270,7 +270,6 @@
             GM_saveTab({ ID: taskId, Role: role, Name: Lib.title() });
         };
 
-        // 更新記錄
         function setTimestamp(currentTime) {
             Lib.setV(config.TimerKey, {
                 RecordTime: timeUtils.getFormat(currentTime),
@@ -281,14 +280,16 @@
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
         async function destroyReset(recover = true) {
             stop = true;
+
             setTab("Member");
             clearTimeout(queryTimer);
             clearTimeout(checkInTimer);
+
             Lib.offEvent(window, "beforeunload");
             Lib.offEvent(document, "visibilitychange");
 
             if (!recover) return;
-            // 恢復預設狀態 (允許重複註冊)
+
             setTimeout(() => {
                 stop = false;
                 registered = false;
@@ -338,7 +339,7 @@
             if (stop) return;
             const enabledTaskList = Lib.getV(config.TaskKey, []); // 取得任務列表
 
-            // 料表類型錯誤, 直接複寫空陣列
+            // 任務列表類型錯誤, 直接複寫空陣列
             if (!Array.isArray(enabledTaskList)) {
                 Lib.setV(config.TaskKey, []);
 
@@ -358,83 +359,77 @@
             };
 
             try {
-                const taskTimer = Lib.getV(config.TimerKey); // 取得時間戳
+                const timer = Lib.getV(config.TimerKey); // 取得時間戳
+                if (!timer) throw new Error("沒有時間戳記錄");
 
-                if (taskTimer) {
-                    clearTimeout(checkInTimer);
+                // 主要驗證
+                const checkInTime = timer.CheckInTime ? new Date(timer.CheckInTime) : currentTime;
+                // 附加驗證 (非必要)
+                const recordTime = timer.RecordTime ? new Date(timer.RecordTime) : null;
 
-                    const checkInTime = taskTimer['CheckInTime']; // 主要驗證
-                    const recordTime = taskTimer['RecordTime']; // 附加驗證 (非必要)
+                // 執行簽到工作
+                const checkInWork = () => {
+                    if (!navigator.onLine) return; // 離線不執行
+                    destroyReset(false); // 簽到時停止詢輪
 
-                    // 執行簽到工作
-                    const checkInWork = () => {
-                        if (!navigator.onLine) return; // 離線不執行
-                        destroyReset(false); // 簽到時停止詢輪
+                    currentTime = new Date(); // 更新當前時間
 
-                        currentTime = new Date(); // 更新當前時間
-                        Lib.log({
-                            "當前時間": timeUtils.getFormat(currentTime),
-                            "簽到觸發": currentTime > new Date(checkInTime),
-                            "紀錄時間": recordTime,
-                            "前一天": timeUtils.isPrevious(currentTime, new Date(recordTime))
-                        });
+                    let index = 0;
+                    const enabledTask = new Set(enabledTaskList);
 
-                        let index = 0;
-                        const enabledTask = new Set(enabledTaskList);
+                    for (const task of taskList) {
+                        if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
+                        if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
 
-                        for (const task of taskList) {
-                            if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
-                            if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
-
-                            // ? 實驗性
-                            if (task.AutoOpen && task.Page) {
-                                try {
-                                    if (Lib.domain !== new URL(task.Page).hostname) {
-                                        window.open(task.Page);
-                                        return;
-                                    }
-                                } catch {
-                                    // 失敗當作成功 靜默處理
-                                    Lib.setV(`${task.Name}-CheckIn`, true);
-                                    continue;
+                        // ! 實驗性
+                        if (task.AutoOpen && task.Page) {
+                            try {
+                                if (Lib.domain !== new URL(task.Page).hostname) {
+                                    window.open(task.Page);
+                                    return;
                                 }
-                            };
-
-                            setTimeout(() => {
-                                requestTask.send(task);
+                            } catch {
+                                // 失敗當作成功 靜默處理
                                 Lib.setV(`${task.Name}-CheckIn`, true);
-                            }, Math.max(index++ * 2000)); // 每個任務間隔 2 秒
-                        }
-
-                        // ? 嘗試確保所有任務都簽到
-                        const retryCount = Lib.getV("ReTry-Count", 0);
-                        const allCheckIn = enabledTaskList.every(name => Lib.getV(`${name}-CheckIn`));
-
-                        if (allCheckIn || retryCount >= 4) {
-                            enabledTask.clear();
-                            setTimestamp(currentTime); // 更新時間戳
-
-                            Lib.delV("ReTry-Count");
-                            enabledTaskList.forEach(name => { // 清除簽到記錄
-                                Lib.delV(`${name}-CheckIn`);
-                            })
-                        } else {
-                            Lib.setV("ReTry-Count", retryCount + 1);
+                                continue;
+                            }
                         };
-                    };
 
-                    if (
-                        currentTime > new Date(checkInTime) // 當前時間 > 簽到時間
-                        || recordTime && timeUtils.isPrevious(currentTime, new Date(recordTime)) // 判斷紀錄時間是前一天
-                    ) checkInWork();
-                    else {
-                        const { hour, minute, seconds, ms } = timeUtils.getTriggerTime(currentTime, new Date(checkInTime));
-
-                        Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒 | 共 ${ms} 毫秒`, { dev: config.Dev });
-                        checkInTimer = setTimeout(checkInWork, ms);
+                        setTimeout(() => {
+                            requestTask.send(task);
+                            Lib.setV(`${task.Name}-CheckIn`, true);
+                        }, Math.max(index++ * 2000)); // 每個任務間隔 2 秒
                     }
 
-                } else throw new Error("沒有時間戳記錄");
+                    // ? 嘗試確保所有任務都簽到
+                    const retryCount = Lib.getV("ReTry-Count", 0);
+                    const allCheckIn = enabledTaskList.every(name => Lib.getV(`${name}-CheckIn`));
+
+                    if (allCheckIn || retryCount >= 4) {
+                        enabledTask.clear();
+                        setTimestamp(currentTime); // 更新時間戳
+
+                        Lib.delV("ReTry-Count");
+                        enabledTaskList.forEach(name => { // 清除簽到記錄
+                            Lib.delV(`${name}-CheckIn`);
+                        })
+                    } else {
+                        Lib.setV("ReTry-Count", retryCount + 1);
+                    };
+                };
+
+                if (
+                    currentTime > checkInTime // 當前時間 > 簽到時間
+                    || recordTime && timeUtils.isPrevious(currentTime, recordTime) // 判斷紀錄時間是前一天
+                ) checkInWork();
+                else {
+                    const { hour, minute, seconds, ms } = timeUtils.getTriggerTime(currentTime, checkInTime);
+                    Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒 | 共 ${ms} 毫秒`, { dev: config.Dev });
+
+                    // ! 實驗性
+                    clearTimeout(checkInTimer);
+                    checkInTimer = setTimeout(checkInWork, ms);
+                }
             } catch {
                 setTimestamp(currentTime);
             };
@@ -446,16 +441,19 @@
         // 註冊任務
         function register() {
             if (registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
-            registered = true;
 
+            registered = true;
             setTab();
+
             Lib.setV(config.RegisterKey, taskId); // 紀錄註冊時間
             changeListener(config.RegisterKey); // 監聽註冊時間變化
 
             taskQuery(); // 開始檢測
+
             Lib.onEvent(window, "beforeunload", () => { // 離開時執行
                 Lib.setV(config.RegisterKey, "leave");
             });
+
             Lib.onEvent(document, "visibilitychange", () => { // 切換頁面時執行
                 if (document.visibilityState === "visible") {
                     clearTimeout(queryTimer);
