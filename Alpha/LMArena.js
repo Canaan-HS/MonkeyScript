@@ -102,7 +102,39 @@
 
     const record = new WeakSet();
     new MutationObserver(debounce(() => {
-        for (const container of document.querySelectorAll("div.transition-all")) {
+        // 提問區塊
+        for (const container of document.querySelectorAll("div.self-end")) {
+            if (record.has(container)) continue;
+
+            container.classList.add('collapsed');
+
+            // === 頂部收合按鈕 ===
+            const topControl = document.createElement('div');
+            topControl.className = 'chhs-custom-control chhs-top-control';
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'chhs-toggle-collapse-btn collapsed';
+            toggleBtn.textContent = '➕ 展開';
+
+            topControl.appendChild(toggleBtn);
+            container.insertBefore(topControl, container.firstChild);
+
+            // === 底部回頂按鈕 ===
+            const bottomControl = document.createElement('div');
+            bottomControl.className = 'chhs-custom-control chhs-bottom-control';
+
+            const backTopBtn = document.createElement('button');
+            backTopBtn.className = 'chhs-back-top-btn';
+            backTopBtn.textContent = '⬆ 頂部';
+
+            bottomControl.appendChild(backTopBtn);
+            container.appendChild(bottomControl);
+
+            record.add(container);
+        }
+
+        // 回復區塊
+        for (const container of document.querySelectorAll("div.transition-all:not(.bg-surface-tertiary)")) {
             if (record.has(container)) continue;
 
             // === 建立頂部控制容器 ===
@@ -149,34 +181,9 @@
             record.add(container);
         }
 
-        for (const container of document.querySelectorAll("div.bg-surface-secondary.duration-150")) {
-            if (record.has(container)) continue;
-
-            container.classList.add('collapsed');
-
-            // === 頂部收合按鈕 ===
-            const topControl = document.createElement('div');
-            topControl.className = 'chhs-custom-control chhs-top-control';
-
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'chhs-toggle-collapse-btn collapsed';
-            toggleBtn.textContent = '➕ 展開';
-
-            topControl.appendChild(toggleBtn);
-            container.insertBefore(topControl, container.firstChild);
-
-            // === 底部回頂按鈕 ===
-            const bottomControl = document.createElement('div');
-            bottomControl.className = 'chhs-custom-control chhs-bottom-control';
-
-            const backTopBtn = document.createElement('button');
-            backTopBtn.className = 'chhs-back-top-btn';
-            backTopBtn.textContent = '⬆ 頂部';
-
-            bottomControl.appendChild(backTopBtn);
-            container.appendChild(bottomControl);
-
-            record.add(container);
+        // 廣告區塊
+        for (const video of document.querySelectorAll("video")) {
+            video.closest(".animate-in")?.remove();
         }
     }, 1e3)).observe(document, { attributes: true, childList: true, subtree: true });
 })();
