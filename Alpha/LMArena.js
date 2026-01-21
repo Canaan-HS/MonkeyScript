@@ -10,6 +10,8 @@
 // @license      MPL-2.0
 // @namespace    https://greasyfork.org/users/989635
 
+// @grant        none
+
 // @run-at       document-end
 // ==/UserScript==
 
