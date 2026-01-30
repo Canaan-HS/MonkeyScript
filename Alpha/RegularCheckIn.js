@@ -24,7 +24,7 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.6.0/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1745401/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
