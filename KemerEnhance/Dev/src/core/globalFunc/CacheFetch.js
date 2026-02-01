@@ -23,7 +23,7 @@ export default async function CacheFetch() {
 
         if (!input) return windowContext(...args);
 
-        const url = (typeof input === 'string') ? input : input.url;
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url || '';
         const method = options.method || (typeof input === 'object' ? input.method : 'GET') || 'GET';
 
         // 不是 GET 請求 或 有 X-Bypass-CacheFetch 標頭 或 url 結尾為 random
