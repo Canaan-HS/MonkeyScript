@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.01.31
+// @version      2025.02.16
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -435,7 +435,7 @@ const Lib = (() => {
             return;
         };
 
-        const key = mark ?? typeof element === "string" ? selector(document, element) : element;
+        const key = mark ?? (typeof element === "string" ? selector(document, element) : element);
         const listens = eventRecord.get(key);
 
         if (listens) {
