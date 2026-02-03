@@ -30,7 +30,7 @@ export default async function BlockAds() {
     if (Parame.Registered.has("BlockAds")) return;
 
     Lib.addStyle(`
-        [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
+        [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
     `, "Ad-blocking-style");
 
     const domains = new Set([
@@ -43,10 +43,10 @@ export default async function BlockAds() {
     unsafeWindow.fetch = function (input) {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url || '';
         try {
-            if (url.endsWith(".m3u8")) return originalFetch.apply(this, arguments);
+            if (url.endsWith(".m3u8")) return new Response(url, { status: 204 });
             if ((
                 url.startsWith('http') || url.startsWith('//')
-            ) && domains.has(new URL(url).host)) return originalFetch.apply(this, arguments);
+            ) && domains.has(new URL(url).host)) return new Response(url, { status: 204 });
         } catch { }
         return originalFetch.apply(this, arguments);
     };
