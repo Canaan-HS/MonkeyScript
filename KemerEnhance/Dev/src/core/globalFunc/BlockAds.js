@@ -36,7 +36,7 @@ export default async function BlockAds() {
     const domains = new Set([
         "go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com",
         "go.bluetrafficstream.com", "creative.bluetrafficstream.com",
-        "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com"
+        "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"
     ]);
 
     const originalFetch = unsafeWindow.fetch;
@@ -50,6 +50,29 @@ export default async function BlockAds() {
         } catch { }
         return originalFetch.apply(this, arguments);
     };
+
+    const originalRequest = unsafeWindow.XMLHttpRequest;
+    unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
+        construct: function (target, args) {
+            const xhr = new target(...args);
+            return new Proxy(xhr, {
+                get: function (target, prop, receiver) {
+                    if (prop === 'open') {
+                        return function (method, url) {
+                            try {
+                                if (url.endsWith(".m3u8")) return;
+                                if ((
+                                    url.startsWith('http') || url.startsWith('//')
+                                ) && domains.has(new URL(url).host)) return;
+                            } catch { }
+                            return target[prop].apply(target, arguments);
+                        };
+                    }
+                    return Reflect.get(target, prop, receiver);
+                }
+            })
+        }
+    });
 
     Parame.Registered.add("BlockAds");
 };
