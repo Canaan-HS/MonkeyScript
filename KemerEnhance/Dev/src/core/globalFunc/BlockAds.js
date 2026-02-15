@@ -30,36 +30,26 @@ export default async function BlockAds() {
     if (Parame.Registered.has("BlockAds")) return;
 
     Lib.addStyle(`
-        .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
+        [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
     `, "Ad-blocking-style");
 
     const domains = new Set([
-        "go.mnaspm.com", "go.reebr.com",
-        "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"
+        "go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com",
+        "go.bluetrafficstream.com", "creative.bluetrafficstream.com",
+        "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com"
     ]);
 
-    const originalRequest = unsafeWindow.XMLHttpRequest;
-    unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
-        construct: function (target, args) {
-            const xhr = new target(...args);
-            return new Proxy(xhr, {
-                get: function (target, prop, receiver) {
-                    if (prop === 'open') {
-                        return function (method, url) {
-                            try {
-                                if (typeof url !== 'string' || url.endsWith(".m3u8")) return;
-                                if ((
-                                    url.startsWith('http') || url.startsWith('//')
-                                ) && domains.has(new URL(url).host)) return;
-                            } catch { }
-                            return target[prop].apply(target, arguments);
-                        };
-                    }
-                    return Reflect.get(target, prop, receiver);
-                }
-            })
-        }
-    });
+    const originalFetch = unsafeWindow.fetch;
+    unsafeWindow.fetch = function (input) {
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url || '';
+        try {
+            if (url.endsWith(".m3u8")) return originalFetch.apply(this, arguments);
+            if ((
+                url.startsWith('http') || url.startsWith('//')
+            ) && domains.has(new URL(url).host)) return originalFetch.apply(this, arguments);
+        } catch { }
+        return originalFetch.apply(this, arguments);
+    };
 
     Parame.Registered.add("BlockAds");
 };
