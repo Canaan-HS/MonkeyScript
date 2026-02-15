@@ -8,7 +8,7 @@ import open from 'open';
 import monkey from 'vite-plugin-monkey';
 import { defineConfig, Plugin, ViteDevServer } from 'vite';
 
-import config from './ExDownloader/Dev/config'; // ? 引入特定腳本開發配置
+import config from './KemerEnhance/Dev/config'; // ? 引入特定腳本開發配置
 
 /* 配置範例 */
 interface configType {
@@ -60,7 +60,7 @@ const serverRestartWatcherPlugin = (): Plugin => ({
 
         // 攔截重啟指令，為下一次重啟設置旗標
         const originalRestart = server.restart;
-        server.restart = async function (...args: any[]) {
+        server.restart = async function (...args: [forceOptimize?: boolean]) {
             process.env[restartFlag] = 'true';
             await originalRestart.apply(this, args);
         };
