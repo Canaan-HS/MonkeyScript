@@ -56,135 +56,46 @@ const OriginalImageFactory = () => {
         img.src = img.$gAttr("data-fsrc");
     };
 
-    async function getFileSize(url) {
-        for (let i = 0; i < 5; i++) {
-            try {
-                const result = await new Promise((resolve, reject) => {
-                    GM_xmlhttpRequest({
-                        method: "HEAD",
-                        url: url,
-                        onload: response => {
-                            const headers = response.responseHeaders.trim().split(/[\r\n]+/).reduce((acc, line) => {
-                                const [name, ...valueParts] = line.split(':');
-                                if (name) acc[name.toLowerCase().trim()] = valueParts.join(':').trim();
-                                return acc;
-                            }, {});
-
-                            const totalLength = parseInt(headers['content-length'], 10);
-                            const supportsRange = headers['accept-ranges'] === 'bytes' && totalLength > 0;
-
-                            resolve({
-                                supportsRange: supportsRange,
-                                totalSize: isNaN(totalLength) ? null : totalLength
-                            });
-                        },
-                        onerror: reject, // 任何網路錯誤都 reject，以便觸發 catch 進行重試
-                        ontimeout: reject
-                    });
-                });
-
-                return result; // 只要成功一次，就立刻回傳結果
-            } catch (error) {
-                if (i < 4) await new Promise(res => setTimeout(res, 300)); // 如果不是最後一次，就稍等後重試
-            }
-        }
-
-        // 5 次重試全部失敗後，靜默回傳「不支援」的狀態
-        return { supportsRange: false, totalSize: null };
-    };
-
     async function imgRequest(container, url, result) {
-        // ! 實驗性分段下載 (暫時關閉)
-        // const fileInfo = await getFileSize(url);
         const indicator = Lib.createElement(container, "div", { class: "progress-indicator" });
 
         let blob = null;
         try {
-            // 如果支援分段下載
-            if (false /* fileInfo.supportsRange && fileInfo.totalSize */) {
-                const CHUNK_COUNT = 6;
-                const totalSize = fileInfo.totalSize;
-                const chunkSize = Math.ceil(totalSize / CHUNK_COUNT);
-                const chunkProgress = new Array(CHUNK_COUNT).fill(0);
+            for (let i = 0; i < 5; i++) {
+                try {
+                    blob = await new Promise((resolve, reject) => {
+                        let timeout = null;
 
-                // 更新進度的統一邏輯
-                const updateProgress = () => {
-                    const totalDownloaded = chunkProgress.reduce((sum, loaded) => sum + loaded, 0);
-                    const percent = ((totalDownloaded / totalSize) * 100).toFixed(1);
-                    indicator.$text(`${percent}%`);
-                };
-
-                const chunkPromises = Array.from({ length: CHUNK_COUNT }, (_, i) => {
-                    return (async () => {
-                        const start = i * chunkSize;
-                        const end = Math.min(start + chunkSize - 1, totalSize - 1);
-                        // 為每個分塊內建重試邏輯
-                        for (let j = 0; j < 5; j++) {
-                            try {
-                                return await new Promise((resolve, reject) => {
-                                    GM_xmlhttpRequest({
-                                        method: "GET",
-                                        url,
-                                        headers: { "Range": `bytes=${start}-${end}` },
-                                        responseType: "blob",
-                                        onload: res => (res.status === 206 ? resolve(res.response) : reject(res)),
-                                        onerror: reject,
-                                        ontimeout: reject,
-                                        onprogress: progress => {
-                                            chunkProgress[i] = progress.loaded;
-                                            updateProgress();
-                                        }
-                                    });
-                                });
-                            } catch (error) {
-                                if (j < 4) await new Promise(res => setTimeout(res, 300));
-                            }
-                        }
-                        throw new Error(`Chunk ${i} failed after 5 retries.`); // 如果單一分塊最終失敗，則拋出錯誤
-                    })();
-                });
-
-                const chunks = await Promise.all(chunkPromises);
-                blob = new Blob(chunks);
-
-                // 策略二：不支援分段，直接完整下載
-            } else {
-                for (let i = 0; i < 5; i++) {
-                    try {
-                        blob = await new Promise((resolve, reject) => {
-                            let timeout = null;
-
-                            const request = GM_xmlhttpRequest({
-                                url,
-                                method: "GET",
-                                responseType: "blob",
-                                onload: res => {
-                                    clearTimeout(timeout);
-                                    return res.status === 200 ? resolve(res.response) : reject(res)
-                                },
-                                onerror: reject,
-                                onprogress: progress => {
-                                    timer();
-                                    if (progress.lengthComputable && indicator.isConnected) {
-                                        const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
-                                        indicator.$text(`${percent}%`);
-                                    }
-                                }
-                            });
-
-                            function timer() {
-                                // GM_xmlhttpRequest 的超時不太穩定
+                        const request = GM_xmlhttpRequest({
+                            url,
+                            method: "GET",
+                            responseType: "blob",
+                            onload: res => {
                                 clearTimeout(timeout);
-                                timeout = setTimeout(() => {
-                                    request.abort();
-                                    reject();
-                                }, 1.5e4)
-                            };
+                                return res.status === 200 ? resolve(res.response) : reject(res)
+                            },
+                            onerror: reject,
+                            onprogress: progress => {
+                                timer();
+                                if (progress.lengthComputable && indicator.isConnected) {
+                                    const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
+                                    indicator.$text(`${percent}%`);
+                                }
+                            }
                         });
-                        break;
-                    } catch (error) {
-                        if (i < 4) await new Promise(res => setTimeout(res, 300));
-                    }
+
+                        function timer() {
+                            // GM_xmlhttpRequest 的超時不太穩定
+                            clearTimeout(timeout);
+                            timeout = setTimeout(() => {
+                                request.abort();
+                                reject();
+                            }, 1.5e4)
+                        };
+                    });
+                    break;
+                } catch (error) {
+                    if (i < 4) await new Promise(res => setTimeout(res, 300));
                 }
             }
 
