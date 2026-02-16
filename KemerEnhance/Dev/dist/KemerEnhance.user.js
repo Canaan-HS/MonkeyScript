@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.11.12
+// @version      2025.02.16
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -28,7 +28,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1711627/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -140,32 +140,61 @@
     };
     return { ...userSet, color };
   })();
-  async function SidebarCollapse() {
-    if (Lib.platform.mobile) return;
+  async function BlockAds() {
+    if (Page.isNeko) return;
+    const cookieString = Lib.cookie();
+    const required = ["ts_popunder", "ts_popunder-cnt"];
+    const hasCookies = required.every((name) => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
+    if (!hasCookies) {
+      const now = new Date();
+      now.setFullYear(now.getFullYear() + 1);
+      const expires = now.toUTCString();
+      const cookies = {
+        [required[0]]: now,
+        [required[1]]: 1,
+      };
+      for (const [key, value] of Object.entries(cookies)) {
+        Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
+      }
+    }
+    if (Parame.Registered.has("BlockAds")) return;
     Lib.addStyle(
       `
-        .global-sidebar {
-            opacity: 0;
-            height: 100%;
-            width: 12rem;
-            display: flex;
-            position: fixed;
-            padding: 0.5em 0;
-            transition: 0.8s;
-            background: #282a2e;
-            flex-direction: column;
-            transform: translateX(-9rem);
-        }
-        .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
-        .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
-        .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
+        [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
     `,
-      "Collapse-Effects",
-      false,
+      "Ad-blocking-style",
     );
-  }
-  async function DeleteNotice() {
-    Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 10 }).then((announcement) => announcement.remove());
+    const domains = new Set(["go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com", "go.bluetrafficstream.com", "creative.bluetrafficstream.com", "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"]);
+    const originalFetch = unsafeWindow.fetch;
+    unsafeWindow.fetch = function (input) {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url || "";
+      try {
+        if (url.endsWith(".m3u8")) return new Response(url, { status: 204 });
+        if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return new Response(url, { status: 204 });
+      } catch {}
+      return originalFetch.apply(this, arguments);
+    };
+    const originalRequest = unsafeWindow.XMLHttpRequest;
+    unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
+      construct: function (target, args) {
+        const xhr = new target(...args);
+        return new Proxy(xhr, {
+          get: function (target2, prop, receiver) {
+            if (prop === "open") {
+              return function (method, url) {
+                try {
+                  if (url.endsWith(".m3u8")) return;
+                  if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return;
+                } catch {}
+                return target2[prop].apply(target2, arguments);
+              };
+            }
+            return Reflect.get(target2, prop, receiver);
+          },
+        });
+      },
+    });
+    Parame.Registered.add("BlockAds");
   }
   async function KeyScroll({ mode }) {
     if (Lib.platform.mobile || Parame.Registered.has("KeyScroll")) return;
@@ -245,53 +274,6 @@
     );
     Parame.Registered.add("KeyScroll");
   }
-  async function BlockAds() {
-    if (Page.isNeko) return;
-    const cookieString = Lib.cookie();
-    const required = ["ts_popunder", "ts_popunder-cnt"];
-    const hasCookies = required.every((name) => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
-    if (!hasCookies) {
-      const now = new Date();
-      now.setFullYear(now.getFullYear() + 1);
-      const expires = now.toUTCString();
-      const cookies = {
-        [required[0]]: now,
-        [required[1]]: 1,
-      };
-      for (const [key, value] of Object.entries(cookies)) {
-        Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
-      }
-    }
-    if (Parame.Registered.has("BlockAds")) return;
-    Lib.addStyle(
-      `
-        .root--ujvuu, [id^="ts_ad_native_"], [id^="ts_ad_video_"] {display: none !important}
-    `,
-      "Ad-blocking-style",
-    );
-    const domains = new Set(["go.mnaspm.com", "go.reebr.com", "creative.reebr.com", "tsyndicate.com", "tsvideo.sacdnssedge.com"]);
-    const originalRequest = unsafeWindow.XMLHttpRequest;
-    unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
-      construct: function (target, args) {
-        const xhr = new target(...args);
-        return new Proxy(xhr, {
-          get: function (target2, prop, receiver) {
-            if (prop === "open") {
-              return function (method, url) {
-                try {
-                  if (typeof url !== "string" || url.endsWith(".m3u8")) return;
-                  if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return;
-                } catch {}
-                return target2[prop].apply(target2, arguments);
-              };
-            }
-            return Reflect.get(target2, prop, receiver);
-          },
-        });
-      },
-    });
-    Parame.Registered.add("BlockAds");
-  }
   async function CacheFetch() {
     if (Page.isNeko || Parame.Registered.has("CacheFetch")) return;
     const cacheKey = "fetch_cache_data";
@@ -306,7 +288,7 @@
       const input = args[0];
       const options = args[1] || {};
       if (!input) return windowContext(...args);
-      const url = typeof input === "string" ? input : input.url;
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url || "";
       const method = options.method || (typeof input === "object" ? input.method : "GET") || "GET";
       if (method.toUpperCase() !== "GET" || options.headers?.["X-Bypass-CacheFetch"] || url.endsWith("random")) {
         return windowContext(...args);
@@ -342,6 +324,9 @@
       }
     }
     Parame.Registered.add("CacheFetch");
+  }
+  async function DeleteNotice() {
+    Lib.waitEl("#announcement-banner", null, { throttle: 50, timeout: 10 }).then((announcement) => announcement.remove());
   }
   function megaUtils(urlRegex) {
     const megaPDecoder = (() => {
@@ -675,6 +660,30 @@
       },
     };
   };
+  async function SidebarCollapse() {
+    if (Lib.platform.mobile) return;
+    Lib.addStyle(
+      `
+        .global-sidebar {
+            opacity: 0;
+            height: 100%;
+            width: 12rem;
+            display: flex;
+            position: fixed;
+            padding: 0.5em 0;
+            transition: 0.8s;
+            background: #282a2e;
+            flex-direction: column;
+            transform: translateX(-9rem);
+        }
+        .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
+        .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
+        .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
+    `,
+      "Collapse-Effects",
+      false,
+    );
+  }
   const Fetch = (() => {
     const responseRule = {
       text: (res) => res.text(),
@@ -1276,11 +1285,10 @@ statusText: ${text}`);
     };
   };
   const globalLoader = {
-    SidebarCollapse,
-    DeleteNotice,
-    KeyScroll,
     BlockAds,
     CacheFetch,
+    SidebarCollapse,
+    DeleteNotice,
     async TextToLink(...args) {
       const value = TextToLinkFactory().TextToLink;
       value(...args);
@@ -1292,19 +1300,8 @@ statusText: ${text}`);
       value(...args);
       Object.defineProperty(this, value.name, { value, writable: false });
     },
+    KeyScroll,
   };
-  async function NewTabOpens({ newtab_active, newtab_insert }) {
-    const [active, insert] = [newtab_active, newtab_insert];
-    Lib.onEvent(
-      Lib.body,
-      "click",
-      (event) => {
-        const target = event.target.closest("article a");
-        target && (event.preventDefault(), event.stopImmediatePropagation(), GM_openInTab(target.href, { active, insert }));
-      },
-      { capture: true, mark: "NewTabOpens" },
-    );
-  }
   async function CardText({ mode }) {
     if (Lib.platform.mobile) return;
     switch (mode) {
@@ -1418,6 +1415,18 @@ statusText: ${text}`);
     `,
       "CardZoom-Effects",
       false,
+    );
+  }
+  async function NewTabOpens({ newtab_active, newtab_insert }) {
+    const [active, insert] = [newtab_active, newtab_insert];
+    Lib.onEvent(
+      Lib.body,
+      "click",
+      (event) => {
+        const target = event.target.closest("article a");
+        target && (event.preventDefault(), event.stopImmediatePropagation(), GM_openInTab(target.href, { active, insert }));
+      },
+      { capture: true, mark: "NewTabOpens" },
     );
   }
   async function QuickPostToggle() {
@@ -1758,15 +1767,169 @@ statusText: ${text}`);
     };
   };
   const previewLoader = {
-    NewTabOpens,
     CardText,
     CardZoom,
+    NewTabOpens,
+    QuickPostToggle,
     async BetterThumbnail(...args) {
       const value = BetterThumbnailFactory().BetterThumbnail;
       value(...args);
       Object.defineProperty(this, value.name, { value, writable: false });
     },
-    QuickPostToggle,
+  };
+  async function VideoBeautify({ mode }) {
+    if (Page.isNeko) {
+      Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then((video) => {
+        video.forEach((media) => media.$sAttr("preload", "metadata"));
+      });
+    } else {
+      Lib.waitEl("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then((parents) => {
+        Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
+          Lib.addStyle(
+            `
+                    .fluid_video_wrapper {
+                        height: 50% !important;
+                        width: 65% !important;
+                        border-radius: 8px !important;
+                    }
+                `,
+            "Video-Effects",
+            false,
+          );
+          const move = mode === 2;
+          const linkBox = Object.fromEntries(
+            [...post].map((a) => {
+              const data = [a.download?.trim(), a];
+              return data;
+            }),
+          );
+          for (const li of parents) {
+            const waitLoad = new MutationObserver(
+              Lib.debounce(() => {
+                waitLoad.disconnect();
+                let [video, summary] = [li.$q("video"), li.$q("summary")];
+                if (!video || !summary) return;
+                video.$sAttr("loop", true);
+                video.$sAttr("preload", "metadata");
+                const link = linkBox[summary.$text()];
+                if (!link) return;
+                move && link.parentElement.remove();
+                let element = link.$copy();
+                element.$sAttr("beautify", true);
+                element.$text(element.$text().replace("Download", ""));
+                summary.$text("");
+                summary.appendChild(element);
+              }, 100),
+            );
+            waitLoad.observe(li, { attributes: true, characterData: true, childList: true, subtree: true });
+            li.$sAttr("Video-Beautify", true);
+          }
+        });
+      });
+    }
+  }
+  async function CommentFormat() {
+    Lib.addStyle(
+      `
+        .post__comments,
+        .scrape__comments {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .post__comments > *:last-child,
+        .scrape__comments > *:last-child {
+            margin-bottom: 0.5rem;
+        }
+        .comment {
+            margin: 0.5rem;
+            max-width: 25rem;
+            border-radius: 10px;
+            flex-basis: calc(35%);
+            word-break: break-all;
+            border: 0.125em solid var(--colour1-secondary);
+        }
+    `,
+      "Comment-Effects",
+      false,
+    );
+  }
+  const ExtraButtonFactory = () => {
+    const loadStyle = () => {
+      Lib.addStyle(
+        `
+            #main section {
+                width: 100%;
+            }
+        `,
+        "Post-Extra",
+        false,
+      );
+    };
+    const getNextPage = (url, oldMain, retry = 5) => {
+      if (!retry) return;
+      Fetch.send(url, null, { responseType: "document" })
+        .then((dom) => {
+          const main = dom.$q("main");
+          if (!main) return;
+          oldMain.replaceWith(main);
+          Lib.$q("header")?.scrollIntoView();
+          history.pushState(null, null, url);
+          Lib.title(dom.title);
+        })
+        .catch(() => {
+          setTimeout(() => getNextPage(url, oldMain), 1e3);
+        });
+    };
+    return {
+      async ExtraButton() {
+        Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then((comments) => {
+          loadStyle();
+          Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev");
+          const nextBtn = Lib.$q(".post__nav-link.next, .scrape__nav-link.next");
+          let toTopBtn, newNextBtn;
+          if (!Lib.$q("#to-top-svg")) {
+            const header = Lib.$q("header");
+            toTopBtn = Lib.createElement(comments, "span", {
+              id: "to-top-svg",
+              html: `
+                            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
+                                <style>svg{fill: ${Load.color}}</style>
+                                <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
+                            </svg>`,
+              on: {
+                click: () => header?.scrollIntoView(),
+              },
+            });
+          }
+          if (nextBtn && !Lib.$q("#next-btn")) {
+            const newBtn = nextBtn.$copy(true);
+            newBtn.style = `color: ${Load.color};`;
+            newBtn.$sAttr("jump", nextBtn.href);
+            newBtn.$dAttr("href");
+            newNextBtn = Lib.createElement(comments, "span", {
+              id: "next-btn",
+              style: "float: right; cursor: pointer;",
+              on: {
+                click: {
+                  listen: () => {
+                    if (Page.isNeko) {
+                      newBtn.disabled = true;
+                      getNextPage(newBtn.$gAttr("jump"), Lib.$q("main"));
+                    } else {
+                      toTopBtn?.remove();
+                      newNextBtn.remove();
+                      nextBtn.click();
+                    }
+                  },
+                  add: { once: true },
+                },
+              },
+            });
+            newNextBtn.appendChild(newBtn);
+          }
+        });
+      },
+    };
   };
   const LinkBeautifyFactory = () => {
     const showBrowse = (browse, retry = 3) => {
@@ -1841,57 +2004,6 @@ statusText: ${text}`);
       },
     };
   };
-  async function VideoBeautify({ mode }) {
-    if (Page.isNeko) {
-      Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then((video) => {
-        video.forEach((media) => media.$sAttr("preload", "metadata"));
-      });
-    } else {
-      Lib.waitEl("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then((parents) => {
-        Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
-          Lib.addStyle(
-            `
-                    .fluid_video_wrapper {
-                        height: 50% !important;
-                        width: 65% !important;
-                        border-radius: 8px !important;
-                    }
-                `,
-            "Video-Effects",
-            false,
-          );
-          const move = mode === 2;
-          const linkBox = Object.fromEntries(
-            [...post].map((a) => {
-              const data = [a.download?.trim(), a];
-              return data;
-            }),
-          );
-          for (const li of parents) {
-            const waitLoad = new MutationObserver(
-              Lib.debounce(() => {
-                waitLoad.disconnect();
-                let [video, summary] = [li.$q("video"), li.$q("summary")];
-                if (!video || !summary) return;
-                video.$sAttr("loop", true);
-                video.$sAttr("preload", "metadata");
-                const link = linkBox[summary.$text()];
-                if (!link) return;
-                move && link.parentElement.remove();
-                let element = link.$copy();
-                element.$sAttr("beautify", true);
-                element.$text(element.$text().replace("Download", ""));
-                summary.$text("");
-                summary.appendChild(element);
-              }, 100),
-            );
-            waitLoad.observe(li, { attributes: true, characterData: true, childList: true, subtree: true });
-            li.$sAttr("Video-Beautify", true);
-          }
-        });
-      });
-    }
-  }
   const OriginalImageFactory = () => {
     const linkQuery = Page.isNeko ? "div" : "a";
     const safeGetSrc = (element) => element?.src || element?.$gAttr("src");
@@ -1946,41 +2058,38 @@ statusText: ${text}`);
       const indicator = Lib.createElement(container, "div", { class: "progress-indicator" });
       let blob = null;
       try {
-        if (false);
-        else {
-          for (let i = 0; i < 5; i++) {
-            try {
-              blob = await new Promise((resolve, reject) => {
-                let timeout = null;
-                const request = GM_xmlhttpRequest({
-                  url,
-                  method: "GET",
-                  responseType: "blob",
-                  onload: (res) => {
-                    clearTimeout(timeout);
-                    return res.status === 200 ? resolve(res.response) : reject(res);
-                  },
-                  onerror: reject,
-                  onprogress: (progress) => {
-                    timer();
-                    if (progress.lengthComputable && indicator.isConnected) {
-                      const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
-                      indicator.$text(`${percent}%`);
-                    }
-                  },
-                });
-                function timer() {
+        for (let i = 0; i < 5; i++) {
+          try {
+            blob = await new Promise((resolve, reject) => {
+              let timeout = null;
+              const request = GM_xmlhttpRequest({
+                url,
+                method: "GET",
+                responseType: "blob",
+                onload: (res) => {
                   clearTimeout(timeout);
-                  timeout = setTimeout(() => {
-                    request.abort();
-                    reject();
-                  }, 15e3);
-                }
+                  return res.status === 200 ? resolve(res.response) : reject(res);
+                },
+                onerror: reject,
+                onprogress: (progress) => {
+                  timer();
+                  if (progress.lengthComputable && indicator.isConnected) {
+                    const percent = ((progress.loaded / progress.total) * 100).toFixed(1);
+                    indicator.$text(`${percent}%`);
+                  }
+                },
               });
-              break;
-            } catch (error) {
-              if (i < 4) await new Promise((res) => setTimeout(res, 300));
-            }
+              function timer() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                  request.abort();
+                  reject();
+                }, 15e3);
+              }
+            });
+            break;
+          } catch (error) {
+            if (i < 4) await new Promise((res) => setTimeout(res, 300));
           }
         }
         if (blob && blob.size > 0) {
@@ -2112,116 +2221,13 @@ statusText: ${text}`);
       },
     };
   };
-  const ExtraButtonFactory = () => {
-    const loadStyle = () => {
-      Lib.addStyle(
-        `
-            #main section {
-                width: 100%;
-            }
-        `,
-        "Post-Extra",
-        false,
-      );
-    };
-    const getNextPage = (url, oldMain, retry = 5) => {
-      if (!retry) return;
-      Fetch.send(url, null, { responseType: "document" })
-        .then((dom) => {
-          const main = dom.$q("main");
-          if (!main) return;
-          oldMain.replaceWith(main);
-          Lib.$q("header")?.scrollIntoView();
-          history.pushState(null, null, url);
-          Lib.title(dom.title);
-        })
-        .catch(() => {
-          setTimeout(() => getNextPage(url, oldMain), 1e3);
-        });
-    };
-    return {
-      async ExtraButton() {
-        Lib.waitEl("h2.site-section__subheading", null, { raf: true, timeout: 5 }).then((comments) => {
-          loadStyle();
-          Lib.$q(".post__nav-link.prev, .scrape__nav-link.prev");
-          const nextBtn = Lib.$q(".post__nav-link.next, .scrape__nav-link.next");
-          let toTopBtn, newNextBtn;
-          if (!Lib.$q("#to-top-svg")) {
-            const header = Lib.$q("header");
-            toTopBtn = Lib.createElement(comments, "span", {
-              id: "to-top-svg",
-              html: `
-                            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" style="margin-left: 10px;cursor: pointer;">
-                                <style>svg{fill: ${Load.color}}</style>
-                                <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
-                            </svg>`,
-              on: {
-                click: () => header?.scrollIntoView(),
-              },
-            });
-          }
-          if (nextBtn && !Lib.$q("#next-btn")) {
-            const newBtn = nextBtn.$copy(true);
-            newBtn.style = `color: ${Load.color};`;
-            newBtn.$sAttr("jump", nextBtn.href);
-            newBtn.$dAttr("href");
-            newNextBtn = Lib.createElement(comments, "span", {
-              id: "next-btn",
-              style: "float: right; cursor: pointer;",
-              on: {
-                click: {
-                  listen: () => {
-                    if (Page.isNeko) {
-                      newBtn.disabled = true;
-                      getNextPage(newBtn.$gAttr("jump"), Lib.$q("main"));
-                    } else {
-                      toTopBtn?.remove();
-                      newNextBtn.remove();
-                      nextBtn.click();
-                    }
-                  },
-                  add: { once: true },
-                },
-              },
-            });
-            newNextBtn.appendChild(newBtn);
-          }
-        });
-      },
-    };
-  };
-  async function CommentFormat() {
-    Lib.addStyle(
-      `
-        .post__comments,
-        .scrape__comments {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .post__comments > *:last-child,
-        .scrape__comments > *:last-child {
-            margin-bottom: 0.5rem;
-        }
-        .comment {
-            margin: 0.5rem;
-            max-width: 25rem;
-            border-radius: 10px;
-            flex-basis: calc(35%);
-            word-break: break-all;
-            border: 0.125em solid var(--colour1-secondary);
-        }
-    `,
-      "Comment-Effects",
-      false,
-    );
-  }
   const contentLoader = {
-    VideoBeautify,
     async LinkBeautify(...args) {
       const value = LinkBeautifyFactory().LinkBeautify;
       value(...args);
       Object.defineProperty(this, value.name, { value, writable: false });
     },
+    VideoBeautify,
     async OriginalImage(...args) {
       const value = OriginalImageFactory().OriginalImage;
       value(...args);
@@ -2842,25 +2848,20 @@ statusText: ${text}`);
   })();
   function Main() {
     const Enhance = (() => {
-      const runningOrder = {
-        Global: ["BlockAds", "CacheFetch", "SidebarCollapse", "DeleteNotice", "TextToLink", "BetterPostCard", "KeyScroll"],
-        Preview: ["CardText", "CardZoom", "NewTabOpens", "QuickPostToggle", "BetterThumbnail"],
-        Content: ["LinkBeautify", "VideoBeautify", "OriginalImage", "ExtraButton", "CommentFormat"],
-      };
       const loadFunc = {
         Global: globalLoader,
         Preview: previewLoader,
         Content: contentLoader,
       };
-      async function call(page, config = User_Config[page]) {
-        const func = loadFunc[page];
-        for (const ord of runningOrder[page]) {
-          let userConfig = config[ord];
-          if (!userConfig) continue;
-          if (typeof userConfig !== "object") {
-            userConfig = { enable: true };
-          } else if (!userConfig.enable) continue;
-          func[ord]?.(userConfig);
+      async function call(runPage) {
+        const config = User_Config[runPage] ?? {};
+        for (const [name, func] of Object.entries(loadFunc[runPage] ?? {})) {
+          let cfg = config[name];
+          if (!cfg || !func) continue;
+          if (typeof cfg !== "object") {
+            cfg = { enable: true };
+          } else if (!cfg.enable) continue;
+          func(cfg);
         }
       }
       return {
