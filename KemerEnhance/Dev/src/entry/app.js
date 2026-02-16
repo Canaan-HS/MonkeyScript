@@ -9,53 +9,28 @@ import MenuFactory from '../core/menu.js';
 
 export default function Main() {
     const Enhance = (() => {
-        const runningOrder = {
-            Global: [
-                "BlockAds",
-                "CacheFetch",
-                "SidebarCollapse",
-                "DeleteNotice",
-                "TextToLink",
-                "BetterPostCard",
-                "KeyScroll"
-            ],
-            Preview: [
-                "CardText",
-                "CardZoom",
-                "NewTabOpens",
-                "QuickPostToggle",
-                "BetterThumbnail"
-            ],
-            Content: [
-                "LinkBeautify",
-                "VideoBeautify",
-                "OriginalImage",
-                "ExtraButton",
-                "CommentFormat",
-            ],
-        };
 
-        // 加載函數
+        // 加載函數映射
         const loadFunc = {
             Global: globalLoader,
             Preview: previewLoader,
             Content: contentLoader
         };
 
-        // 解析配置調用對應功能
-        async function call(page, config = User_Config[page]) {
-            const func = loadFunc[page]; // 載入對應函數
+        // 呼叫函數
+        async function call(runPage) {
+            const config = User_Config[runPage] ?? {}; // 載入對應用戶配置
 
-            for (const ord of runningOrder[page]) {
-                let userConfig = config[ord]; // 載入對應的用戶配置
+            for (const [name, func] of Object.entries(loadFunc[runPage] ?? {})) {
+                let cfg = config[name]; // 載入對應名稱的用戶配置
 
-                if (!userConfig) continue;
-                if (typeof userConfig !== "object") {
-                    userConfig = { enable: true };
-                } else if (!userConfig.enable) continue;
+                if (!cfg || !func) continue;
+                if (typeof cfg !== "object") {
+                    cfg = { enable: true };
+                } else if (!cfg.enable) continue;
 
-                // 更輕量化的直接呼叫 (沒有驗證數據格式)
-                func[ord]?.(userConfig);
+                // 直接呼叫 (沒有驗證數據格式)
+                func(cfg);
             }
         };
 
@@ -65,8 +40,8 @@ export default function Main() {
 
                 if (Page.isPreview()) call("Preview");
                 else if (Page.isContent()) {
-                    MenuFactory.postViewInit();
-                    call("Content"); // 呼叫功能
+                    MenuFactory.postViewInit(); // 菜單與配置初始化
+                    call("Content");
                     MenuFactory.menuInit();
                 }
             }
