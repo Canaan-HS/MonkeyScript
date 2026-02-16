@@ -1,16 +1,16 @@
-import LinkBeautifyFactory from './LinkBeautify.js';
 import VideoBeautify from './VideoBeautify.js';
-import OriginalImageFactory from './OriginalImage.js';
-import ExtraButtonFactory from './ExtraButton.js';
 import CommentFormat from './CommentFormat.js';
+import ExtraButtonFactory from './ExtraButton.js';
+import LinkBeautifyFactory from './LinkBeautify.js';
+import OriginalImageFactory from './OriginalImage.js';
 
 const contentLoader = {
-    VideoBeautify,
     async LinkBeautify(...args) {
         const value = LinkBeautifyFactory().LinkBeautify;
         value(...args);
         Object.defineProperty(this, value.name, { value, writable: false });
     },
+    VideoBeautify,
     async OriginalImage(...args) {
         const value = OriginalImageFactory().OriginalImage;
         value(...args);
