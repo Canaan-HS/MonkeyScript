@@ -376,7 +376,7 @@ export default function Downloader() {
                 if (typeof iurl !== "undefined") {
                     gmRequest = GM_xmlhttpRequest({
                         url: iurl,
-                        timeout: 15000,
+                        timeout: Config.Timeout,
                         method: "GET",
                         responseType: "blob",
                         onload: response => {
@@ -403,7 +403,7 @@ export default function Downloader() {
                 timeout = setTimeout(() => {
                     gmRequest?.abort();
                     statusUpdate(time, index, name, iurl, null, true);
-                }, 15000);
+                }, Config.Timeout);
             };
 
             // 發起請求任務
