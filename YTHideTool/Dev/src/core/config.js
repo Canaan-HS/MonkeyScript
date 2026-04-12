@@ -21,7 +21,7 @@ export const Match = {
 }
 
 export const Param = {
-    Token: false,
+    FixRules: undefined,
     StartTime: undefined,
     ...Lib.getV('__REMOVE_ON_BUILD__', {})
 }
