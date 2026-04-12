@@ -24,15 +24,15 @@ const Tools = (() => {
     /**
      * 判斷設置
      * @param {element} element - 要修改的元素
-     * @param {String} setKey - 要保存設置的 key, 如果沒傳遞該值, 就不會有保存操作
+     * @param {String} saveKey - 要保存設置的 key, 如果沒傳遞該值, 就不會有保存操作
      */
-    const hideJudgment = async (element, setKey = null) => {
-        if (element.style.display == "none" || Param.Token) {
+    const hideJudgment = async (element, saveKey = null) => {
+        if (element.style.display == "none") {
             element.style.display = "block";
-            setKey && Lib.setV(setKey, false);
+            saveKey && Lib.setV(saveKey, false);
         } else {
             element.style.display = "none";
-            setKey && Lib.setV(setKey, true);
+            saveKey && Lib.setV(saveKey, true);
         }
     };
 
@@ -52,6 +52,17 @@ const Tools = (() => {
         }
     };
 
+    /* 臨時用於修復顯示樣式補丁 */
+    const afterDisplay = {
+        toggle(state) {
+            if (!Param.FixRules) return;
+            Object.assign(Param.FixRules[0].style, {
+                width: state ? "var(--ytd-watch-flexy-sidebar-width)" : "0px",
+                minWidth: state ? "var(--ytd-watch-flexy-sidebar-min-width)" : "0px"
+            })
+        }
+    };
+
     /* 監聽配置 */
     const titleOp = { childList: true, subtree: false };
     /* 持續隱藏 */
@@ -59,7 +70,7 @@ const Tools = (() => {
         Lib.title() != "..." && Lib.title("...");
     });
 
-    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, titleOp, titleOb };
+    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, afterDisplay, titleOp, titleOb };
 })();
 
 export default Tools;
