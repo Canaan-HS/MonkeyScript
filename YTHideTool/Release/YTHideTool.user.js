@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      2025.10.22
+// @version      2026.04.12
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -22,7 +22,7 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/487608/1677884/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -51,7 +51,7 @@
         Video: /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/
     };
     const Param = {
-        Token: false,
+        FixRules: void 0,
         StartTime: void 0
     };
     const Tools = (() => {
@@ -69,13 +69,13 @@
                 log: false
             }), state);
         };
-        const hideJudgment = async (element, setKey = null) => {
-            if (element.style.display == "none" || Param.Token) {
+        const hideJudgment = async (element, saveKey = null) => {
+            if (element.style.display == "none") {
                 element.style.display = "block";
-                setKey && Lib.setV(setKey, false);
+                saveKey && Lib.setV(saveKey, false);
             } else {
                 element.style.display = "none";
-                setKey && Lib.setV(setKey, true);
+                saveKey && Lib.setV(saveKey, true);
             }
         };
         const styleTransform = async (list, type, style) => {
@@ -85,6 +85,15 @@
             if (Config.Dev) {
                 return new Promise(resolve => {
                     resolve(list.every(element => element.style[type] == style));
+                });
+            }
+        };
+        const afterDisplay = {
+            toggle(state) {
+                if (!Param.FixRules) return;
+                Object.assign(Param.FixRules[0].style, {
+                    width: state ? "var(--ytd-watch-flexy-sidebar-width)" : "0px",
+                    minWidth: state ? "var(--ytd-watch-flexy-sidebar-min-width)" : "0px"
                 });
             }
         };
@@ -102,6 +111,7 @@
             devTimePrint: devTimePrint,
             hideJudgment: hideJudgment,
             styleTransform: styleTransform,
+            afterDisplay: afterDisplay,
             titleOp: titleOp,
             titleOb: titleOb
         };
@@ -242,17 +252,25 @@
                     overflow-x: hidden !important;
                 }
             `, "Youtube-Hide-Tool", false);
-                Lib.waitEl([ "title", "#title h1", "#end", "#below", "#secondary.style-scope.ytd-watch-flexy", "#secondary-inner", "#related", "#comments", "#actions" ], null, {
+                Lib.addStyle(`
+                ytd-watch-flexy[split-scroll][fixed-default-panels] #columns.ytd-watch-flexy:after {
+                    width: var(--ytd-watch-flexy-sidebar-width);
+                    min-width: var(--ytd-watch-flexy-sidebar-min-width);
+                }
+            `, "Youtube-Hide-Fix", false);
+                Lib.waitEl([ "title", "#title h1", "#end", "#below", "#secondary-inner", "#related", "#comments", "#actions" ], null, {
                     throttle: 80,
                     characterData: true,
                     timeoutResult: true
                 }).then(found => {
                     Tools.devPrint(Transl("隱藏元素"), found);
-                    const [ title, h1, end, below, secondary, inner, related, comments, actions ] = found;
+                    const [ title, h1, end, below, secondary, related, comments, actions ] = found;
+                    Param.FixRules ??= Lib.$q("#Youtube-Hide-Fix")?.sheet.cssRules;
                     if (Lib.getV("Minimalist")) {
                         Tools.titleOb.observe(title, Tools.titleOp);
                         Tools.styleTransform([ document.body ], "overflow", "hidden");
                         Tools.styleTransform([ h1, end, below, secondary, related ], "display", "none").then(state => Tools.devTimePrint(Transl("極簡化"), state));
+                        Tools.afterDisplay.toggle(false);
                         Lib.title("...");
                     } else {
                         if (Lib.getV("Title")) {
@@ -262,6 +280,7 @@
                         }
                         if (Lib.getV("RecomViewing")) {
                             Tools.styleTransform([ secondary, related ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏推薦觀看"), state));
+                            Tools.afterDisplay.toggle(false);
                         }
                         if (Lib.getV("Comment")) {
                             Tools.styleTransform([ comments ], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏留言區"), state));
@@ -271,41 +290,37 @@
                         }
                     }
                     const modify = {
-                        Title: (mode, save = "Title") => {
-                            mode = save ? mode : !mode;
+                        Title: (mode, saveKey = "Title") => {
+                            mode = saveKey ? mode : !mode;
                             Lib.title(mode ? (Tools.titleOb.disconnect(), Tools.titleFormat(h1)) : (Tools.titleOb.observe(title, Tools.titleOp), 
                             "..."));
-                            Tools.hideJudgment(h1, save);
+                            Tools.hideJudgment(h1, saveKey);
                         },
-                        Minimalist: (mode, save = true) => {
-                            mode = save ? mode : !mode;
+                        Minimalist: (mode, saveKey = true) => {
+                            mode = saveKey ? mode : !mode;
                             if (mode) {
                                 modify.Title(false, false);
-                                save && Lib.setV("Minimalist", false);
+                                saveKey && Lib.setV("Minimalist", false);
                                 Tools.styleTransform([ document.body ], "overflow", "auto");
                                 Tools.styleTransform([ end, below, secondary, related ], "display", "block");
                             } else {
                                 modify.Title(true, false);
-                                save && Lib.setV("Minimalist", true);
+                                saveKey && Lib.setV("Minimalist", true);
                                 Tools.styleTransform([ document.body ], "overflow", "hidden");
                                 Tools.styleTransform([ end, below, secondary, related ], "display", "none");
                             }
+                            Tools.afterDisplay.toggle(mode);
                         },
-                        RecomViewing: (_, save = "RecomViewing") => {
-                            if (inner.childElementCount > 1) {
-                                Tools.hideJudgment(secondary);
-                                Tools.hideJudgment(related, save);
-                                Param.Token = false;
-                            } else {
-                                Tools.hideJudgment(related, save);
-                                Param.Token = true;
-                            }
+                        RecomViewing: (_, saveKey = "RecomViewing") => {
+                            Tools.hideJudgment(related);
+                            Tools.hideJudgment(secondary, saveKey);
+                            Tools.afterDisplay.toggle(!Lib.getV(saveKey));
                         },
-                        Comment: (_, save = "Comment") => {
-                            Tools.hideJudgment(comments, save);
+                        Comment: (_, saveKey = "Comment") => {
+                            Tools.hideJudgment(comments, saveKey);
                         },
-                        FunctionBar: (_, save = "FunctionBar") => {
-                            Tools.hideJudgment(actions, save);
+                        FunctionBar: (_, saveKey = "FunctionBar") => {
+                            Tools.hideJudgment(actions, saveKey);
                         }
                     };
                     Lib.onEvent(document, "keydown", event => {
