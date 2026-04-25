@@ -108,14 +108,21 @@
                     onTarget && _trigger();
                 }, 1e3);
 
-                Lib.onEvent(document, "keydown", event => {
-                    if (event.key === "ArrowLeft") {
+                const keyboardRules = {
+                    " ": event => event.preventDefault(),
+                    ArrowLeft: event => {
                         event.preventDefault();
                         video.currentTime -= 1;
-                    } else if (event.key === "ArrowRight") {
+                    },
+                    ArrowRight: event => {
                         event.preventDefault();
                         video.currentTime += 1;
-                    } else keyboardTrigger();
+                    }
+                };
+
+                Lib.onEvent(document, "keydown", event => {
+                    if (keyboardRules[event.key]) keyboardRules[event.key](event);
+                    else keyboardTrigger();
                 }, { capture: true, passive: true });
 
                 // 離開目標
