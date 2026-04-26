@@ -23,7 +23,6 @@
 // ==/UserScript==
 
 (async () => {
-    if (Lib.platform === "Mobile") return;
 
     if (!Lib.cookie().includes("quality")) {
         Lib.cookie(`quality=1080; domain=${Lib.$domain}; path=/; max-age=${3.1536e7};`);
@@ -94,7 +93,7 @@
             Lib.onEvent(video, "play", () => {
 
                 // 目標上移動
-                Lib.onEvent(container, "pointermove", Lib.$throttle(() => {
+                Lib.onEvent(container, "pointermove", Lib.throttle(() => {
                     onTarget = true;
                     _trigger();
                 }, 100), { passive: true });
@@ -105,9 +104,19 @@
                 }, { passive: true });
 
                 // 鍵盤按下
-                Lib.onEvent(document, "keydown", Lib.$throttle(() => {
+                const keyboardTrigger = Lib.throttle(() => {
                     onTarget && _trigger();
-                }, 1e3), { capture: true, passive: true });
+                }, 1e3);
+
+                Lib.onEvent(document, "keydown", event => {
+                    if (event.key === "ArrowLeft") {
+                        event.preventDefault();
+                        video.currentTime -= 1;
+                    } else if (event.key === "ArrowRight") {
+                        event.preventDefault();
+                        video.currentTime += 1;
+                    } else keyboardTrigger();
+                }, { capture: true, passive: true });
 
                 // 離開目標
                 Lib.onEvent(container, "pointerleave", () => {
@@ -205,7 +214,7 @@
 
                 // 快照顯示
                 const parent = tip.parentNode;
-                Lib.$observer(tip, () => {
+                Lib.observer(tip, () => {
                     Lib.$q(".snapshot")?.remove();  // 移除舊圖片
 
                     // 獲取指示器的時間, 並獲取對應的快照
