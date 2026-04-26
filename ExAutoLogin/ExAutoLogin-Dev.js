@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 자동 로그인
 // @name:ru      [E/Ex-Hentai] Автоматический вход
 // @name:en      [E/Ex-Hentai] AutoLogin
-// @version      2025.08.23-Beta
+// @version      2026.04.26
 // @author       Canaan HS
 // @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
 // @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
