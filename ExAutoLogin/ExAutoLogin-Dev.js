@@ -1069,7 +1069,7 @@
                 GM_xmlhttpRequest({
                     method: "GET",
                     responseType: "json",
-                    url: "https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/refs/heads/main/Share/ExShare.json",
+                    url: "https://gitlab.com/Canaan-HS/database/-/raw/main/Share/ExShare.json",
                     onload: response => {
                         if (response.status === 200) {
                             const data = response.response;
