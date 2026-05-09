@@ -5,7 +5,7 @@
 // @name:ja      YouTube 非表示ツール
 // @name:ko      유튜브 숨기기 도구
 // @name:en      Youtube Hide Tool
-// @version      2026.04.12
+// @version      2026.05.10-Beta
 // @author       Canaan HS
 // @description         該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
 // @description:zh-TW   該腳本能夠自動隱藏 YouTube 影片結尾的推薦卡，當滑鼠懸浮於影片上方時，推薦卡會恢復顯示。並額外提供快捷鍵切換功能，可隱藏留言區、影片推薦、功能列表，及切換至極簡模式。設置會自動保存，並在下次開啟影片時自動套用。
@@ -51,7 +51,6 @@
     Video: /^(https?:\/\/)www\.youtube\.com\/watch\?v=.+$/,
   };
   const Param = {
-    FixRules: void 0,
     StartTime: void 0,
   };
   const Tools = (() => {
@@ -82,20 +81,11 @@
         });
       }
     };
-    const afterDisplay = {
-      toggle(state) {
-        if (!Param.FixRules) return;
-        Object.assign(Param.FixRules[0].style, {
-          width: state ? "var(--ytd-watch-flexy-sidebar-width)" : "0px",
-          minWidth: state ? "var(--ytd-watch-flexy-sidebar-min-width)" : "0px",
-        });
-      },
-    };
     const titleOp = { childList: true, subtree: false };
     const titleOb = new MutationObserver(() => {
       Lib.title() != "..." && Lib.title("...");
     });
-    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, afterDisplay, titleOp, titleOb };
+    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, titleOp, titleOb };
   })();
   const dict = {
     Traditional: {
@@ -232,25 +222,13 @@
           "Youtube-Hide-Tool",
           false,
         );
-        Lib.addStyle(
-          `
-                ytd-watch-flexy[split-scroll][fixed-default-panels] #columns.ytd-watch-flexy:after {
-                    width: var(--ytd-watch-flexy-sidebar-width);
-                    min-width: var(--ytd-watch-flexy-sidebar-min-width);
-                }
-            `,
-          "Youtube-Hide-Fix",
-          false,
-        );
-        Lib.waitEl(["title", "#title h1", "#end", "#below", "#secondary-inner", "#related", "#comments", "#actions"], null, { throttle: 80, characterData: true, timeoutResult: true }).then((found) => {
+        Lib.waitEl(["title", "#title h1", "#end", "#below", "#secondary", "#related", "#comments", "#actions"], null, { throttle: 80, characterData: true, timeoutResult: true }).then((found) => {
           Tools.devPrint(Transl("隱藏元素"), found);
           const [title, h1, end, below, secondary, related, comments, actions] = found;
-          Param.FixRules ??= Lib.$q("#Youtube-Hide-Fix")?.sheet.cssRules;
           if (Lib.getV("Minimalist")) {
             Tools.titleOb.observe(title, Tools.titleOp);
             Tools.styleTransform([document.body], "overflow", "hidden");
             Tools.styleTransform([h1, end, below, secondary, related], "display", "none").then((state) => Tools.devTimePrint(Transl("極簡化"), state));
-            Tools.afterDisplay.toggle(false);
             Lib.title("...");
           } else {
             if (Lib.getV("Title")) {
@@ -260,7 +238,6 @@
             }
             if (Lib.getV("RecomViewing")) {
               Tools.styleTransform([secondary, related], "display", "none").then((state) => Tools.devTimePrint(Transl("隱藏推薦觀看"), state));
-              Tools.afterDisplay.toggle(false);
             }
             if (Lib.getV("Comment")) {
               Tools.styleTransform([comments], "display", "none").then((state) => Tools.devTimePrint(Transl("隱藏留言區"), state));
@@ -288,12 +265,10 @@
                 Tools.styleTransform([document.body], "overflow", "hidden");
                 Tools.styleTransform([end, below, secondary, related], "display", "none");
               }
-              Tools.afterDisplay.toggle(mode);
             },
             RecomViewing: (_, saveKey = "RecomViewing") => {
               Tools.hideJudgment(related);
               Tools.hideJudgment(secondary, saveKey);
-              Tools.afterDisplay.toggle(!Lib.getV(saveKey));
             },
             Comment: (_, saveKey = "Comment") => {
               Tools.hideJudgment(comments, saveKey);
