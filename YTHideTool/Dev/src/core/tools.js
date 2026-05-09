@@ -52,17 +52,6 @@ const Tools = (() => {
         }
     };
 
-    /* 臨時用於修復顯示樣式補丁 */
-    const afterDisplay = {
-        toggle(state) {
-            if (!Param.FixRules) return;
-            Object.assign(Param.FixRules[0].style, {
-                width: state ? "var(--ytd-watch-flexy-sidebar-width)" : "0px",
-                minWidth: state ? "var(--ytd-watch-flexy-sidebar-min-width)" : "0px"
-            })
-        }
-    };
-
     /* 監聽配置 */
     const titleOp = { childList: true, subtree: false };
     /* 持續隱藏 */
@@ -70,7 +59,7 @@ const Tools = (() => {
         Lib.title() != "..." && Lib.title("...");
     });
 
-    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, afterDisplay, titleOp, titleOb };
+    return { pageType, titleFormat, devPrint, devTimePrint, hideJudgment, styleTransform, titleOp, titleOb };
 })();
 
 export default Tools;
