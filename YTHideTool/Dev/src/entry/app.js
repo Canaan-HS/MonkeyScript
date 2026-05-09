@@ -50,17 +50,10 @@ export default function Main() {
                 }
             `, "Youtube-Hide-Tool", false);
 
-            Lib.addStyle(`
-                ytd-watch-flexy[split-scroll][fixed-default-panels] #columns.ytd-watch-flexy:after {
-                    width: var(--ytd-watch-flexy-sidebar-width);
-                    min-width: var(--ytd-watch-flexy-sidebar-min-width);
-                }
-            `, "Youtube-Hide-Fix", false);
-
             // 等待影片頁面需隱藏的數據
             Lib.waitEl([
                 "title", "#title h1", "#end", "#below",
-                "#secondary-inner", "#related", "#comments", "#actions"
+                "#secondary", "#related", "#comments", "#actions"
             ], null, { throttle: 80, characterData: true, timeoutResult: true }).then(found => {
                 Tools.devPrint(Transl("隱藏元素"), found);
 
@@ -68,15 +61,11 @@ export default function Main() {
                     title, h1, end, below, secondary, related, comments, actions
                 ] = found;
 
-                // 查找修復樣式規則
-                Param.FixRules ??= Lib.$q("#Youtube-Hide-Fix")?.sheet.cssRules;
-
                 // 極簡化
                 if (Lib.getV("Minimalist")) {
                     Tools.titleOb.observe(title, Tools.titleOp);
                     Tools.styleTransform([document.body], "overflow", "hidden");
                     Tools.styleTransform([h1, end, below, secondary, related], "display", "none").then(state => Tools.devTimePrint(Transl("極簡化"), state));
-                    Tools.afterDisplay.toggle(false);
                     Lib.title("...");
                 } else {
                     // 標題
@@ -89,7 +78,6 @@ export default function Main() {
                     // 推薦播放
                     if (Lib.getV("RecomViewing")) {
                         Tools.styleTransform([secondary, related], "display", "none").then(state => Tools.devTimePrint(Transl("隱藏推薦觀看"), state));
-                        Tools.afterDisplay.toggle(false);
                     };
 
                     // 評論區
@@ -129,13 +117,10 @@ export default function Main() {
                             Tools.styleTransform([document.body], "overflow", "hidden");
                             Tools.styleTransform([end, below, secondary, related], "display", "none");
                         }
-
-                        Tools.afterDisplay.toggle(mode);
                     },
                     RecomViewing: (_, saveKey = "RecomViewing") => {
                         Tools.hideJudgment(related);
                         Tools.hideJudgment(secondary, saveKey);
-                        Tools.afterDisplay.toggle(!Lib.getV(saveKey));
                     },
                     Comment: (_, saveKey = "Comment") => {
                         Tools.hideJudgment(comments, saveKey);
