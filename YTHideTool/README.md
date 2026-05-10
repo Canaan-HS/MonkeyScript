@@ -76,11 +76,11 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **📦 Version Information**
 
-**Release Version: 0.0.38-Beta1**
+**Release Version: 2026.05.10-Beta**
 
 ### **Update Contents**
-1. Library update
-2. Architecture adjustment
-3. Remove playlist hiding
+1. Adapt to YT page style changes
+
+Select the 2026.04.12 or 2026.05.10 version according to the personal page style.
 
 ---
