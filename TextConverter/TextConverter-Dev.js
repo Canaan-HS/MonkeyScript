@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      2025.12.10
+// @version      2026.05.17
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
@@ -676,7 +676,7 @@
         // 請求字典
         const RequestDict = (data) => {
             // 解析請求的 Url 是完整的連結, 還是單個字串
-            const URL = Parse.Url(data) ? data : `https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/main/Words/${data}.json`;
+            const URL = Parse.Url(data) ? data : `https://gitlab.com/Canaan-HS/database/-/raw/main/Words/${data}.json`;
 
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
