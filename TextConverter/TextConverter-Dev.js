@@ -25,6 +25,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 
 // @run-at       document-start
@@ -215,6 +216,10 @@
                 attributeFilter: ['placeholder'], // 只監視 placeholder 屬性
             })
         };
+
+        window.addEventListener("urlchange", () => {
+            Transl.Trigger(document);
+        });
 
         // 斷開觀察
         const DisOB = () => observer.disconnect();
@@ -938,31 +943,31 @@
     };
 
     async function WaitElem(selector, found) {
-        const Core = async function () {
-            let AnimationFrame;
+        const core = async function () {
+            let animationFrame;
             let timer, result;
 
             const query = () => {
                 result = document.getElementsByTagName(selector)[0];
 
                 if (result) {
-                    cancelAnimationFrame(AnimationFrame);
+                    cancelAnimationFrame(animationFrame);
                     clearTimeout(timer);
                     found && found(result);
                 } else {
-                    AnimationFrame = requestAnimationFrame(query);
+                    animationFrame = requestAnimationFrame(query);
                 }
             };
 
-            AnimationFrame = requestAnimationFrame(query);
+            animationFrame = requestAnimationFrame(query);
 
             timer = setTimeout(() => {
-                cancelAnimationFrame(AnimationFrame);
+                cancelAnimationFrame(animationFrame);
             }, (1000 * 8));
         };
 
         if (document.visibilityState === "hidden") {
-            document.addEventListener("visibilitychange", () => Core(), { once: true });
-        } else Core();
+            document.addEventListener("visibilitychange", () => core(), { once: true });
+        } else core();
     };
 })();
