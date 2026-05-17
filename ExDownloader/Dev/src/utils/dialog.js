@@ -5,112 +5,82 @@ const Dialog = (() => {
         .dialog-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(20, 15, 20, 0.75);
             display: grid;
             place-items: center;
             z-index: 10000;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(3px);
             padding: clamp(12px, 4vw, 60px);
             box-sizing: border-box;
         }
 
         /* 動畫效果類 */
-        .dialog-overlay.animated-fade {
-            animation: fadeIn 0.4s ease-out;
-        }
-
-        .dialog-overlay.animated-fade.closing {
-            animation: fadeOut 0.35s ease-out;
-        }
-
-        .dialog-overlay.no-animation {
-            opacity: 1;
-        }
+        .dialog-overlay.animated-fade { animation: fadeIn 0.4s ease-out; }
+        .dialog-overlay.animated-fade.closing { animation: fadeOut 0.35s ease-out forwards; }
+        .dialog-overlay.no-animation { opacity: 1; }
 
         .dialog {
-            background: linear-gradient(135deg, 
-                rgba(100, 180, 255, 0.6) 0%,
-                rgba(33, 150, 243, 0.8) 50%,
-                rgba(100, 180, 255, 0.6) 100%);
-            border-radius: clamp(16px, 4vw, 24px);
+            background: linear-gradient(135deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.28) 22%, rgba(0,0,0,.48) 50%, rgba(0,0,0,.28) 78%);
+            border-radius: clamp(12px, 3vw, 18px);
             padding: 3px;
-            width: clamp(280px, 90vw, var(--dialog-width));
-            max-width: 100%;
+            width: fit-content;
+            min-width: min(clamp(280px, 90vw, var(--dialog-width)), 95vw);
+            max-width: 95vw;
             max-height: clamp(400px, 85vh, 90vh);
             box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.2),
-                0 2px 16px rgba(0, 0, 0, 0.1);
+                0 0 25px rgba(50, 50, 50, 0.2), 
+                0 0 50px rgba(75, 75, 75, 0.15), 
+                0 12px 35px rgba(0, 0, 0, 0.4);
             position: relative;
             overflow: hidden;
             box-sizing: border-box;
+            font-family: 
+                'Segoe UI Variable', 'Segoe UI', system-ui,
+                -apple-system, BlinkMacSystemFont,
+                'Roboto', 'Helvetica Neue', 'Arial',
+                'Microsoft YaHei', '微软雅黑',
+                'Microsoft JhengHei', '微軟正黑體',
+                'PingFang SC', 'PingFang TC',
+                'Hiragino Sans GB', 'Hiragino Kaku Gothic Pro',
+                'Noto Sans CJK SC', 'Noto Sans CJK TC', 
+                'Source Han Sans SC', 'Source Han Sans TC',
+                'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo',
+                sans-serif,
+                'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            font-feature-settings: 'kern' 1;
+            font-kerning: normal;
         }
 
-        /* 淡入效果 */
-        .dialog.animated-fade {
-            animation: dialogFadeIn 0.4s ease-out;
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            @supports not (-webkit-touch-callout: none) {
+                .dialog-title { font-weight: 700; }
+                .dialog-message { font-weight: 550; }
+                .dialog-button { font-weight: 600; }
+            }
         }
 
-        .dialog.animated-fade.closing {
-            animation: dialogFadeOut 0.35s ease-out;
-        }
-
-        /* 從上滑入 */
-        .dialog.animated-slide-top {
-            animation: slideFromTop 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dialog.animated-slide-top.closing {
-            animation: slideToTop 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53);
-        }
-
-        /* 從下滑入 */
-        .dialog.animated-slide-bottom {
-            animation: slideFromBottom 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dialog.animated-slide-bottom.closing {
-            animation: slideToBottom 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53);
-        }
-
-        /* 從左滑入 */
-        .dialog.animated-slide-left {
-            animation: slideFromLeft 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dialog.animated-slide-left.closing {
-            animation: slideToLeft 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53);
-        }
-
-        /* 從右滑入 */
-        .dialog.animated-slide-right {
-            animation: slideFromRight 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dialog.animated-slide-right.closing {
-            animation: slideToRight 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53);
-        }
-
-        /* 縮放效果 */
-        .dialog.animated-scale {
-            animation: scaleIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .dialog.animated-scale.closing {
-            animation: scaleOut 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045);
-        }
-
-        /* 無動畫 */
-        .dialog.no-animation {
-            opacity: 1;
-            transform: none;
-        }
+        /* 對話框動畫 */
+        .dialog.animated-fade { animation: dialogFadeIn 0.4s ease-out; }
+        .dialog.animated-fade.closing { animation: dialogFadeOut 0.35s ease-out forwards; }
+        .dialog.animated-slide-top { animation: slideFromTop 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .dialog.animated-slide-top.closing { animation: slideToTop 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; }
+        .dialog.animated-slide-bottom { animation: slideFromBottom 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .dialog.animated-slide-bottom.closing { animation: slideToBottom 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; }
+        .dialog.animated-slide-left { animation: slideFromLeft 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .dialog.animated-slide-left.closing { animation: slideToLeft 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; }
+        .dialog.animated-slide-right { animation: slideFromRight 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .dialog.animated-slide-right.closing { animation: slideToRight 0.35s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; }
+        .dialog.animated-scale { animation: scaleIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .dialog.animated-scale.closing { animation: scaleOut 0.35s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; }
+        .dialog.no-animation { opacity: 1; transform: none; }
 
         .dialog-content {
-            background: linear-gradient(135deg, 
-                rgba(250, 250, 250, 0.98) 0%,
-                rgba(255, 255, 255, 0.98) 100%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(250, 250, 250, 0.98) 100%);
             backdrop-filter: blur(10px);
-            border-radius: clamp(14px, 3.5vw, 22px);
+            border-radius: clamp(10px, 2.5vw, 15px);
             padding: clamp(16px, 4vw, 24px);
             position: relative;
             overflow: hidden;
@@ -120,130 +90,138 @@ const Dialog = (() => {
             box-sizing: border-box;
         }
 
-        /* 標題占位符（無標題時使用） */
-        .dialog-title-spacer {
-            height: clamp(8px, 2vh, 16px);
-            flex-shrink: 0;
+        .dialog-title-spacer { 
+            height: clamp(8px, 2vh, 16px); 
+            flex-shrink: 0; 
         }
 
         .dialog-title {
-            font-size: clamp(16px, 3.5vw, 19px);
-            font-weight: 700;
-            color: #2c2c2c;
+            font-size: clamp(17px, 3.5vw, 20px);
+            color: rgba(20, 20, 20, 0.95);
             margin-bottom: clamp(12px, 3vw, 16px);
             text-align: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            letter-spacing: clamp(0.3px, 0.1vw, 0.5px);
+            letter-spacing: -0.01em;
             flex-shrink: 0;
         }
 
-        .dialog-message-align[align="center"] {
-            align-items: center;
-            text-align: center;
-        }
-
-        .dialog-message-align[align="left"] {
-            align-items: flex-start;
-            text-align: left;
-        }
-
-        .dialog-message-align[align="right"] {
-            align-items: flex-end;
-            text-align: right;
-        }
+        .dialog-message-align[align="center"] { align-items: center; text-align: center; }
+        .dialog-message-align[align="left"] { align-items: flex-start; text-align: left; }
+        .dialog-message-align[align="right"] { align-items: flex-end; text-align: right; }
 
         .dialog-message-container {
             flex: 1;
             overflow-y: auto;
             overflow-x: hidden;
-            margin-bottom: clamp(12px, 3vw, 18px);
+            margin-bottom: clamp(14px, 3vw, 20px);
             min-height: clamp(40px, 10vh, 60px);
             max-height: clamp(200px, 50vh, 400px);
-            padding: 2px clamp(4px, 1.5vw, 8px);
+            padding: clamp(8px, 2vw, 12px) clamp(6px, 1.5vw, 10px);
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
-        /* 自定義滾動條 */
-        .dialog-message-container::-webkit-scrollbar {
-            width: clamp(6px, 1.5vw, 8px);
+        /* 優化滾動條 */
+        .dialog-message-container::-webkit-scrollbar { 
+            width: clamp(7px, 1.8vw, 9px); 
         }
-
-        .dialog-message-container::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.04);
-            border-radius: 4px;
+        .dialog-message-container::-webkit-scrollbar-track { 
+            background: rgba(0, 0, 0, 0.06); 
+            border-radius: 5px;
+            margin: 4px 0;
         }
-
         .dialog-message-container::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 4px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.5) 100%);
+            border-radius: 5px;
+            border: 2px solid rgba(0, 0, 0, 0.06);
+            background-clip: padding-box;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         }
-
         .dialog-message-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.3);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.7) 100%);
+            background-clip: padding-box;
         }
 
         .dialog-message {
             font-size: clamp(14px, 3.2vw, var(--message-font-size));
-            color: #3a3a3a;
-            font-weight: 500;
-            line-height: 1.75;
+            color: rgba(30, 30, 30, 0.92);
+            line-height: 1.7;
             word-wrap: break-word;
             word-break: break-word;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            letter-spacing: clamp(0.2px, 0.05vw, 0.3px);
+            overflow-wrap: break-word;
+            letter-spacing: 0.01em;
         }
 
-        .dialog-input-container {
-            flex-shrink: 0;
-            margin-bottom: clamp(12px, 3vw, 18px);
+        .dialog-input-container { 
+            flex-shrink: 0; 
+            margin-bottom: clamp(14px, 3vw, 20px);
         }
 
+        /* 輸入框 */
         .dialog-input {
             width: 100%;
-            padding: clamp(10px, 2vw, 12px) clamp(12px, 3vw, 16px);
-            border: 2px solid #2196F3;
-            border-radius: clamp(12px, 3vw, 18px);
+            padding: clamp(11px, 2.5vw, 13px) clamp(14px, 3.5vw, 18px);
+            border: 2px solid rgba(40, 40, 40, 0.9);
+            border-radius: clamp(8px, 2vw, 10px);
             font-size: clamp(14px, 3vw, 16px);
-            background: #fafafa;
-            color: #2c2c2c;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            transition: all 0.3s ease;
-            letter-spacing: clamp(0.2px, 0.05vw, 0.3px);
+            font-weight: 450;
+            background: linear-gradient(135deg, rgba(25, 25, 25, 0.98) 0%, rgba(15, 15, 15, 0.99) 100%);
+            color: rgba(255, 255, 255, 0.95);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.02em;
             box-sizing: border-box;
+            box-shadow: 
+                0 2px 6px rgba(0, 0, 0, 0.15),
+                inset 0 1px 3px rgba(0, 0, 0, 0.4),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
         }
 
-        .dialog-input::placeholder {
-            color: #999999;
+        .dialog-input::placeholder { 
+            color: rgba(180, 180, 180, 0.5);
+            font-weight: 400;
+            text-align: center; 
         }
 
         .dialog-input:focus {
             outline: none;
-            border-color: #1976D2;
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
+            border-color: rgba(60, 60, 60, 1);
+            background: linear-gradient(135deg, rgba(30, 30, 30, 1) 0%, rgba(20, 20, 20, 1) 100%);
+            color: rgba(255, 255, 255, 1);
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.25),
+                0 0 0 3px rgba(80, 80, 80, 0.2),
+                inset 0 1px 3px rgba(0, 0, 0, 0.3),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .dialog-input:hover:not(:focus) {
+            border-color: rgba(50, 50, 50, 0.95);
+            box-shadow: 
+                0 3px 8px rgba(0, 0, 0, 0.18),
+                inset 0 1px 3px rgba(0, 0, 0, 0.35),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.07);
         }
 
         .dialog-buttons {
             display: flex;
-            gap: clamp(6px, 1.5vw, 10px);
+            gap: clamp(8px, 2vw, 12px);
             justify-content: flex-end;
             flex-shrink: 0;
             flex-wrap: wrap;
         }
 
         .dialog-button {
-            padding: clamp(8px, 2vw, 10px) clamp(16px, 4vw, 24px);
+            padding: clamp(10px, 2.2vw, 12px) clamp(20px, 4.5vw, 28px);
             border: none;
-            border-radius: clamp(20px, 5vw, 28px);
+            border-radius: clamp(7px, 1.5vw, 9px);
             font-size: clamp(13px, 2.8vw, 15px);
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.25s ease;
-            min-width: clamp(60px, 15vw, 80px);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            letter-spacing: clamp(0.3px, 0.08vw, 0.5px);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: clamp(70px, 16vw, 90px);
+            letter-spacing: 0.02em;
             position: relative;
             overflow: hidden;
             outline: none;
@@ -260,319 +238,122 @@ const Dialog = (() => {
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.3);
             transform: translate(-50%, -50%);
-            transition: width 0.4s, height 0.4s;
+            transition: width 0.5s, height 0.5s;
+            pointer-events: none;
         }
 
-        .dialog-button:active::before {
-            width: 300px;
-            height: 300px;
+        .dialog-button:active::before { 
+            width: 320px; 
+            height: 320px; 
         }
 
-        .dialog-button:focus {
-            outline: none;
-        }
-
+        /* 主要按鈕 */
         .dialog-button-primary {
-            background: #2196F3;
-            color: #ffffff;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.96) 0%, rgba(10, 10, 10, 0.98) 100%);
+            color: rgba(255, 255, 255, 0.98);
+            border: 1.5px solid rgba(0, 0, 0, 0.2);
             box-shadow: 
-                0 0 0 2px #ffffff,
-                0 0 0 4px #2196F3,
-                0 2px 8px rgba(33, 150, 243, 0.3);
+                0 2px 8px rgba(0, 0, 0, 0.2),
+                0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .dialog-button-primary:hover {
-            background: #1976D2;
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.98) 0%, rgba(20, 20, 20, 0.98) 100%);
             transform: translateY(-1px);
+            border-color: rgba(0, 0, 0, 0.25);
             box-shadow: 
-                0 0 0 2px #ffffff,
-                0 0 0 4px #1976D2,
-                0 4px 12px rgba(33, 150, 243, 0.4);
+                0 4px 12px rgba(0, 0, 0, 0.25),
+                0 2px 4px rgba(0, 0, 0, 0.15);
         }
 
         .dialog-button-primary:active {
             transform: translateY(0);
             box-shadow: 
-                0 0 0 2px #ffffff,
-                0 0 0 4px #1565C0,
-                0 1px 4px rgba(33, 150, 243, 0.3);
+                0 1px 4px rgba(0, 0, 0, 0.2),
+                0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
+        /* 次要按鈕 */
         .dialog-button-secondary {
-            background: rgba(255, 255, 255, 0.95);
-            color: #2196F3;
-            border: 2px solid #2196F3;
+            background: rgba(255, 255, 255, 0.9);
+            color: rgba(20, 20, 20, 0.9);
+            border: 1.5px solid rgba(0, 0, 0, 0.15);
+            box-shadow: 
+                0 1px 3px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
         }
 
         .dialog-button-secondary:hover {
-            background: rgba(245, 250, 255, 0.98);
-            border-color: #1976D2;
+            background: rgba(255, 255, 255, 0.95);
+            color: rgba(10, 10, 10, 0.95);
+            border-color: rgba(0, 0, 0, 0.25);
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+            box-shadow: 
+                0 2px 6px rgba(0, 0, 0, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
         }
 
         .dialog-button-secondary:active {
             transform: translateY(0);
-            background: rgba(240, 248, 255, 0.95);
-            border-color: #1565C0;
-            box-shadow: none;
+            box-shadow: 
+                0 1px 2px rgba(0, 0, 0, 0.08),
+                inset 0 1px 2px rgba(0, 0, 0, 0.06);
+            background: rgba(245, 245, 245, 0.95);
         }
 
-        /* 位置類 - 使用 CSS Grid 布局 */
-        .position-top { 
-            place-items: start center;
-        }
-
-        .position-center { 
-            place-items: center;
-        }
-
-        .position-bottom { 
-            place-items: end center;
-        }
-
-        .position-left { 
-            place-items: center start;
-        }
-
-        .position-right { 
-            place-items: center end;
-        }
+        /* 位置類 */
+        .position-top { place-items: start center; }
+        .position-center { place-items: center; }
+        .position-bottom { place-items: end center; }
+        .position-left { place-items: center start; }
+        .position-right { place-items: center end; }
 
         /* 小屏幕優化 */
         @media (max-width: 640px) {
-            .dialog-overlay {
-                padding: 16px;
-            }
-
-            .dialog {
-                width: 100%;
-                max-width: calc(100vw - 32px);
-            }
-
-            .dialog-buttons {
-                flex-direction: column-reverse;
-                gap: 8px;
-            }
-
-            .dialog-button {
-                width: 100%;
-                min-width: unset;
-            }
-
-            .dialog-message-container {
-                max-height: 60vh;
-            }
+            .dialog-overlay { padding: 16px; }
+            .dialog { width: 100%; min-width: unset; max-width: calc(100vw - 32px); }
+            .dialog-buttons { flex-direction: column-reverse; gap: 10px; }
+            .dialog-button { width: 100%; min-width: unset; padding: 12px 20px; }
+            .dialog-message-container { max-height: 60vh; }
         }
 
-        /* 超小屏幕 */
         @media (max-width: 380px) {
-            .dialog-overlay {
-                padding: 8px;
-            }
-
-            .dialog {
-                border-radius: 12px;
-            }
-
-            .dialog-content {
-                padding: 12px;
-            }
-
-            .dialog-title {
-                font-size: 15px;
-                margin-bottom: 10px;
-            }
-
-            .dialog-message {
-                font-size: 13px;
-            }
+            .dialog-overlay { padding: 8px; }
+            .dialog { border-radius: 12px; max-width: calc(100vw - 16px); }
+            .dialog-content { padding: 14px; }
+            .dialog-title { font-size: 16px; margin-bottom: 12px; }
+            .dialog-message { font-size: 13px; line-height: 1.65; }
+            .dialog-input { padding: 10px 12px; }
         }
 
         /* 動畫定義 */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
-        @keyframes dialogFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes dialogFadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
-        @keyframes slideFromTop {
-            from {
-                transform: translateY(clamp(-40px, -10vw, -60px));
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideToTop {
-            from {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateY(clamp(-40px, -10vw, -60px));
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideFromBottom {
-            from {
-                transform: translateY(clamp(40px, 10vw, 60px));
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideToBottom {
-            from {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateY(clamp(40px, 10vw, 60px));
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideFromLeft {
-            from {
-                transform: translateX(clamp(-40px, -10vw, -60px));
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideToLeft {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(clamp(-40px, -10vw, -60px));
-                opacity: 0;
-            }
-        }
-
-        @keyframes slideFromRight {
-            from {
-                transform: translateX(clamp(40px, 10vw, 60px));
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideToRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(clamp(40px, 10vw, 60px));
-                opacity: 0;
-            }
-        }
-
-        @keyframes scaleIn {
-            from {
-                transform: scale(0.7);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        @keyframes scaleOut {
-            from {
-                transform: scale(1);
-                opacity: 1;
-            }
-            to {
-                transform: scale(0.7);
-                opacity: 0;
-            }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes dialogFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes dialogFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes slideFromTop { from { transform: translateY(clamp(-40px, -10vw, -60px)); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideToTop { from { transform: translateY(0); opacity: 1; } to { transform: translateY(clamp(-40px, -10vw, -60px)); opacity: 0; } }
+        @keyframes slideFromBottom { from { transform: translateY(clamp(40px, 10vw, 60px)); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideToBottom { from { transform: translateY(0); opacity: 1; } to { transform: translateY(clamp(40px, 10vw, 60px)); opacity: 0; } }
+        @keyframes slideFromLeft { from { transform: translateX(clamp(-40px, -10vw, -60px)); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .slideToLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(clamp(-40px, -10vw, -60px)); opacity: 0; } }
+        @keyframes slideFromRight { from { transform: translateX(clamp(40px, 10vw, 60px)); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideToRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(clamp(40px, 10vw, 60px)); opacity: 0; } }
+        @keyframes scaleIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.7); opacity: 0; } }
     `;
-
-    const dialogThemes = {
-        // 暗黑主題
-        dark: `
-        .dialog-overlay { background: rgba(0, 0, 0, 0.7); }
-        .dialog { background: linear-gradient(135deg, rgba(80, 80, 90, 0.8) 0%, rgba(50, 50, 60, 0.95) 50%, rgba(80, 80, 90, 0.8) 100%); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 16px rgba(0, 0, 0, 0.3); }
-        .dialog-content { background: linear-gradient(135deg, rgba(35, 35, 45, 0.98) 0%, rgba(45, 45, 55, 0.98) 100%); }
-        .dialog-title { color: #e8e8e8; }
-        .dialog-message-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); }
-        .dialog-message-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
-        .dialog-message-container::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
-        .dialog-message { color: #c8c8c8; }
-        .dialog-input { border: 2px solid #5a5a6a; background: #2a2a35; color: #e0e0e0; }
-        .dialog-input::placeholder { color: #777; }
-        .dialog-input:focus { border-color: #7a7a8a; background: #35354a; box-shadow: 0 0 0 3px rgba(120, 120, 140, 0.2); }
-        .dialog-button-primary { background: #6366f1; color: #ffffff; box-shadow: 0 0 0 2px #35354a, 0 0 0 4px #6366f1, 0 2px 8px rgba(99, 102, 241, 0.4); }
-        .dialog-button-primary:hover { background: #5558e8; box-shadow: 0 0 0 2px #35354a, 0 0 0 4px #5558e8, 0 4px 12px rgba(99, 102, 241, 0.5); }
-        .dialog-button-primary:active { box-shadow: 0 0 0 2px #35354a, 0 0 0 4px #4f52d5, 0 1px 4px rgba(99, 102, 241, 0.4); }
-        .dialog-button-secondary { background: rgba(55, 55, 65, 0.95); color: #a5a5b5; border: 2px solid #5a5a6a; }
-        .dialog-button-secondary:hover { background: rgba(65, 65, 75, 0.98); border-color: #7a7a8a; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
-        .dialog-button-secondary:active { background: rgba(50, 50, 60, 0.95); border-color: #6a6a7a; }
-        `,
-        // 紫羅蘭主題
-        violet: `
-        .dialog-overlay { background: rgba(30, 15, 40, 0.55); }
-        .dialog { background: linear-gradient(135deg, rgba(167, 139, 250, 0.6) 0%, rgba(139, 92, 246, 0.8) 50%, rgba(167, 139, 250, 0.6) 100%); box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3), 0 2px 16px rgba(0, 0, 0, 0.1); }
-        .dialog-content { background: linear-gradient(135deg, rgba(253, 251, 255, 0.98) 0%, rgba(255, 255, 255, 0.98) 100%); }
-        .dialog-title { color: #5b21b6; }
-        .dialog-message-container::-webkit-scrollbar-track { background: rgba(139, 92, 246, 0.08); }
-        .dialog-message-container::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); }
-        .dialog-message-container::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.45); }
-        .dialog-message { color: #4c1d95; }
-        .dialog-input { border: 2px solid #8b5cf6; background: #faf5ff; color: #5b21b6; }
-        .dialog-input::placeholder { color: #c4b5fd; }
-        .dialog-input:focus { border-color: #7c3aed; background: #ffffff; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
-        .dialog-button-primary { background: #8b5cf6; color: #ffffff; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #8b5cf6, 0 2px 8px rgba(139, 92, 246, 0.3); }
-        .dialog-button-primary:hover { background: #7c3aed; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #7c3aed, 0 4px 12px rgba(139, 92, 246, 0.4); }
-        .dialog-button-primary:active { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #6d28d9, 0 1px 4px rgba(139, 92, 246, 0.3); }
-        .dialog-button-secondary { background: rgba(255, 255, 255, 0.95); color: #8b5cf6; border: 2px solid #8b5cf6; }
-        .dialog-button-secondary:hover { background: rgba(250, 245, 255, 0.98); border-color: #7c3aed; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2); }
-        .dialog-button-secondary:active { background: rgba(245, 240, 255, 0.95); border-color: #6d28d9; }
-        `,
-    };
 
     class DialogManager {
         constructor() {
             Lib.addStyle(dialogStyle, "dialog-style");
 
+            // 對話框隊列管理
             this.dialogQueue = [];
             this.currentDialog = null;
             this.isProcessing = false;
             this.transitionDelay = 100; // 多對話框間的過渡延遲
 
+            // 位置映射表
             this.positionMap = {
                 top: 'position-top',
                 center: 'position-center',
@@ -581,6 +362,7 @@ const Dialog = (() => {
                 right: 'position-right'
             };
 
+            // 動畫類型映射表
             this.animationMap = {
                 fade: 'animated-fade',
                 top: 'animated-slide-top',
@@ -590,6 +372,7 @@ const Dialog = (() => {
                 scale: 'animated-scale'
             };
 
+            // 動畫持續時間映射表（毫秒）
             this.durationMap = {
                 fade: 400,
                 top: 450,
@@ -598,26 +381,28 @@ const Dialog = (() => {
                 right: 450,
                 scale: 450
             };
-
-            this.fragment = Lib.createFragment;
         };
 
+        // 獲取位置對應的 CSS 類名
         getPositionClass(position) {
             return this.positionMap[position] || 'position-center';
         };
 
+        // 獲取動畫對應的 CSS 類名
         getAnimationClass(animation) {
             if (!animation || animation === 'none') return 'no-animation';
             if (animation === true) return 'animated-fade';
             return this.animationMap[animation] || 'animated-fade';
         };
 
+        // 獲取動畫持續時間
         getAnimationDuration(animation) {
             if (!animation || animation === 'none') return 0;
             if (animation === true) return 400;
             return this.durationMap[animation] || 400;
         };
 
+        // 將隊列中的對話框入隊
         enqueue(options) {
             return new Promise(resolve => {
                 this.dialogQueue.push({ options, resolve });
@@ -625,6 +410,7 @@ const Dialog = (() => {
             })
         };
 
+        // 處理對話框隊列
         async processQueue() {
             if (this.dialogQueue.length === 0) {
                 this.isProcessing = false;
@@ -635,11 +421,11 @@ const Dialog = (() => {
             const { options, resolve } = this.dialogQueue.shift();
             const hasNextDialog = this.dialogQueue.length > 0;
 
+            // 關閉當前對話框
             if (this.currentDialog) {
                 await this.closeCurrentDialog(this.currentDialog.animation, hasNextDialog);
-
                 if (hasNextDialog) {
-                    await new Promise(resolve => setTimeout(resolve, this.transitionDelay));
+                    await new Promise(r => setTimeout(r, this.transitionDelay));
                 }
             }
 
@@ -650,6 +436,7 @@ const Dialog = (() => {
             this.processQueue();
         };
 
+        // 關閉當前對話框
         closeCurrentDialog(animation, hasNextDialog = false) {
             return new Promise(resolve => {
                 if (!this.currentDialog) return resolve();
@@ -657,32 +444,30 @@ const Dialog = (() => {
                 const { overlay, dialog } = this.currentDialog;
                 const duration = this.getAnimationDuration(animation);
 
-                const remove = () => {
-                    if (hasNextDialog) {
-                        overlay.style.transition = 'opacity 0.15s ease-out';
-                        overlay.style.opacity = '0';
-                        setTimeout(() => {
-                            overlay.remove();
-                            this.currentDialog = null;
-                            resolve();
-                        }, 150);
-                    } else {
-                        overlay.remove();
-                        this.currentDialog = null;
-                        resolve();
-                    }
+                const cleanup = () => {
+                    overlay.remove();
+                    this.currentDialog = null;
+                    resolve();
                 };
 
-                if (duration > 0) {
-                    overlay.$addClass('closing');
-                    dialog.$addClass('closing');
-                    setTimeout(remove, duration * 0.9);
+                if (duration > 0 && !hasNextDialog) {
+                    overlay.style.transition = 'none';
+                    void overlay.offsetHeight; // 強制重繪
+
+                    overlay.classList.add('closing');
+                    dialog.classList.add('closing');
+                    setTimeout(cleanup, duration);
+                } else if (hasNextDialog) {
+                    overlay.style.transition = 'opacity 0.15s ease-out';
+                    overlay.style.opacity = '0';
+                    setTimeout(cleanup, 150);
                 } else {
-                    remove();
+                    cleanup();
                 }
             })
         };
 
+        // 創建對話框
         createDialog(rawOptions) {
             return new Promise(resolve => {
                 const {
@@ -699,192 +484,161 @@ const Dialog = (() => {
                     autoClose = false,
                     duration = 3,
                     animation = 'fade',
-                    align = 'center'
+                    align = 'center',
                 } = rawOptions;
 
                 const overlayAnimationClass = !animation || animation === 'none'
                     ? 'no-animation' : 'animated-fade';
-
                 const dialogAnimationClass = this.getAnimationClass(animation);
+                const positionClass = this.getPositionClass(position);
                 const hasQueue = this.dialogQueue.length > 0;
 
-                const overlay = Lib.createElement("div", {
-                    class: `dialog-overlay ${overlayAnimationClass} ${this.getPositionClass(position)}`,
-                    // 如果有隊列，初始設為半透明，避免閃爍
-                    style: hasQueue ? "opacity: 0;" : {},
-                    on: {
-                        click: event => {
-                            const target = event.target;
-                            if (target === overlay) handleClose();
-                        }
+                const showCancelBtn = type === 'confirm' || type === 'prompt';
+                const showInput = type === 'prompt';
+
+                const html = `
+                    <div class="dialog-overlay ${overlayAnimationClass} ${positionClass}"
+                         ${hasQueue ? 'style="opacity: 0;"' : ''}>
+                        <div class="dialog ${dialogAnimationClass}" 
+                             style="--dialog-width: ${width}px;">
+                            <div class="dialog-content">
+                                ${title ? `<div class="dialog-title">${title}</div>` : '<div class="dialog-title-spacer"></div>'}
+                                <div class="dialog-message-align dialog-message-container" align="${align}">
+                                    <div class="dialog-message-align dialog-message" 
+                                         align="${align}" 
+                                         style="--message-font-size: ${fontSize}px;">
+                                        ${message.replace(/\n/g, '<br>')}
+                                    </div>
+                                </div>
+                                ${showInput ? `
+                                    <div class="dialog-input-container">
+                                        <input class="dialog-input" 
+                                               type="text" 
+                                               value="${defaultValue}" 
+                                               placeholder="${placeholder}"
+                                               style="text-align: center;">
+                                    </div>
+                                ` : ''}
+                                <div class="dialog-buttons">
+                                    ${showCancelBtn ? `
+                                        <button class="dialog-button dialog-button-secondary" data-action="cancel">
+                                            ${cancelText}
+                                        </button>
+                                    ` : ''}
+                                    <button class="dialog-button dialog-button-primary" data-action="confirm">
+                                        ${confirmText}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 解析模板為 DOM 元素
+                document.body.appendChild(
+                    document.createRange().createContextualFragment(html)
+                );
+
+                const overlay = document.querySelector('.dialog-overlay');
+
+                const dialog = overlay.querySelector('.dialog');
+                const inputElement = overlay.querySelector('.dialog-input');
+                const confirmBtn = overlay.querySelector('[data-action="confirm"]');
+                const cancelBtn = overlay.querySelector('[data-action="cancel"]');
+
+                // 確認/取消/背景點擊
+                const handleClose = (confirmed) => {
+                    let result;
+                    if (type === 'prompt') {
+                        result = confirmed ? (inputElement?.value ?? '') : null;
+                    } else {
+                        result = confirmed;
                     }
-                });
 
-                const dialog = Lib.createElement("div", {
-                    class: `dialog ${dialogAnimationClass}`,
-                    style: `--dialog-width: ${width}px;`,
-                });
+                    const hasNextInQueue = this.dialogQueue.length > 0;
+                    const duration = this.getAnimationDuration(animation);
 
-                const content = Lib.createElement("div", {
-                    class: "dialog-content"
-                });
-
-                const dialogTitle = Lib.createElement(
-                    "div", {
-                    class: title ? "dialog-title" : "dialog-title-spacer",
-                    text: title ? title : "",
-                });
-
-                content.appendChild(dialogTitle);
-
-                const msgBox = Lib.createElement("div", {
-                    class: 'dialog-message-align dialog-message-container',
-                    attr: { align }
-                });
-
-                const msg = Lib.createElement("div", {
-                    class: 'dialog-message-align dialog-message',
-                    attr: { align },
-                    style: `--message-font-size: ${fontSize}px;`,
-                    html: message.replace(/\n/g, '<br>')
-                });
-
-                msgBox.appendChild(msg);
-                content.appendChild(msgBox);
-
-                let inputElement = null;
-                if (type === 'prompt') {
-                    const inputWrap = Lib.createElement("div", {
-                        class: 'dialog-input-container'
-                    });
-
-                    inputElement = Lib.createElement("input", {
-                        class: 'dialog-input',
-                        type: 'text',
-                        value: defaultValue,
-                        placeholder,
-                        on: {
-                            keydown: e => {
-                                e.stopPropagation();
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleConfirm();
-                                }
-                            }
+                    const cleanup = () => {
+                        overlay.remove();
+                        if (this.currentDialog?.overlay === overlay) {
+                            this.currentDialog = null;
                         }
-                    });
-
-                    inputWrap.appendChild(inputElement);
-                    content.appendChild(inputWrap);
-                };
-
-                const btnBox = Lib.createElement("div", {
-                    class: 'dialog-buttons'
-                });
-
-                if (type === 'confirm' || type === 'prompt') {
-                    const cancelBtn = Lib.createElement("button", {
-                        class: 'dialog-button dialog-button-secondary',
-                        text: cancelText,
-                        on: {
-                            pointerup: handleCancel
-                        }
-                    });
-                    btnBox.appendChild(cancelBtn);
-                };
-
-                const confirmBtn = Lib.createElement("button", {
-                    class: 'dialog-button dialog-button-primary',
-                    text: confirmText,
-                    on: {
-                        pointerup: handleConfirm
-                    }
-                });
-
-                const self = this;
-                function handleClose(result) {
-                    self.closeDialog(overlay, dialog, () => {
                         resolve(result);
-                    }, animation, self.dialogQueue.length > 0);
+                    };
+
+                    if (duration > 0 && !hasNextInQueue) {
+                        overlay.style.transition = 'none';
+                        void overlay.offsetHeight; // 強制重繪
+
+                        overlay.classList.add('closing');
+                        dialog.classList.add('closing');
+                        setTimeout(cleanup, duration);
+                    } else if (hasNextInQueue) {
+                        overlay.style.transition = 'opacity 0.15s ease-out';
+                        overlay.style.opacity = '0';
+                        setTimeout(cleanup, 150);
+                    } else {
+                        cleanup();
+                    }
                 };
 
-                function handleConfirm() {
-                    const result = type === 'prompt'
-                        ? inputElement?.value ?? '' : true;
-                    handleClose(result);
+                overlay.addEventListener('pointerup', e => {
+                    const target = e.target;
+
+                    // 點擊確認按鈕
+                    if (target === confirmBtn || target.closest('[data-action="confirm"]')) {
+                        handleClose(true);
+                    }
+                    // 點擊取消按鈕
+                    else if (target === cancelBtn || target.closest('[data-action="cancel"]')) {
+                        handleClose(false);
+                    }
+                    // 點擊模態背景（overlay 本身，不是 dialog 內部）
+                    else if (target === overlay) {
+                        handleClose(false);
+                    }
+                });
+
+                // 輸入框 Enter 鍵處理
+                if (inputElement) {
+                    inputElement.addEventListener('keydown', e => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleClose(true);
+                        }
+                    })
                 };
-
-                function handleCancel() {
-                    const result = type === 'prompt'
-                        ? null : false;
-                    handleClose(result);
-                };
-
-
-                btnBox.appendChild(confirmBtn);
-                content.appendChild(btnBox);
-                dialog.appendChild(content);
-                overlay.appendChild(dialog);
-
-                this.fragment.appendChild(overlay);
-                document.body.appendChild(this.fragment);
 
                 this.currentDialog = { overlay, dialog, animation };
 
-                // 如果有隊列，延遲後淡入
+                // 隊列淡入處理
                 if (hasQueue) {
                     requestAnimationFrame(() => {
                         overlay.style.transition = 'opacity 0.2s ease-in';
                         overlay.style.opacity = '1';
                     })
-                };
+                }
 
-                // 延遲聚焦，確保動畫流暢
+                // 延遲聚焦
                 setTimeout(() => {
                     if (inputElement) {
                         inputElement.focus();
                     } else {
-                        confirmBtn.focus();
+                        confirmBtn?.focus();
                     }
                 }, hasQueue ? 150 : 50);
 
+                // 自動關閉
                 if (autoClose && duration > 0) {
                     setTimeout(() => {
-                        if (this.currentDialog?.overlay === overlay) handleConfirm();
-                    }, duration * 1000);
-                };
-            })
-        };
-
-        closeDialog(overlay, dialog, callback, animation, hasNextDialog = false) {
-            const duration = this.getAnimationDuration(animation);
-
-            const finish = () => {
-                if (hasNextDialog) {
-                    overlay.style.transition = 'opacity 0.15s ease-out';
-                    overlay.style.opacity = '0';
-                    setTimeout(() => {
-                        overlay.remove();
                         if (this.currentDialog?.overlay === overlay) {
-                            this.currentDialog = null;
+                            handleClose(true);
                         }
-                        callback?.();
-                    }, 150);
-                } else {
-                    overlay.remove();
-                    if (this.currentDialog?.overlay === overlay) {
-                        this.currentDialog = null;
-                    }
-                    callback?.();
+                    }, duration * 1000);
                 }
-            };
-
-            if (duration > 0 && !hasNextDialog) {
-                overlay.$addClass('closing');
-                dialog.$addClass('closing');
-                setTimeout(finish, duration * 0.9);
-            } else finish();
-        }
+            });
+        };
     };
 
     const dialogManager = new DialogManager();
