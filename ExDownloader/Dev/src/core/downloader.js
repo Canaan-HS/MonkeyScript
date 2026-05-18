@@ -117,10 +117,9 @@ export default function Downloader() {
                         if (processed.has(url)) continue;
                         processed.add(url);
 
-                        let name = link.$q("div[title]").title?.match(nameRegex);
-                        name = name ? `${name[1] || index + 1} - ${name[2] || comicName}` : "";
-
-                        box.push({ name, url });
+                        // ? 有使用名稱的話, 嘗試取得名稱
+                        const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
+                        box.push({ url, name: matchName ? `${matchName[2] || crypto.randomUUID()}` : "" });
                     };
 
                     // 添加數據
@@ -342,11 +341,8 @@ export default function Downloader() {
                 Lib.title(display);
 
                 // Todo: 等待調整更完善判斷, 是否下載成功的條件
-                if (!error && blob) {
-                    zipper.file(`${comicName}/${Config.UseName
-                        ? `${name}.${Lib.suffixName(iurl)}`
-                        : Lib.mantissa(index, fillValue, "0", iurl)}`
-                        , blob); // 保存正確的數據 (有資料夾)
+                if (!error && blob) { // ? 如果 name 不為空, 代表有使用原始名稱
+                    zipper.file(`${comicName}/${name ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`, blob); // 保存正確的數據 (有資料夾)
                     dataMap.delete(index); // 清除完成的任務
                 };
 
