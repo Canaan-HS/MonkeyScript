@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      2025.09.20-Beta
+// @version      2026.05.26-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -25,9 +25,9 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1676420/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1755349/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -47,6 +47,7 @@
   const Config = {
     Dev: true,
     ReTry: 10,
+    Timeout: 3e4,
     UseName: false,
     Original: false,
     ResetScope: true,
@@ -71,7 +72,7 @@
     ModeDisplay: void 0,
     CompressMode: void 0,
     KeyCache: void 0,
-    GetKey: function () {
+    GetKey() {
       return (this.KeyCache ??= `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`);
     },
   };
@@ -336,9 +337,8 @@
               const url2 = link.href;
               if (processed.has(url2)) continue;
               processed.add(url2);
-              let name = link.$q("div[title]").title?.match(nameRegex);
-              name = name ? `${name[1] || index + 1} - ${name[2] || comicName}` : "";
-              box.push({ name, url: url2 });
+              const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
+              box.push({ url: url2, name: matchName?.[2] ? matchName[2] : "" });
             }
             homeData.set(index, box);
             const display = `[${++task}/${pages}]`;
@@ -490,7 +490,7 @@ ${JSON.stringify(dataList, null, 4)}`,
         function runClear() {
           if (!clearCache) {
             clearCache = true;
-            sessionStorage.removeItem(DConfig.GetKey());
+            Lib.delSession(DConfig.GetKey());
             Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
@@ -501,7 +501,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           button?.$text(`${Transl("下載進度")}: ${display}`);
           Lib.title(display);
           if (!error && blob) {
-            zipper.file(`${comicName}/${Config.UseName ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
+            zipper.file(`${comicName}/${name ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
             dataMap.delete(index);
           }
           if (progress === totalSize) {
@@ -526,7 +526,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           if (typeof iurl !== "undefined") {
             gmRequest = GM_xmlhttpRequest({
               url: iurl,
-              timeout: 15e3,
+              timeout: Config.Timeout,
               method: "GET",
               responseType: "blob",
               onload: (response) => {
@@ -550,7 +550,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           timeout = setTimeout(() => {
             gmRequest?.abort();
             statusUpdate(time, index, name, iurl, null, true);
-          }, 15e3);
+          }, Config.Timeout);
         }
         async function start(dataMap2, reGet = false) {
           if (enforce) return;
@@ -632,7 +632,7 @@ ${JSON.stringify(dataList, null, 4)}`,
         function runClear() {
           if (!clearCache) {
             clearCache = true;
-            sessionStorage.removeItem(DConfig.GetKey());
+            Lib.delSession(DConfig.GetKey());
             Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
           }
         }
@@ -702,7 +702,7 @@ ${JSON.stringify(dataList, null, 4)}`,
   function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
     const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
-    let Download;
+    let Download, downloadButton;
     let Url = Lib.url.split("?p=")[0];
     async function initStyle() {
       const position = `
@@ -720,9 +720,9 @@ ${JSON.stringify(dataList, null, 4)}`,
         `;
       const eStyle = `
             .Download_Button {
-            color: #5C0D12;
-            border: 2px solid #9a7c7e;
-            background-color: #EDEADA;
+                color: #5C0D12;
+                border: 2px solid #9a7c7e;
+                background-color: #EDEADA;
             }
             .Download_Button:hover {
                 color: #8f4701;
@@ -732,7 +732,7 @@ ${JSON.stringify(dataList, null, 4)}`,
                 color: #B5A4A4;
                 border: 2px dashed #B5A4A4;
                 cursor: default;
-                    }
+            }
         `;
       const exStyle = `
             .Download_Button {
@@ -751,7 +751,7 @@ ${JSON.stringify(dataList, null, 4)}`,
             }
         `;
       const style = Lib.$domain === "e-hentai.org" ? eStyle : exStyle;
-      Lib.addStyle(`${position}${style}`, "Button-Style");
+      Lib.addStyle(`${position}${style}`, "Downloader-Button-Style");
     }
     async function downloadRangeSetting() {
       const scope = prompt(Transl("範圍設置"));
@@ -766,14 +766,14 @@ ${scope}`);
         return;
       }
       DConfig.CompressMode ? Lib.setV("CompressedMode", false) : Lib.setV("CompressedMode", true);
-      Lib.$q("#ExDB")?.remove();
+      downloadButton?.remove();
       buttonCreation();
     }
     async function buttonCreation() {
       Lib.waitEl("#gd2", null, { raf: true }).then((gd2) => {
         DConfig.CompressMode = Lib.getV("CompressedMode", true);
         DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
-        const downloadButton = Lib.createElement(gd2, "button", {
+        downloadButton = Lib.createElement(gd2, "button", {
           id: "ExDB",
           class: "Download_Button",
           text: DConfig.ModeDisplay,
