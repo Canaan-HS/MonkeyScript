@@ -3,7 +3,6 @@ import { DConfig } from '../core/config.js';
 
 import Transl from '../shared/language.js';
 import Downloader from '../core/downloader.js';
-import Dialog from '../utils/dialog.js';
 
 export default function Main() {
     const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
@@ -66,17 +65,17 @@ export default function Main() {
 
     /* 下載範圍設置 */
     async function downloadRangeSetting() {
-        const scope = await Dialog.prompt(Transl("範圍設置"));
+        const scope = prompt(Transl("範圍設置"));
         if (scope == null) return;
 
-        const yes = await Dialog.confirm(`${Transl("確認設置範圍")}:\n${scope}`);
+        const yes = confirm(`${Transl("確認設置範圍")}:\n${scope}`);
         if (yes) DConfig.Scope = scope;
     };
 
     /* 下載模式切換 */
     async function downloadModeSwitch() {
         if (DConfig.Lock) {
-            Dialog.alert(Transl("下載中鎖定"));
+            alert(Transl("下載中鎖定"));
             return;
         };
 
