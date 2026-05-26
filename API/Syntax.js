@@ -1350,7 +1350,7 @@ const Lib = (() => {
      * zipEngine.file('test.txt', 'Hello, World!');
      * zipEngine.generateZip().then(zip => {})
      */
-    function createZip(fflateCode, fflateUrl = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js") {
+    function createZip(fflateCode, fflateUrl = "https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js") {
         let worker = createWorker(`
             ${fflateCode || `importScripts('${fflateUrl}')`}
             onmessage = function(e) {
