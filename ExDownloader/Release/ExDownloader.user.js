@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      2025.09.20-Beta
+// @version      2026.05.26-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -25,7 +25,9 @@
 // @namespace    https://greasyfork.org/users/989635
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
-// @require      https://update.greasyfork.org/scripts/495339/1661431/Syntax_min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
+
+// @require      https://update.greasyfork.org/scripts/495339/1755349/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -34,6 +36,7 @@
 // @grant        GM_download
 // @grant        GM_addElement
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getResourceText
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 
@@ -44,6 +47,8 @@
     const Config = {
         Dev: true,            // 開發模式 (會顯示除錯訊息)
         ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
+        Timeout: 30000,       // 壓縮下載超時時間 (毫秒)
+        UseName: false,       // 使用圖片名稱作為檔名
         Original: false,      // 是否下載原圖
         ResetScope: true,     // 下載完成後 重置範圍設置
         CompleteClose: false, // 下載完成自動關閉
@@ -67,7 +72,7 @@
         ModeDisplay: void 0,
         CompressMode: void 0,
         KeyCache: void 0,
-        GetKey: function () {
+        GetKey() {
             return this.KeyCache ??= `DownloadCache_${location.pathname.split("/").slice(2, 4).join("")}`;
         }
     };
@@ -250,8 +255,8 @@
         };
     })();
     function Downloader() {
-        const zipper = Lib.createCompressor();
-        const dynamicParam = Lib.createNnetworkObserver({
+        const zipper = Lib.createZip(GM_getResourceText("fflate"));
+        const dynamicParam = Lib.createNetworkObserver({
             MAX_Delay: DConfig.MAX_Delay,
             MIN_CONCURRENCY: DConfig.MIN_CONCURRENCY,
             MAX_CONCURRENCY: DConfig.MAX_CONCURRENCY,
@@ -269,18 +274,18 @@
             }
             async function processQueue() {
                 if (queue.length > 0) {
-                    const {index, url, time, delay} = queue.shift();
-                    FetchRequest(index, url, time, delay);
+                    const {index, url, name, time, delay} = queue.shift();
+                    FetchRequest(index, url, name, time, delay);
                     setTimeout(processQueue, delay);
-                } else {processing = false}
+                } else { processing = false }
             }
-            async function FetchRequest(index, url, time, delay) {
+            async function FetchRequest(index, url, name, time, delay) {
                 try {
                     const response = await fetch(url);
                     const html = await response.text();
-                    postMessage({index, url, html, time, delay, error: false});
+                    postMessage({index, url, name, html, time, delay, error: false});
                 } catch {
-                    postMessage({index, url, html: null, time, delay, error: true});
+                    postMessage({index, url, name, html: null, time, delay, error: true});
                 }
             }
         `);
@@ -297,7 +302,7 @@
             async function getHomeData() {
                 comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text());
                 const ct6 = Lib.$q("#gdc .ct6");
-                const cacheData = Lib.session(DConfig.GetKey());
+                const cacheData = Lib.getSession(DConfig.GetKey());
                 if (ct6) {
                     const yes = confirm(Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"));
                     DConfig.SortReverse = yes ? true : false;
@@ -344,11 +349,16 @@
                 function parseLink(index, page) {
                     try {
                         const box = [];
+                        const nameRegex = /[a-z0-9_\-\+]+/gi;
                         for (const link of page.$qa("#gdt a")) {
-                            const href = link.href;
-                            if (processed.has(href)) continue;
-                            processed.add(href);
-                            box.push(href);
+                            const url2 = link.href;
+                            if (processed.has(url2)) continue;
+                            processed.add(url2);
+                            const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
+                            box.push({
+                                url: url2,
+                                name: matchName?.[2] ? matchName[2] : ""
+                            });
                         }
                         homeData.set(index, box);
                         const display = `[${++task}/${pages}]`;
@@ -380,6 +390,7 @@ ${JSON.stringify(box2, null, 4)}`, {
                     const {
                         index,
                         url: url2,
+                        name,
                         html,
                         time,
                         delay,
@@ -388,21 +399,26 @@ ${JSON.stringify(box2, null, 4)}`, {
                     error ? worker.postMessage({
                         index: index,
                         url: url2,
+                        name: name,
                         time: time,
                         delay: dynamicParam(time, delay, null, DConfig.Image_ND)
-                    }) : parseLink(index, url2, Lib.domParse(html));
+                    }) : parseLink(index, url2, name, Lib.domParse(html));
                 };
-                for (const [index, url2] of homeDataList.entries()) {
+                for (const [index, {
+                    url: url2,
+                    name
+                }] of homeDataList.entries()) {
                     worker.postMessage({
                         index: index,
                         url: url2,
+                        name: name,
                         time: Date.now(),
                         delay: DConfig.Image_ID
                     });
                 }
                 let task = 0;
                 const imgData = [];
-                function parseLink(index, url2, page) {
+                function parseLink(index, url2, name, page) {
                     try {
                         const resample = Lib.$Q(page, "#img");
                         const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
@@ -419,6 +435,7 @@ ${JSON.stringify(box2, null, 4)}`, {
                         const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
                         imgData.push({
                             Index: index,
+                            Name: name,
                             PageUrl: url2,
                             ImgUrl: link
                         });
@@ -427,9 +444,7 @@ ${JSON.stringify(box2, null, 4)}`, {
                         button.$text(`${Transl("獲取連結")}: ${display}`);
                         if (task === pages) {
                             imgData.sort((a, b) => a.Index - b.Index);
-                            Lib.session(DConfig.GetKey(), {
-                                value: imgData
-                            });
+                            Lib.setSession(DConfig.GetKey(), imgData);
                             startTask(imgData);
                         }
                     } catch (error) {
@@ -440,30 +455,26 @@ ${JSON.stringify(box2, null, 4)}`, {
                     }
                 }
             }
-            function reGetImageData(index, url2) {
-                function parseLink(index2, url3, page) {
+            function reGetImageData(index, name, url2) {
+                function parseLink(index2, url3, name2, page) {
                     const resample = Lib.$Q(page, "#img");
                     const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
                     if (!resample) return false;
                     const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
                     return {
                         Index: index2,
+                        Name: name2,
                         PageUrl: url3,
                         ImgUrl: link
                     };
                 }
                 let token = Config.ReTry;
                 return new Promise(resolve => {
-                    worker.postMessage({
-                        index: index,
-                        url: url2,
-                        time: Date.now(),
-                        delay: DConfig.Image_ID
-                    });
                     worker.onmessage = e => {
                         const {
                             index: index2,
                             url: url3,
+                            name: name2,
                             html,
                             time,
                             delay,
@@ -474,15 +485,17 @@ ${JSON.stringify(box2, null, 4)}`, {
                             worker.postMessage({
                                 index: index2,
                                 url: url3,
+                                name: name2,
                                 time: time,
                                 delay: delay
                             });
                         } else {
-                            const result = parseLink(index2, url3, Lib.domParse(html));
+                            const result = parseLink(index2, url3, name2, Lib.domParse(html));
                             if (result) resolve(result); else {
                                 worker.postMessage({
                                     index: index2,
                                     url: url3,
+                                    name: name2,
                                     time: time,
                                     delay: delay
                                 });
@@ -490,6 +503,13 @@ ${JSON.stringify(box2, null, 4)}`, {
                         }
                         token--;
                     };
+                    worker.postMessage({
+                        index: index,
+                        url: url2,
+                        name: name,
+                        time: Date.now(),
+                        delay: DConfig.Image_ID
+                    });
                 });
             }
             function startTask(dataList) {
@@ -511,12 +531,9 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 const dataMap = new Map(dataList.map(data => [data.Index, data]));
                 button.$text(Transl("開始下載"));
                 Lib.log({
-                    ReTry: Config.ReTry,
-                    Original: Config.Original,
-                    ResetScope: Config.ResetScope,
-                    CompleteClose: Config.CompleteClose,
+                    ...Config,
                     SortReverse: DConfig.SortReverse,
-                    CompressMode: DConfig.CompressMode,
+                    CompressMode: DConfig.CompressMode ?? false,
                     CompressionLevel: DConfig.Compress_Level,
                     DownloadData: dataMap
                 }, {
@@ -555,20 +572,20 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 function runClear() {
                     if (!clearCache) {
                         clearCache = true;
-                        sessionStorage.removeItem(DConfig.GetKey());
+                        Lib.delSession(DConfig.GetKey());
                         Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
                             group: Transl("清理警告")
                         }).warn;
                     }
                 }
-                function statusUpdate(time, index, iurl, blob, error = false) {
+                function statusUpdate(time, index, name, iurl, blob, error = false) {
                     if (enforce) return;
                     [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                     const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
                     button?.$text(`${Transl("下載進度")}: ${display}`);
                     Lib.title(display);
                     if (!error && blob) {
-                        zipper.file(`${comicName}/${Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
+                        zipper.file(`${comicName}/${name ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`, blob);
                         dataMap.delete(index);
                     }
                     if (progress === totalSize) {
@@ -584,44 +601,46 @@ ${JSON.stringify(dataList, null, 4)}`, {
                     }
                     --task;
                 }
-                function request(index, iurl) {
+                function request(index, name, iurl) {
                     if (enforce) return;
                     ++task;
-                    let timeout = null;
+                    let timeout = null, gmRequest = null;
                     const time = Date.now();
                     if (typeof iurl !== "undefined") {
-                        GM_xmlhttpRequest({
+                        gmRequest = GM_xmlhttpRequest({
                             url: iurl,
-                            timeout: 15e3,
+                            timeout: Config.Timeout,
                             method: "GET",
                             responseType: "blob",
                             onload: response => {
                                 clearTimeout(timeout);
                                 if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                                    request(index, response.finalUrl);
+                                    request(index, name, response.finalUrl);
                                 } else {
-                                    response.status == 200 ? statusUpdate(time, index, iurl, response.response) : statusUpdate(time, index, iurl, null, true);
+                                    response.status == 200 ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
                                 }
                             },
                             onerror: () => {
                                 clearTimeout(timeout);
-                                statusUpdate(time, index, iurl, null, true);
+                                statusUpdate(time, index, name, iurl, null, true);
                             }
                         });
                     } else {
                         runClear();
                         clearTimeout(timeout);
-                        statusUpdate(time, index, iurl, null, true);
+                        statusUpdate(time, index, name, iurl, null, true);
                     }
                     timeout = setTimeout(() => {
-                        statusUpdate(time, index, iurl, null, true);
-                    }, 15e3);
+                        gmRequest?.abort();
+                        statusUpdate(time, index, name, iurl, null, true);
+                    }, Config.Timeout);
                 }
                 async function start(dataMap2, reGet = false) {
                     if (enforce) return;
                     init();
                     for (const {
                         Index,
+                        Name,
                         PageUrl,
                         ImgUrl
                     } of dataMap2.values()) {
@@ -631,7 +650,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                                 dev: Config.Dev,
                                 group: `${Transl("重新取得數據")} (${reTry})`
                             });
-                            const result = await reGetImageData(Index, PageUrl);
+                            const result = await reGetImageData(Index, Name, PageUrl);
                             Lib.log(result, {
                                 dev: Config.Dev,
                                 group: `${Transl("取得結果")} (${reTry})`
@@ -639,18 +658,19 @@ ${JSON.stringify(dataList, null, 4)}`, {
                             if (result) {
                                 const {
                                     Index: Index2,
+                                    Name: Name2,
                                     ImgUrl: ImgUrl2
                                 } = result;
-                                request(Index2, ImgUrl2);
+                                request(Index2, Name2, ImgUrl2);
                             } else {
                                 runClear();
-                                request(Index, ImgUrl);
+                                request(Index, Name, ImgUrl);
                             }
                         } else {
                             while (task >= $thread) {
                                 await Lib.sleep($delay);
                             }
-                            request(Index, ImgUrl);
+                            request(Index, Name, ImgUrl);
                         }
                     }
                 }
@@ -707,20 +727,20 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 function runClear() {
                     if (!clearCache) {
                         clearCache = true;
-                        sessionStorage.removeItem(DConfig.GetKey());
+                        Lib.delSession(DConfig.GetKey());
                         Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), {
                             group: Transl("清理警告")
                         }).warn;
                     }
                 }
-                async function request(index, purl, iurl, retry) {
+                async function request(index, name, purl, iurl, retry) {
                     return new Promise((resolve, reject) => {
                         if (typeof iurl !== "undefined") {
                             const time = Date.now();
                             ++task;
                             GM_download({
                                 url: iurl,
-                                name: `${comicName}-${Lib.mantissa(index, fillValue, "0", iurl)}`,
+                                name: `${comicName} - ${Config.UseName ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`,
                                 onload: () => {
                                     [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                                     const display = `[${++progress}/${totalSize}]`;
@@ -737,12 +757,13 @@ ${JSON.stringify(dataList, null, 4)}`, {
                                         }).error;
                                         --task;
                                         setTimeout(() => {
-                                            reGetImageData(index, purl).then(({
+                                            reGetImageData(index, name, purl).then(({
                                                 Index,
+                                                Name,
                                                 PageUrl,
                                                 ImgUrl
                                             }) => {
-                                                request(Index, PageUrl, ImgUrl, retry - 1);
+                                                request(Index, Name, PageUrl, ImgUrl, retry - 1);
                                                 reject();
                                             }).catch(err => {
                                                 runClear();
@@ -763,13 +784,14 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 }
                 for (const {
                     Index,
+                    Name,
                     PageUrl,
                     ImgUrl
                 } of dataMap.values()) {
                     while (task >= $thread) {
                         await Lib.sleep($delay);
                     }
-                    taskPromises.push(request(Index, PageUrl, ImgUrl, reTry));
+                    taskPromises.push(request(Index, Name, PageUrl, ImgUrl, reTry));
                 }
                 await Promise.allSettled(taskPromises);
                 button.$text(Transl("下載完成"));
@@ -784,7 +806,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
     function Main() {
         const eRegex = /https:\/\/e-hentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
         const exRegex = /https:\/\/exhentai\.org\/g\/\d+\/[a-zA-Z0-9]+/;
-        let Download;
+        let Download, downloadButton;
         let Url = Lib.url.split("?p=")[0];
         async function initStyle() {
             const position = `
@@ -802,9 +824,9 @@ ${JSON.stringify(dataList, null, 4)}`, {
         `;
             const eStyle = `
             .Download_Button {
-            color: #5C0D12;
-            border: 2px solid #9a7c7e;
-            background-color: #EDEADA;
+                color: #5C0D12;
+                border: 2px solid #9a7c7e;
+                background-color: #EDEADA;
             }
             .Download_Button:hover {
                 color: #8f4701;
@@ -814,7 +836,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 color: #B5A4A4;
                 border: 2px dashed #B5A4A4;
                 cursor: default;
-                    }
+            }
         `;
             const exStyle = `
             .Download_Button {
@@ -833,7 +855,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
             }
         `;
             const style = Lib.$domain === "e-hentai.org" ? eStyle : exStyle;
-            Lib.addStyle(`${position}${style}`, "Button-Style");
+            Lib.addStyle(`${position}${style}`, "Downloader-Button-Style");
         }
         async function downloadRangeSetting() {
             const scope = prompt(Transl("範圍設置"));
@@ -848,7 +870,7 @@ ${scope}`);
                 return;
             }
             DConfig.CompressMode ? Lib.setV("CompressedMode", false) : Lib.setV("CompressedMode", true);
-            Lib.$q("#ExDB")?.remove();
+            downloadButton?.remove();
             buttonCreation();
         }
         async function buttonCreation() {
@@ -857,22 +879,17 @@ ${scope}`);
             }).then(gd2 => {
                 DConfig.CompressMode = Lib.getV("CompressedMode", true);
                 DConfig.ModeDisplay = DConfig.CompressMode ? Transl("壓縮下載") : Transl("單圖下載");
-                const downloadButton = Lib.createElement(gd2, "button", {
+                downloadButton = Lib.createElement(gd2, "button", {
                     id: "ExDB",
                     class: "Download_Button",
                     text: DConfig.ModeDisplay,
                     on: {
-                        type: "click",
-                        listener: () => {
+                        click: () => {
                             Download ??= Downloader();
                             DConfig.Lock = true;
                             downloadButton.disabled = true;
                             downloadButton.$text(Transl("開始下載"));
                             Download(Url, downloadButton);
-                        },
-                        add: {
-                            capture: true,
-                            passive: true
                         }
                     }
                 });
@@ -882,10 +899,10 @@ ${scope}`);
             initStyle();
             DConfig.TitleCache = Lib.title();
             buttonCreation();
-            if (Lib.session(DConfig.GetKey())) {
+            if (Lib.getSession(DConfig.GetKey())) {
                 Lib.regMenu({
                     [Transl("🚮 清除數據緩存")]: () => {
-                        sessionStorage.removeItem(DConfig.GetKey());
+                        Lib.delSession(DConfig.GetKey());
                         Lib.unMenu("ClearCache-1");
                     }
                 }, {
