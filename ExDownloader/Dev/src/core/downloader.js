@@ -119,7 +119,7 @@ export default function Downloader() {
 
                         // ? 有使用名稱的話, 嘗試取得名稱
                         const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
-                        box.push({ url, name: matchName ? `${matchName[2] || crypto.randomUUID()}` : "" });
+                        box.push({ url, name: matchName?.[2] ? matchName[2] : "" });
                     };
 
                     // 添加數據
