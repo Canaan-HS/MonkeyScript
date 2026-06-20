@@ -232,7 +232,16 @@
 
             /* 查找過期的項目將其刪除 */
             this.expiredCleanup = (element, adapter, timestamp, callback) => {
-                const targetTime = adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime;
+                let targetTime;
+
+                try {
+                    targetTime = typeof timestamp === "string"
+                        ? adapter?.(timestamp, this.currentTime.getFullYear()) ?? this.currentTime
+                        : this.currentTime;
+                } catch {
+                    targetTime = this.currentTime;
+                }
+
                 this.currentTime > targetTime ? (this.config.ClearExpiration && element.remove()) : callback(element);
             };
 
