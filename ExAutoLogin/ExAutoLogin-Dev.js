@@ -8,13 +8,13 @@
 // @name:en      [E/Ex-Hentai] AutoLogin
 // @version      2026.04.26
 // @author       Canaan HS
-// @description         E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
-// @description:zh-TW   E/Ex - 共享帳號登入、自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
-// @description:zh-CN   E/Ex - 共享帐号登录、自动获取 Cookies、手动输入 Cookies、本地备份以及查看备份，自动检测登录
-// @description:ja      E/Ex - 共有アカウントでのログイン、クッキーの自動取得、クッキーの手動入力、ローカルバックアップおよびバックアップの表示、自動ログイン検出
-// @description:ko      E/Ex - 공유 계정 로그인, 자동으로 쿠키 가져오기, 쿠키 수동 입력, 로컬 백업 및 백업 보기, 자동 로그인 감지
-// @description:ru      E/Ex - Вход в общий аккаунт, автоматическое получение cookies, ручной ввод cookies, локальное резервное копирование и просмотр резервных копий, автоматическое определение входа
-// @description:en      E/Ex - Shared account login, automatic cookie retrieval, manual cookie input, local backup, and backup viewing, automatic login detection
+// @description         E/Ex - 自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
+// @description:zh-TW   E/Ex - 自動獲取 Cookies、手動輸入 Cookies、本地備份以及查看備份，自動檢測登入
+// @description:zh-CN   E/Ex - 自动获取 Cookies、手动输入 Cookies、本地备份以及查看备份，自动检测登录
+// @description:ja      E/Ex - クッキーの手動入力、ローカルバックアップおよびバックアップの表示、自動ログイン検出
+// @description:ko      E/Ex - 자동으로 쿠키 가져오기, 쿠키 수동 입력, 로컬 백업 및 백업 보기, 자동 로그인 감지
+// @description:ru      E/Ex - автоматическое получение cookies, ручной ввод cookies, локальное резервное копирование и просмотр резервных копий, автоматическое определение входа
+// @description:en      E/Ex - automatic cookie retrieval, manual cookie input, local backup, and backup viewing, automatic login detection
 
 // @noframes
 // @connect      *
