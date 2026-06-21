@@ -110,9 +110,10 @@ const Page = {
 
 const Load = (() => {
     const color = {
-        "kemono": "#e8a17d !important",
-        "coomer": "#99ddff !important",
-        "nekohouse": "#bb91ff !important"
+        kemono: "#e8a17d !important",
+        coomer: "#99ddff !important",
+        pawchive: "#e9bbb4 !important",
+        nekohouse: "#bb91ff !important"
     }[Lib.$domain.split(".")[0]];
 
     const userSet = {
