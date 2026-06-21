@@ -22,8 +22,7 @@
 - When enabled, automatically checks login status every 10 minutes when entering the site and performs automatic login
 
 ### **Shared Account Login**
-- Use the Cookies I personally provided to log in (2026.02.01 | 5) [Please notify me if they expire]
-- Account expiration is due to website restrictions. Updates require time and effort, and I cannot monitor them constantly. If I receive numerous negative reviews due to expired accounts again, I will discontinue maintaining this script
+- ❗️ They have all been banned for now
 
 ### **Local Favorites**
 - Add custom favorites in posts and view them on the favorites page (display only, site search function not supported)
