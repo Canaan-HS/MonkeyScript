@@ -366,7 +366,7 @@ export default function Downloader() {
             function request(index, name, iurl) {
                 if (enforce) return;
                 ++task; // 任務開始計數
-                let timeout = null, gmRequest = null;
+                let timeout = null, gmRequest = null, pass = false;
                 const time = Date.now(); // 請求開始時間
 
                 if (typeof iurl !== "undefined") {
@@ -379,12 +379,26 @@ export default function Downloader() {
                             clearTimeout(timeout);
 
                             if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                                request(index, name, response.finalUrl);
-                            } else {
-                                response.status == 200
-                                    ? statusUpdate(time, index, name, iurl, response.response)
-                                    : statusUpdate(time, index, name, iurl, null, true);
+                                return request(index, name, response.finalUrl);
                             }
+
+                            if (response.status === 200) {
+                                const headers = response.responseHeaders;
+                                const contentTypeMatch = headers.match(/content-type:\s*([^\r\n]+)/i);
+
+                                if (contentTypeMatch) {
+                                    // 排除掉 Token 失效只回傳文本的
+                                    const contentType = contentTypeMatch[1].toLowerCase();
+                                    pass = contentType.includes("image") ? true : false;
+                                } else {
+                                    // 沒有 Content-Type 標頭, 假設為圖片
+                                    pass = true;
+                                }
+                            }
+
+                            pass
+                                ? statusUpdate(time, index, name, iurl, response.response)
+                                : statusUpdate(time, index, name, iurl, null, true);
                         }, onerror: () => {
                             clearTimeout(timeout);
                             statusUpdate(time, index, name, iurl, null, true);
