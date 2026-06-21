@@ -262,15 +262,29 @@
       Poor_Network_THRESHOLD: 1500,
     });
     const getTotal = (page) => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, "") / 20);
+    let cleanCache = false;
+    const modifyCache = (data) => {
+      const cacheData = Lib.getSession(DConfig.GetKey());
+      if (!cacheData) return;
+      cacheData[data.Index] = data;
+      Lib.setSession(DConfig.GetKey(), cacheData);
+    };
+    const clearCache = () => {
+      if (cleanCache) return;
+      cleanCache = true;
+      Lib.delSession(DConfig.GetKey());
+      Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
+    };
     return (url, button) => {
       let comicName = null;
+      cleanCache = false;
       const worker = Lib.createWorker(`
             let queue = [], processing = false;
             onmessage = function(e) {
                 queue.push(e.data);
                 !processing && (processing = true, processQueue());
             }
-            async function processQueue() {
+            function processQueue() {
                 if (queue.length > 0) {
                     const {index, url, name, time, delay} = queue.shift();
                     FetchRequest(index, url, name, time, delay);
@@ -287,8 +301,7 @@
                 }
             }
         `);
-      getHomeData();
-      async function reset() {
+      function reset() {
         Config.CompleteClose && window.close();
         Config.ResetScope && (DConfig.Scope = void 0);
         worker.terminate();
@@ -297,7 +310,7 @@
         button.$text(`✓ ${DConfig.ModeDisplay}`);
         DConfig.Lock = false;
       }
-      async function getHomeData() {
+      (function getHomeData() {
         comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text());
         const ct6 = Lib.$q("#gdc .ct6");
         const cacheData = Lib.getSession(DConfig.GetKey());
@@ -319,7 +332,7 @@
                 time,
                 delay: dynamicParam(time, delay2, null, DConfig.Home_ND),
               })
-            : parseLink(index, Lib.domParse(html));
+            : processUpdate(index, Lib.domParse(html));
         };
         const delay = DConfig.Home_ID;
         worker.postMessage({ index: 0, url, time: Date.now(), delay });
@@ -329,11 +342,11 @@
         let task = 0;
         let processed = new Set();
         const homeData = new Map();
-        function parseLink(index, page) {
+        function processUpdate(index, dom) {
           try {
             const box = [];
             const nameRegex = /[a-z0-9_\-\+]+/gi;
-            for (const link of page.$qa("#gdt a")) {
+            for (const link of dom.$qa("#gdt a")) {
               const url2 = link.href;
               if (processed.has(url2)) continue;
               processed.add(url2);
@@ -366,8 +379,20 @@ ${JSON.stringify(box2, null, 4)}`,
             location.reload();
           }
         }
+      })();
+      function parseImgData(index, url2, name, dom) {
+        const resample = Lib.$Q(dom, "#img");
+        const original = Lib.$Q(dom, "#i6 div:last-of-type a")?.href || "#";
+        if (!resample)
+          return {
+            PageUrl: url2,
+            ResampleUrl: resample,
+            OriginalUrl: original,
+          };
+        const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
+        return { Index: index, Name: name, PageUrl: url2, ImgUrl: link };
       }
-      async function getImageData(homeDataList) {
+      function getImageData(homeDataList) {
         const pages = homeDataList.length;
         worker.onmessage = (e) => {
           const { index, url: url2, name, html, time, delay, error } = e.data;
@@ -379,23 +404,21 @@ ${JSON.stringify(box2, null, 4)}`,
                 time,
                 delay: dynamicParam(time, delay, null, DConfig.Image_ND),
               })
-            : parseLink(index, url2, name, Lib.domParse(html));
+            : processUpdate(index, url2, name, Lib.domParse(html));
         };
         for (const [index, { url: url2, name }] of homeDataList.entries()) {
           worker.postMessage({ index, url: url2, name, time: Date.now(), delay: DConfig.Image_ID });
         }
         let task = 0;
         const imgData = [];
-        function parseLink(index, url2, name, page) {
+        function processUpdate(index, url2, name, dom) {
           try {
-            const resample = Lib.$Q(page, "#img");
-            const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
-            if (!resample) {
-              Lib.log({ page, resample, original }, { dev: Config.Dev }).error;
+            const data = parseImgData(index, url2, name, dom);
+            if (!data.ImgUrl) {
+              Lib.log(data, { dev: Config.Dev }).error;
               throw new Error("Image not found");
             }
-            const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
-            imgData.push({ Index: index, Name: name, PageUrl: url2, ImgUrl: link });
+            imgData.push(data);
             const display = `[${++task}/${pages}]`;
             Lib.title(display);
             button.$text(`${Transl("獲取連結")}: ${display}`);
@@ -411,13 +434,6 @@ ${JSON.stringify(box2, null, 4)}`,
         }
       }
       function reGetImageData(index, name, url2) {
-        function parseLink(index2, url3, name2, page) {
-          const resample = Lib.$Q(page, "#img");
-          const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
-          if (!resample) return false;
-          const link = Config.Original && !original.endsWith("#") ? original : resample.src || resample.href;
-          return { Index: index2, Name: name2, PageUrl: url3, ImgUrl: link };
-        }
         let token = Config.ReTry;
         return new Promise((resolve) => {
           worker.onmessage = (e) => {
@@ -426,9 +442,11 @@ ${JSON.stringify(box2, null, 4)}`,
             if (error) {
               worker.postMessage({ index: index2, url: url3, name: name2, time, delay });
             } else {
-              const result = parseLink(index2, url3, name2, Lib.domParse(html));
-              if (result) resolve(result);
-              else {
+              const data = parseImgData(index2, url3, name2, Lib.domParse(html));
+              if (data.ImgUrl) {
+                modifyCache(data);
+                resolve(data);
+              } else {
                 worker.postMessage({ index: index2, url: url3, name: name2, time, delay });
               }
             }
@@ -464,11 +482,10 @@ ${JSON.stringify(dataList, null, 4)}`,
         );
         DConfig.CompressMode ? packDownload(dataMap) : singleDownload(dataMap);
       }
-      async function packDownload(dataMap) {
+      function packDownload(dataMap) {
         let totalSize = dataMap.size;
         const fillValue = Lib.getFill(totalSize);
         let enforce = false;
-        let clearCache = false;
         let reTry = Config.ReTry;
         let task, progress, $thread, $delay;
         function init() {
@@ -487,14 +504,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           init();
           compressFile();
         }
-        function runClear() {
-          if (!clearCache) {
-            clearCache = true;
-            Lib.delSession(DConfig.GetKey());
-            Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
-          }
-        }
-        function statusUpdate(time, index, name, iurl, blob, error = false) {
+        function processUpdate(time, index, name, iurl, blob, error = false) {
           if (enforce) return;
           [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
           const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
@@ -511,7 +521,7 @@ ${JSON.stringify(dataList, null, 4)}`,
               Lib.title(display2);
               button.$text(display2);
               setTimeout(() => {
-                start(dataMap, true);
+                start(dataMap);
               }, 2e3);
             } else force();
           }
@@ -545,27 +555,27 @@ ${JSON.stringify(dataList, null, 4)}`,
                     pass = true;
                   }
                 }
-                pass ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
+                pass ? processUpdate(time, index, name, iurl, response.response) : processUpdate(time, index, name, iurl, null, true);
               },
               onerror: () => {
                 clearTimeout(timeout);
-                statusUpdate(time, index, name, iurl, null, true);
+                processUpdate(time, index, name, iurl, null, true);
               },
             });
           } else {
-            runClear();
+            clearCache();
             clearTimeout(timeout);
-            statusUpdate(time, index, name, iurl, null, true);
+            processUpdate(time, index, name, iurl, null, true);
           }
           timeout = setTimeout(() => {
             gmRequest?.abort();
-            statusUpdate(time, index, name, iurl, null, true);
+            processUpdate(time, index, name, iurl, null, true);
           }, Config.Timeout);
         }
-        async function start(dataMap2, reGet = false) {
+        async function start(reGet = false) {
           if (enforce) return;
           init();
-          for (const { Index, Name, PageUrl, ImgUrl } of dataMap2.values()) {
+          for (const { Index, Name, PageUrl, ImgUrl } of dataMap.values()) {
             if (enforce) break;
             if (reGet) {
               Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
@@ -575,7 +585,7 @@ ${JSON.stringify(dataList, null, 4)}`,
                 const { Index: Index2, Name: Name2, ImgUrl: ImgUrl2 } = result;
                 request(Index2, Name2, ImgUrl2);
               } else {
-                runClear();
+                clearCache();
                 request(Index, Name, ImgUrl);
               }
             } else {
@@ -586,7 +596,7 @@ ${JSON.stringify(dataList, null, 4)}`,
             }
           }
         }
-        start(dataMap);
+        start();
         Lib.regMenu(
           {
             [Transl("📥 強制壓縮下載")]: () => force(),
@@ -594,7 +604,7 @@ ${JSON.stringify(dataList, null, 4)}`,
           { name: "Enforce" },
         );
       }
-      async function compressFile() {
+      function compressFile() {
         Lib.unMenu("Enforce-1");
         zipper
           .generateZip(
@@ -635,18 +645,10 @@ ${JSON.stringify(dataList, null, 4)}`,
         let task = 0;
         let progress = 0;
         let retryDelay = 1e3;
-        let clearCache = false;
         let reTry = Config.ReTry;
         let $delay = DConfig.Download_ID;
         let $thread = DConfig.Download_IT;
-        function runClear() {
-          if (!clearCache) {
-            clearCache = true;
-            Lib.delSession(DConfig.GetKey());
-            Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
-          }
-        }
-        async function request(index, name, purl, iurl, retry) {
+        function request(index, name, purl, iurl, retry) {
           return new Promise((resolve, reject) => {
             if (typeof iurl !== "undefined") {
               const time = Date.now();
@@ -675,7 +677,7 @@ ${JSON.stringify(dataList, null, 4)}`,
                             reject();
                           })
                           .catch((err) => {
-                            runClear();
+                            clearCache();
                             reject();
                           });
                       },
@@ -688,7 +690,7 @@ ${JSON.stringify(dataList, null, 4)}`,
                 },
               });
             } else {
-              runClear();
+              clearCache();
               reject();
             }
           });
