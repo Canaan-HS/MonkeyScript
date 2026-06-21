@@ -18,8 +18,27 @@ export default function Downloader() {
     // 計算總頁數
     const getTotal = (page) => Math.ceil(+page[page.length - 2].$text().replace(/\D/g, '') / 20);
 
+    // 判斷緩存是否被清除
+    let cleanCache = false;
+
+    const modifyCache = (data) => {
+        const cacheData = Lib.getSession(DConfig.GetKey());
+        if (!cacheData) return;
+        // 根據 Index 更新, 指定的數據
+        cacheData[data.Index] = data;
+        Lib.setSession(DConfig.GetKey(), cacheData);
+    };
+
+    const clearCache = () => {
+        if (cleanCache) return;
+        cleanCache = true;
+        Lib.delSession(DConfig.GetKey());
+        Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
+    };
+
     return (url, button) => {
         let comicName = null;
+        cleanCache = false; // 重置
 
         /* 後台請求工作 */
         const worker = Lib.createWorker(`
@@ -28,7 +47,7 @@ export default function Downloader() {
                 queue.push(e.data);
                 !processing && (processing = true, processQueue());
             }
-            async function processQueue() {
+            function processQueue() {
                 if (queue.length > 0) {
                     const {index, url, name, time, delay} = queue.shift();
                     FetchRequest(index, url, name, time, delay);
@@ -46,10 +65,8 @@ export default function Downloader() {
             }
         `);
 
-        getHomeData(); // 開始查找工作
-
         /* 重置所有狀態 */
-        async function reset() {
+        function reset() {
             Config.CompleteClose && window.close();
             Config.ResetScope && (DConfig.Scope = undefined);
 
@@ -64,7 +81,7 @@ export default function Downloader() {
         };
 
         /* 獲取主頁連結數據 */
-        async function getHomeData() {
+        (function getHomeData() {
             comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text()); // 取得漫畫名稱
 
             const ct6 = Lib.$q("#gdc .ct6"); // 嘗試 取得圖片集 標籤
@@ -94,7 +111,7 @@ export default function Downloader() {
                         index, url, time,
                         delay: dynamicParam(time, delay, null, DConfig.Home_ND)
                     })
-                    : parseLink(index, Lib.domParse(html));
+                    : processUpdate(index, Lib.domParse(html));
             };
 
             // 發起請求
@@ -107,12 +124,12 @@ export default function Downloader() {
             let task = 0; // 下載任務進度
             let processed = new Set(); // 排除重複
             const homeData = new Map(); // 保存主頁數據
-            function parseLink(index, page) {
+            function processUpdate(index, dom) {
                 try {
                     const box = [];
                     const nameRegex = /[a-z0-9_\-\+]+/gi;
 
-                    for (const link of page.$qa("#gdt a")) {
+                    for (const link of dom.$qa("#gdt a")) {
                         const url = link.href;
                         if (processed.has(url)) continue;
                         processed.add(url);
@@ -153,10 +170,30 @@ export default function Downloader() {
                 }
             };
 
+        })();
+
+        /* 解析圖片連結數據 */
+        function parseImgData(index, url, name, dom) {
+            // 獲取 重新採樣 元素 & 原圖 連結
+            const resample = Lib.$Q(dom, "#img");
+            const original = Lib.$Q(dom, "#i6 div:last-of-type a")?.href || "#";
+
+            if (!resample) return {
+                PageUrl: url,
+                ResampleUrl: resample,
+                OriginalUrl: original,
+            };
+
+            // 處理圖片連結
+            const link = Config.Original && !original.endsWith("#")
+                ? original : resample.src || resample.href;
+
+            // 索引, 圖片名稱, 頁面連結, 圖片連結
+            return { Index: index, Name: name, PageUrl: url, ImgUrl: link };
         };
 
         /* 獲取圖片連結數據 */
-        async function getImageData(homeDataList) {
+        function getImageData(homeDataList) {
             const pages = homeDataList.length; // 取得頁數
 
             // 接收請求訊息
@@ -167,7 +204,7 @@ export default function Downloader() {
                         index, url, name, time,
                         delay: dynamicParam(time, delay, null, DConfig.Image_ND)
                     })
-                    : parseLink(index, url, name, Lib.domParse(html));
+                    : processUpdate(index, url, name, Lib.domParse(html));
             };
 
             // 發起請求訊息
@@ -177,22 +214,17 @@ export default function Downloader() {
 
             let task = 0; // 下載任務進度
             const imgData = []; // 保存圖片數據
-            function parseLink(index, url, name, page) {
+            function processUpdate(index, url, name, dom) {
                 try {
-                    // 獲取 取樣 元素 與 原圖 連結
-                    const resample = Lib.$Q(page, "#img");
-                    const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
+                    const data = parseImgData(index, url, name, dom);
 
-                    if (!resample) { // 處理找不到圖片的錯誤
-                        Lib.log({ page, resample, original }, { dev: Config.Dev }).error;
+                    // 處理找不到圖片的錯誤 (有 ImgUrl 代表找到圖片)
+                    if (!data.ImgUrl) {
+                        Lib.log(data, { dev: Config.Dev }).error;
                         throw new Error("Image not found");
                     };
 
-                    // 處理圖片連結
-                    const link = Config.Original && !original.endsWith("#")
-                        ? original : resample.src || resample.href;
-
-                    imgData.push({ Index: index, Name: name, PageUrl: url, ImgUrl: link });
+                    imgData.push(data);
 
                     const display = `[${++task}/${pages}]`;
                     Lib.title(display);
@@ -214,20 +246,8 @@ export default function Downloader() {
 
         /* 重新獲取圖片數據 (試錯) -> {索引, 頁面連結, 圖片連結} */
         function reGetImageData(index, name, url) {
-            function parseLink(index, url, name, page) {
-                const resample = Lib.$Q(page, "#img");
-                const original = Lib.$Q(page, "#i6 div:last-of-type a")?.href || "#";
-
-                if (!resample) return false;
-
-                const link = Config.Original && !original.endsWith("#")
-                    ? original : resample.src || resample.href;
-
-                // 索引, 頁面連結, 圖片連結
-                return { Index: index, Name: name, PageUrl: url, ImgUrl: link };
-            };
-
             let token = Config.ReTry; // 取得試錯次數
+
             return new Promise(resolve => {
                 worker.onmessage = (e) => {
                     const { index, url, name, html, time, delay, error } = e.data;
@@ -237,8 +257,11 @@ export default function Downloader() {
                     if (error) {
                         worker.postMessage({ index, url, name, time, delay });
                     } else {
-                        const result = parseLink(index, url, name, Lib.domParse(html));
-                        if (result) resolve(result);
+                        const data = parseImgData(index, url, name, Lib.domParse(html));
+                        if (data.ImgUrl) {
+                            modifyCache(data); // 更新緩存
+                            resolve(data);
+                        }
                         else {
                             worker.postMessage({ index, url, name, time, delay });
                         }
@@ -288,13 +311,12 @@ export default function Downloader() {
         };
 
         /* 壓縮下載 */
-        async function packDownload(dataMap) {
+        function packDownload(dataMap) {
 
             let totalSize = dataMap.size;
             const fillValue = Lib.getFill(totalSize); // 取得填充量
 
             let enforce = false; // 判斷強制下載狀態
-            let clearCache = false; // 判斷緩存是否被清除
             let reTry = Config.ReTry; // 重試次數
 
             let task, progress, $thread, $delay; // 宣告變數
@@ -320,17 +342,8 @@ export default function Downloader() {
                 compressFile(); // 觸發壓縮
             };
 
-            // 清除緩存
-            function runClear() {
-                if (!clearCache) {
-                    clearCache = true;
-                    Lib.delSession(DConfig.GetKey()); // 清除緩存
-                    Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
-                }
-            };
-
-            // 更新請求狀態 (開始請求時間, 數據的索引, 圖片名稱, 圖片連結, 圖片數據, 錯誤狀態)
-            function statusUpdate(time, index, name, iurl, blob, error = false) {
+            // 處理更新請求狀態 (開始請求時間, 數據的索引, 圖片名稱, 圖片連結, 圖片數據, 錯誤狀態)
+            function processUpdate(time, index, name, iurl, blob, error = false) {
                 if (enforce) return;
                 [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND); // 動態變更延遲與線程
 
@@ -397,27 +410,27 @@ export default function Downloader() {
                             }
 
                             pass
-                                ? statusUpdate(time, index, name, iurl, response.response)
-                                : statusUpdate(time, index, name, iurl, null, true);
+                                ? processUpdate(time, index, name, iurl, response.response)
+                                : processUpdate(time, index, name, iurl, null, true);
                         }, onerror: () => {
                             clearTimeout(timeout);
-                            statusUpdate(time, index, name, iurl, null, true);
+                            processUpdate(time, index, name, iurl, null, true);
                         }
                     });
                 } else {
-                    runClear();
+                    clearCache();
                     clearTimeout(timeout);
-                    statusUpdate(time, index, name, iurl, null, true);
+                    processUpdate(time, index, name, iurl, null, true);
                 }
 
                 timeout = setTimeout(() => {
                     gmRequest?.abort();
-                    statusUpdate(time, index, name, iurl, null, true);
+                    processUpdate(time, index, name, iurl, null, true);
                 }, Config.Timeout);
             };
 
             // 發起請求任務
-            async function start(dataMap, reGet = false) {
+            async function start(reGet = false) {
                 if (enforce) return;
                 init(); // 進行初始化
 
@@ -433,7 +446,7 @@ export default function Downloader() {
                             const { Index, Name, ImgUrl } = result;
                             request(Index, Name, ImgUrl);
                         } else {
-                            runClear();
+                            clearCache();
                             request(Index, Name, ImgUrl);
                         }
                     } else {
@@ -447,14 +460,14 @@ export default function Downloader() {
                 }
             };
 
-            start(dataMap);
+            start();
             Lib.regMenu({
                 [Transl("📥 強制壓縮下載")]: () => force()
             }, { name: "Enforce" });
         };
 
         /* 壓縮檔案 */
-        async function compressFile() {
+        function compressFile() {
             Lib.unMenu("Enforce-1");
             zipper.generateZip({
                 level: DConfig.Compress_Level
@@ -496,20 +509,11 @@ export default function Downloader() {
             let task = 0;
             let progress = 0;
             let retryDelay = 1e3;
-            let clearCache = false;
             let reTry = Config.ReTry;
             let $delay = DConfig.Download_ID;
             let $thread = DConfig.Download_IT;
 
-            function runClear() {
-                if (!clearCache) {
-                    clearCache = true;
-                    Lib.delSession(DConfig.GetKey()); // 清除緩存
-                    Lib.log(Transl("下載數據不完整將清除緩存, 建議刷新頁面後重載"), { group: Transl("清理警告") }).warn;
-                }
-            };
-
-            async function request(index, name, purl, iurl, retry) {
+            function request(index, name, purl, iurl, retry) {
                 return new Promise((resolve, reject) => {
                     if (typeof iurl !== "undefined") {
 
@@ -544,7 +548,7 @@ export default function Downloader() {
                                                 reject();
                                             })
                                             .catch((err) => {
-                                                runClear();
+                                                clearCache();
                                                 reject();
                                             });
                                     }, retryDelay += 1e3); // 如果取得數據失敗, 代表資源衝突了, 就需要設置更高的延遲
@@ -556,7 +560,7 @@ export default function Downloader() {
                             }
                         });
                     } else {
-                        runClear();
+                        clearCache();
                         reject();
                     }
                 });
