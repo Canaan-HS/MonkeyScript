@@ -21,6 +21,7 @@ export default `
 // @connect      *
 // @match        *://kemono.cr/*
 // @match        *://coomer.st/*
+// @match        *://pawchive.st/*
 // @match        *://nekohouse.su/*
 
 // @license      MPL-2.0
