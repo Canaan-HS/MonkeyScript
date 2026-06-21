@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      2026.05.26-Beta
+// @version      2026.06.21-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -43,15 +43,15 @@
 // @run-at       document-body
 // ==/UserScript==
 
-(function () {
+(function() {
     const Config = {
-        Dev: true,            // 開發模式 (會顯示除錯訊息)
-        ReTry: 10,            // 下載錯誤重試次數, 超過這個次數該圖片會被跳過
-        Timeout: 30000,       // 壓縮下載超時時間 (毫秒)
-        UseName: false,       // 使用圖片名稱作為檔名
-        Original: false,      // 是否下載原圖
-        ResetScope: true,     // 下載完成後 重置範圍設置
-        CompleteClose: false, // 下載完成自動關閉
+        Dev: true,
+        ReTry: 10,
+        Timeout: 3e4,
+        UseName: false,
+        Original: false,
+        ResetScope: true,
+        CompleteClose: false
     };
     const DConfig = {
         Compress_Level: 9,
@@ -404,10 +404,10 @@ ${JSON.stringify(box2, null, 4)}`, {
                         delay: dynamicParam(time, delay, null, DConfig.Image_ND)
                     }) : parseLink(index, url2, name, Lib.domParse(html));
                 };
-                for (const [index, {
+                for (const [ index, {
                     url: url2,
                     name
-                }] of homeDataList.entries()) {
+                } ] of homeDataList.entries()) {
                     worker.postMessage({
                         index: index,
                         url: url2,
@@ -528,7 +528,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                         Index: size - index
                     }));
                 }
-                const dataMap = new Map(dataList.map(data => [data.Index, data]));
+                const dataMap = new Map(dataList.map(data => [ data.Index, data ]));
                 button.$text(Transl("開始下載"));
                 Lib.log({
                     ...Config,
@@ -557,9 +557,9 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 }
                 function force() {
                     if (totalSize > 0) {
-                        const sortData = [...dataMap].sort((a, b) => a.Index - b.Index);
+                        const sortData = [ ...dataMap ].sort((a, b) => a.Index - b.Index);
                         sortData.splice(0, 0, {
-                            ErrorPage: sortData.map(([_, value]) => value.Index + 1).join(",")
+                            ErrorPage: sortData.map(([ _, value ]) => value.Index + 1).join(",")
                         });
                         Lib.log(JSON.stringify(sortData, null, 4), {
                             group: Transl("下載失敗數據")
@@ -580,7 +580,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 }
                 function statusUpdate(time, index, name, iurl, blob, error = false) {
                     if (enforce) return;
-                    [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
+                    [ $delay, $thread ] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                     const display = `[${Math.min(++progress, totalSize)}/${totalSize}]`;
                     button?.$text(`${Transl("下載進度")}: ${display}`);
                     Lib.title(display);
@@ -604,7 +604,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                 function request(index, name, iurl) {
                     if (enforce) return;
                     ++task;
-                    let timeout = null, gmRequest = null;
+                    let timeout = null, gmRequest = null, pass = false;
                     const time = Date.now();
                     if (typeof iurl !== "undefined") {
                         gmRequest = GM_xmlhttpRequest({
@@ -615,10 +615,19 @@ ${JSON.stringify(dataList, null, 4)}`, {
                             onload: response => {
                                 clearTimeout(timeout);
                                 if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                                    request(index, name, response.finalUrl);
-                                } else {
-                                    response.status == 200 ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
+                                    return request(index, name, response.finalUrl);
                                 }
+                                if (response.status === 200) {
+                                    const headers = response.responseHeaders;
+                                    const contentTypeMatch = headers.match(/content-type:\s*([^\r\n]+)/i);
+                                    if (contentTypeMatch) {
+                                        const contentType = contentTypeMatch[1].toLowerCase();
+                                        pass = contentType.includes("image") ? true : false;
+                                    } else {
+                                        pass = true;
+                                    }
+                                }
+                                pass ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
                             },
                             onerror: () => {
                                 clearTimeout(timeout);
@@ -742,7 +751,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                                 url: iurl,
                                 name: `${comicName} - ${Config.UseName ? `${name}.${Lib.suffixName(iurl)}` : Lib.mantissa(index, fillValue, "0", iurl)}`,
                                 onload: () => {
-                                    [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
+                                    [ $delay, $thread ] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                                     const display = `[${++progress}/${totalSize}]`;
                                     Lib.title(display);
                                     button?.$text(`${Transl("下載進度")}: ${display}`);
@@ -751,7 +760,7 @@ ${JSON.stringify(dataList, null, 4)}`, {
                                 },
                                 onerror: () => {
                                     if (retry > 0) {
-                                        [$delay, $thread] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
+                                        [ $delay, $thread ] = dynamicParam(time, $delay, $thread, DConfig.Download_ND);
                                         Lib.log(`[Delay:${$delay}|Thread:${$thread}|Retry:${retry}] : [${iurl}]`, {
                                             dev: Config.Dev
                                         }).error;
