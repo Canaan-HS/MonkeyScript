@@ -6,7 +6,7 @@
 // @name:ko      [E/Ex-Hentai] 다운로더
 // @name:ru      [E/Ex-Hentai] Загрузчик
 // @name:en      [E/Ex-Hentai] Downloader
-// @version      2026.05.26-Beta
+// @version      2026.06.21-Beta
 // @author       Canaan HS
 // @description         漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
 // @description:zh-TW   漫畫頁面創建下載按鈕, 可切換 (壓縮下載 | 單圖下載), 無須複雜設置一鍵點擊下載, 自動獲取(非原圖)進行下載
@@ -521,7 +521,8 @@ ${JSON.stringify(dataList, null, 4)}`,
           if (enforce) return;
           ++task;
           let timeout = null,
-            gmRequest = null;
+            gmRequest = null,
+            pass = false;
           const time = Date.now();
           if (typeof iurl !== "undefined") {
             gmRequest = GM_xmlhttpRequest({
@@ -532,10 +533,19 @@ ${JSON.stringify(dataList, null, 4)}`,
               onload: (response) => {
                 clearTimeout(timeout);
                 if (response.finalUrl !== iurl && `${response.status}`.startsWith("30")) {
-                  request(index, name, response.finalUrl);
-                } else {
-                  response.status == 200 ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
+                  return request(index, name, response.finalUrl);
                 }
+                if (response.status === 200) {
+                  const headers = response.responseHeaders;
+                  const contentTypeMatch = headers.match(/content-type:\s*([^\r\n]+)/i);
+                  if (contentTypeMatch) {
+                    const contentType = contentTypeMatch[1].toLowerCase();
+                    pass = contentType.includes("image") ? true : false;
+                  } else {
+                    pass = true;
+                  }
+                }
+                pass ? statusUpdate(time, index, name, iurl, response.response) : statusUpdate(time, index, name, iurl, null, true);
               },
               onerror: () => {
                 clearTimeout(timeout);
