@@ -62,10 +62,10 @@ const BetterPostCardFactory = async () => {
      * @returns {Object} { server, user } - 網址解析結果
      */
     const parseUrlInfo = (uri) => {
-        uri = uri.match(uriFormat1) || uri.match(uriFormat2) || uri.match(uriFormat3);
-        if (!uri) return;
+        const uriMatch = uri.match(uriFormat1) || uri.match(uriFormat2) || uri.match(uriFormat3);
+        if (!uriMatch) return;
 
-        return uri.splice(1).reduce((acc, str) => {
+        return uriMatch.splice(1).reduce((acc, str) => {
             if (supportServer.test(str)) {
                 const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
                 acc.server = specialServer[cleanStr] ?? cleanStr
