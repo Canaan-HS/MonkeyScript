@@ -51,12 +51,23 @@ const User_Config = {
 
 const Parame = {
     Url: Lib.$url,
+    SaveKey: { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" },
     DB: import.meta.hot
         ? monkeyWindow["openDB"] ?? await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako"))
         : await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako")),
-    OriginalApi: `https://${Lib.$domain}/data`,
-    ThumbnailApi: `https://${Lib.$domain}/thumbnail/data`,
-    SaveKey: { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" },
+    // 特例 所以宣告在這裡 (外部不直接從這裡取得)
+    _isPawchive: Lib.$domain.startsWith("pawchive"),
+    // 組成 api 網址
+    get OriginalApi() { // 不用 this 的原因, 是因為有奇怪的 bug
+        const value = `https://${Parame._isPawchive ? "file." : ""}${Lib.$domain}/data`;
+        Object.defineProperty(Parame, "OriginalApi", { value, writable: false });
+        return value;
+    },
+    get ThumbnailApi() {
+        const value = `https://${Parame._isPawchive ? "img." : ""}${Lib.$domain}/thumbnail/data`;
+        Object.defineProperty(Parame, "ThumbnailApi", { value, writable: false });
+        return value;
+    },
     // 搜尋頁面 ./artists*
     Artists: /.+(?<!favorites)\/artists.*/,
     // 預覽頁的藝術家其他頁面連結 ./links | ./links/new
@@ -106,6 +117,7 @@ const Page = {
         || Parame.User.test(Parame.Url)
         || Parame.FavorPosts.test(Parame.Url),
     isNeko: Lib.$domain.startsWith("nekohouse"),
+    IsPawchive: Parame._isPawchive
 };
 
 const Load = (() => {
