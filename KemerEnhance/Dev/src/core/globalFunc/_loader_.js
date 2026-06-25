@@ -14,13 +14,13 @@ const globalLoader = {
     async TextToLink(...args) {
         const value = TextToLinkFactory().TextToLink;
         value(...args);
-        Object.defineProperty(this, value.name, { value, writable: false });
+        Object.defineProperty(globalLoader, value.name, { value, writable: false });
     },
     async BetterPostCard(...args) {
         const func = await BetterPostCardFactory();
         const value = func.BetterPostCard;
         value(...args);
-        Object.defineProperty(this, value.name, { value, writable: false });
+        Object.defineProperty(globalLoader, value.name, { value, writable: false });
     },
     KeyScroll,
 }
