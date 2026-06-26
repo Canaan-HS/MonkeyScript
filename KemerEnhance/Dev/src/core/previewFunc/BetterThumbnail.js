@@ -82,7 +82,11 @@ const BetterThumbnailFactory = () => {
                         const attachments = post.attachments || [];
 
                         const record = new Set();
-                        const count = [post.file, ...attachments].reduce((count, attach, index) => {
+
+                        let fileData = [post.file, ...attachments];
+                        if (Page.isPawchive && fileData.length > 1) fileData = fileData.slice(1);
+
+                        const count = fileData.reduce((count, attach, index) => {
                             const path = attach.path || "";
                             if (record.has(path)) return count;
 
