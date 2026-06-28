@@ -117,7 +117,7 @@ const Page = {
         || Parame.User.test(Parame.Url)
         || Parame.FavorPosts.test(Parame.Url),
     isNeko: Lib.$domain.startsWith("nekohouse"),
-    IsPawchive: Parame._isPawchive
+    isPawchive: Parame._isPawchive
 };
 
 const Load = (() => {
