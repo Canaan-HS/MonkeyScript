@@ -69,6 +69,10 @@ const BetterThumbnailFactory = () => {
 
                 // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
                 const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
+
+                // ? 該網站的該頁面不支援 API 請求
+                if (Page.isPawchive && api.includes("popular")) return;
+
                 Fetch.send(api, data => {
                     // ! 不特別處理 API 格式修改, 會導致報錯的問題
                     if (Lib.type(data) === "Object") data = data?.posts || [];
