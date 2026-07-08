@@ -58,14 +58,14 @@ const Parame = {
     // 特例 所以宣告在這裡 (外部不直接從這裡取得)
     _isPawchive: Lib.$domain.startsWith("pawchive"),
     // 組成 api 網址
-    get OriginalApi() { // 不用 this 的原因, 是因為有奇怪的 bug
-        const value = `https://${Parame._isPawchive ? "file." : ""}${Lib.$domain}/data`;
-        Object.defineProperty(Parame, "OriginalApi", { value, writable: false });
+    get OriginalApi() {
+        const value = `https://${this._isPawchive ? "file." : ""}${Lib.$domain}/data`;
+        Object.defineProperty(this, "OriginalApi", { value, writable: false });
         return value;
     },
     get ThumbnailApi() {
-        const value = `https://${Parame._isPawchive ? "img." : ""}${Lib.$domain}/thumbnail/data`;
-        Object.defineProperty(Parame, "ThumbnailApi", { value, writable: false });
+        const value = `https://${this._isPawchive ? "img." : ""}${Lib.$domain}/thumbnail/data`;
+        Object.defineProperty(this, "ThumbnailApi", { value, writable: false });
         return value;
     },
     // 搜尋頁面 ./artists*
