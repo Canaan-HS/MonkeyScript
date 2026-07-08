@@ -20,8 +20,9 @@ export default function Main() {
         // 呼叫函數
         async function call(runPage) {
             const config = User_Config[runPage] ?? {}; // 載入對應用戶配置
+            const loadedFunc = loadFunc[runPage] ?? {};
 
-            for (const [name, func] of Object.entries(loadFunc[runPage] ?? {})) {
+            for (const [name, func] of Object.entries(loadedFunc)) {
                 let cfg = config[name]; // 載入對應名稱的用戶配置
 
                 if (!cfg || !func) continue;
@@ -29,8 +30,8 @@ export default function Main() {
                     cfg = { enable: true };
                 } else if (!cfg.enable) continue;
 
-                // 直接呼叫 (沒有驗證數據格式)
-                func(cfg);
+                // (沒有驗證數據格式)
+                func.call(loadedFunc, cfg);
             }
         };
 
