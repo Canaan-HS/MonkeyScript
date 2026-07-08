@@ -9,15 +9,17 @@
 1. Install a browser script manager (such as [Tampermonkey](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo))
 2. [Install the script](https://update.greasyfork.org/scripts/472096/Kemer%20%E5%A2%9E%E5%BC%B7.user.js)
 3. Visit the following sites:
-    - [kemono](https://kemono.cr/)
-    - [coomer](https://coomer.st/)
-    - [nekohouse](https://nekohouse.su/)
+   - [kemono](https://kemono.cr/)
+   - [coomer](https://coomer.st/)
+   - [pawchive](https://pawchive.pw/)
+   - [nekohouse](https://nekohouse.su/)
 
 ---
 
 ## **📜 Feature Overview**
 
 ### **Settings Menu (Only for Posts)**
+
 - Set the original image, width, height, and spacing, with real-time previews of changes.
 - Menu language support (default is English):
   - Traditional Chinese
@@ -61,14 +63,6 @@ KeyScroll: (The mode difference is the implementation method, users can choose b
 
 [1] Animation frame scrolling
 [2] Interval scrolling
-
-CardText:
-[1] On post preview pages, hide text on preview cards, which will be restored when the mouse moves over it
-[2] On post preview pages, fade the text on preview cards, which will restore when the mouse moves over it
-
-CardZoom:
-[1] Enlarge preview card [previous versions before v0.0.46 used this method]
-[2] Enlarge preview card + hover zoom
 
 VideoBeautify:
 [1] Move the download links from the download area to above the video as a title, allowing direct download by clicking the title or scrolling to the download area.
@@ -121,7 +115,7 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 ## **🔗 Related Links**
 
-- **Development Environment**: [Greasy Fork](https://greasyfork.org/zh-TW/users/989635-canaan-hs)  
+- **Development Environment**: [Greasy Fork](https://greasyfork.org/zh-TW/users/989635-canaan-hs)
 - **GitHub Repository**: [GitHub](https://github.com/Canaan-HS/MonkeyScript/tree/main/KemerEnhance)
 
 ---
@@ -130,26 +124,26 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 Compatibility recommendations:
 
-- **Avoid CacheFetch cache interference**  
-  - If you need to always request the latest API data instead of cached ones, attach a custom header in your Fetch request:  
+- **Avoid CacheFetch cache interference**
+  - If you need to always request the latest API data instead of cached ones, attach a custom header in your Fetch request:
     ```
     X-Bypass-CacheFetch: true
     ```
   - When detected, the script will bypass its internal cache and send the actual request.
 
-- **Avoid LinkBeautify altering Download section**  
-  - By default, the script adds beautify attributes to the Downloads section.  
-  - If you need the raw DOM, apply an additional filter:  
+- **Avoid LinkBeautify altering Download section**
+  - By default, the script adds beautify attributes to the Downloads section.
+  - If you need the raw DOM, apply an additional filter:
     ```css
-    :not([beautify])
+    :not([beautify]);
     ```
 
-- **Avoid OriginalImage rewriting Files section**  
-  - The script may replace preview images with originals, affecting DOM structure.  
-  - To reliably fetch file sources, consider:  
+- **Avoid OriginalImage rewriting Files section**
+  - The script may replace preview images with originals, affecting DOM structure.
+  - To reliably fetch file sources, consider:
     ```javascript
     // Example
-    document.querySelector("a, rc, img")
+    document.querySelector("a, rc, img");
     ```
   - Then check `.href || .src` to maintain compatibility.
 
@@ -157,15 +151,14 @@ Compatibility recommendations:
 
 ## **📦 Version Info**
 
-**Release Version: 2025.09.26-Beta**
+**Release Version: 2026.07.08**
 
 ### **Changelog**
-1. Update tool library
-2. Rename: FixArtist -> BetterPostCard
-3. BetterPostCard adds a `previewAbove` option. By default, the preview appears above; if set to false, it appears below.
-4. Added BetterThumbnail, which directly displays attachment types (not supported for nekohouse) [Experimental]
+
+1. Compatible with pawchive (not fully tested)
 
 ### **Known Issues**
+
 1. Sometimes page render lags behind feature load, causing functions to fail. Refreshing usually resolves it.
 
 ---
