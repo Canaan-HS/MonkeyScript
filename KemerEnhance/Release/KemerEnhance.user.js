@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2025.02.16
+// @version      2026.07.08
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -19,6 +19,7 @@
 // @connect      *
 // @match        *://kemono.cr/*
 // @match        *://coomer.st/*
+// @match        *://pawchive.pw/*
 // @match        *://nekohouse.su/*
 
 // @license      MPL-2.0
@@ -94,13 +95,28 @@
     };
     const Parame = {
         Url: Lib.$url,
-        DB: await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako")),
-        OriginalApi: `https://${Lib.$domain}/data`,
-        ThumbnailApi: `https://${Lib.$domain}/thumbnail/data`,
         SaveKey: {
             Img: "ImgStyle",
             Lang: "Language",
             Menu: "MenuPoint"
+        },
+        DB: await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako")),
+        _isPawchive: Lib.$domain.startsWith("pawchive"),
+        get OriginalApi() {
+            const value = `https://${this._isPawchive ? "file." : ""}${Lib.$domain}/data`;
+            Object.defineProperty(this, "OriginalApi", {
+                value: value,
+                writable: false
+            });
+            return value;
+        },
+        get ThumbnailApi() {
+            const value = `https://${this._isPawchive ? "img." : ""}${Lib.$domain}/thumbnail/data`;
+            Object.defineProperty(this, "ThumbnailApi", {
+                value: value,
+                writable: false
+            });
+            return value;
         },
         Artists: new RegExp(".+(?<!favorites)\\/artists.*"),
         Links: /.+\/user\/[^\/]+\/links.*/,
@@ -121,12 +137,14 @@
         isAnnouncement: () => Parame.Announcement.test(Parame.Url) || Parame.Dms.test(Parame.Url),
         isSearch: () => Parame.Artists.test(Parame.Url) || Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url) || Parame.FavoritesArtists.test(Parame.Url),
         isPreview: () => Parame.Posts.test(Parame.Url) || Parame.User.test(Parame.Url) || Parame.FavorPosts.test(Parame.Url),
-        isNeko: Lib.$domain.startsWith("nekohouse")
+        isNeko: Lib.$domain.startsWith("nekohouse"),
+        isPawchive: Parame._isPawchive
     };
     const Load = (() => {
         const color = {
             kemono: "#e8a17d !important",
             coomer: "#99ddff !important",
+            pawchive: "#e9bbb4 !important",
             nekohouse: "#bb91ff !important"
         }[Lib.$domain.split(".")[0]];
         const userSet = {
@@ -148,21 +166,6 @@
     })();
     async function BlockAds() {
         if (Page.isNeko) return;
-        const cookieString = Lib.cookie();
-        const required = ["ts_popunder", "ts_popunder-cnt"];
-        const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
-        if (!hasCookies) {
-            const now = new Date();
-            now.setFullYear(now.getFullYear() + 1);
-            const expires = now.toUTCString();
-            const cookies = {
-                [required[0]]: now,
-                [required[1]]: 1
-            };
-            for (const [key, value] of Object.entries(cookies)) {
-                Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
-            }
-        }
         if (Parame.Registered.has("BlockAds")) return;
         Lib.addStyle(`
         [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
@@ -181,26 +184,6 @@
             } catch { }
             return originalFetch.apply(this, arguments);
         };
-        const originalRequest = unsafeWindow.XMLHttpRequest;
-        unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
-            construct: function (target, args) {
-                const xhr = new target(...args);
-                return new Proxy(xhr, {
-                    get: function (target2, prop, receiver) {
-                        if (prop === "open") {
-                            return function (method, url) {
-                                try {
-                                    if (url.endsWith(".m3u8")) return;
-                                    if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return;
-                                } catch { }
-                                return target2[prop].apply(target2, arguments);
-                            };
-                        }
-                        return Reflect.get(target2, prop, receiver);
-                    }
-                });
-            }
-        });
         Parame.Registered.add("BlockAds");
     }
     async function KeyScroll({
@@ -816,9 +799,9 @@ statusText: ${text}`);
         };
         const supportServer = /Gumroad|Patreon|Fantia|Pixiv|Fanbox|CandFans|Twitter|Boosty|OnlyFans|Fansly|SubscribeStar|DLsite/i;
         const parseUrlInfo = uri => {
-            uri = uri.match(uriFormat1) || uri.match(uriFormat2) || uri.match(uriFormat3);
-            if (!uri) return;
-            return uri.splice(1).reduce((acc, str) => {
+            const uriMatch = uri.match(uriFormat1) || uri.match(uriFormat2) || uri.match(uriFormat3);
+            if (!uriMatch) return;
+            return uriMatch.splice(1).reduce((acc, str) => {
                 if (supportServer.test(str)) {
                     const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
                     acc.server = specialServer[cleanStr] ?? cleanStr;
@@ -1807,6 +1790,7 @@ statusText: ${text}`);
                         return acc;
                     }, {});
                     const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
+                    if (Page.isPawchive && api.includes("popular")) return;
                     Fetch.send(api, data => {
                         if (Lib.type(data) === "Object") data = data?.posts || [];
                         for (const post of data) {
@@ -1819,7 +1803,9 @@ statusText: ${text}`);
                             const src = img?.src;
                             const attachments = post.attachments || [];
                             const record = new Set();
-                            const count = [post.file, ...attachments].reduce((count2, attach, index) => {
+                            let fileData = [post.file, ...attachments];
+                            if (Page.isPawchive) fileData = fileData.slice(1);
+                            const count = fileData.reduce((count2, attach, index) => {
                                 const path = attach.path || "";
                                 if (record.has(path)) return count2;
                                 const ext = path.split(".").at(-1).toLowerCase();
@@ -1878,7 +1864,7 @@ statusText: ${text}`);
                 video.forEach(media => media.$sAttr("preload", "metadata"));
             });
         } else {
-            Lib.waitEl("ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
+            Lib.waitEl(Page.isPawchive ? ".post__videos li" : "ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
                 raf: true,
                 all: true,
                 timeout: 5
@@ -1889,17 +1875,19 @@ statusText: ${text}`);
                     timeout: 5
                 }).then(post => {
                     Lib.addStyle(`
-                    .fluid_video_wrapper {
-                        height: 50% !important;
-                        width: 65% !important;
-                        border-radius: 8px !important;
-                    }
-                `, "Video-Effects", false);
+                        .fluid_video_wrapper {
+                            height: 50% !important;
+                            width: 65% !important;
+                            border-radius: 8px !important;
+                        }
+                        .post__videos .fluid_video_wrapper:not(.pseudo_fullscreen):not(:fullscreen) {
+                            height: 50% !important;
+                            width: 65% !important;
+                            border-radius: 8px !important;
+                        }
+                    `, "Video-Effects", false);
                     const move = mode === 2;
-                    const linkBox = Object.fromEntries([...post].map(a => {
-                        const data = [a.download?.trim(), a];
-                        return data;
-                    }));
+                    const linkBox = Object.fromEntries([...post].map(a => [a.download?.trim(), a]));
                     for (const li of parents) {
                         const waitLoad = new MutationObserver(Lib.debounce(() => {
                             waitLoad.disconnect();
@@ -2980,7 +2968,8 @@ statusText: ${text}`);
             };
             async function call(runPage) {
                 const config = User_Config[runPage] ?? {};
-                for (const [name, func] of Object.entries(loadFunc[runPage] ?? {})) {
+                const loadedFunc = loadFunc[runPage] ?? {};
+                for (const [name, func] of Object.entries(loadedFunc)) {
                     let cfg = config[name];
                     if (!cfg || !func) continue;
                     if (typeof cfg !== "object") {
@@ -2988,7 +2977,7 @@ statusText: ${text}`);
                             enable: true
                         };
                     } else if (!cfg.enable) continue;
-                    func(cfg);
+                    func.call(loadedFunc, cfg);
                 }
             }
             return {
