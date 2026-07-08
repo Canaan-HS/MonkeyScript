@@ -5,24 +5,24 @@ import { Parame, Page } from '../config.js';
 export default async function BlockAds() {
     if (Page.isNeko) return;
 
-    const cookieString = Lib.cookie();
-    const required = ["ts_popunder", "ts_popunder-cnt"];
-    const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
+    // const cookieString = Lib.cookie();
+    // const required = ["ts_popunder", "ts_popunder-cnt"];
+    // const hasCookies = required.every(name => new RegExp(`(?:^|;\\s*)${name}=`).test(cookieString));
 
-    if (!hasCookies) {
-        const now = new Date();
-        now.setFullYear(now.getFullYear() + 1);
-        const expires = now.toUTCString();
+    // if (!hasCookies) {
+    //     const now = new Date();
+    //     now.setFullYear(now.getFullYear() + 1);
+    //     const expires = now.toUTCString();
 
-        const cookies = {
-            [required[0]]: now,
-            [required[1]]: 1
-        };
+    //     const cookies = {
+    //         [required[0]]: now,
+    //         [required[1]]: 1
+    //     };
 
-        for (const [key, value] of Object.entries(cookies)) {
-            Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
-        }
-    };
+    //     for (const [key, value] of Object.entries(cookies)) {
+    //         Lib.cookie(`${key}=${value}; domain=.${Lib.$domain}; path=/; expires=${expires};`);
+    //     }
+    // };
 
     // 舊版白名單正則轉換
     // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
@@ -51,28 +51,36 @@ export default async function BlockAds() {
         return originalFetch.apply(this, arguments);
     };
 
-    const originalRequest = unsafeWindow.XMLHttpRequest;
-    unsafeWindow.XMLHttpRequest = new Proxy(originalRequest, {
-        construct: function (target, args) {
-            const xhr = new target(...args);
-            return new Proxy(xhr, {
-                get: function (target, prop, receiver) {
-                    if (prop === 'open') {
-                        return function (method, url) {
-                            try {
-                                if (url.endsWith(".m3u8")) return;
-                                if ((
-                                    url.startsWith('http') || url.startsWith('//')
-                                ) && domains.has(new URL(url).host)) return;
-                            } catch { }
-                            return target[prop].apply(target, arguments);
-                        };
-                    }
-                    return Reflect.get(target, prop, receiver);
-                }
-            })
-        }
-    });
+    // const originalOpen = unsafeWindow.XMLHttpRequest.prototype.open;
+    // unsafeWindow.XMLHttpRequest.prototype.open = function (method, url, ...args) {
+    //     try {
+    //         if (url.endsWith(".m3u8")) {
+    //             this.__blocked = true;
+    //             return;
+    //         }
+
+    //         if (
+    //             (url.startsWith("http") || url.startsWith("//")) &&
+    //             domains.has(new URL(url).host)
+    //         ) {
+    //             this.__blocked = true;
+    //             return;
+    //         }
+    //     } catch { }
+
+    //     return originalOpen.call(this, method, url, ...args);
+    // };
+
+
+    // const originalSend = unsafeWindow.XMLHttpRequest.prototype.send;
+    // unsafeWindow.XMLHttpRequest.prototype.send = function (...args) {
+    //     if (this.__blocked) {
+    //         this.abort();
+    //         return;
+    //     }
+
+    //     return originalSend.apply(this, args);
+    // };
 
     Parame.Registered.add("BlockAds");
 };
