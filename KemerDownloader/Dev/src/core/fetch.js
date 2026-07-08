@@ -605,7 +605,7 @@ export default class FetchData {
                     this.worker.onmessage = async (e) => {
                         const { title, url, content, time, delay, error } = e.data;
                         if (!error) {
-                            this.fetchDelay = Process.dynamicParam(time, delay);
+                            this.fetchDelay = Process.DynamicParam(time, delay);
                             resolve(content);
                         }
                         else {
@@ -638,7 +638,7 @@ export default class FetchData {
                 this.worker.onmessage = async (e) => {
                     const { title, url, content, time, delay, error } = e.data;
                     if (!error) {
-                        this.fetchDelay = Process.dynamicParam(time, delay);
+                        this.fetchDelay = Process.DynamicParam(time, delay);
                         resolve({ url, content });
                     }
                     else {
@@ -682,7 +682,7 @@ export default class FetchData {
 
                 if (!error) {
                     const { resolve } = resolvers.get(index);
-                    this.fetchDelay = Process.dynamicParam(time, delay);
+                    this.fetchDelay = Process.DynamicParam(time, delay);
 
                     const standardTitle = this.normalizeName(title, index);
                     const postDom = Lib.domParse(content);
@@ -771,7 +771,7 @@ export default class FetchData {
                         if (!error) {
                             const { resolve } = resolvers.get(index);
 
-                            this.fetchDelay = Process.dynamicParam(time, delay);
+                            this.fetchDelay = Process.DynamicParam(time, delay);
                             const contentJson = JSON.parse(content);
 
                             if (contentJson) {
