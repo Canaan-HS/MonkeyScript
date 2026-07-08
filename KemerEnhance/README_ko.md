@@ -11,6 +11,7 @@
 3. 다음 사이트 방문
    - [kemono](https://kemono.cr/)
    - [coomer](https://coomer.st/)
+   - [pawchive](https://pawchive.pw/)
    - [nekohouse](https://nekohouse.su/)
 
 ---
@@ -65,14 +66,6 @@ KeyScroll:
 
 [1] 애니메이션 프레임 스크롤
 [2] 간격 스크롤
-
-CardText:
-[1] 게시물 미리보기 페이지에서 미리보기 카드 텍스트 숨김, 마우스 이동 시 복원
-[2] 게시물 미리보기 페이지에서 미리보기 카드 텍스트 흐리게, 마우스 이동 시 복원
-
-CardZoom:
-[1] 미리보기 카드 확대 [v0.0.46 이전 버전과 동일]
-[2] 미리보기 카드 확대 + 호버 시 확대/축소
 
 VideoBeautify:
 [1] Download 영역의 다운로드 링크를 비디오 상단에 제목으로 복사, 상단 제목 클릭으로 다운로드 가능, 또는 Download 영역으로 스크롤하여 다운로드
@@ -136,26 +129,26 @@ OriginalImage:
 
 호환성 권장 사항:
 
-- **CacheFetch 캐시 간섭 방지**  
-  - 항상 최신 API 데이터를 요청해야 하고 캐시에 덮어쓰기 되길 원하지 않을 경우, Fetch 요청에 다음과 같은 커스텀 헤더를 추가하세요:  
+- **CacheFetch 캐시 간섭 방지**
+  - 항상 최신 API 데이터를 요청해야 하고 캐시에 덮어쓰기 되길 원하지 않을 경우, Fetch 요청에 다음과 같은 커스텀 헤더를 추가하세요:
     ```
     X-Bypass-CacheFetch: true
     ```
   - 스크립트가 해당 헤더를 감지하면 내부 캐시 로직을 우회하고 실제 요청을 전송합니다.
 
-- **LinkBeautify 가 Download 블록을 수정하는 것 방지**  
-  - 기본적으로 스크립트는 Downloads 블록에 미화 태그를 추가합니다.  
-  - 원본 DOM을 추출해야 할 경우, 다음 필터를 적용하세요:  
+- **LinkBeautify 가 Download 블록을 수정하는 것 방지**
+  - 기본적으로 스크립트는 Downloads 블록에 미화 태그를 추가합니다.
+  - 원본 DOM을 추출해야 할 경우, 다음 필터를 적용하세요:
     ```css
-    :not([beautify])
+    :not([beautify]);
     ```
 
-- **OriginalImage 가 Files 블록을 덮어쓰는 것 방지**  
-  - 스크립트는 미리보기 이미지를 원본으로 교체할 수 있으며, 이는 DOM 구조에 영향을 줍니다.  
-  - 안정적으로 파일 출처를 확보하려면 다음을 권장합니다:  
+- **OriginalImage 가 Files 블록을 덮어쓰는 것 방지**
+  - 스크립트는 미리보기 이미지를 원본으로 교체할 수 있으며, 이는 DOM 구조에 영향을 줍니다.
+  - 안정적으로 파일 출처를 확보하려면 다음을 권장합니다:
     ```javascript
     // 예시
-    document.querySelector("a, rc, img")
+    document.querySelector("a, rc, img");
     ```
   - 노드의 `.href || .src` 를 확인하여 호환성을 보장하세요.
 
@@ -163,15 +156,14 @@ OriginalImage:
 
 ## **📦 버전 정보**
 
-**배포 버전: 2025.09.26-Beta**
+**배포 버전: 2026.07.08**
 
 ### **업데이트 내용**
-1. 도구 라이브러리 업데이트
-2. 이름 변경: FixArtist -> BetterPostCard
-3. BetterPostCard에 `previewAbove` 설정 추가. 기본값은 위쪽에 표시되며, false로 설정하면 아래쪽에 표시됨
-4. BetterThumbnail 추가. attachments 유형을 직접 표시 (nekohouse 미지원) [실험적]
+
+1. pawchive 지원 (전체 테스트 미완료)
 
 ### **알려진 문제**
+
 1. 가끔 페이지 로드 속도가 기능 초기화보다 늦어서 기능이 작동하지 않을 수 있음. 보통 새로고침으로 해결 가능.
 
 ---
