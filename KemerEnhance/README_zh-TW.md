@@ -11,6 +11,7 @@
 3. 前往
    - [kemono](https://kemono.cr/)
    - [coomer](https://coomer.st/)
+   - [pawchive](https://pawchive.pw/)
    - [nekohouse](https://nekohouse.su/)
 
 ---
@@ -65,14 +66,6 @@ KeyScroll:
 
 [1] 動畫幀滾動
 [2] 間隔滾動
-
-CardText:
-[1] 帖子預覽頁面，預覽卡文字隱藏，滑鼠移動過去後恢復
-[2] 帖子預覽頁面，預覽卡文字淡化，滑鼠移動過去後恢復
-
-CardZoom:
-[1] 預覽卡放大 [ v0.0.46 以前的都是他 ]
-[2] 預覽卡放大 + 懸浮縮放
 
 VideoBeautify:
 [1] 將 Download 的區域的下載連結，複製到影片的上方作為標題，可直接點上方標題下載，或滾動到 Download 區域下載
@@ -136,26 +129,26 @@ OriginalImage:
 
 相容性建議：
 
-- **避免 CacheFetch 緩存干擾**  
-  - 若需要完整請求最新 API 內容，而非被快取覆蓋，可在 Fetch 請求中加上自訂標頭：  
+- **避免 CacheFetch 緩存干擾**
+  - 若需要完整請求最新 API 內容，而非被快取覆蓋，可在 Fetch 請求中加上自訂標頭：
     ```
     X-Bypass-CacheFetch: true
     ```
   - 腳本檢測到該標頭時，將繞過內部快取邏輯，直接發送實際請求。
 
-- **避免 LinkBeautify 修改 Download 區塊**  
-  - 預設情況下，腳本會為 Downloads 區塊加上美化標記。  
-  - 若你需要抓取原始 DOM，請額外過濾：  
+- **避免 LinkBeautify 修改 Download 區塊**
+  - 預設情況下，腳本會為 Downloads 區塊加上美化標記。
+  - 若你需要抓取原始 DOM，請額外過濾：
     ```css
-    :not([beautify])
+    :not([beautify]);
     ```
 
-- **避免 OriginalImage 改寫 Files 區塊**  
-  - 腳本可能將預覽圖替換為原始圖，影響節點結構。  
-  - 若要穩定取得檔案來源，建議使用：  
+- **避免 OriginalImage 改寫 Files 區塊**
+  - 腳本可能將預覽圖替換為原始圖，影響節點結構。
+  - 若要穩定取得檔案來源，建議使用：
     ```javascript
     // 例子
-    document.querySelector("a, rc, img")
+    document.querySelector("a, rc, img");
     ```
   - 並查找節點的 `.href || .src` 以確保兼容。
 
@@ -163,19 +156,14 @@ OriginalImage:
 
 ## **📦 版本資訊**
 
-**發佈版本：2025.10.13-Beta**
+**發佈版本：2026.07.08**
 
 ### **更新內容**
-1. 更新工具庫
-2. 修復已知 Bug
-3. BetterThumbnail 移除對 nekohouse 的支援
-4. BetterPostCard 保存數據轉移 [實驗性]
-5. TextToLink 添加，Mega 雲端連結自動解密 [實驗性]
-6. CacheFetch 實現修改，並加入長時緩存 (如果有記憶體的問題請反饋) [實驗性]
 
-Mega 連結解析僅適用一些簡單的頁面格式，且只會對純文本生效，這是一個附加功能沒生效也不用在意
+1. 適配 pawchive (未全面測試)
 
 ### **已知問題**
+
 1. 有時頁面載入速度，會慢於代碼功能載入，會導致功能失效，通常重新整理即可解決
 
 ---
