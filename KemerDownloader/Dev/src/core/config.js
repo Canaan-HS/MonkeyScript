@@ -86,7 +86,7 @@ const Process = {
         "mxf", "ogg",
     ],
     Lock: false,
-    dynamicParam: Lib.createNetworkObserver({
+    DynamicParam: Lib.createNetworkObserver({
         MAX_Delay: 1500,
         MIN_CONCURRENCY: 5,
         MAX_CONCURRENCY: 10,
