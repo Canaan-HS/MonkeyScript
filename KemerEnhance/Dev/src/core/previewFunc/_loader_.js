@@ -12,7 +12,7 @@ const previewLoader = {
     async BetterThumbnail(...args) {
         const value = BetterThumbnailFactory().BetterThumbnail;
         value(...args);
-        Object.defineProperty(this, value.name, { value, writable: false });
+        Object.defineProperty(previewLoader, value.name, { value, writable: false });
     },
 };
 
