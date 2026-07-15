@@ -67,7 +67,7 @@ export default function Downloader() {
 
         /* 重置所有狀態 */
         function reset() {
-            Config.CompleteClose && window.close();
+            Config.CompleteClose && window.close(); // 無判斷是否全部完成, 直接關閉
             Config.ResetScope && (DConfig.Scope = undefined);
 
             worker.terminate(); // 清理後台請求工作
@@ -84,22 +84,22 @@ export default function Downloader() {
         (function getHomeData() {
             comicName = Lib.nameFilter(Lib.$q("#gj").$text() || Lib.$q("#gn").$text()); // 取得漫畫名稱
 
-            const ct6 = Lib.$q("#gdc .ct6"); // 嘗試 取得圖片集 標籤
+            const ct6 = Lib.$q("#gdc .ct6:not([confirmed])"); // 嘗試 取得圖片集 標籤
             const cacheData = Lib.getSession(DConfig.GetKey()); // 嘗試獲取緩存數據
 
-            /* 判斷是否為圖片集 (每次下載都可重新設置) */
+            // 判斷是否為圖片集 (每次下載都可重新設置)
             if (ct6) {
                 const yes = confirm(Transl("檢測到圖片集 !!\n\n是否反轉排序後下載 ?"));
                 DConfig.SortReverse = yes ? true : false;
+                // 如果要避免重新下載時, 再次確認, 可以將標籤加上 confirmed 屬性
+                // ct6.$sAttr("confirmed", true);
             };
 
-            /* 當存在緩存時, 直接啟動下載任務 */
+            // 當存在緩存時, 直接啟動下載任務
             if (cacheData) {
                 startTask(cacheData);
                 return;
             };
-
-            /* ----- 數據請求 ----- */
 
             const pages = getTotal(Lib.$qa("#gdd td.gdt2")); // 取得總共頁數
 
@@ -134,7 +134,7 @@ export default function Downloader() {
                         if (processed.has(url)) continue;
                         processed.add(url);
 
-                        // ? 有使用名稱的話, 嘗試取得名稱
+                        // ? 有使用名稱的話, 嘗試取得名稱 (也能從圖片連結尾端取得名稱)
                         const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
                         box.push({ url, name: matchName?.[2] ? matchName[2] : "" });
                     };
