@@ -134,6 +134,7 @@ export default function Downloader() {
                         if (processed.has(url)) continue;
                         processed.add(url);
 
+                        // Todo: 嘗試改成使用 parseImgData 時解析名稱
                         // ? 有使用名稱的話, 嘗試取得名稱 (也能從圖片連結尾端取得名稱)
                         const matchName = Config.UseName ? link.$q("div[title]").title?.match(nameRegex) : "";
                         box.push({ url, name: matchName?.[2] ? matchName[2] : "" });
@@ -437,6 +438,10 @@ export default function Downloader() {
                 for (const { Index, Name, PageUrl, ImgUrl } of dataMap.values()) {
                     if (enforce) break;
 
+                    while (task >= $thread) { // 根據線程數量暫時卡住迴圈
+                        await Lib.sleep($delay);
+                    }
+
                     if (reGet) {
                         Lib.log(PageUrl, { dev: Config.Dev, group: `${Transl("重新取得數據")} (${reTry})` });
                         const result = await reGetImageData(Index, Name, PageUrl);
@@ -450,11 +455,6 @@ export default function Downloader() {
                             request(Index, Name, ImgUrl);
                         }
                     } else {
-
-                        while (task >= $thread) { // 根據線程數量暫時卡住迴圈
-                            await Lib.sleep($delay);
-                        }
-
                         request(Index, Name, ImgUrl);
                     }
                 }
