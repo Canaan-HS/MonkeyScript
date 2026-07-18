@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Syntax
-// @version      2025.02.16
+// @version      2026.07.18
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax
 // @namespace    https://greasyfork.org/users/989635
@@ -915,43 +915,37 @@ const Lib = (() => {
     };
     function parseExpire(expireStr) {
         // 傳入空值或只包含空白的字串，返回 0
-        if (!expireStr || !expireStr.trim()) {
-            return 0;
-        }
+        if (!expireStr?.trim()) return 0;
 
         // 檢查是否為絕對時間格式 "YYYY-MM-DD HH:MM:SS"
-        const absoluteDatePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
-        if (absoluteDatePattern.test(expireStr)) {
-            const dateObj = new Date(expireStr);
-            const time = dateObj.getTime();
-            if (!isNaN(time)) {
-                return Math.floor(time / 1000);
-            }
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(expireStr)) {
+            const time = Date.parse(expireStr);
+            if (!isNaN(time)) return Math.floor(time / 1000);
         }
 
         // 解析特定格式字串, 計算到期時間
-        const now = new Date();
-        const pattern = /(\d+)\s*([YyMDdhms])/g;
-        const matches = [...expireStr.matchAll(pattern)];
-        if (matches.length === 0) return 0;
-
+        let matching = false;
         const durations = { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+        const unitMap = { y: "years", d: "days", h: "hours", s: "seconds" };
 
-        for (const match of matches) {
+        for (const match of expireStr.matchAll(/(\d+)\s*([YyMDdhms])/g)) {
+            matching = true;
+
             const value = parseInt(match[1], 10);
             const unit = match[2];
 
-            switch (unit.toLowerCase()) {
-                case 'y': durations.years += value; break;
-                case 'd': durations.days += value; break;
-                case 'h': durations.hours += value; break;
-                case 's': durations.seconds += value; break;
-                default:
-                    if (unit === 'M') durations.months += value;
-                    else if (unit === 'm') durations.minutes += value;
+            if (unit === "M") {
+                durations.months += value;
+            } else if (unit === "m") {
+                durations.minutes += value;
+            } else {
+                durations[unitMap[unit.toLowerCase()]] += value;
             }
         }
 
+        if (!matching) return 0;
+
+        const now = new Date();
         now.setFullYear(now.getFullYear() + durations.years);
         now.setMonth(now.getMonth() + durations.months);
         now.setDate(now.getDate() + durations.days);
@@ -979,6 +973,7 @@ const Lib = (() => {
         try {
             item = JSON.parse(item);
 
+            // 不使用 typeof 來判斷, 因為 typeof null === "object", 這會誤判
             const isObject = item instanceof Object;
             if (isObject && item.expire && Date.now() > item.expire * 1000) {
                 remover(key);
@@ -1001,24 +996,29 @@ const Lib = (() => {
             return unPack;
         }
         catch {
-            if (typeof item === "object" && sugar.isEmpty(item)) return error;
+            if (item instanceof Object && sugar.isEmpty(item)) return error;
             if (typeof item === "string" && item.startsWith("[object")) return error;
             return item;
         }
     };
-    const delLocal = localStorage.removeItem.bind(localStorage);
-    const setLocal = localStorage.setItem.bind(localStorage);
-    const getLocal = localStorage.getItem.bind(localStorage);
-    const delSession = sessionStorage.removeItem.bind(sessionStorage);
-    const setSession = sessionStorage.setItem.bind(sessionStorage);
-    const getSession = sessionStorage.getItem.bind(sessionStorage);
+
+    const createStorageCall = (name, engine) => ({
+        [`del${name}`]: engine.del,
+        [`set${name}`]: (key, value, expireStr) =>
+            setStorage(engine.set, key, value, { expireStr }),
+        [`get${name}`]: (key, error, autoRemove) =>
+            getStorage(engine.get, key, error, { autoRemove, remover: engine.del }),
+    });
+
+    const createStorageEngine = (storage) => ({
+        del: storage.removeItem.bind(storage),
+        set: storage.setItem.bind(storage),
+        get: storage.getItem.bind(storage),
+    });
+
     const storageCall = {
-        delLocal: (key) => delLocal(key),
-        setLocal: (key, value, expireStr) => setStorage(setLocal, key, value, { expireStr }),
-        getLocal: (key, error, autoRemove) => getStorage(getLocal, key, error, { autoRemove, remover: delLocal }),
-        delSession: (key) => delSession(key),
-        setSession: (key, value, expireStr) => setStorage(setSession, key, value, { expireStr }),
-        getSession: (key, error, autoRemove) => getStorage(getSession, key, error, { autoRemove, remover: delSession })
+        ...createStorageCall("Local", createStorageEngine(localStorage)),
+        ...createStorageCall("Session", createStorageEngine(sessionStorage)),
     };
 
     /**
@@ -2092,6 +2092,29 @@ const Lib = (() => {
              * const Fill = getFill(box);
              */
             getFill: (pages) => Math.max(2, `${pages}`.length),
+
+            /**
+             * @description 獲取數據的指紋 (模擬 md5 hash, 並非真實 md5 hash)
+             * @param {string|number|object} data - 要獲取指紋的數據
+             * @returns {string} - 返回指紋哈希
+             */
+            getFingerprint(data) {
+                // 基本數據類型與空值都有處理, 特殊數據類型則不做處理, 會直接報錯
+                data = JSON.stringify(storageSerialize[_type(data)]?.(data) ?? data ?? "null");
+
+                let h1 = 1779033703, h2 = 3024733165, h3 = 3362453630, h4 = 2197574221;
+                for (let i = 0, k; i < data.length; i++) {
+                    k = data.charCodeAt(i);
+                    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+                    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+                    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+                    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+                }
+
+                return [h1, h2, h3, h4].map(v =>
+                    (((v ^ (v >>> 16)) * 2246822507) >>> 0).toString(16).padStart(8, '0')
+                ).join('');
+            },
 
             /**
              * @description 解析網址字串的副檔名
