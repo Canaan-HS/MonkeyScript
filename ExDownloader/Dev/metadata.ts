@@ -29,7 +29,7 @@ export default `
 
 // @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1755349/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1878572/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
