@@ -43,7 +43,7 @@
      *      Headers: Object | Function,
      *      Data: Object | Function,
      *      Cookie: Object | Function,
-     *      verifyStatus: (response) => { // 驗證簽到狀態回傳 0=success, 1=checked, 2=failed } // 必要
+     *      verifyStatus: (response) => { 在簽到觸發後執行任意程式 (可選), 最終必要回傳 0=success, 1=checked, 2=failed }
      */
 
     const taskList = [
@@ -74,9 +74,28 @@
         {
             Name: "Android 台灣中文網",
             Method: "GET",
-            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=e7ffa4a2&inajax=1", // 每過一段時間就會變更 formhash=後面字串
+            // 每過一段時間就會變更 formhash=後面字串
+            API: `https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=${Lib.getV("apktw_formhash", "e7ffa4a2")}&inajax=1`,
             Page: "https://apk.tw/forum.php",
-            verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
+            verifyStatus(response) {
+                let status = response?.includes("wb.gif") ? 0 : 2;
+
+                // 自動取得 formhash (測試)
+                if (status === 2) {
+                    requestTask.send({
+                        API: "https://apk.tw/forum.php",
+                        Method: "GET",
+                        responseType: "document",
+                        verifyStatus(data) {
+                            const formhashMatch = data.$q("#my_amupper")?.$gAttr("onclick")?.match(/formhash=([^&]+)/);
+                            if (formhashMatch) Lib.setV("apktw_formhash", formhashMatch[1]); // 僅更新數據, 不主動觸發簽到 (如果要主動觸發簽到, 需要手動刪除簽到狀態標籤, 管理上更麻煩)
+                            else { status = 1 } // 沒有取到通常代表登入狀態過期, 讓他顯示已簽, 避免一直觸發重試 (個人喜好, 可以不這樣)
+                        }
+                    }, false)
+                }
+
+                return status;
+            }
         },
         {
             Name: "GenshInimpact",
@@ -133,16 +152,20 @@
 
     const requestTask = (() => {
 
+        // 簽到成功才紀錄
         const showStatus = {
-            0: (name) => Qmsg.success(`${name} 簽到成功`),
-            1: (name) => Qmsg.info(`${name} 已經簽到`),
-            2: (name) => {
-                Qmsg.error(`${name} 簽到失敗`);
-                Lib.delV(`${name}-CheckIn`); // 刪除簽到成功標籤
-            }
+            0(name) {
+                Qmsg.success(`${name} 簽到成功`);
+                Lib.setV(`${name}-CheckIn`, true);
+            },
+            1(name) {
+                Qmsg.info(`${name} 已經簽到`);
+                Lib.setV(`${name}-CheckIn`, true);
+            },
+            2: (name) => Qmsg.error(`${name} 簽到失敗`)
         };
 
-        const deBug = (name="Unknown", result) => {
+        const deBug = (name = "Unknown", result) => {
             Lib.log(
                 Object.assign({ name }, Lib.type(result) === "Object" ? result : { response: result }),
                 { group: `${name} 簽到除錯`, dev: config.Dev },
@@ -220,13 +243,6 @@
             }
         }
     })();
-
-    // Todo 等待後續測試是否能直接獲取到, 新的 API 資訊
-    // requestTask.send({
-        // API: "https://apk.tw/forum.php", Method: "GET", responseType: "document", verifyStatus(data) {
-            // Lib.log(data.$q("#ppered_menu"));
-        // }
-    // }, false)
 
     const timeUtils = {
         // 判斷是否是前一天
@@ -384,20 +400,18 @@
                 const recordTime = timer.RecordTime ? new Date(timer.RecordTime) : null;
 
                 // 執行簽到工作
-                const checkInWork = () => {
+                const checkInWork = async () => {
                     if (!navigator.onLine) return; // 離線不執行
                     destroyReset(false); // 簽到時停止詢輪
 
                     currentTime = new Date(); // 更新當前時間
 
-                    let index = 0;
                     const enabledTask = new Set(enabledTaskList);
 
                     for (const task of taskList) {
                         if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
                         if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
 
-                        // ! 實驗性
                         if (task.AutoOpen && task.Page) {
                             try {
                                 if (Lib.domain !== new URL(task.Page).hostname) {
@@ -405,16 +419,14 @@
                                     return;
                                 }
                             } catch {
-                                // 失敗當作成功 靜默處理
+                                // 失敗當作成功 靜默處理 (因為是參數錯誤, 不是網路問題)
                                 Lib.setV(`${task.Name}-CheckIn`, true);
                                 continue;
                             }
                         };
 
-                        setTimeout(() => {
-                            requestTask.send(task);
-                            Lib.setV(`${task.Name}-CheckIn`, true);
-                        }, Math.max(index++ * 2000)); // 每個任務間隔 2 秒
+                        // 改為同步執行 (測試)
+                        await requestTask.send(task);
                     }
 
                     // ? 嘗試確保所有任務都簽到
