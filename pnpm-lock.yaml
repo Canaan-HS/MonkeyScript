@@ -31,7 +31,7 @@ importers:
         version: 7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)
       vite-plugin-monkey:
         specifier: ^7.1.9
-        version: 7.1.9(postcss@8.5.19)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0))
+        version: 7.1.9(postcss@8.5.20)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0))
 
 packages:
 
@@ -547,8 +547,8 @@ packages:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
     engines: {node: '>=10'}
 
-  nanoid@3.3.15:
-    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
+  nanoid@3.3.16:
+    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -573,8 +573,8 @@ packages:
     peerDependencies:
       postcss: ^8.0.0
 
-  postcss@8.5.19:
-    resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
+  postcss@8.5.20:
+    resolution: {integrity: sha512-lW616l85ucIQL+FocMmL7pQFPqBmwejrCMg+iPxyImlrANNJG9NHq/RkyCZopDhd8C3LA03PHRJDjkbGu8vvug==}
     engines: {node: ^10 || ^12 || >=14}
 
   prettier@3.9.5:
@@ -1041,7 +1041,7 @@ snapshots:
 
   mrmime@2.0.1: {}
 
-  nanoid@3.3.15: {}
+  nanoid@3.3.16: {}
 
   open@10.2.0:
     dependencies:
@@ -1056,17 +1056,17 @@ snapshots:
 
   picomatch@4.0.5: {}
 
-  postcss-url@10.1.4(postcss@8.5.19):
+  postcss-url@10.1.4(postcss@8.5.20):
     dependencies:
       make-dir: 3.1.0
       mime: 2.5.2
       minimatch: 3.1.5
-      postcss: 8.5.19
+      postcss: 8.5.20
       xxhashjs: 0.2.2
 
-  postcss@8.5.19:
+  postcss@8.5.20:
     dependencies:
-      nanoid: 3.3.15
+      nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -1128,7 +1128,7 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  vite-plugin-monkey@7.1.9(postcss@8.5.19)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)):
+  vite-plugin-monkey@7.1.9(postcss@8.5.20)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)):
     dependencies:
       acorn: 8.17.0
       acorn-walk: 8.3.5
@@ -1139,7 +1139,7 @@ snapshots:
       mrmime: 2.0.1
       open: 10.2.0
       picocolors: 1.1.1
-      postcss-url: 10.1.4(postcss@8.5.19)
+      postcss-url: 10.1.4(postcss@8.5.20)
       systemjs: 6.15.1
     optionalDependencies:
       vite: 7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)
@@ -1151,7 +1151,7 @@ snapshots:
       esbuild: 0.28.1
       fdir: 6.5.0(picomatch@4.0.5)
       picomatch: 4.0.5
-      postcss: 8.5.19
+      postcss: 8.5.20
       rollup: 4.62.2
       tinyglobby: 0.2.17
     optionalDependencies:
