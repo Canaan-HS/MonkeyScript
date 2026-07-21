@@ -31,8 +31,7 @@ export default `
 
 // @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1709491/Syntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://update.greasyfork.org/scripts/495339/1878572/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
