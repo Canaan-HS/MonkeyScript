@@ -24,7 +24,7 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.6.0/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1745401/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1878573/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
@@ -74,7 +74,7 @@
         {
             Name: "Android 台灣中文網",
             Method: "GET",
-            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=e7ffa4a2&inajax=1", // 似乎每過一段時間就會變更 (改 formhash=後面這串)
+            API: "https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=e7ffa4a2&inajax=1", // 每過一段時間就會變更 formhash=後面字串
             Page: "https://apk.tw/forum.php",
             verifyStatus: (response) => response?.includes("wb.gif") ? 0 : 2
         },
@@ -124,7 +124,7 @@
     });
 
     const config = {
-        Dev: false,
+        Dev: false, // 開發模式
         TaskKey: "RunTasks", // 任務列表 Key
         TimerKey: "TaskTimer", // 時間戳 Key
         RegisterKey: "LeaderId", // 當前註冊 Key
@@ -142,9 +142,10 @@
             }
         };
 
-        const deBug = (name, result) => {
+        const deBug = (name="Unknown", result) => {
             Lib.log(
-                Object.assign({ name }, Lib.type(result) === "Object" ? result : { response: result })
+                Object.assign({ name }, Lib.type(result) === "Object" ? result : { response: result }),
+                { group: `${name} 簽到除錯`, dev: config.Dev },
             ).table;
             return result;
         };
@@ -154,62 +155,78 @@
                 ? obj() : obj;
 
         return {
-            send({ API, Method = "POST", Headers, Cookie, Data, Name, verifyStatus }) {
+            // 傳送簽到請求
+            send({ API, Method = "POST", Headers, Cookie, Data, responseType = "text", Name, verifyStatus }, msgShow = true) {
                 let checkIn = undefined;
 
                 try {
-                    checkIn = Qmsg.loading(`${Name} 簽到中`);
+                    if (msgShow) checkIn = Qmsg.loading(`${Name} 簽到中`);
                 } catch (error) { }
 
-                const params = {
-                    url: API,
-                    method: Method,
-                    onload(response) {
-                        checkIn?.close();
+                return new Promise((resolve, reject) => {
+                    const params = {
+                        url: API,
+                        method: Method,
+                        responseType,
+                        onload(response) {
+                            checkIn?.close();
 
-                        if (response.status < 200 || response.status > 300) {
-                            showStatus[2](Name);
-                            return;
+                            if (response.status < 200 || response.status > 300) {
+                                if (msgShow) showStatus[2](Name);
+                                return resolve(response);
+                            }
+
+                            let status = undefined;
+
+                            try {
+                                status = verifyStatus?.(deBug(Name, JSON.parse(response.response)));
+                            } catch {
+                                status = verifyStatus?.(deBug(Name, response.response));
+                            }
+
+                            if (msgShow) {
+                                status != null
+                                    ? showStatus[status](Name)
+                                    : showStatus[2](Name);
+                            }
+
+                            resolve(response);
+                        },
+                        onerror(response) {
+                            checkIn?.close();
+
+                            try {
+                                deBug(Name, JSON.parse(response.response));
+                            } catch {
+                                deBug(Name, response.response);
+                            } finally {
+                                if (msgShow) showStatus[2](Name);
+                                resolve(response);
+                            }
                         }
+                    };
 
-                        let status = undefined;
+                    // 確保參數不為空, 才傳參數
+                    const data = objectVerify(Data);
+                    const cookie = objectVerify(Cookie);
+                    const headers = objectVerify(Headers);
 
-                        try {
-                            status = verifyStatus(deBug(Name, JSON.parse(response.response)));
-                        } catch {
-                            status = verifyStatus(deBug(Name, response.response));
-                        }
+                    if (data != null) params.data = data;
+                    if (cookie != null) params.cookie = cookie;
+                    if (headers != null) params.headers = headers;
 
-                        status != null
-                            ? showStatus[status](Name)
-                            : showStatus[2](Name);
-                    },
-                    onerror(response) {
-                        checkIn?.close();
-
-                        try {
-                            deBug(Name, JSON.parse(response.response));
-                        } catch {
-                            deBug(Name, response.response);
-                        } finally {
-                            showStatus[2](Name);
-                        }
-                    }
-                };
-
-                // 確保參數不為空, 才傳參數
-                const data = objectVerify(Data);
-                const cookie = objectVerify(Cookie);
-                const headers = objectVerify(Headers);
-
-                if (data != null) params.data = data;
-                if (cookie != null) params.cookie = cookie;
-                if (headers != null) params.headers = headers;
-
-                GM_xmlhttpRequest(params);
+                    GM_xmlhttpRequest(params);
+                })
             }
         }
     })();
+
+    // Todo 等待後續測試是否能直接獲取到, 新的 API 資訊
+    // requestTask.send({
+        // API: "https://apk.tw/forum.php", Method: "GET", responseType: "document", verifyStatus(data) {
+            // Lib.log(data.$q("#ppered_menu"));
+        // }
+    // }, false)
 
     const timeUtils = {
         // 判斷是否是前一天
