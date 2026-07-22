@@ -1,4 +1,4 @@
-import { Lib, md5 } from "../services/client.js";
+import { Lib } from "../services/client.js";
 import { General, FetchSet, Process } from "./config.js";
 
 import Parse from "../utils/parse.js";
@@ -258,7 +258,7 @@ export default class FetchData {
 
                     // 名稱為 空 與 連結相同 時, 用哈希值名稱
                     parsed[
-                        name && name !== href ? name : md5(href).slice(0, 16)
+                        name && name !== href ? name : Lib.getFingerprint(href).slice(0, 16)
                     ] = pass ? {
                         [Transl("密碼")]: pass,
                         [Transl("連結")]: href
