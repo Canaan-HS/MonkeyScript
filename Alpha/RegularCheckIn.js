@@ -40,6 +40,7 @@
      *      API: "簽到 API 網址", // 必要
      *      Page: "簽到網址",
      *      AutoOpen: Boolean, // 依賴 Page 參數 (以開啟對應 Page 來觸發簽到)
+     *      Async: Boolean, // 允許不阻塞下一個任務
      *      Headers: Object | Function,
      *      Data: Object | Function,
      *      Cookie: Object | Function,
@@ -69,13 +70,14 @@
             Page: "https://jkforum.net/",
             Headers: { "Content-Type": "application/json" },
             Data: JSON.stringify({ "taskId": "614115862249472" }),
+            Async: true,
             verifyStatus: (response) => response === undefined ? 1 : 0
         },
         {
             Name: "Android 台灣中文網",
             Method: "GET",
             // 每過一段時間就會變更 formhash=後面字串
-            API: `https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=${Lib.getV("apktw_formhash", "e7ffa4a2")}&inajax=1`,
+            API: `https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=${Lib.getV("apktw_formhash", "")}&inajax=1`,
             Page: "https://apk.tw/forum.php",
             verifyStatus(response) {
                 let status = response?.includes("wb.gif") ? 0 : 2;
@@ -101,18 +103,21 @@
             Name: "GenshInimpact",
             API: "https://sg-hk4e-api.hoyolab.com/event/sol/sign?act_id=e202102251931481",
             Page: "https://act.hoyolab.com/ys/event/signin-sea-v3/index.html?act_id=e202102251931481",
+            Async: true,
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
             Name: "HonkaiStarRail",
             API: "https://sg-public-api.hoyolab.com/event/luna/os/sign?act_id=e202303301540311",
             Page: "https://act.hoyolab.com/bbs/event/signin/hkrpg/index.html?act_id=e202303301540311",
+            Async: true,
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
             Name: "HonkaiImpact3rd",
             API: "https://sg-public-api.hoyolab.com/event/mani/sign?act_id=e202110291205111",
             Page: "https://act.hoyolab.com/bbs/event/signin-bh3/index.html?act_id=e202110291205111",
+            Async: true,
             verifyStatus: ({ retcode }) => retcode === 0 ? 0 : retcode === -5003 ? 1 : 2
         },
         {
@@ -126,6 +131,7 @@
             Name: "LeveCheckIn",
             API: "https://api-pass.levelinfinite.com/api/rewards/proxy/lipass/Points/DailyCheckIn?task_id=15",
             Page: "https://pass.levelinfinite.com/rewards?points=/points/",
+            Async: true,
             verifyStatus: ({ code }) => code === 0 ? 0 : code === 1001009 ? 1 : 2
         },
         {
@@ -156,11 +162,11 @@
         const showStatus = {
             0(name) {
                 Qmsg.success(`${name} 簽到成功`);
-                Lib.setV(`${name}-CheckIn`, true);
+                Lib.setV(`${name}-Checked`, true);
             },
             1(name) {
                 Qmsg.info(`${name} 已經簽到`);
-                Lib.setV(`${name}-CheckIn`, true);
+                Lib.setV(`${name}-Checked`, true);
             },
             2: (name) => Qmsg.error(`${name} 簽到失敗`)
         };
@@ -406,11 +412,12 @@
 
                     currentTime = new Date(); // 更新當前時間
 
-                    const enabledTask = new Set(enabledTaskList);
+                    let runningTask = [];
+                    let enabledTask = new Set(enabledTaskList);
 
                     for (const task of taskList) {
                         if (!enabledTask.has(task.Name)) continue; // 判斷是否啟用
-                        if (Lib.getV(`${task.Name}-CheckIn`)) continue; // 判斷是否已經簽到
+                        if (Lib.getV(`${task.Name}-Checked`)) continue; // 判斷是否已經簽到
 
                         if (task.AutoOpen && task.Page) {
                             try {
@@ -420,26 +427,35 @@
                                 }
                             } catch {
                                 // 失敗當作成功 靜默處理 (因為是參數錯誤, 不是網路問題)
-                                Lib.setV(`${task.Name}-CheckIn`, true);
+                                Lib.setV(`${task.Name}-Checked`, true);
                                 continue;
                             }
                         };
 
-                        // 改為同步執行 (測試)
-                        await requestTask.send(task);
+                        // 存儲運行中任務 Promise
+                        runningTask.push(
+                            // 沒有啟用就會等到自身任務完成, 才進行下一個簽到
+                            task.Async
+                                ? requestTask.send(task)
+                                : await requestTask.send(task)
+                        );
                     }
 
-                    // ? 嘗試確保所有任務都簽到
+                    // 確保所有任務都簽到
+                    await Promise.allSettled(runningTask);
+
                     const retryCount = Lib.getV("ReTry-Count", 0);
-                    const allCheckIn = enabledTaskList.every(name => Lib.getV(`${name}-CheckIn`));
+                    const allCheckIn = enabledTaskList.every(name => Lib.getV(`${name}-Checked`));
 
                     if (allCheckIn || retryCount >= 4) {
-                        enabledTask.clear();
                         setTimestamp(currentTime); // 更新時間戳
+
+                        runningTask = null;
+                        enabledTask = null;
 
                         Lib.delV("ReTry-Count");
                         enabledTaskList.forEach(name => { // 清除簽到記錄
-                            Lib.delV(`${name}-CheckIn`);
+                            Lib.delV(`${name}-Checked`);
                         })
                     } else {
                         Lib.setV("ReTry-Count", retryCount + 1);
