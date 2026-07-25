@@ -69,6 +69,7 @@ const FetchSet = {
 /* 不懂不要改 */
 const Process = {
     IsNeko: Lib.$domain.startsWith("nekohouse"),
+    IsPawchive: Lib.$domain.startsWith("pawchive"),
     ImageExts: [
         "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic",
         "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2",
