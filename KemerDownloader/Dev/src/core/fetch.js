@@ -44,7 +44,10 @@ export default class FetchData {
         // 帖子內部 API 連結
         this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
 
-        // 帖子配置 API (獲取基本數據)
+        // 保存元數據
+        this.profile = null;
+
+        // 帖子配置 API (用於獲取元數據)
         this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
 
         // 下一頁連結
@@ -124,20 +127,31 @@ export default class FetchData {
         // 正規化帖子時間戳 (傳入 Post 的物件)
         this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
 
-        // 適用 kemono 和 coomer 的分類 (data = api 文件數據, serverDict = api 伺服器字典, fillValue = 填充數字的位數)
-        this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
+        /**
+         * @description 適用 kemono 和 coomer 的分類
+         * @param {object} params
+         * @param {string} params.title - 帖子標題
+         * @param {array} params.data - 文件數據
+         * @param {object} params.server - 檔案伺服器
+         * @param {number} params.fillValue - 填充數字的位數 
+         * @returns 
+         */
+        this.kemerCategorize = ({ title, data, server, fillValue }) => {
             let imgNumber = 0;
 
             return data.reduce((acc, file) => {
                 const name = file.name;
                 const path = file.path;
-                const extension = Lib.suffixName(path, "");
 
+                // 排除空數據
+                if (!path) return acc;
+
+                const extension = Lib.suffixName(path, "");
                 if (filterExts.has(extension)) return acc;
 
-                // 如果有伺服器字典, 是非進階抓取模式
-                const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
-                const url = `${server}${path}`;
+                // 如果有檔案伺服器, 是非進階抓取模式
+                const serverPath = server ? `${server}/data` : `${file.server}/data`;
+                const url = `${serverPath}${path}`;
 
                 if (this.isVideo(extension)) {
                     acc.video[name] = `${url}?f=${name}`;
@@ -546,7 +560,7 @@ export default class FetchData {
             const currentPage = +Lib.$q(".pagination-button-current b")?.$text();
             currentPage && (this.currentPage = currentPage);
 
-            // ! 實驗性獲取總頁數
+            // 獲取總頁數
             if (small) {
                 this.totalPages = +small.$text().split(" of ")[1] || 0;
                 this.finalPage = Math.max(Math.ceil(this.totalPages / 50), 1);
@@ -630,7 +644,8 @@ export default class FetchData {
 
                 await this._fetchContent({ content });
             };
-        } else {
+        }
+        else {
             this.worker.postMessage({ title: this.titleCache, url: this.getPreviewAPI(url), time: Date.now(), delay: this.fetchDelay });
 
             // 等待主頁數據
@@ -663,19 +678,16 @@ export default class FetchData {
         const { content } = homeData; // 解構數據
         Lib.log(homeData, { dev: General.Dev, group: "Fetch Content" });
 
-        // 解析處理的數據
+        // 獲取基本數據
+        if (!this.profile) this._getMeta();
+
+        // 解析獲取的數據
         if (Process.IsNeko) {
             let taskCount = 0;
             const tasks = [];
             const resolvers = new Map();
-            const postCount = content.length;
 
-            if (this.metaDict.size === 0) {
-                this.metaDict.set(Transl("作者"), Lib.$q("span[itemprop='name'], fix_name").$text());
-                this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-                this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-                this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-            };
+            if (this.metaDict.size === 0) this._setMeta({ defPostCount: content.length });
 
             this.worker.onmessage = async (e) => {
                 const { index, title, url, content, time, delay, error } = e.data;
@@ -726,19 +738,21 @@ export default class FetchData {
 
             await Promise.allSettled(tasks);
 
-        } else {
+        }
+        else {
             /* ----- 這邊是主頁的數據 ----- */
             let homeJson = JSON.parse(content);
 
             if (homeJson) {
 
                 if (this.metaDict.size === 0) {
-                    let profile = { name: null };
 
-                    if (this.isPost) {
+                    // 如果 沒有取得 profile 需要數據, 且是 Post 頁面, 但非 Pawchive (因為他沒 API), 就用 API 嘗試獲取
+                    if (
+                        (!this.profile.name || !this.profile.post_count) && this.isPost && !Process.IsPawchive
+                    ) {
                         this.worker.postMessage({ url: this.profileAPI });
-
-                        profile = await new Promise((resolve, reject) => {
+                        Object.assign(this.profile, await new Promise((resolve, reject) => {
                             this.worker.onmessage = async (e) => {
                                 const { url, content, error } = e.data;
                                 if (!error) resolve(JSON.parse(content));
@@ -746,20 +760,18 @@ export default class FetchData {
                                     Lib.log(url, { dev: General.Dev, collapsed: false }).error;
                                     await this.tooManyTryAgain(url);
                                     this.worker.postMessage({ url });
-                                };
+                                }
                             }
-                        })
-                    } else {
-                        this.finalPage = Math.min(this.finalPage, 1000); // 該頁面能翻的只有 1000
-                        profile["post_count"] = homeJson.true_count;
+                        }))
                     }
 
-                    this.metaDict.set(Transl("作者"), profile.name);
-                    this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
-                    this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-                    this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
+                    // 非 post 頁面特殊處理
+                    if (!this.isPost) {
+                        this.finalPage = Math.min(this.finalPage, 1000); // 該頁面能翻的只有 1000
+                        this.profile.post_count = homeJson.true_count;
+                    }
 
-                    Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+                    this._setMeta();
                 }
 
                 const tasks = [];
@@ -767,6 +779,7 @@ export default class FetchData {
 
                 this.worker.onmessage = async (e) => {
                     const { index, title, url, content, time, delay, error } = e.data;
+
                     try {
                         if (!error) {
                             const { resolve } = resolvers.get(index);
@@ -775,36 +788,19 @@ export default class FetchData {
                             const contentJson = JSON.parse(content);
 
                             if (contentJson) {
+                                // 這邊是專門用於 API 解析的, 所以哪怕是已經有的數據, 還是要重新解析
+
                                 const post = contentJson.post;
                                 const previews = contentJson.previews || []; // 取得圖片數據
                                 const attachments = contentJson.attachments || []; // 取得下載數據
 
-                                const standardTitle = this.normalizeName(post.title, index);
-                                const classifiedFiles = this.kemerCategorize({
-                                    title: standardTitle,
+                                this._packData({
+                                    index,
+                                    post,
                                     data: [...previews, ...attachments],
-                                    fillValue: Lib.getFill(previews?.length || 1)
-                                });
-
-                                // 生成請求數據 (處理要抓什麼數據)
-                                const generatedData = this.fetchGenerate({
-                                    PostLink: this.getPostURL(post),
-                                    Timestamp: this.normalizeTimestamp(post),
-                                    TypeTag: post.tags,
-                                    ImgLink: classifiedFiles.img,
-                                    VideoLink: classifiedFiles.video,
-                                    DownloadLink: classifiedFiles.other,
-                                    ExternalLink: this.specialLinkParse(post.content)
-                                });
-
-                                // 儲存數據
-                                if (Object.keys(generatedData).length !== 0) {
-                                    this.dataDict.set(standardTitle, generatedData);
-                                };
+                                })
 
                                 resolve();
-                                Lib.title(`（${this.currentPage} - ${++this.progress}）`);
-                                Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
                             } else throw new Error("Json Parse Failed");
                         } else {
                             throw new Error("Request Failed");
@@ -819,19 +815,46 @@ export default class FetchData {
                 // 生成任務
                 homeJson = this.isPost ? homeJson : homeJson.posts;
                 for (const [index, post] of homeJson.entries()) {
-                    tasks.push(new Promise((resolve, reject) => {
-                        resolvers.set(index, { resolve, reject }); // 存儲解析器
 
-                        this.worker.postMessage({
-                            index,
-                            title: post.title,
-                            url: this.getPostAPI(post),
-                            time: Date.now(),
-                            delay: this.fetchDelay
-                        })
-                    }));
+                    if (Process.IsPawchive) {
+                        const file = post.file ? [post.file] : []; // 取得圖片
+                        const attachments = post.attachments || []; // 取得附件
 
-                    await Lib.sleep(this.fetchDelay);
+                        // ! 實驗性
+                        try {
+                            // pawchive 的 tags 格式是字串, 需要特別處理
+                            post.tags = post.tags.slice(1, -1).split(",").map(s => s.trim());
+
+                            this._packData({
+                                index,
+                                post,
+                                data: [...file, ...attachments],
+                                server: "https://file.pawchive.pw"
+                            })
+                        } catch (error) {
+                            Lib.log({
+                                index,
+                                title: post.title,
+                                url: this.getPostURL(post),
+                                error
+                            }, { dev: General.Dev, collapsed: false }).error;
+                        }
+                    }
+                    else {
+                        tasks.push(new Promise((resolve, reject) => {
+                            resolvers.set(index, { resolve, reject }); // 存儲解析器
+
+                            this.worker.postMessage({
+                                index,
+                                title: post.title,
+                                url: this.getPostAPI(post),
+                                time: Date.now(),
+                                delay: this.fetchDelay
+                            })
+                        }));
+
+                        await Lib.sleep(this.fetchDelay);
+                    }
                 };
 
                 // 等待所有任務
@@ -842,6 +865,68 @@ export default class FetchData {
         }
 
         return true; // 回傳完成
+    };
+
+    /* ===== 工具函數 ===== */
+
+    /* 獲取元數據 (由 DOM 解析) */
+    _getMeta() {
+        this.profile = {
+            name: Lib.$q("span[itemprop='name'], fix_name").$text(),
+            post_count: this.totalPages > 0 ? this.totalPages : undefined,
+            create_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}"),
+            source_url: this.sourceURL,
+        };
+    };
+
+    /* 設置元數據 */
+    _setMeta({ defName, defPostCount, defCreateTime, defSourceUrl } = {}) {
+        this.metaDict.set(Transl("作者"), this.profile.name ?? defName);
+        this.metaDict.set(Transl("帖子數量"), this.profile.post_count ?? defPostCount);
+        this.metaDict.set(Transl("建立時間"), this.profile.create_time ?? defCreateTime);
+        this.metaDict.set(Transl("獲取頁面"), this.profile.source_url ?? defSourceUrl);
+        Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+    };
+
+    /**
+     * @description 打包數據
+     * @param {object} params
+     * @param {number} params.index - 處理編號
+     * @param {object} params.post - api 完整內容
+     * @param {object} params.data - api 文件部份
+     * @param {string|undefined} params.server - 帖子服務器 (可選)
+     */
+    _packData({ index, post, data, server }) {
+        const standardTitle = this.normalizeName(post.title, index);
+
+        // 解析數據類型
+        const classifiedFiles = this.kemerCategorize({
+            title: standardTitle,
+            data,
+            server,
+            fillValue: Lib.getFill(data?.length || 1)
+        });
+
+        // 生成請求數據
+        const url = this.getPostURL(post);
+        const generatedData = this.fetchGenerate({
+            PostLink: url,
+            Timestamp: this.normalizeTimestamp(post),
+            TypeTag: post.tags,
+            ImgLink: classifiedFiles.img,
+            VideoLink: classifiedFiles.video,
+            DownloadLink: classifiedFiles.other,
+            ExternalLink: this.specialLinkParse(post.content)
+        });
+
+        // 儲存數據
+        if (!Lib.isEmpty(generatedData)) this.dataDict.set(standardTitle, generatedData);
+
+        Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+        Lib.log(
+            { index, title: standardTitle, url, data: generatedData },
+            { dev: General.Dev, group: "Request Successful", collapsed: false }
+        );
     };
 
     /* ===== 輸出生成 ===== */
