@@ -100,13 +100,13 @@
 
     /* ====================== 不瞭解不要修改下方參數 ===================== */
 
-    // 解構設置, TranslationFactory 需要 Translation 的數據, 如果晚宣告會出錯
+    // 解構設置, translationFactory 需要 Translation 的數據, 如果晚宣告會出錯
     const [LoadDict, Translation] = [Config.LoadDictionary, Config.TranslationReversal];
 
     const Dev = GM_getValue("Dev", false); // 開發者模式
-    const Update = UpdateWordsDict(); // 更新函數
+    const Update = updateWordsDict(); // 更新函數
 
-    let Dict = GM_getValue("LocalWords", null) ?? await Update.Reques(); // 本地翻譯字典 (無字典立即請求, 通常只會在第一次運行)
+    let Dict = GM_getValue("LocalWords", null) ?? await Update.reques(); // 本地翻譯字典 (無字典立即請求, 通常只會在第一次運行)
     let Translated = true; // 判斷翻譯狀態 (不要修改)
 
     const Dictionary = { // 字典操作
@@ -165,11 +165,11 @@
     };
     Dictionary.Init();
 
-    WaitElem("body", () => { // 等待頁面載入
-        const Transl = TranslationFactory(); // 翻譯工廠
+    waitElem("body", body => { // 等待頁面載入
+        const Transl = translationFactory(); // 翻譯工廠
 
         const processedNodes = new WeakSet();
-        const observer = new MutationObserver(DebounceCollect((mutations) => {
+        const observer = new MutationObserver(debounceCollect((mutations) => {
 
             const toProcess = [];
             for (const mutation of mutations) {
@@ -206,9 +206,9 @@
 
 
         // 啟動觀察 (啟動時會觸發轉換)
-        const StartOb = () => {
-            Transl.Trigger(document);
-            observer.observe(document, {
+        const startOb = () => {
+            Transl.Trigger();
+            observer.observe(body, {
                 subtree: true, // 監視所有後代節點
                 childList: true, // 監視子節點添加或移除
                 characterData: true, // 監視文字內容變化
@@ -218,12 +218,12 @@
         };
 
         window.addEventListener("urlchange", () => {
-            Transl.Trigger(document);
+            Transl.Trigger();
         });
 
         // 斷開觀察
         const DisOB = () => observer.disconnect();
-        !Dev && StartOb(); // 首次運行 (開發者模式下不會自動運行, 因為有可能轉換不回來)
+        !Dev && startOb(); // 首次運行 (開發者模式下不會自動運行, 因為有可能轉換不回來)
 
         // 反轉 參數: (是否恢復監聽)
         function ThePolesAreReversed(RecoverOB = true) {
@@ -231,12 +231,12 @@
             Dictionary.RefreshDict();
 
             // 恢復觀察的反轉, 與直接觸發的反轉
-            RecoverOB ? StartOb() : Transl.Trigger(document);
+            RecoverOB ? startOb() : Transl.Trigger();
         };
 
         /* ----- 創建按鈕 ----- */
 
-        Menu({
+        regMenu({
             "🆕 更新字典": {
                 desc: "獲取伺服器字典, 更新本地數據庫, 並在控制台打印狀態",
                 func: async () => {
@@ -245,7 +245,7 @@
 
                     ThePolesAreReversed(false); // 反轉一次, 並且不恢復觀察 (在更新前直接恢復一次, 是因為更新後 Dict 會被覆蓋, 可能會轉不回來)
 
-                    Dict = await Update.Reques(); // 請求新的字典
+                    Dict = await Update.reques(); // 請求新的字典
                     Dictionary.Init(); // 更新後重新初始化 緩存
 
                     ThePolesAreReversed(); // 再次觸發反轉, 並恢復觀察
@@ -278,7 +278,7 @@
 
         if (Dev) {
             Translated = false;
-            Menu({
+            regMenu({
                 "« 🚫 停用開發者模式 »": {
                     desc: "關閉開發者模式", func: () => {
                         GM_setValue("Dev", false);
@@ -304,7 +304,7 @@
                 }
             }, "Dev");
         } else {
-            Menu({
+            regMenu({
                 "« ✅ 啟用開發者模式 »": {
                     desc: "打開開發者模式", func: () => {
                         GM_setValue("Dev", true);
@@ -318,7 +318,7 @@
         const UpdateTime = GM_getValue("UpdateTime", false); // 紀錄時間戳
 
         if (!UpdateTime || (CurrentTime - new Date(UpdateTime).getTime()) > (36e5 * 24)) { // 24 小時更新
-            Update.Reques().then(data => { // 不 await 的更新
+            Update.reques().then(data => { // 不 await 的更新
                 Dict = data;
                 Dictionary.Init(); // 初始化
                 ThePolesAreReversed(false); // 反轉兩次
@@ -330,7 +330,7 @@
     /* =========================================== */
 
     // requestIdleCallback 的 fallback
-    const RenderWait = requestIdleCallback || ((callback) => {
+    const renderWait = requestIdleCallback || ((callback) => {
         const startTime = Date.now();
         // 使用 setTimeout 延遲 1ms，將任務推到事件循環的末尾，模擬“空閒”
         return setTimeout(() => {
@@ -346,7 +346,7 @@
     });
 
     /* 翻譯任務的調度程序 */
-    function Scheduler() {
+    const scheduler = (() => {
         let queue = [];
         let timeout = 1500;
         let isRunning = false;
@@ -365,7 +365,7 @@
 
             // 如果時間用完但任務仍在，預約下一次
             if (queue.length > 0) {
-                RenderWait(processQueue, { timeout });
+                renderWait(processQueue, { timeout });
             } else {
                 isRunning = false; // 所有任務完成
             }
@@ -384,13 +384,13 @@
                 }
 
                 isRunning = true;
-                RenderWait(processQueue, { timeout });
+                renderWait(processQueue, { timeout });
             }
         }
-    };
+    })();
 
     /* 翻譯處理工廠 */
-    function TranslationFactory() {
+    function translationFactory() {
         const filterTags = new Set([
             // 腳本和樣式
             "SCRIPT", "STYLE", "NOSCRIPT",
@@ -413,32 +413,14 @@
                 {
                     acceptNode: (node) => {
                         // 標籤過濾
-                        const tag = node.parentElement;
-                        if (!tag || filterTags.has(tag.tagName)) {
+                        const parent = node.parentElement;
+                        if (filterTags.has(parent?.tagName)) {
                             return NodeFilter.FILTER_REJECT;
                         }
 
                         // 檢查內容是否為空
                         const content = node.textContent.trim();
                         if (!content) return NodeFilter.FILTER_REJECT;
-
-                        // 過濾明顯的代碼或屬性
-                        if (
-                            content.startsWith("src=") ||
-                            content.startsWith("href=") ||
-                            content.startsWith("data-") ||
-                            content.startsWith("function ") ||
-                            content.startsWith("const ") ||
-                            content.startsWith("var ")
-                        ) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 代碼符號密度檢查
-                        const codeSymbolCount = (content.match(/[{}[\]()<>]/g) || []).length;
-                        if (codeSymbolCount > content.length * 0.2) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
 
                         // 過濾全都是數字
                         if (/^\d+$/.test(content)) {
@@ -602,14 +584,13 @@
                 };
             },
             OperationText(root, scheduler) {
-                requestIdleCallback
                 return Promise.all(
                     getTextNodes(root).map(textNode => scheduler.wrap(() => this.__FocusTextCore(textNode)))
                 )
             },
             OperationInput(root, scheduler) {
                 return Promise.all(
-                    [...root.querySelectorAll("input[placeholder], input[value]")]
+                    [...root.querySelectorAll("input[placeholder]")]
                         .map(inputNode => scheduler.wrap(() => this.__FocusInputCore(inputNode)))
                 )
             },
@@ -619,13 +600,13 @@
             Dev(root, print = true) {
                 ProcessingDataCore.Dev_Operation(root, print);
             },
-            Trigger: (root) => {
-                // 若是 Text Node，轉向 parentElement 處理
+            // 預設只處理 body 元素
+            Trigger: (root = document.body) => {
+
+                // Text Node，使用 parentElement 處理
                 if (root.nodeType === Node.TEXT_NODE && root.parentElement) {
-                    const scheduler = Scheduler();
                     const textPromise = ProcessingDataCore.OperationText(root.parentElement, scheduler);
                     scheduler.start();
-
                     return Promise.all([textPromise]);
                 }
 
@@ -634,11 +615,9 @@
                     root === document ||
                     (root.nodeType === Node.ELEMENT_NODE) // 包含 document.body、div 等
                 ) {
-                    const scheduler = Scheduler();
                     const textPromise = ProcessingDataCore.OperationText(root, scheduler);
                     const inputPromise = ProcessingDataCore.OperationInput(root, scheduler);
                     scheduler.start();
-
                     return Promise.all([textPromise, inputPromise]);
                 }
 
@@ -646,7 +625,7 @@
                 if (
                     root.nodeType === Node.ELEMENT_NODE &&
                     root.tagName === "INPUT" &&
-                    (root.hasAttribute("placeholder") || root.value)
+                    (root.hasAttribute("placeholder"))
                 ) {
                     return ProcessingDataCore.__FocusInputCore(root);
                 }
@@ -657,7 +636,7 @@
     };
 
     /* 更新數據 */
-    function UpdateWordsDict() {
+    function updateWordsDict() {
         const ObjType = (object) => Object.prototype.toString.call(object).slice(8, -1);
         const Parse = { // 解析數據
             Url(str) {
@@ -679,7 +658,7 @@
         };
 
         // 請求字典
-        const RequestDict = (data) => {
+        const requestDict = (data) => {
             // 解析請求的 Url 是完整的連結, 還是單個字串
             const URL = Parse.Url(data) ? data : `https://gitlab.com/Canaan-HS/database/-/raw/main/Words/${data}.json`;
 
@@ -711,7 +690,7 @@
         };
 
         return {
-            async Reques() {
+            async reques() {
                 const { State, Type, Data } = Parse[ObjType(LoadDict?.Data)](LoadDict?.Data); // 解構數據 (避免可能的例外)
                 const DefaultDict = Object.assign(GM_getValue("LocalWords", {}), Customize);
 
@@ -719,17 +698,17 @@
                 if (!State || GM_getValue("Clear")) return DefaultDict;
 
                 const CacheDict = {};
-                if (Type == "str") Object.assign(CacheDict, await RequestDict(Data)); // 是字串直接傳遞
+                if (Type == "str") Object.assign(CacheDict, await requestDict(Data)); // 是字串直接傳遞
                 else if (Type == "arr") { // 是列表的傳遞
                     for (const data of Data) {
-                        Object.assign(CacheDict, await RequestDict(data));
+                        Object.assign(CacheDict, await requestDict(data));
                     }
                 };
 
                 if (Object.keys(CacheDict).length > 0) {
                     Object.assign(CacheDict, Customize); // 只保留新的字典
 
-                    GM_setValue("UpdateTime", GetDate());
+                    GM_setValue("UpdateTime", getDate());
                     GM_setValue("LocalWords", CacheDict);
 
                     console.log("%c數據更新成功", `
@@ -896,7 +875,7 @@
         }, {})
     };
 
-    function DebounceCollect(func, delay) {
+    function debounceCollect(func, delay) {
         let timer = null;
         let collectedMutations = []; // 用於收集所有 mutations
 
@@ -911,7 +890,7 @@
         }
     };
 
-    function GetDate(format = null) {
+    function getDate(format = null) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
 
@@ -928,7 +907,7 @@
         return generate(typeof format === "string" ? format : defaultFormat);
     };
 
-    function Menu(items, name = "Menu", index = 1) {
+    function regMenu(items, name = "Menu", index = 1) {
         for (let [show, item] of Object.entries(items)) {
             let id = `${name}-${index++}`;
             typeof item === "function" && (item = { func: item });
@@ -942,7 +921,7 @@
         }
     };
 
-    async function WaitElem(selector, found) {
+    async function waitElem(selector, found) {
         const core = async function () {
             let animationFrame;
             let timer, result;
