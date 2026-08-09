@@ -20,5 +20,8 @@ export default async function CommentFormat() {
             word-break: break-all;
             border: 0.125em solid var(--colour1-secondary);
         }
-    `, "Comment-Effects", false);
+    `, {
+        id: "Comment-Effects",
+        repeatAdd: false,
+    });
 };
