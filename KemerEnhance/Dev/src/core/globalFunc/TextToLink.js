@@ -46,16 +46,15 @@ const TextToLinkFactory = () => {
     };
 
     // 將區塊的所有 a 觸發跳轉, 改成新分頁
-    const jumpTrigger = async (root, { newtab, newtab_active, newtab_insert }) => {
-        const [active, insert] = [newtab_active, newtab_insert];
+    const jumpTrigger = async (root, { openInTab }) => {
         Lib.onEvent(root, "click", event => {
             const target = event.target.closest("a:not(.fileThumb)");
             if (!target || target.$hAttr("download")) return;
             event.preventDefault();
 
-            !newtab
+            !openInTab.enable
                 ? location.assign(target.href)
-                : GM_openInTab(target.href, { active, insert });
+                : GM_openInTab(target.href, openInTab);
         }, { capture: true });
     };
 
