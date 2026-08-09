@@ -15,7 +15,10 @@ export default async function CardText({ mode }) {
                 a:hover .post-card__footer {
                     opacity: 1 !important;
                 }
-            `, "CardText-Effects-2", false);
+            `, {
+                id: "CardText-Effects-2",
+                repeatAdd: false,
+            });
             break;
         default:
             Lib.addStyle(`
@@ -41,6 +44,9 @@ export default async function CardText({ mode }) {
                     pointer-events: auto;
                     transform: translateY(0);
                 }
-            `, "CardText-Effects", false);
+            `, {
+                id: "CardText-Effects",
+                repeatAdd: false,
+            });
     }
 };
