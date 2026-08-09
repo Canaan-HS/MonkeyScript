@@ -293,7 +293,7 @@ const BetterPostCardFactory = async () => {
     await init();
 
     const color = Load.color;
-    const loadStyle = async () => {
+    const loadStyle = () => {
         Lib.addStyle(`
             a {
                 user-drag: none;
@@ -460,7 +460,10 @@ const BetterPostCardFactory = async () => {
                 height: 115px;
                 position: absolute;
             }
-        `, "Better-Post-Card-Effects", false);
+        `, {
+            id: "Better-Post-Card-Effects",
+            repeatAdd: false,
+        });
     };
 
     return {
