@@ -23,7 +23,10 @@ export default async function CardZoom({ mode }) {
                 .post-card a:hover .post-card__image-container {
                     position: relative;
                 }
-            `, "CardZoom-Effects-2", false);
+            `, {
+                id: "CardZoom-Effects-2",
+                repeatAdd: false,
+            });
             break;
         case 3:
             [paddingBottom, rowGap, height] = Page.isNeko
@@ -41,7 +44,10 @@ export default async function CardZoom({ mode }) {
                     height: ${height}vh;
                 }
                 .post-card__image-container img { object-fit: contain }
-            `, "CardZoom-Effects-3", false);
+            `, {
+                id: "CardZoom-Effects-3",
+                repeatAdd: false,
+            });
     };
 
     Lib.addStyle(`
@@ -57,5 +63,8 @@ export default async function CardZoom({ mode }) {
             border: 3px solid #fff6;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-    `, "CardZoom-Effects", false);
+    `, {
+        id: "CardZoom-Effects",
+        repeatAdd: false,
+    });
 };
