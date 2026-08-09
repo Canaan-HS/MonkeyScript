@@ -19,6 +19,7 @@
 // @connect      *
 // @match        *://kemono.cr/*
 // @match        *://coomer.st/*
+// @match        *://pawchive.pw/*
 // @match        *://nekohouse.su/*
 
 // @license      MPL-2.0
@@ -26,10 +27,9 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1709491/Syntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://update.greasyfork.org/scripts/495339/1878572/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -75,10 +75,11 @@
   };
   const Process = {
     IsNeko: Lib.$domain.startsWith("nekohouse"),
+    IsPawchive: Lib.$domain.startsWith("pawchive"),
     ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
     VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"],
     Lock: false,
-    dynamicParam: Lib.createNetworkObserver({
+    DynamicParam: Lib.createNetworkObserver({
       MAX_Delay: 1500,
       MIN_CONCURRENCY: 5,
       MAX_CONCURRENCY: 10,
@@ -388,6 +389,7 @@
       const apiInterface = "api/v1";
       this.getPostURL = ({ service, user, id }) => `${this.origin}/${service}/user/${user}/post/${id}`;
       this.getPostAPI = ({ service, user, id }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+      this.profile = null;
       this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
       this.getNextPageURL = (urlStr) => {
         const url = new URL(urlStr);
@@ -427,16 +429,17 @@
       this.isImage = (str) => imageExts.has(str.replace(/^\./, "").toLowerCase());
       this.normalizeName = (title, index) => title.trim().replace(/\n/g, " ") || `Untitled_${String((this.currentPage - 1) * 50 + (index + 1)).padStart(2, "0")}`;
       this.normalizeTimestamp = ({ added, published }) => new Date(added || published)?.toLocaleString();
-      this.kemerCategorize = ({ title, data, serverDict, fillValue }) => {
+      this.kemerCategorize = ({ title, data, server, fillValue }) => {
         let imgNumber = 0;
         return data.reduce(
           (acc, file) => {
             const name = file.name;
             const path = file.path;
+            if (!path) return acc;
             const extension = Lib.suffixName(path, "");
             if (filterExts.has(extension)) return acc;
-            const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
-            const url = `${server}${path}`;
+            const serverPath = server ? `${server}/data` : `${file.server}/data`;
+            const url = `${serverPath}${path}`;
             if (this.isVideo(extension)) {
               acc.video[name] = `${url}?f=${name}`;
             } else if (this.isImage(extension)) {
@@ -539,7 +542,7 @@
             if (!href) return;
             if (/\.[a-zA-Z0-9]+$/.test(href)) return;
             if (safeInclud(name, "frame embed")) name = "";
-            parsed[name && name !== href ? name : md5(href).slice(0, 16)] = pass
+            parsed[name && name !== href ? name : Lib.getFingerprint(href).slice(0, 16)] = pass
               ? {
                   [Transl("密碼")]: pass,
                   [Transl("連結")]: href,
@@ -802,7 +805,7 @@
             this.worker.onmessage = async (e) => {
               const { title, url: url2, content, time, delay, error } = e.data;
               if (!error) {
-                this.fetchDelay = Process.dynamicParam(time, delay);
+                this.fetchDelay = Process.DynamicParam(time, delay);
                 resolve(content);
               } else {
                 Lib.log({ title, url: url2, error }, { dev: General.Dev, collapsed: false }).error;
@@ -828,7 +831,7 @@
           this.worker.onmessage = async (e) => {
             const { title, url: url2, content, time, delay, error } = e.data;
             if (!error) {
-              this.fetchDelay = Process.dynamicParam(time, delay);
+              this.fetchDelay = Process.DynamicParam(time, delay);
               resolve({ url: url2, content });
             } else {
               Lib.log({ title, url: url2, error }, { dev: General.Dev, collapsed: false }).error;
@@ -845,22 +848,17 @@
       this.progress = 0;
       const { content } = homeData;
       Lib.log(homeData, { dev: General.Dev, group: "Fetch Content" });
+      if (!this.profile) this._getMeta();
       if (Process.IsNeko) {
         let taskCount = 0;
         const tasks = [];
         const resolvers = new Map();
-        const postCount = content.length;
-        if (this.metaDict.size === 0) {
-          this.metaDict.set(Transl("作者"), Lib.$q("span[itemprop='name'], fix_name").$text());
-          this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-          this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-          this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-        }
+        if (this.metaDict.size === 0) this._setMeta({ defPostCount: content.length });
         this.worker.onmessage = async (e) => {
           const { index, title, url, content: content2, time, delay, error } = e.data;
           if (!error) {
             const { resolve } = resolvers.get(index);
-            this.fetchDelay = Process.dynamicParam(time, delay);
+            this.fetchDelay = Process.DynamicParam(time, delay);
             const standardTitle = this.normalizeName(title, index);
             const postDom = Lib.domParse(content2);
             const classifiedFiles = this.nekoCategorize(standardTitle, [...postDom.$qa(".fileThumb"), ...postDom.$qa(".scrape__attachments a")]);
@@ -896,29 +894,28 @@
         let homeJson = JSON.parse(content);
         if (homeJson) {
           if (this.metaDict.size === 0) {
-            let profile = { name: null };
-            if (this.isPost) {
+            if ((!this.profile.name || !this.profile.post_count) && this.isPost && !Process.IsPawchive) {
               this.worker.postMessage({ url: this.profileAPI });
-              profile = await new Promise((resolve, reject) => {
-                this.worker.onmessage = async (e) => {
-                  const { url, content: content2, error } = e.data;
-                  if (!error) resolve(JSON.parse(content2));
-                  else {
-                    Lib.log(url, { dev: General.Dev, collapsed: false }).error;
-                    await this.tooManyTryAgain(url);
-                    this.worker.postMessage({ url });
-                  }
-                };
-              });
-            } else {
-              this.finalPage = Math.min(this.finalPage, 1e3);
-              profile["post_count"] = homeJson.true_count;
+              Object.assign(
+                this.profile,
+                await new Promise((resolve, reject) => {
+                  this.worker.onmessage = async (e) => {
+                    const { url, content: content2, error } = e.data;
+                    if (!error) resolve(JSON.parse(content2));
+                    else {
+                      Lib.log(url, { dev: General.Dev, collapsed: false }).error;
+                      await this.tooManyTryAgain(url);
+                      this.worker.postMessage({ url });
+                    }
+                  };
+                }),
+              );
             }
-            this.metaDict.set(Transl("作者"), profile.name);
-            this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
-            this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-            this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-            Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+            if (!this.isPost) {
+              this.finalPage = Math.min(this.finalPage, 1e3);
+              this.profile.post_count = homeJson.true_count;
+            }
+            this._setMeta();
           }
           const tasks = [];
           const resolvers = new Map();
@@ -927,33 +924,18 @@
             try {
               if (!error) {
                 const { resolve } = resolvers.get(index);
-                this.fetchDelay = Process.dynamicParam(time, delay);
+                this.fetchDelay = Process.DynamicParam(time, delay);
                 const contentJson = JSON.parse(content2);
                 if (contentJson) {
                   const post = contentJson.post;
                   const previews = contentJson.previews || [];
                   const attachments = contentJson.attachments || [];
-                  const standardTitle = this.normalizeName(post.title, index);
-                  const classifiedFiles = this.kemerCategorize({
-                    title: standardTitle,
+                  this._packData({
+                    index,
+                    post,
                     data: [...previews, ...attachments],
-                    fillValue: Lib.getFill(previews?.length || 1),
                   });
-                  const generatedData = this.fetchGenerate({
-                    PostLink: this.getPostURL(post),
-                    Timestamp: this.normalizeTimestamp(post),
-                    TypeTag: post.tags,
-                    ImgLink: classifiedFiles.img,
-                    VideoLink: classifiedFiles.video,
-                    DownloadLink: classifiedFiles.other,
-                    ExternalLink: this.specialLinkParse(post.content),
-                  });
-                  if (Object.keys(generatedData).length !== 0) {
-                    this.dataDict.set(standardTitle, generatedData);
-                  }
                   resolve();
-                  Lib.title(`（${this.currentPage} - ${++this.progress}）`);
-                  Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
                 } else throw new Error("Json Parse Failed");
               } else {
                 throw new Error("Request Failed");
@@ -966,25 +948,89 @@
           };
           homeJson = this.isPost ? homeJson : homeJson.posts;
           for (const [index, post] of homeJson.entries()) {
-            tasks.push(
-              new Promise((resolve, reject) => {
-                resolvers.set(index, { resolve, reject });
-                this.worker.postMessage({
+            if (Process.IsPawchive) {
+              const file = post.file ? [post.file] : [];
+              const attachments = post.attachments || [];
+              try {
+                post.tags = post.tags
+                  .slice(1, -1)
+                  .split(",")
+                  .map((s) => s.trim());
+                this._packData({
                   index,
-                  title: post.title,
-                  url: this.getPostAPI(post),
-                  time: Date.now(),
-                  delay: this.fetchDelay,
+                  post,
+                  data: [...file, ...attachments],
+                  server: "https://file.pawchive.pw",
                 });
-              }),
-            );
-            await Lib.sleep(this.fetchDelay);
+              } catch (error) {
+                Lib.log(
+                  {
+                    index,
+                    title: post.title,
+                    url: this.getPostURL(post),
+                    error,
+                  },
+                  { dev: General.Dev, collapsed: false },
+                ).error;
+              }
+            } else {
+              tasks.push(
+                new Promise((resolve, reject) => {
+                  resolvers.set(index, { resolve, reject });
+                  this.worker.postMessage({
+                    index,
+                    title: post.title,
+                    url: this.getPostAPI(post),
+                    time: Date.now(),
+                    delay: this.fetchDelay,
+                  });
+                }),
+              );
+              await Lib.sleep(this.fetchDelay);
+            }
           }
           await Promise.allSettled(tasks);
           await Lib.sleep(this.fetchDelay);
         }
       }
       return true;
+    }
+    _getMeta() {
+      this.profile = {
+        name: Lib.$q("span[itemprop='name'], fix_name").$text(),
+        post_count: this.totalPages > 0 ? this.totalPages : void 0,
+        create_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}"),
+        source_url: this.sourceURL,
+      };
+    }
+    _setMeta({ defName, defPostCount, defCreateTime, defSourceUrl } = {}) {
+      this.metaDict.set(Transl("作者"), this.profile.name ?? defName);
+      this.metaDict.set(Transl("帖子數量"), this.profile.post_count ?? defPostCount);
+      this.metaDict.set(Transl("建立時間"), this.profile.create_time ?? defCreateTime);
+      this.metaDict.set(Transl("獲取頁面"), this.profile.source_url ?? defSourceUrl);
+      Lib.log(this.metaDict, { dev: General.Dev, group: "Meta Data" });
+    }
+    _packData({ index, post, data, server }) {
+      const standardTitle = this.normalizeName(post.title, index);
+      const classifiedFiles = this.kemerCategorize({
+        title: standardTitle,
+        data,
+        server,
+        fillValue: Lib.getFill(data?.length || 1),
+      });
+      const url = this.getPostURL(post);
+      const generatedData = this.fetchGenerate({
+        PostLink: url,
+        Timestamp: this.normalizeTimestamp(post),
+        TypeTag: post.tags,
+        ImgLink: classifiedFiles.img,
+        VideoLink: classifiedFiles.video,
+        DownloadLink: classifiedFiles.other,
+        ExternalLink: this.specialLinkParse(post.content),
+      });
+      if (!Lib.isEmpty(generatedData)) this.dataDict.set(standardTitle, generatedData);
+      Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+      Lib.log({ index, title: standardTitle, url, data: generatedData }, { dev: General.Dev, group: "Request Successful", collapsed: false });
     }
     async _reset() {
       this.metaDict = null;
