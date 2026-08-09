@@ -9,7 +9,10 @@ const ExtraButtonFactory = () => {
             #main section {
                 width: 100%;
             }
-        `, "Post-Extra", false);
+        `, {
+            id: "Post-Extra",
+            repeatAdd: false,
+        });
     };
 
     const getNextPage = (url, oldMain, retry = 5) => {
