@@ -1,5 +1,5 @@
 import { Lib } from "../services/client";
-import { Parame, Load } from "./config";
+import { Parame, Load, Page } from "./config";
 
 import getLanguage from "./language.js";
 
@@ -26,11 +26,12 @@ const MenuFactory = (() => {
     };
 
     async function postViewInit() {
-        if (Parame.Registered.has("PostViewInit")) return;
+        // ! 需要寫成這樣是因為 Pawchive 在搞, 他頁面刷新連 head 都刷掉了, 需要重新載入
+        if (!Page.isPawchive && Parame.Registered.has("PostViewInit")) return;
 
         // 讀取圖像設置
         const set = Load.imgSet();
-        Lib.addStyle(`
+        await Lib.addStyle(`
             .post__files > div,
             .scrape__files > div {
                 position: relative;
@@ -68,8 +69,14 @@ const MenuFactory = (() => {
                 border-radius: 3px;
                 background-color: rgba(0, 0, 0, 0.3);
             }
-        `, "Image-Custom-Style", false);
-        imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+        `, {
+            id: "Image-Custom-Style",
+            repeatAdd: false,
+        });
+
+        imgRule = Lib.headRecord.get("Image-Custom-Style")?.sheet.cssRules;
+
+        if (Parame.Registered.has("PostViewInit")) return;
 
         // 全局修改功能
         Lib.storageListen(Object.values(Parame.SaveKey), call => {
