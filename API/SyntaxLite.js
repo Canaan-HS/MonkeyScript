@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyntaxLite
-// @version      2026.07.18
+// @version      2026.08.09
 // @author       Canaan HS
 // @description  Library for simplifying code logic and syntax (Lite)
 // @namespace    https://greasyfork.org/users/989635
@@ -409,6 +409,7 @@ const Lib = (() => {
 
         if (!record) eventRecord.set(key, new Map());
         eventRecord.get(key).set(type, { element, type, listener });
+        return;
     };
 
     /**
@@ -452,6 +453,7 @@ const Lib = (() => {
                 eventRecord.delete(key);
             }
         }
+        return;
     };
 
     /**
@@ -641,33 +643,24 @@ const Lib = (() => {
 
     /**
      * @description 添加元素到 head
-     * @param {string} Rule - 元素內容
-     * @param {string} ID - 元素ID
-     * @param {boolean} RepeatAdd - 是否重複添加
+     * @param {string} rule - 樣式規則
+     * @param {string} [options.id] - 元素ID
+     * @param {boolean} [options.repeatAdd] - 是否重複添加
      *
      * @example
-     * addStyle(Rule, ID, RepeatAdd)
-     * addScript(Rule, ID, RepeatAdd)
+     * addStyle(rule, id)
+     * addScript(rule, id, repeatAdd)
      */
-    /**
-     * @description 添加元素到 head
-     * @param {string} Rule - 元素內容
-     * @param {string} ID - 元素ID
-     * @param {boolean} RepeatAdd - 是否重複添加
-     *
-     * @example
-     * addStyle(Rule, ID, RepeatAdd)
-     * addScript(Rule, ID, RepeatAdd)
-     */
-    const addRecord = new Map();
+    const headRecord = new Map();
     const addCall = {
-        addStyle: (rule, id, repeatAdd) => addHead("style", rule, id, repeatAdd),
-        addScript: (rule, id, repeatAdd) => addHead("script", rule, id, repeatAdd),
+        addStyle: (rule, { id, repeatAdd } = {}) => addHead("style", rule, id, repeatAdd),
+        addScript: (rule, { id, repeatAdd } = {}) => addHead("script", rule, id, repeatAdd),
     };
     async function addHead(type, rule, id = crypto.randomUUID(), repeatAdd = true) {
-        let element = addRecord.get(id);
+        let element = headRecord.get(id);
 
         if (!repeatAdd && element) return;
+
         if (!element) {
             element = document.createElement(type);
             element.id = id;
@@ -680,7 +673,8 @@ const Lib = (() => {
         };
 
         element.textContent += rule;
-        addRecord.set(id, element);
+        headRecord.set(id, element);
+        return;
     };
 
     /**
@@ -693,16 +687,17 @@ const Lib = (() => {
      */
     async function delHead(id) {
         if (id == null) {
-            for (const el of addRecord.values()) el.remove();
-            addRecord.clear();
+            for (const el of headRecord.values()) el.remove();
+            headRecord.clear();
             return;
         }
 
-        const element = addRecord.get(id);
+        const element = headRecord.get(id);
         if (element) {
             element.remove();
-            addRecord.delete(id);
+            headRecord.delete(id);
         }
+        return;
     };
 
     /**
@@ -1634,7 +1629,7 @@ const Lib = (() => {
         deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
             ...addCall, ...storageCall, ...GM_storageCall,
-            eventRecord, addRecord, observerRecord,
+            eventRecord, headRecord, observerRecord,
             type: _type, onE, onEvent, offEvent, onUrlChange, log, delHead,
             observer, waitEl, openDB, throttle: _throttle, debounce: _debounce, createWorker, createStrCompress, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
