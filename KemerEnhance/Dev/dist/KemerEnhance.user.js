@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.07.08
+// @version      2026.08.09
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -60,7 +60,7 @@
           enable: true,
           active: false,
           insert: true,
-          setParent: true,
+          setParent: false,
         },
       },
       BetterPostCard: {
@@ -71,7 +71,7 @@
           enable: true,
           active: true,
           insert: true,
-          setParent: true,
+          setParent: false,
         },
       },
     },
@@ -1413,7 +1413,7 @@ statusText: ${text}`);
       },
     );
   }
-  async function NewTabOpens({ openInTab }) {
+  async function NewTabOpens(openInTab) {
     Lib.onEvent(
       Lib.body,
       "click",
