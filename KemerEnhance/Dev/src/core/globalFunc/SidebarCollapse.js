@@ -20,5 +20,8 @@ export default async function SidebarCollapse() {
         .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
         .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
         .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
-    `, "Collapse-Effects", false);
+    `, {
+        id: "Collapse-Effects",
+        repeatAdd: false,
+    });
 };
