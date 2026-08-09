@@ -10,18 +10,24 @@ const User_Config = {
         KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
         TextToLink: { // 連結的 (文本 -> 超連結)
             enable: true,
-            newtab: true, // 新選項卡開啟
-            newtab_active: false, // 切換焦點到新選項卡
-            newtab_insert: true, // 選項卡插入到當前選項卡的正後方
+            openInTab: {
+                enable: true, // 新選項卡開啟
+                active: false, // 切換焦點到新選項卡
+                insert: true, // 選項卡插入到當前選項卡的正後方
+                setParent: false, // 設置新選項卡的父選項卡為當前選項卡
+            },
         },
         BetterPostCard: { // 修復名稱|自訂名稱|外部 TAG 跳轉|快速預覽內容
             enable: true,
             previewAbove: true, // 快速預覽展示於帖子上方
             enableNameTools: true, // 啟用名稱工具 (修復名稱|自訂名稱|外部 TAG 跳轉)
             /* 以下配置僅在啟用名稱工具時生效 */
-            newtab: true,
-            newtab_active: true,
-            newtab_insert: true,
+            openInTab: {
+                enable: true,
+                active: true,
+                insert: true,
+                setParent: false,
+            },
         },
     },
     Preview: {
@@ -31,8 +37,9 @@ const User_Config = {
         QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
         NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
             enable: true,
-            newtab_active: false,
-            newtab_insert: true,
+            active: false,
+            insert: true,
+            setParent: true,
         },
     },
     Content: {
