@@ -29,7 +29,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1897760/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -56,17 +56,23 @@
       KeyScroll: { mode: 1, enable: true },
       TextToLink: {
         enable: true,
-        newtab: true,
-        newtab_active: false,
-        newtab_insert: true,
+        openInTab: {
+          enable: true,
+          active: false,
+          insert: true,
+          setParent: true,
+        },
       },
       BetterPostCard: {
         enable: true,
         previewAbove: true,
         enableNameTools: true,
-        newtab: true,
-        newtab_active: true,
-        newtab_insert: true,
+        openInTab: {
+          enable: true,
+          active: true,
+          insert: true,
+          setParent: true,
+        },
       },
     },
     Preview: {
@@ -76,8 +82,9 @@
       QuickPostToggle: true,
       NewTabOpens: {
         enable: true,
-        newtab_active: false,
-        newtab_insert: true,
+        active: false,
+        insert: true,
+        setParent: true,
       },
     },
     Content: {
@@ -154,13 +161,13 @@
   })();
   async function BlockAds() {
     if (Page.isNeko) return;
-    if (Parame.Registered.has("BlockAds")) return;
     Lib.addStyle(
       `
         [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
     `,
-      "Ad-blocking-style",
+      { id: "Ad-blocking-style", repeatAdd: false },
     );
+    if (Parame.Registered.has("BlockAds")) return;
     const domains = new Set(["go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com", "go.bluetrafficstream.com", "creative.bluetrafficstream.com", "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"]);
     const originalFetch = unsafeWindow.fetch;
     unsafeWindow.fetch = function (input) {
@@ -494,8 +501,7 @@
       if (uriFormat4.test(uri)) return "https:" + uri;
       return uri;
     };
-    const jumpTrigger = async (root, { newtab, newtab_active, newtab_insert }) => {
-      const [active, insert] = [newtab_active, newtab_insert];
+    const jumpTrigger = async (root, { openInTab }) => {
       Lib.onEvent(
         root,
         "click",
@@ -503,7 +509,7 @@
           const target = event.target.closest("a:not(.fileThumb)");
           if (!target || target.$hAttr("download")) return;
           event.preventDefault();
-          !newtab ? location.assign(target.href) : GM_openInTab(target.href, { active, insert });
+          !openInTab.enable ? location.assign(target.href) : GM_openInTab(target.href, openInTab);
         },
         { capture: true },
       );
@@ -657,8 +663,10 @@
         .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
         .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
     `,
-      "Collapse-Effects",
-      false,
+      {
+        id: "Collapse-Effects",
+        repeatAdd: false,
+      },
     );
   }
   const Fetch = (() => {
@@ -918,7 +926,7 @@ statusText: ${text}`);
     }
     await init();
     const color = Load.color;
-    const loadStyle = async () => {
+    const loadStyle = () => {
       Lib.addStyle(
         `
             a {
@@ -1084,12 +1092,14 @@ statusText: ${text}`);
                 position: absolute;
             }
         `,
-        "Better-Post-Card-Effects",
-        false,
+        {
+          id: "Better-Post-Card-Effects",
+          repeatAdd: false,
+        },
       );
     };
     return {
-      async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove, enableNameTools }) {
+      async BetterPostCard({ previewAbove, enableNameTools, openInTab }) {
         loadStyle();
         const isSearch = Page.isSearch();
         if (Lib.platform.desktop) {
@@ -1181,7 +1191,6 @@ statusText: ${text}`);
           }
         }
         if (!enableNameTools) return;
-        const [active, insert] = [newtab_active, newtab_insert];
         Lib.onEvent(
           Lib.body,
           "click",
@@ -1226,15 +1235,15 @@ statusText: ${text}`);
                   );
                 }, 50);
               }, 300);
-            } else if ((newtab && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Page.isContent() && target.matches(".fancy-image__image"))) {
+            } else if ((openInTab.enable && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Page.isContent() && target.matches(".fancy-image__image"))) {
               event.preventDefault();
               event.stopImmediatePropagation();
               const url = target.$gAttr("jump");
               if (url) {
-                newtab || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && Page.isPreview()) ? GM_openInTab(url, { active, insert }) : location.assign(url);
+                openInTab.enable || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && Page.isPreview()) ? GM_openInTab(url, openInTab) : location.assign(url);
               } else if (tagName === "IMG" || tagName === "PICTURE") {
                 const href = target.closest("a").href;
-                newtab && !Page.isContent() ? GM_openInTab(href, { active, insert }) : location.assign(href);
+                openInTab.enable && !Page.isContent() ? GM_openInTab(href, openInTab) : location.assign(href);
               }
             }
           },
@@ -1294,8 +1303,10 @@ statusText: ${text}`);
                     opacity: 1 !important;
                 }
             `,
-          "CardText-Effects-2",
-          false,
+          {
+            id: "CardText-Effects-2",
+            repeatAdd: false,
+          },
         );
         break;
       default:
@@ -1324,8 +1335,10 @@ statusText: ${text}`);
                     transform: translateY(0);
                 }
             `,
-          "CardText-Effects",
-          false,
+          {
+            id: "CardText-Effects",
+            repeatAdd: false,
+          },
         );
     }
   }
@@ -1352,8 +1365,10 @@ statusText: ${text}`);
                     position: relative;
                 }
             `,
-          "CardZoom-Effects-2",
-          false,
+          {
+            id: "CardZoom-Effects-2",
+            repeatAdd: false,
+          },
         );
         break;
       case 3:
@@ -1371,8 +1386,10 @@ statusText: ${text}`);
                 }
                 .post-card__image-container img { object-fit: contain }
             `,
-          "CardZoom-Effects-3",
-          false,
+          {
+            id: "CardZoom-Effects-3",
+            repeatAdd: false,
+          },
         );
     }
     Lib.addStyle(
@@ -1390,18 +1407,19 @@ statusText: ${text}`);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
     `,
-      "CardZoom-Effects",
-      false,
+      {
+        id: "CardZoom-Effects",
+        repeatAdd: false,
+      },
     );
   }
-  async function NewTabOpens({ newtab_active, newtab_insert }) {
-    const [active, insert] = [newtab_active, newtab_insert];
+  async function NewTabOpens({ openInTab }) {
     Lib.onEvent(
       Lib.body,
       "click",
       (event) => {
         const target = event.target.closest("article a");
-        target && (event.preventDefault(), event.stopImmediatePropagation(), GM_openInTab(target.href, { active, insert }));
+        target && (event.preventDefault(), event.stopImmediatePropagation(), GM_openInTab(target.href, openInTab));
       },
       { capture: true, mark: "NewTabOpens" },
     );
@@ -1778,8 +1796,10 @@ statusText: ${text}`);
                             border-radius: 8px !important;
                         }
                     `,
-            "Video-Effects",
-            false,
+            {
+              id: "Video-Effects",
+              repeatAdd: false,
+            },
           );
           const move = mode === 2;
           const linkBox = Object.fromEntries([...post].map((a) => [a.download?.trim(), a]));
@@ -1829,8 +1849,10 @@ statusText: ${text}`);
             border: 0.125em solid var(--colour1-secondary);
         }
     `,
-      "Comment-Effects",
-      false,
+      {
+        id: "Comment-Effects",
+        repeatAdd: false,
+      },
     );
   }
   const ExtraButtonFactory = () => {
@@ -1841,8 +1863,10 @@ statusText: ${text}`);
                 width: 100%;
             }
         `,
-        "Post-Extra",
-        false,
+        {
+          id: "Post-Extra",
+          repeatAdd: false,
+        },
       );
     };
     const getNextPage = (url, oldMain, retry = 5) => {
@@ -1960,8 +1984,10 @@ statusText: ${text}`);
                 }
                 .post__attachment-link:not([beautify]) { display: none !important; }
             `,
-          "Link-Effects",
-          false,
+          {
+            id: "Link-Effects",
+            repeatAdd: false,
+          },
         );
         Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
           for (const link of post) {
@@ -2344,9 +2370,9 @@ statusText: ${text}`);
       Spacing: (value) => importantStyle(imgRule[1], "margin", `${value} auto`),
     };
     async function postViewInit() {
-      if (Parame.Registered.has("PostViewInit")) return;
+      if (!Page.isPawchive && Parame.Registered.has("PostViewInit")) return;
       const set = Load.imgSet();
-      Lib.addStyle(
+      await Lib.addStyle(
         `
             .post__files > div,
             .scrape__files > div {
@@ -2386,10 +2412,13 @@ statusText: ${text}`);
                 background-color: rgba(0, 0, 0, 0.3);
             }
         `,
-        "Image-Custom-Style",
-        false,
+        {
+          id: "Image-Custom-Style",
+          repeatAdd: false,
+        },
       );
-      imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+      imgRule = Lib.headRecord.get("Image-Custom-Style")?.sheet.cssRules;
+      if (Parame.Registered.has("PostViewInit")) return;
       Lib.storageListen(Object.values(Parame.SaveKey), (call) => {
         if (call.far) {
           if (typeof call.nv === "string") {
@@ -2847,6 +2876,7 @@ statusText: ${text}`);
       }
       return {
         async run() {
+          if (Page.isPawchive) await Lib.delHead();
           call("Global");
           if (Page.isPreview()) call("Preview");
           else if (Page.isContent()) {
