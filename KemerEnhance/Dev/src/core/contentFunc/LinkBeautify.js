@@ -55,16 +55,16 @@ const LinkBeautifyFactory = () => {
                     height: 100%;
                     padding: .4rem;
                 }
-                .post__attachment-link:not([beautify]) { display: none !important; }
+                .post__attachment-link:not([beautify]):not([class*='--missing']) { display: none !important; }
             `, {
                 id: "Link-Effects",
                 repeatAdd: false,
             });
 
-            Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
+            Lib.waitEl(".post__attachment-link:not([class*='--missing']), .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                 for (const link of post) {
 
-                    // 過濾先前處理層
+                    // 過濾先前處理層 (不直接查找時跳過, 是為了避免重複創建)
                     if (!Page.isNeko && link.$gAttr("beautify")) {
                         link.remove();
                         continue;
