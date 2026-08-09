@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.07.08
+// @version      2026.08.09
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -29,7 +29,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1897760/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -56,18 +56,24 @@
             KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
             TextToLink: { // 連結的 (文本 -> 超連結)
                 enable: true,
-                newtab: true, // 新選項卡開啟
-                newtab_active: false, // 切換焦點到新選項卡
-                newtab_insert: true, // 選項卡插入到當前選項卡的正後方
+                openInTab: {
+                    enable: true, // 新選項卡開啟
+                    active: false, // 切換焦點到新選項卡
+                    insert: true, // 選項卡插入到當前選項卡的正後方
+                    setParent: false, // 設置新選項卡的父選項卡為當前選項卡
+                },
             },
             BetterPostCard: { // 修復名稱|自訂名稱|外部 TAG 跳轉|快速預覽內容
                 enable: true,
                 previewAbove: true, // 快速預覽展示於帖子上方
                 enableNameTools: true, // 啟用名稱工具 (修復名稱|自訂名稱|外部 TAG 跳轉)
                 /* 以下配置僅在啟用名稱工具時生效 */
-                newtab: true,
-                newtab_active: true,
-                newtab_insert: true,
+                openInTab: {
+                    enable: true,
+                    active: true,
+                    insert: true,
+                    setParent: false,
+                },
             },
         },
         Preview: {
@@ -77,8 +83,9 @@
             QuickPostToggle: true, // 快速切換帖子 (僅支援 nekohouse)
             NewTabOpens: { // 預覽頁面的帖子都以新分頁開啟
                 enable: true,
-                newtab_active: false,
-                newtab_insert: true,
+                active: false,
+                insert: true,
+                setParent: true,
             },
         },
         Content: {
@@ -166,10 +173,13 @@
     })();
     async function BlockAds() {
         if (Page.isNeko) return;
-        if (Parame.Registered.has("BlockAds")) return;
         Lib.addStyle(`
         [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
-    `, "Ad-blocking-style");
+    `, {
+            id: "Ad-blocking-style",
+            repeatAdd: false
+        });
+        if (Parame.Registered.has("BlockAds")) return;
         const domains = new Set(["go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com", "go.bluetrafficstream.com", "creative.bluetrafficstream.com", "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"]);
         const originalFetch = unsafeWindow.fetch;
         unsafeWindow.fetch = function (input) {
@@ -533,19 +543,13 @@
             return uri;
         };
         const jumpTrigger = async (root, {
-            newtab,
-            newtab_active,
-            newtab_insert
+            openInTab
         }) => {
-            const [active, insert] = [newtab_active, newtab_insert];
             Lib.onEvent(root, "click", event => {
                 const target = event.target.closest("a:not(.fileThumb)");
                 if (!target || target.$hAttr("download")) return;
                 event.preventDefault();
-                !newtab ? location.assign(target.href) : GM_openInTab(target.href, {
-                    active: active,
-                    insert: insert
-                });
+                !openInTab.enable ? location.assign(target.href) : GM_openInTab(target.href, openInTab);
             }, {
                 capture: true
             });
@@ -691,7 +695,10 @@
         .global-sidebar:hover { opacity: 1; transform: translateX(0rem); }
         .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
         .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
-    `, "Collapse-Effects", false);
+    `, {
+            id: "Collapse-Effects",
+            repeatAdd: false
+        });
     }
     const Fetch = (() => {
         const responseRule = {
@@ -974,7 +981,7 @@ statusText: ${text}`);
         }
         await init();
         const color = Load.color;
-        const loadStyle = async () => {
+        const loadStyle = () => {
             Lib.addStyle(`
             a {
                 user-drag: none;
@@ -1138,15 +1145,16 @@ statusText: ${text}`);
                 height: 115px;
                 position: absolute;
             }
-        `, "Better-Post-Card-Effects", false);
+        `, {
+                id: "Better-Post-Card-Effects",
+                repeatAdd: false
+            });
         };
         return {
             async BetterPostCard({
-                newtab,
-                newtab_active,
-                newtab_insert,
                 previewAbove,
-                enableNameTools
+                enableNameTools,
+                openInTab
             }) {
                 loadStyle();
                 const isSearch = Page.isSearch();
@@ -1232,7 +1240,6 @@ statusText: ${text}`);
                     }
                 }
                 if (!enableNameTools) return;
-                const [active, insert] = [newtab_active, newtab_insert];
                 Lib.onEvent(Lib.body, "click", event => {
                     const target = event.target;
                     const tagName = target.tagName;
@@ -1267,21 +1274,15 @@ statusText: ${text}`);
                                 });
                             }, 50);
                         }, 300);
-                    } else if (newtab && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Page.isContent() && target.matches(".fancy-image__image")) {
+                    } else if (openInTab.enable && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Page.isContent() && target.matches(".fancy-image__image")) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const url = target.$gAttr("jump");
                         if (url) {
-                            newtab || tagName === "FIX_TAG" || tagName === "FIX_NAME" && Page.isPreview() ? GM_openInTab(url, {
-                                active: active,
-                                insert: insert
-                            }) : location.assign(url);
+                            openInTab.enable || tagName === "FIX_TAG" || tagName === "FIX_NAME" && Page.isPreview() ? GM_openInTab(url, openInTab) : location.assign(url);
                         } else if (tagName === "IMG" || tagName === "PICTURE") {
                             const href = target.closest("a").href;
-                            newtab && !Page.isContent() ? GM_openInTab(href, {
-                                active: active,
-                                insert: insert
-                            }) : location.assign(href);
+                            openInTab.enable && !Page.isContent() ? GM_openInTab(href, openInTab) : location.assign(href);
                         }
                     }
                 }, {
@@ -1357,7 +1358,10 @@ statusText: ${text}`);
                 a:hover .post-card__footer {
                     opacity: 1 !important;
                 }
-            `, "CardText-Effects-2", false);
+            `, {
+                    id: "CardText-Effects-2",
+                    repeatAdd: false
+                });
                 break;
 
             default:
@@ -1384,7 +1388,10 @@ statusText: ${text}`);
                     pointer-events: auto;
                     transform: translateY(0);
                 }
-            `, "CardText-Effects", false);
+            `, {
+                    id: "CardText-Effects",
+                    repeatAdd: false
+                });
         }
     }
     async function CardZoom({
@@ -1410,7 +1417,10 @@ statusText: ${text}`);
                 .post-card a:hover .post-card__image-container {
                     position: relative;
                 }
-            `, "CardZoom-Effects-2", false);
+            `, {
+                    id: "CardZoom-Effects-2",
+                    repeatAdd: false
+                });
                 break;
 
             case 3:
@@ -1426,7 +1436,10 @@ statusText: ${text}`);
                     height: ${height}vh;
                 }
                 .post-card__image-container img { object-fit: contain }
-            `, "CardZoom-Effects-3", false);
+            `, {
+                    id: "CardZoom-Effects-3",
+                    repeatAdd: false
+                });
         }
         Lib.addStyle(`
         .card-list--legacy * {
@@ -1441,20 +1454,16 @@ statusText: ${text}`);
             border: 3px solid #fff6;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-    `, "CardZoom-Effects", false);
+    `, {
+            id: "CardZoom-Effects",
+            repeatAdd: false
+        });
     }
-    async function NewTabOpens({
-        newtab_active,
-        newtab_insert
-    }) {
-        const [active, insert] = [newtab_active, newtab_insert];
+    async function NewTabOpens(openInTab) {
         Lib.onEvent(Lib.body, "click", event => {
             const target = event.target.closest("article a");
             target && (event.preventDefault(), event.stopImmediatePropagation(),
-                GM_openInTab(target.href, {
-                    active: active,
-                    insert: insert
-                }));
+                GM_openInTab(target.href, openInTab));
         }, {
             capture: true,
             mark: "NewTabOpens"
@@ -1885,7 +1894,10 @@ statusText: ${text}`);
                             width: 65% !important;
                             border-radius: 8px !important;
                         }
-                    `, "Video-Effects", false);
+                    `, {
+                        id: "Video-Effects",
+                        repeatAdd: false
+                    });
                     const move = mode === 2;
                     const linkBox = Object.fromEntries([...post].map(a => [a.download?.trim(), a]));
                     for (const li of parents) {
@@ -1935,7 +1947,10 @@ statusText: ${text}`);
             word-break: break-all;
             border: 0.125em solid var(--colour1-secondary);
         }
-    `, "Comment-Effects", false);
+    `, {
+            id: "Comment-Effects",
+            repeatAdd: false
+        });
     }
     const ExtraButtonFactory = () => {
         const loadStyle = () => {
@@ -1943,7 +1958,10 @@ statusText: ${text}`);
             #main section {
                 width: 100%;
             }
-        `, "Post-Extra", false);
+        `, {
+                id: "Post-Extra",
+                repeatAdd: false
+            });
         };
         const getNextPage = (url, oldMain, retry = 5) => {
             if (!retry) return;
@@ -2061,7 +2079,10 @@ statusText: ${text}`);
                     padding: .4rem;
                 }
                 .post__attachment-link:not([beautify]) { display: none !important; }
-            `, "Link-Effects", false);
+            `, {
+                    id: "Link-Effects",
+                    repeatAdd: false
+                });
                 Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
                     raf: true,
                     all: true,
@@ -2473,9 +2494,9 @@ statusText: ${text}`);
             Spacing: value => importantStyle(imgRule[1], "margin", `${value} auto`)
         };
         async function postViewInit() {
-            if (Parame.Registered.has("PostViewInit")) return;
+            if (!Page.isPawchive && Parame.Registered.has("PostViewInit")) return;
             const set = Load.imgSet();
-            Lib.addStyle(`
+            await Lib.addStyle(`
             .post__files > div,
             .scrape__files > div {
                 position: relative;
@@ -2513,8 +2534,12 @@ statusText: ${text}`);
                 border-radius: 3px;
                 background-color: rgba(0, 0, 0, 0.3);
             }
-        `, "Image-Custom-Style", false);
-            imgRule = Lib.$q("#Image-Custom-Style")?.sheet.cssRules;
+        `, {
+                id: "Image-Custom-Style",
+                repeatAdd: false
+            });
+            imgRule = Lib.headRecord.get("Image-Custom-Style")?.sheet.cssRules;
+            if (Parame.Registered.has("PostViewInit")) return;
             Lib.storageListen(Object.values(Parame.SaveKey), call => {
                 if (call.far) {
                     if (typeof call.nv === "string") {
@@ -2982,6 +3007,7 @@ statusText: ${text}`);
             }
             return {
                 async run() {
+                    if (Page.isPawchive) await Lib.delHead();
                     call("Global");
                     if (Page.isPreview()) call("Preview"); else if (Page.isContent()) {
                         MenuFactory.postViewInit();
