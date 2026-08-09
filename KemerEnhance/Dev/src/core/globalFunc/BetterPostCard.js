@@ -468,7 +468,7 @@ const BetterPostCardFactory = async () => {
 
     return {
         /* 更好的 PostCard */
-        async BetterPostCard({ newtab, newtab_active, newtab_insert, previewAbove, enableNameTools }) {
+        async BetterPostCard({ previewAbove, enableNameTools, openInTab }) {
             loadStyle();
 
             const isSearch = Page.isSearch();
@@ -571,7 +571,6 @@ const BetterPostCardFactory = async () => {
             if (!enableNameTools) return;
 
             // 監聽點擊事件
-            const [active, insert] = [newtab_active, newtab_insert];
             Lib.onEvent(Lib.body, "click", event => {
                 const target = event.target;
                 const tagName = target.tagName;
@@ -611,7 +610,7 @@ const BetterPostCardFactory = async () => {
                     }, 300);
                 } else if (
                     // ! 以後在優化, 現在只是為了快速實現
-                    newtab && Lib.platform.desktop && (
+                    openInTab.enable && Lib.platform.desktop && (
                         tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE"
                         || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")
                     )
@@ -624,16 +623,16 @@ const BetterPostCardFactory = async () => {
 
                     const url = target.$gAttr("jump");
                     if (url) {
-                        newtab
+                        openInTab.enable
                             || tagName === "FIX_TAG"
                             || tagName === "FIX_NAME" && Page.isPreview()
-                            ? GM_openInTab(url, { active, insert })
+                            ? GM_openInTab(url, openInTab)
                             : location.assign(url);
                     }
                     else if (tagName === "IMG" || tagName === "PICTURE") {
                         const href = target.closest("a").href;
-                        newtab && !Page.isContent()
-                            ? GM_openInTab(href, { active, insert })
+                        openInTab.enable && !Page.isContent()
+                            ? GM_openInTab(href, openInTab)
                             : location.assign(href);
                     }
                 }
