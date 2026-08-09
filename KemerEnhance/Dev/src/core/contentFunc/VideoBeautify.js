@@ -25,7 +25,10 @@ export default async function VideoBeautify({ mode }) {
                             width: 65% !important;
                             border-radius: 8px !important;
                         }
-                    `, "Video-Effects", false);
+                    `, {
+                        id: "Video-Effects",
+                        repeatAdd: false,
+                    });
 
                     const move = mode === 2;
                     const linkBox = Object.fromEntries([...post].map(a => [a.download?.trim(), a]));
