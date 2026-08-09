@@ -1982,14 +1982,14 @@ statusText: ${text}`);
                     height: 100%;
                     padding: .4rem;
                 }
-                .post__attachment-link:not([beautify]) { display: none !important; }
+                .post__attachment-link:not([beautify]):not([class*='--missing']) { display: none !important; }
             `,
           {
             id: "Link-Effects",
             repeatAdd: false,
           },
         );
-        Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
+        Lib.waitEl(".post__attachment-link:not([class*='--missing']), .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
           for (const link of post) {
             if (!Page.isNeko && link.$gAttr("beautify")) {
               link.remove();
