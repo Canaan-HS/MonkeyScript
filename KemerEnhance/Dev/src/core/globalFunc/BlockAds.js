@@ -27,11 +27,11 @@ export default async function BlockAds() {
     // 舊版白名單正則轉換
     // const adRegex = new RegExp("(?:" + domains.join("|").replace(/\./g, "\\.") + ")");
 
-    if (Parame.Registered.has("BlockAds")) return;
-
     Lib.addStyle(`
         [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
-    `, "Ad-blocking-style");
+    `, { id: "Ad-blocking-style", repeatAdd: false });
+
+    if (Parame.Registered.has("BlockAds")) return;
 
     const domains = new Set([
         "go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com",
