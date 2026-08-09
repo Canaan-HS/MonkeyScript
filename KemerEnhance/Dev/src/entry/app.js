@@ -37,6 +37,8 @@ export default function Main() {
 
         return {
             async run() {
+                if (Page.isPawchive) await Lib.delHead();
+
                 call("Global");
 
                 if (Page.isPreview()) call("Preview");
