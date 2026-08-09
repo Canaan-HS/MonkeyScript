@@ -56,7 +56,10 @@ const LinkBeautifyFactory = () => {
                     padding: .4rem;
                 }
                 .post__attachment-link:not([beautify]) { display: none !important; }
-            `, "Link-Effects", false);
+            `, {
+                id: "Link-Effects",
+                repeatAdd: false,
+            });
 
             Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then(post => {
                 for (const link of post) {
