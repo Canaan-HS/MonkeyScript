@@ -70,7 +70,7 @@ export default function Main() {
                     background-color: hsl(0, 0%, 45%);
                     cursor: Synault;
                 }
-            `, "Download-button-style", false);
+            `, { id: "Download-button-style", repeatAdd: false });
 
             try {
                 Lib.$qa("[id^='Button-Container-']").forEach(button => button.remove()); // 移除已存在的按鈕
