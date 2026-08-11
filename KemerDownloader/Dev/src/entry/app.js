@@ -48,6 +48,7 @@ export default function Main() {
                     fill: white;
                 }
                 .Setting_Button {
+                    display: none; // 暫時用不到隱藏起來
                     cursor: pointer;
                 }
                 .Download_Button {
@@ -55,7 +56,7 @@ export default function Main() {
                     padding: 6px;
                     margin: 10px;
                     border-radius: 8px;
-                    font-size: 1.1vw;
+                    font-size: 1rem;
                     border: 2px solid rgba(59, 62, 68, 0.7);
                     background-color: rgba(29, 31, 32, 0.8);
                     font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
