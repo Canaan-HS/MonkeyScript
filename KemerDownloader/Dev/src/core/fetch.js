@@ -765,10 +765,11 @@ export default class FetchData {
                         }))
                     }
 
-                    // 非 post 頁面特殊處理
+                    // 是 posts 頁面特殊處理
                     if (!this.isPost) {
-                        this.finalPage = Math.min(this.finalPage, 1000); // 該頁面能翻的只有 1000
-                        this.profile.post_count = homeJson.true_count;
+                        this.finalPage = 1000; // 該頁面只能翻 1000 頁
+                        this.profile.name = "Posts";
+                        this.profile.post_count = this.profile.post_count || homeJson.true_count;
                     }
 
                     this._setMeta();
@@ -812,8 +813,10 @@ export default class FetchData {
                     }
                 };
 
+                // Pawchive 的 API, Post 頁面 跟 Posts 是一樣的
+                homeJson = this.isPost || Process.IsPawchive ? homeJson : homeJson.posts;
+
                 // 生成任務
-                homeJson = this.isPost ? homeJson : homeJson.posts;
                 for (const [index, post] of homeJson.entries()) {
 
                     if (Process.IsPawchive) {
@@ -823,7 +826,7 @@ export default class FetchData {
                         // ! 實驗性
                         try {
                             // pawchive 的 tags 格式是字串, 需要特別處理
-                            post.tags = post.tags.slice(1, -1).split(",").map(s => s.trim());
+                            post.tags = post.tags?.slice(1, -1).split(",").map(s => s.trim());
 
                             this._packData({
                                 index,
@@ -872,7 +875,7 @@ export default class FetchData {
     /* 獲取元數據 (由 DOM 解析) */
     _getMeta() {
         this.profile = {
-            name: Lib.$q("span[itemprop='name'], fix_name").$text(),
+            name: Lib.$q("span[itemprop='name'], fix_name")?.$text(),
             post_count: this.totalPages > 0 ? this.totalPages : undefined,
             create_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}"),
             source_url: this.sourceURL,
