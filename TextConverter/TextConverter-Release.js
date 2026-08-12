@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      0.0.1-Beta3
+// @version      2026.08.12-Beta
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
@@ -25,6 +25,7 @@
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_xmlhttpRequest
+// @grant        window.onurlchange
 // @grant        GM_registerMenuCommand
 
 // @run-at       document-start
@@ -44,9 +45,11 @@
              *
              * 可導入字典
              *
-             * ! 如果某些單字翻譯的很怪, 可以個別導入 但不導入 "Short"
+             * ! 如果某些單字翻譯的很怪, 可以個別導入 但不導入 "Short", 或是導入 "Curated_Words"
+             * ! Curated_Words 主要是, Parody, Character, Tags, 跟一些特殊單詞
              *
              * 全部: "All_Words"
+             * 精選: "Curated_Words"
              * 標籤: "Tags"
              * 語言: "Language"
              * 角色: "Character"
@@ -90,79 +93,109 @@
     /* ====================== 不瞭解不要修改下方參數 ===================== */
     const [LoadDict, Translation] = [Config.LoadDictionary, Config.TranslationReversal];
     const Dev = GM_getValue("Dev", false);
-    const Update = UpdateWordsDict();
-    const Transl = TranslationFactory();
-    const Time = new Date().getTime();
-    const Timestamp = GM_getValue("UpdateTime", false);
+    const Update = updateWordsDict();
+    let Dict = GM_getValue("LocalWords", null) ?? await Update.reques();
     let Translated = true;
-    let TranslatedRecord = new Set();
-    let Dict = GM_getValue("LocalWords", null) ?? await Update.Reques();
     const Dictionary = {
         NormalDict: undefined,
         ReverseDict: undefined,
-        RefreshNormal: function () {
+        RefreshNormal() {
             this.NormalDict = Dict;
         },
-        RefreshReverse: function () {
+        RefreshReverse() {
             this.ReverseDict = Object.entries(this.NormalDict).reduce((acc, [key, value]) => {
                 acc[value] = key;
                 return acc;
             }, {});
         },
-        RefreshDict: function () {
-            TranslatedRecord = new Set();
-            Dict = Translated ? (Translated = false, this.ReverseDict) : (Translated = true,
+        RefreshDict() {
+            Dict = Translated ? (Translated = false, this.RefreshReverse(), this.ReverseDict) : (Translated = true,
                 this.NormalDict);
         },
-        DisplayMemory: function () {
+        DisplayMemory() {
             const [NormalSize, ReverseSize] = [getObjectSize(this.NormalDict), getObjectSize(this.ReverseDict)];
-            const ExactMB = (Dict === this.NormalDict ? NormalSize.MB : NormalSize.MB + getObjectSize(Dict).MB) + ReverseSize.MB;
+            const fullMB = (Dict === this.NormalDict ? NormalSize.MB : NormalSize.MB + getObjectSize(Dict).MB) + ReverseSize.MB;
             alert(`字典緩存大小
                 \r一般字典大小: ${NormalSize.MB} MB
                 \r反轉字典大小: ${ReverseSize.MB} MB
-                \r全部緩存大小: ${ExactMB} MB
+                \r全部緩存大小: ${fullMB.toFixed(2)} MB
             `);
         },
-        ReleaseMemory: function () {
+        ReleaseMemory() {
             Dict = this.NormalDict = this.ReverseDict = {};
+            console.log("%c緩存已釋放", `
+                padding: 5px;
+                color: #43fdeeff;
+                font-weight: bold;
+                border-radius: 10px;
+                background-color: #2b6eebff;
+                border: 2px solid #2b6eebff;
+            `);
         },
-        Init: function () {
+        Init() {
             Object.assign(Dict, Customize);
             this.RefreshNormal();
-            this.RefreshReverse();
         }
     };
     Dictionary.Init();
-    WaitElem("body", body => {
-        const RunFactory = () => Transl.Trigger(body);
-        const observer = new MutationObserver(Debounce(mutations => {
-            const hasRelevantChanges = mutations.some(mutation => mutation.type === "childList" || mutation.type === "characterData");
-            hasRelevantChanges && RunFactory();
-        }, 300));
-        const StartOb = () => {
-            RunFactory();
+    waitElem("body", body => {
+        const Transl = translationFactory();
+        const processedNodes = new WeakSet();
+        const observer = new MutationObserver(debounceCollect(mutations => {
+            const toProcess = [];
+            for (const mutation of mutations) {
+                if (mutation.type === "characterData" && mutation.target.parentElement) {
+                    const node = mutation.target.parentElement;
+                    if (!processedNodes.has(node)) {
+                        processedNodes.add(node);
+                    }
+                } else if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+                    for (const node of mutation.addedNodes) {
+                        if ((node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) && !processedNodes.has(node)) {
+                            processedNodes.add(node);
+                            toProcess.push(node);
+                        }
+                    }
+                } else if (mutation.type === "attributes" && mutation.attributeName === "placeholder") {
+                    const node = mutation.target;
+                    if (!processedNodes.has(node)) {
+                        processedNodes.add(node);
+                        toProcess.push(node);
+                    }
+                }
+            }
+            if (toProcess.length > 0) {
+                for (const node of toProcess) Transl.Trigger(node);
+            }
+        }, 600));
+        const startOb = () => {
+            Transl.Trigger();
             observer.observe(body, {
                 subtree: true,
                 childList: true,
                 characterData: true,
+                attributes: true,
                 attributeFilter: ["placeholder"]
             });
         };
+        window.addEventListener("urlchange", () => {
+            Transl.Trigger();
+        });
         const DisOB = () => observer.disconnect();
-        !Dev && StartOb();
+        !Dev && startOb();
         function ThePolesAreReversed(RecoverOB = true) {
             DisOB();
             Dictionary.RefreshDict();
-            RecoverOB ? StartOb() : RunFactory();
+            RecoverOB ? startOb() : Transl.Trigger();
         }
-        Menu({
+        regMenu({
             "🆕 更新字典": {
                 desc: "獲取伺服器字典, 更新本地數據庫, 並在控制台打印狀態",
                 func: async () => {
                     Translated = true;
                     GM_setValue("Clear", false);
                     ThePolesAreReversed(false);
-                    Dict = await Update.Reques();
+                    Dict = await Update.reques();
                     Dictionary.Init();
                     ThePolesAreReversed();
                 }
@@ -192,7 +225,7 @@
         }
         if (Dev) {
             Translated = false;
-            Menu({
+            regMenu({
                 "« 🚫 停用開發者模式 »": {
                     desc: "關閉開發者模式",
                     func: () => {
@@ -202,12 +235,12 @@
                 },
                 "🪧 展示匹配文本": {
                     desc: "在控制台打印匹配的文本, 建議先開啟控制台在運行",
-                    func: () => Transl.Dev(body),
+                    func: () => Transl.Dev(document),
                     close: false
                 },
                 "🖨️ 輸出匹配文檔": {
                     desc: "以 Json 格式輸出, 頁面上被匹配到的所有文本",
-                    func: () => Transl.Dev(body, false)
+                    func: () => Transl.Dev(document, false)
                 },
                 "📼 展示字典緩存": {
                     desc: "顯示當前載入的字典大小",
@@ -219,7 +252,7 @@
                 }
             }, "Dev");
         } else {
-            Menu({
+            regMenu({
                 "« ✅ 啟用開發者模式 »": {
                     desc: "打開開發者模式",
                     func: () => {
@@ -229,8 +262,10 @@
                 }
             }, "Dev");
         }
-        if (!Timestamp || Time - new Date(Timestamp).getTime() > 36e5 * 24) {
-            Update.Reques().then(data => {
+        const CurrentTime = new Date().getTime();
+        const UpdateTime = GM_getValue("UpdateTime", false);
+        if (!UpdateTime || CurrentTime - new Date(UpdateTime).getTime() > 36e5 * 24) {
+            Update.reques().then(data => {
                 Dict = data;
                 Dictionary.Init();
                 ThePolesAreReversed(false);
@@ -238,23 +273,70 @@
             });
         }
     });
-    function TranslationFactory() {
+    const renderWait = requestIdleCallback || (callback => {
+        const startTime = Date.now();
+        return setTimeout(() => {
+            callback({
+                didTimeout: false,
+                timeRemaining: () => {
+                    return Math.max(0, 50 - (Date.now() - startTime));
+                }
+            });
+        }, 1);
+    });
+    const scheduler = (() => {
+        let queue = [];
+        let timeout = 1500;
+        let isRunning = false;
+        const processQueue = deadline => {
+            while (deadline.timeRemaining() > 0 && queue.length > 0) {
+                const task = queue.shift();
+                try {
+                    task.workFn();
+                    task.resolver();
+                } catch {
+                    task.resolver();
+                }
+            }
+            if (queue.length > 0) {
+                renderWait(processQueue, {
+                    timeout: timeout
+                });
+            } else {
+                isRunning = false;
+            }
+        };
+        return {
+            wrap: workFn => {
+                return new Promise(resolve => {
+                    queue.push({
+                        workFn: workFn,
+                        resolver: resolve
+                    });
+                });
+            },
+            start: () => {
+                if (isRunning || queue.length === 0) {
+                    return;
+                }
+                isRunning = true;
+                renderWait(processQueue, {
+                    timeout: timeout
+                });
+            }
+        };
+    })();
+    function translationFactory() {
+        const filterTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL"]);
         function getTextNodes(root) {
             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                 acceptNode: node => {
-                    const tag = node.parentElement.tagName;
-                    if (tag === "STYLE" || tag === "SCRIPT" || tag === "CODE" || tag === "PRE" || tag === "NOSCRIPT" || tag === "SVG") {
+                    const parent = node.parentElement;
+                    if (filterTags.has(parent?.tagName)) {
                         return NodeFilter.FILTER_REJECT;
                     }
                     const content = node.textContent.trim();
                     if (!content) return NodeFilter.FILTER_REJECT;
-                    if (content.startsWith("src=") || content.startsWith("href=") || content.startsWith("data-") || content.startsWith("function ") || content.startsWith("const ") || content.startsWith("var ")) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    const codeSymbolCount = (content.match(/[{}[\]()<>]/g) || []).length;
-                    if (codeSymbolCount > content.length * .2) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
                     if (/^\d+$/.test(content)) {
                         return NodeFilter.FILTER_REJECT;
                     }
@@ -277,7 +359,7 @@
             __ShortWordRegex: /[\d\p{L}]+/gu,
             __LongWordRegex: /[\d\p{L}]+(?:[^|()\[\]{}{[(\t\n])+[\d\p{L}]\.*/gu,
             __Clean: text => text.trim().toLowerCase(),
-            Dev_MatchObj: function (text) {
+            Dev_MatchObj(text) {
                 const Sresult = text?.match(this.__ShortWordRegex)?.map(Short => {
                     const Clean = this.__Clean(Short);
                     return [Clean, Dict[Clean] ?? ""];
@@ -291,43 +373,90 @@
                     return acc;
                 }, {});
             },
-            OnlyLong: function (text) {
+            OnlyLong(text) {
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? Long);
             },
-            OnlyShort: function (text) {
+            OnlyShort(text) {
                 return text?.replace(this.__ShortWordRegex, Short => Dict[this.__Clean(Short)] ?? Short);
             },
-            LongShort: function (text) {
+            LongShort(text) {
                 return text?.replace(this.__LongWordRegex, Long => Dict[this.__Clean(Long)] ?? this.OnlyShort(Long));
             }
         };
         const RefreshUICore = {
-            FocusTextRecovery: async textNode => {
-                textNode.textContent = TCore.OnlyLong(textNode.textContent);
-                textNode.textContent = TCore.OnlyShort(textNode.textContent);
+            async FocusTextRecovery(textNode) {
+                const originalContent = textNode.textContent;
+                const longTranslated = TCore.OnlyLong(originalContent);
+                if (originalContent !== longTranslated) {
+                    textNode.textContent = longTranslated;
+                }
+                const shortTranslated = TCore.OnlyShort(textNode.textContent);
+                if (textNode.textContent !== shortTranslated) {
+                    textNode.textContent = shortTranslated;
+                }
             },
-            FocusTextTranslate: async textNode => {
-                textNode.textContent = TCore.LongShort(textNode.textContent);
+            async FocusTextTranslate(textNode) {
+                const originalContent = textNode.textContent;
+                const translated = TCore.LongShort(originalContent);
+                if (originalContent !== translated) {
+                    textNode.textContent = translated;
+                }
             },
-            FocusInputRecovery: async inputNode => {
-                inputNode.value = TCore.OnlyLong(inputNode.value);
-                inputNode.value = TCore.OnlyShort(inputNode.value);
-                inputNode.setAttribute("placeholder", TCore.OnlyLong(inputNode.getAttribute("placeholder")));
-                inputNode.setAttribute("placeholder", TCore.OnlyShort(inputNode.getAttribute("placeholder")));
+            async FocusInputRecovery(inputNode) {
+                const originalValue = inputNode.value;
+                if (originalValue) {
+                    const longTranslated = TCore.OnlyLong(originalValue);
+                    if (originalValue !== longTranslated) {
+                        inputNode.value = longTranslated;
+                    }
+                    const shortTranslated = TCore.OnlyShort(inputNode.value);
+                    if (inputNode.value !== shortTranslated) {
+                        inputNode.value = shortTranslated;
+                    }
+                }
+                const originalPlaceholder = inputNode.getAttribute("placeholder");
+                if (originalPlaceholder) {
+                    const longTranslated = TCore.OnlyLong(originalPlaceholder);
+                    if (originalPlaceholder !== longTranslated) {
+                        inputNode.setAttribute("placeholder", longTranslated);
+                    }
+                    const shortTranslated = TCore.OnlyShort(inputNode.getAttribute("placeholder"));
+                    if (inputNode.getAttribute("placeholder") !== shortTranslated) {
+                        inputNode.setAttribute("placeholder", shortTranslated);
+                    }
+                }
             },
-            FocusInputTranslate: async inputNode => {
-                inputNode.value = TCore.LongShort(inputNode.value);
-                inputNode.setAttribute("placeholder", TCore.LongShort(inputNode.getAttribute("placeholder")));
+            async FocusInputTranslate(inputNode) {
+                const originalValue = inputNode.value;
+                if (originalValue) {
+                    const translated = TCore.LongShort(originalValue);
+                    if (originalValue !== translated) {
+                        inputNode.value = translated;
+                    }
+                }
+                const originalPlaceholder = inputNode.getAttribute("placeholder");
+                if (originalPlaceholder) {
+                    const translated = TCore.LongShort(originalPlaceholder);
+                    if (originalPlaceholder !== translated) {
+                        inputNode.setAttribute("placeholder", translated);
+                    }
+                }
             }
         };
         const ProcessingDataCore = {
             __FocusTextCore: Translation.FocusOnRecovery ? RefreshUICore.FocusTextRecovery : RefreshUICore.FocusTextTranslate,
             __FocusInputCore: Translation.FocusOnRecovery ? RefreshUICore.FocusInputRecovery : RefreshUICore.FocusInputTranslate,
-            Dev_Operation: function (root, print) {
+            Dev_Operation(root, print) {
                 const results = {};
                 [...getTextNodes(root).map(textNode => textNode.textContent), ...[...root.querySelectorAll("input[placeholder], input[value]")].map(inputNode => [inputNode.value, inputNode.getAttribute("placeholder")]).flat().filter(value => value && value != "")].map(text => Object.assign(results, TCore.Dev_MatchObj(text)));
+                if (Object.keys(results).length === 0) {
+                    alert("沒有匹配的數據");
+                    return;
+                }
                 if (print) console.table(results); else {
-                    const Json = new Blob([JSON.stringify(results, null, 4)], { type: "application/json" });
+                    const Json = new Blob([JSON.stringify(results, null, 4)], {
+                        type: "application/json"
+                    });
                     const Link = document.createElement("a");
                     Link.href = URL.createObjectURL(Json);
                     Link.download = "MatchWords.json";
@@ -336,34 +465,40 @@
                     Link.remove();
                 }
             },
-            OperationText: async function (root) {
-                return Promise.all(getTextNodes(root).map(textNode => {
-                    if (TranslatedRecord.has(textNode)) return Promise.resolve();
-                    TranslatedRecord.add(textNode);
-                    return this.__FocusTextCore(textNode);
-                }));
+            OperationText(root, scheduler) {
+                return Promise.all(getTextNodes(root).map(textNode => scheduler.wrap(() => this.__FocusTextCore(textNode))));
             },
-            OperationInput: async function (root) {
-                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode => {
-                    if (TranslatedRecord.has(inputNode)) return Promise.resolve();
-                    TranslatedRecord.add(inputNode);
-                    return this.__FocusInputCore(inputNode);
-                }));
+            OperationInput(root, scheduler) {
+                return Promise.all([...root.querySelectorAll("input[placeholder]")].map(inputNode => scheduler.wrap(() => this.__FocusInputCore(inputNode))));
             }
         };
         return {
-            Dev: (root, print = true) => {
+            Dev(root, print = true) {
                 ProcessingDataCore.Dev_Operation(root, print);
             },
-            Trigger: async root => {
-                await Promise.all([ProcessingDataCore.OperationText(root), ProcessingDataCore.OperationInput(root)]);
+            Trigger: (root = document.body) => {
+                if (root.nodeType === Node.TEXT_NODE && root.parentElement) {
+                    const textPromise = ProcessingDataCore.OperationText(root.parentElement, scheduler);
+                    scheduler.start();
+                    return Promise.all([textPromise]);
+                }
+                if (root === document || root.nodeType === Node.ELEMENT_NODE) {
+                    const textPromise = ProcessingDataCore.OperationText(root, scheduler);
+                    const inputPromise = ProcessingDataCore.OperationInput(root, scheduler);
+                    scheduler.start();
+                    return Promise.all([textPromise, inputPromise]);
+                }
+                if (root.nodeType === Node.ELEMENT_NODE && root.tagName === "INPUT" && root.hasAttribute("placeholder")) {
+                    return ProcessingDataCore.__FocusInputCore(root);
+                }
+                return Promise.resolve();
             }
         };
     }
-    function UpdateWordsDict() {
+    function updateWordsDict() {
         const ObjType = object => Object.prototype.toString.call(object).slice(8, -1);
         const Parse = {
-            Url: str => {
+            Url(str) {
                 try {
                     new URL(str);
                     return true;
@@ -371,14 +506,14 @@
                     return false;
                 }
             },
-            ExtenName: link => {
+            ExtenName(link) {
                 try {
                     return link.match(/\.([^.]+)$/)[1].toLowerCase() || "json";
                 } catch {
                     return "json";
                 }
             },
-            Array: data => {
+            Array(data) {
                 data = data.filter(d => d.trim() !== "");
                 return {
                     State: data.length > 0,
@@ -386,27 +521,23 @@
                     Data: data
                 };
             },
-            String: data => {
-                return {
-                    State: data != "",
-                    Type: "str",
-                    Data: data
-                };
-            },
-            Undefined: () => {
-                return {
-                    State: false
-                };
-            }
+            String: data => ({
+                State: data != "",
+                Type: "str",
+                Data: data
+            }),
+            Undefined: () => ({
+                State: false
+            })
         };
-        const RequestDict = data => {
-            const URL = Parse.Url(data) ? data : `https://raw.githubusercontent.com/Canaan-HS/Script-DataBase/main/Words/${data}.json`;
+        const requestDict = data => {
+            const URL = Parse.Url(data) ? data : `https://gitlab.com/Canaan-HS/database/-/raw/main/Words/${data}.json`;
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: "GET",
                     responseType: Parse.ExtenName(URL),
                     url: URL,
-                    onload: response => {
+                    onload(response) {
                         if (response.status === 200) {
                             const data = response.response;
                             if (typeof data === "object" && Object.keys(data).length > 0) {
@@ -420,7 +551,7 @@
                             resolve({});
                         }
                     },
-                    onerror: error => {
+                    onerror(error) {
                         console.error("連線異常");
                         resolve({});
                     }
@@ -428,7 +559,7 @@
             });
         };
         return {
-            Reques: async () => {
+            async reques() {
                 const {
                     State,
                     Type,
@@ -437,14 +568,14 @@
                 const DefaultDict = Object.assign(GM_getValue("LocalWords", {}), Customize);
                 if (!State || GM_getValue("Clear")) return DefaultDict;
                 const CacheDict = {};
-                if (Type == "str") Object.assign(CacheDict, await RequestDict(Data)); else if (Type == "arr") {
+                if (Type == "str") Object.assign(CacheDict, await requestDict(Data)); else if (Type == "arr") {
                     for (const data of Data) {
-                        Object.assign(CacheDict, await RequestDict(data));
+                        Object.assign(CacheDict, await requestDict(data));
                     }
                 }
                 if (Object.keys(CacheDict).length > 0) {
                     Object.assign(CacheDict, Customize);
-                    GM_setValue("UpdateTime", GetDate());
+                    GM_setValue("UpdateTime", getDate());
                     GM_setValue("LocalWords", CacheDict);
                     console.log("%c數據更新成功", `
                         padding: 5px;
@@ -470,132 +601,120 @@
         };
     }
     function getObjectSize(object) {
-        const visited = new WeakSet();
-        const alignSize = size => Math.ceil(size / 8) * 8;
-        const Type = obj => {
+        const seenObjects = new WeakSet();
+        const seenStrings = new Set();
+        const bytesPerPointer = 4;
+        const headerSize = 12;
+        const align = n => Math.ceil(n / 8) * 8;
+        const getType = obj => {
             if (obj === null) return "Null";
             if (obj === undefined) return "Undefined";
             return Object.prototype.toString.call(obj).slice(8, -1);
         };
-        const calculateCollectionSize = (value, cache, iteratee) => {
-            if (!value || cache.has(value)) return 0;
-            cache.add(value);
-            let bytes = 16;
-            const size = value.size || value.length || 0;
-            bytes += size * 8;
-            for (const item of iteratee(value)) {
-                if (item[0] !== undefined) {
-                    bytes += Calculate[Type(item[0])]?.(item[0], cache) ?? 0;
-                }
-                if (item[1] !== undefined) {
-                    bytes += Calculate[Type(item[1])]?.(item[1], cache) ?? 0;
+        const calcString = str => {
+            if (seenStrings.has(str)) return 0;
+            seenStrings.add(str);
+            let isTwoByte = false;
+            for (let i = 0; i < str.length; i++) {
+                if (str.charCodeAt(i) > 255) {
+                    isTwoByte = true;
+                    break;
                 }
             }
-            return alignSize(bytes);
+            return align(headerSize + str.length * (isTwoByte ? 2 : 1));
         };
-        const calculateStringSize = value => {
-            let bytes = 12;
-            for (let i = 0; i < value.length; i++) {
-                const code = value.charCodeAt(i);
-                if (code < 128) bytes += 1; else if (code < 2048) bytes += 2; else if (code < 65536) bytes += 3; else bytes += 4;
+        const getSizeRec = value => {
+            const type = getType(value);
+            if (type === "Boolean") return 4;
+            if (type === "Number") {
+                if (Number.isSafeInteger(value) && value >= -2147483648 && value <= 2147483647) return 0;
+                return 12;
             }
-            return alignSize(bytes);
+            if (type === "String") return calcString(value);
+            if (type === "Symbol") return value.description ? calcString(value.description) : 0;
+            if (type === "Null" || type === "Undefined") return 0;
+            if (seenObjects.has(value)) return 0;
+            seenObjects.add(value);
+            return handlers[type] ? handlers[type](value) : handlers.Object(value);
         };
-        const Calculate = {
-            Undefined: () => 0,
-            Null: () => 0,
-            Boolean: () => 4,
-            Number: () => 8,
-            BigInt: value => alignSize(Math.ceil(value.toString(2).length / 8) + 8),
-            String: calculateStringSize,
-            Symbol: value => alignSize((value.description || "").length * 2 + 8),
-            Date: () => 8,
-            RegExp: value => alignSize(value.toString().length * 2 + 8),
-            Function: value => alignSize(value.toString().length * 2 + 16),
-            ArrayBuffer: value => alignSize(value.byteLength + 16),
-            DataView: value => alignSize(value.byteLength + 24),
-            Int8Array: value => alignSize(value.byteLength + 24),
-            Uint8Array: value => alignSize(value.byteLength + 24),
-            Uint8ClampedArray: value => alignSize(value.byteLength + 24),
-            Int16Array: value => alignSize(value.byteLength + 24),
-            Uint16Array: value => alignSize(value.byteLength + 24),
-            Int32Array: value => alignSize(value.byteLength + 24),
-            Uint32Array: value => alignSize(value.byteLength + 24),
-            Float32Array: value => alignSize(value.byteLength + 24),
-            Float64Array: value => alignSize(value.byteLength + 24),
-            BigInt64Array: value => alignSize(value.byteLength + 24),
-            BigUint64Array: value => alignSize(value.byteLength + 24),
-            Array: (value, cache) => {
-                return calculateCollectionSize(value, cache, function* (arr) {
-                    for (let i = 0; i < arr.length; i++) {
-                        yield [arr[i]];
-                    }
-                });
+        const handlers = {
+            Array: val => {
+                let bytes = headerSize + val.length * bytesPerPointer;
+                for (const item of val) bytes += getSizeRec(item);
+                return align(bytes);
             },
-            Set: (value, cache) => {
-                return calculateCollectionSize(value, cache, function* (set) {
-                    for (const item of set) {
-                        yield [item];
-                    }
-                });
-            },
-            Map: (value, cache) => {
-                return calculateCollectionSize(value, cache, function* (map) {
-                    for (const [key, val] of map) {
-                        yield [key, val];
-                    }
-                });
-            },
-            Object: (value, cache) => {
-                if (!value || cache.has(value)) return 0;
-                cache.add(value);
-                let bytes = 16;
-                const props = Object.getOwnPropertyNames(value);
-                bytes += props.length * 8;
-                for (const key of props) {
-                    bytes += calculateStringSize(key);
-                    const propValue = value[key];
-                    bytes += Calculate[Type(propValue)]?.(propValue, cache) ?? 0;
+            Object: val => {
+                let bytes = headerSize;
+                const keys = Object.keys(val);
+                const symKeys = Object.getOwnPropertySymbols(val);
+                bytes += (keys.length + symKeys.length) * bytesPerPointer;
+                for (const key of keys) {
+                    bytes += calcString(key);
+                    bytes += getSizeRec(val[key]);
                 }
-                const symbols = Object.getOwnPropertySymbols(value);
-                bytes += symbols.length * 8;
-                for (const sym of symbols) {
-                    bytes += Calculate.Symbol(sym);
-                    const symValue = value[sym];
-                    bytes += Calculate[Type(symValue)]?.(symValue, cache) ?? 0;
+                for (const sym of symKeys) {
+                    bytes += (sym.description || "").length * 2;
+                    bytes += getSizeRec(val[sym]);
                 }
-                return alignSize(bytes);
+                return align(bytes);
             },
-            WeakMap: () => 32,
-            WeakSet: () => 24,
-            Error: value => {
-                let bytes = 32;
-                bytes += calculateStringSize(value.message || "");
-                bytes += calculateStringSize(value.stack || "");
-                return alignSize(bytes);
+            Set: val => {
+                let bytes = headerSize + val.size * bytesPerPointer * 2;
+                for (const item of val) bytes += getSizeRec(item);
+                return align(bytes);
             },
-            Promise: () => 64
+            Map: val => {
+                let bytes = headerSize + val.size * bytesPerPointer * 4;
+                for (const [k, v] of val) {
+                    bytes += getSizeRec(k) + getSizeRec(v);
+                }
+                return align(bytes);
+            },
+            Date: () => align(headerSize + 8),
+            RegExp: val => {
+                return align(headerSize + 4 + calcString(val.toString()));
+            },
+            BigInt: val => {
+                const hexLen = val.toString(16).length;
+                return align(headerSize + Math.ceil(hexLen / 2));
+            },
+            Error: val => {
+                let bytes = headerSize;
+                if (val.message) bytes += calcString(val.message);
+                if (val.stack) bytes += calcString(val.stack);
+                return align(bytes);
+            },
+            Promise: () => align(headerSize + bytesPerPointer * 3),
+            WeakMap: () => align(headerSize + 32),
+            WeakSet: () => align(headerSize + 24),
+            ArrayBuffer: val => align(headerSize + val.byteLength),
+            DataView: () => align(headerSize + 24),
+            Function: val => align(headerSize + val.toString().length)
         };
-        const type = Type(object);
-        const calculator = Calculate[type] || Calculate.Object;
-        const bytes = calculator(object, visited);
-        return {
-            bytes: bytes,
-            KB: Number((bytes / 1024).toFixed(2)),
-            MB: Number((bytes / 1024 / 1024).toFixed(2)),
-            GB: Number((bytes / 1024 / 1024 / 1024).toFixed(2))
-        };
+        ["Int8Array", "Uint8Array", "Uint8ClampedArray", "Int16Array", "Uint16Array", "Int32Array", "Uint32Array", "Float32Array", "Float64Array", "BigInt64Array", "BigUint64Array"].forEach(type => {
+            handlers[type] = () => align(headerSize + 24);
+        });
+        const totalBytes = getSizeRec(object);
+        const units = ["Bytes", "KB", "MB", "GB"];
+        return units.reduce((acc, unit, i) => {
+            acc[unit] = Number(i === 0 ? totalBytes : (totalBytes / 1024 ** i).toFixed(2));
+            return acc;
+        }, {});
     }
-    function Debounce(func, delay = 100) {
+    function debounceCollect(func, delay) {
         let timer = null;
-        return (...args) => {
+        let collectedMutations = [];
+        return mutations => {
             clearTimeout(timer);
-            timer = setTimeout(function () {
-                func(...args);
+            collectedMutations.push(...mutations);
+            timer = setTimeout(() => {
+                func(collectedMutations);
+                collectedMutations = [];
+                timer = null;
             }, delay);
         };
     }
-    function GetDate(format = null) {
+    function getDate(format = null) {
         const date = new Date();
         const defaultFormat = "{year}-{month}-{date} {hour}:{minute}:{second}";
         const formatMap = {
@@ -609,41 +728,45 @@
         const generate = temp => temp.replace(/{([^}]+)}/g, (_, key) => formatMap[key] || "Error");
         return generate(typeof format === "string" ? format : defaultFormat);
     }
-    async function Menu(Item, ID = "Menu", Index = 1) {
-        for (const [Name, options] of Object.entries(Item)) {
-            GM_registerMenuCommand(Name, () => {
-                options.func();
+    function regMenu(items, name = "Menu", index = 1) {
+        for (let [show, item] of Object.entries(items)) {
+            let id = `${name}-${index++}`;
+            typeof item === "function" && (item = {
+                func: item
+            });
+            GM_registerMenuCommand(show, () => {
+                item.func();
             }, {
-                title: options.desc,
-                id: `${ID}-${Index++}`,
-                autoClose: options.close,
-                accessKey: options.hotkey
+                id: id,
+                title: item.desc,
+                autoClose: item.close,
+                accessKey: item.hotkey
             });
         }
     }
-    async function WaitElem(selector, found) {
-        const Core = async function () {
-            let AnimationFrame;
+    async function waitElem(selector, found) {
+        const core = async function () {
+            let animationFrame;
             let timer, result;
             const query = () => {
                 result = document.getElementsByTagName(selector)[0];
                 if (result) {
-                    cancelAnimationFrame(AnimationFrame);
+                    cancelAnimationFrame(animationFrame);
                     clearTimeout(timer);
                     found && found(result);
                 } else {
-                    AnimationFrame = requestAnimationFrame(query);
+                    animationFrame = requestAnimationFrame(query);
                 }
             };
-            AnimationFrame = requestAnimationFrame(query);
+            animationFrame = requestAnimationFrame(query);
             timer = setTimeout(() => {
-                cancelAnimationFrame(AnimationFrame);
+                cancelAnimationFrame(animationFrame);
             }, 1e3 * 8);
         };
         if (document.visibilityState === "hidden") {
-            document.addEventListener("visibilitychange", () => Core(), {
+            document.addEventListener("visibilitychange", () => core(), {
                 once: true
             });
-        } else Core();
+        } else core();
     }
 })();
