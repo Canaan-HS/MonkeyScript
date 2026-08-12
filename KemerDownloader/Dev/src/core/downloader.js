@@ -16,6 +16,7 @@ export default function Downloader() {
             this.compressMode = compressMode;
 
             this.namedData = null;
+            this.sourceType = null;
             this.forceCompressSignal = false;
 
             /* 獲取原始標題 */
@@ -74,17 +75,26 @@ export default function Downloader() {
             } else { }
         }
 
-        /* 下載觸發 [ 查找下載數據, 解析下載資訊, 呼叫下載函數 ] */
-        trigger(sourceType) { // 下載數據, 文章標題, 作者名稱
+        /* 下載觸發 獲取所需數據 */
+        trigger(sourceType) {
+            this.sourceType = sourceType;
+
             Lib.waitEl([
-                ".post__title, .scrape__title",
-                ".post__files, .scrape__files",
-                ".post__user-name, .scrape__user-name, fix_name"
+                ".post__title, .scrape__title", // 下載數據
+                ".post__files, .scrape__files", // 文章標題
+                ".post__user-name, .scrape__user-name, fix_name" // 作者名稱
             ], found => {
                 const [title, files, artist] = found;
 
                 Process.Lock = true;
-                this.button.disabled = true;
+
+                // 使用該模式時全都鎖定
+                if (General.IncludeExtras) {
+                    Lib.$qa(".Download_Button:not([disabled])").forEach(el => el.disabled = true);
+                } else {
+                    this.button.disabled = true;
+                }
+
                 const downloadData = new Map();
 
                 const { server, user, post } = Parse.getUrlInfo(Lib.url);
@@ -108,7 +118,7 @@ export default function Downloader() {
                     }
                 }
 
-                const [ // 獲取名稱
+                let [ // 獲取名稱
                     compressName,
                     folderName,
                     fillName
@@ -123,7 +133,14 @@ export default function Downloader() {
 
                 const finalData = General.IncludeExtras
                     ? [...imgData, ...extrasData] // 包含所有下載內容
-                    : sourceType === "Files" ? imgData : extrasData; // 根據類型選擇
+                    : (() => {
+                        // 如果沒使用包括模式, 並使用壓縮模式會再壓縮名稱前 加上類型, 反之會在文件名前 加上類型
+                        if (this.compressMode) compressName = `[${sourceType}] ${compressName}`;
+                        else fillName = `[${sourceType}] ${fillName}`;
+
+                        // 根據類型選擇
+                        return sourceType === "Files" ? imgData : extrasData;
+                    })();
 
                 // 使用 foreach, 他的異步特性可能造成一些意外, 因此使用 for
                 for (const [index, file] of finalData.entries()) {
@@ -138,6 +155,7 @@ export default function Downloader() {
                 if (downloadData.size == 0) General.Dev = true; // 如果沒有下載數據, 就顯示開發者模式, 偵錯用
 
                 Lib.log({
+                    SourceType: sourceType,
                     CompressName: compressName,
                     FolderName: folderName,
                     DownloadData: downloadData
@@ -406,6 +424,7 @@ export default function Downloader() {
                 Lib.log(result, { dev: General.Dev, group: errorShow, collapsed: false }).error;
 
                 setTimeout(() => {
+                    // ! 如果用戶亂按, 這邊直接解鎖, 可能會導致重複下載
                     Process.Lock = false;
                     this.button.disabled = false;
                     this.button.$text(this.modeDisplay);
@@ -416,11 +435,29 @@ export default function Downloader() {
         /* 按鈕重置 */
         async _resetButton() {
             General.CompleteClose && window.close();
-            Process.Lock = false;
-            Lib.$qa(".Download_Button[disabled]").forEach(button => {
+
+            const modifyButton = (button) => {
+                if (!button) return;
+
                 button.disabled = false;
                 button.$text(`✓ ${this.modeDisplay}`);
-            });
+            };
+
+            // ? 使用重新查找, 而不使用 this.button 來修改, 是因為允許中途修改下載模式, 而修改的方式是刪除重建
+            // ? 所以可能會有丟失的狀況, 重新查找比較穩定
+
+            if (General.IncludeExtras) {
+                // 該模式兩個都需要解鎖
+                Lib.$qa(".Download_Button[disabled]").forEach(el => modifyButton(el));
+            } else {
+                modifyButton(Lib.$q(`#${this.sourceType} .Download_Button[disabled]`));
+            }
+
+            // ? 避免有人同時點兩個下載, 一個先好就解鎖, 導致重複下載
+
+            if (Lib.$qa(".Download_Button:not([disabled])").length >= 2) {
+                Process.Lock = false;
+            }
         }
     }
 }
