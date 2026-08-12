@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.12.08-Beta
+// @version      2026.08.12-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -19,6 +19,7 @@
 // @connect      *
 // @match        *://kemono.cr/*
 // @match        *://coomer.st/*
+// @match        *://pawchive.pw/*
 // @match        *://nekohouse.su/*
 
 // @license      MPL-2.0
@@ -26,10 +27,9 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2381/2381981.png
 
-// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.min.js
+// @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1709491/Syntax_min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js
+// @require      https://update.greasyfork.org/scripts/495339/1897759/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -114,7 +114,7 @@
         ImageExts: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif", "svg", "heic", "heif", "raw", "ico", "avif", "jxl", "cr2", "nef", "arw", "orf", "rw2", "tga", "pcx", "crw", "cr3", "dng", "eps", "xcf", "ai", "psd", "psb", "pef", "nrw", "ptx", "srf", "sr2", "raf", "rwl", "3fr", "fff", "iiq", "x3f", "ari", "bay", "dcr", "kdc", "mef", "mos", "usdz", "jxr", "cdr", "wmf", "emf", "dxf", "svgz", "obj", "fbx", "stl", "gltf", "glb", "dae", "blend", "max", "c4d", "step", "stp", "iges"],
         VideoExts: ["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"],
         Lock: false,
-        dynamicParam: Lib.createNetworkObserver({
+        DynamicParam: Lib.createNetworkObserver({
             MAX_Delay: 1500,
             MIN_CONCURRENCY: 5,
             MAX_CONCURRENCY: 10,
@@ -437,6 +437,7 @@
                 user,
                 id
             }) => `${this.origin}/${apiInterface}/${service}/user/${user}/post/${id}`;
+            this.profile = null;
             this.profileAPI = `${this.origin}/${apiInterface}${this.pathname}/profile`;
             this.getNextPageURL = urlStr => {
                 const url = new URL(urlStr);
@@ -482,17 +483,18 @@
             this.kemerCategorize = ({
                 title,
                 data,
-                serverDict,
+                server,
                 fillValue
             }) => {
                 let imgNumber = 0;
                 return data.reduce((acc, file) => {
                     const name = file.name;
                     const path = file.path;
+                    if (!path) return acc;
                     const extension = Lib.suffixName(path, "");
                     if (filterExts.has(extension)) return acc;
-                    const server = serverDict ? `${serverDict[path]}/data` : `${file.server}/data`;
-                    const url = `${server}${path}`;
+                    const serverPath = server ? `${server}/data` : `${file.server}/data`;
+                    const url = `${serverPath}${path}`;
                     if (this.isVideo(extension)) {
                         acc.video[name] = `${url}?f=${name}`;
                     } else if (this.isImage(extension)) {
@@ -602,7 +604,7 @@
                         if (!href) return;
                         if (/\.[a-zA-Z0-9]+$/.test(href)) return;
                         if (safeInclud(name, "frame embed")) name = "";
-                        parsed[name && name !== href ? name : md5(href).slice(0, 16)] = pass ? {
+                        parsed[name && name !== href ? name : Lib.getFingerprint(href).slice(0, 16)] = pass ? {
                             [Transl("密碼")]: pass,
                             [Transl("連結")]: href
                         } : href;
@@ -908,7 +910,7 @@
                                 error
                             } = e.data;
                             if (!error) {
-                                this.fetchDelay = Process.dynamicParam(time, delay);
+                                this.fetchDelay = Process.DynamicParam(time, delay);
                                 resolve(content);
                             } else {
                                 Lib.log({
@@ -960,7 +962,7 @@
                             error
                         } = e.data;
                         if (!error) {
-                            this.fetchDelay = Process.dynamicParam(time, delay);
+                            this.fetchDelay = Process.DynamicParam(time, delay);
                             resolve({
                                 url: url2,
                                 content: content
@@ -997,17 +999,14 @@
                 dev: General.Dev,
                 group: "Fetch Content"
             });
+            if (!this.profile) this._getMeta();
             if (Process.IsNeko) {
                 let taskCount = 0;
                 const tasks = [];
                 const resolvers = new Map();
-                const postCount = content.length;
-                if (this.metaDict.size === 0) {
-                    this.metaDict.set(Transl("作者"), Lib.$q("span[itemprop='name'], fix_name").$text());
-                    this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : postCount);
-                    this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-                    this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-                }
+                if (this.metaDict.size === 0) this._setMeta({
+                    defPostCount: content.length
+                });
                 this.worker.onmessage = async e => {
                     const {
                         index,
@@ -1022,7 +1021,7 @@
                         const {
                             resolve
                         } = resolvers.get(index);
-                        this.fetchDelay = Process.dynamicParam(time, delay);
+                        this.fetchDelay = Process.DynamicParam(time, delay);
                         const standardTitle = this.normalizeName(title, index);
                         const postDom = Lib.domParse(content2);
                         const classifiedFiles = this.nekoCategorize(standardTitle, [...postDom.$qa(".fileThumb"), ...postDom.$qa(".scrape__attachments a")]);
@@ -1084,14 +1083,11 @@
                 let homeJson = JSON.parse(content);
                 if (homeJson) {
                     if (this.metaDict.size === 0) {
-                        let profile = {
-                            name: null
-                        };
-                        if (this.isPost) {
+                        if ((!this.profile.name || !this.profile.post_count) && this.isPost && !Process.IsPawchive) {
                             this.worker.postMessage({
                                 url: this.profileAPI
                             });
-                            profile = await new Promise((resolve, reject) => {
+                            Object.assign(this.profile, await new Promise((resolve, reject) => {
                                 this.worker.onmessage = async e => {
                                     const {
                                         url,
@@ -1109,19 +1105,14 @@
                                         });
                                     }
                                 };
-                            });
-                        } else {
-                            this.finalPage = Math.min(this.finalPage, 1e3);
-                            profile["post_count"] = homeJson.true_count;
+                            }));
                         }
-                        this.metaDict.set(Transl("作者"), profile.name);
-                        this.metaDict.set(Transl("帖子數量"), this.totalPages > 0 ? this.totalPages : profile.post_count);
-                        this.metaDict.set(Transl("建立時間"), Lib.getDate("{year}-{month}-{date} {hour}:{minute}"));
-                        this.metaDict.set(Transl("獲取頁面"), this.sourceURL);
-                        Lib.log(this.metaDict, {
-                            dev: General.Dev,
-                            group: "Meta Data"
-                        });
+                        if (!this.isPost) {
+                            this.finalPage = 1e3;
+                            this.profile.name = "Posts";
+                            this.profile.post_count = this.profile.post_count || homeJson.true_count;
+                        }
+                        this._setMeta();
                     }
                     const tasks = [];
                     const resolvers = new Map();
@@ -1140,42 +1131,18 @@
                                 const {
                                     resolve
                                 } = resolvers.get(index);
-                                this.fetchDelay = Process.dynamicParam(time, delay);
+                                this.fetchDelay = Process.DynamicParam(time, delay);
                                 const contentJson = JSON.parse(content2);
                                 if (contentJson) {
                                     const post = contentJson.post;
                                     const previews = contentJson.previews || [];
                                     const attachments = contentJson.attachments || [];
-                                    const standardTitle = this.normalizeName(post.title, index);
-                                    const classifiedFiles = this.kemerCategorize({
-                                        title: standardTitle,
-                                        data: [...previews, ...attachments],
-                                        fillValue: Lib.getFill(previews?.length || 1)
-                                    });
-                                    const generatedData = this.fetchGenerate({
-                                        PostLink: this.getPostURL(post),
-                                        Timestamp: this.normalizeTimestamp(post),
-                                        TypeTag: post.tags,
-                                        ImgLink: classifiedFiles.img,
-                                        VideoLink: classifiedFiles.video,
-                                        DownloadLink: classifiedFiles.other,
-                                        ExternalLink: this.specialLinkParse(post.content)
-                                    });
-                                    if (Object.keys(generatedData).length !== 0) {
-                                        this.dataDict.set(standardTitle, generatedData);
-                                    }
-                                    resolve();
-                                    Lib.title(`（${this.currentPage} - ${++this.progress}）`);
-                                    Lib.log({
+                                    this._packData({
                                         index: index,
-                                        title: standardTitle,
-                                        url: url,
-                                        data: generatedData
-                                    }, {
-                                        dev: General.Dev,
-                                        group: "Request Successful",
-                                        collapsed: false
+                                        post: post,
+                                        data: [...previews, ...attachments]
                                     });
+                                    resolve();
                                 } else throw new Error("Json Parse Failed");
                             } else {
                                 throw new Error("Request Failed");
@@ -1200,28 +1167,111 @@
                             });
                         }
                     };
-                    homeJson = this.isPost ? homeJson : homeJson.posts;
+                    homeJson = this.isPost || Process.IsPawchive ? homeJson : homeJson.posts;
                     for (const [index, post] of homeJson.entries()) {
-                        tasks.push(new Promise((resolve, reject) => {
-                            resolvers.set(index, {
-                                resolve: resolve,
-                                reject: reject
-                            });
-                            this.worker.postMessage({
-                                index: index,
-                                title: post.title,
-                                url: this.getPostAPI(post),
-                                time: Date.now(),
-                                delay: this.fetchDelay
-                            });
-                        }));
-                        await Lib.sleep(this.fetchDelay);
+                        if (Process.IsPawchive) {
+                            const file = post.file ? [post.file] : [];
+                            const attachments = post.attachments || [];
+                            try {
+                                post.tags = post.tags?.slice(1, -1).split(",").map(s => s.trim());
+                                this._packData({
+                                    index: index,
+                                    post: post,
+                                    data: [...file, ...attachments],
+                                    server: "https://file.pawchive.pw"
+                                });
+                            } catch (error) {
+                                Lib.log({
+                                    index: index,
+                                    title: post.title,
+                                    url: this.getPostURL(post),
+                                    error: error
+                                }, {
+                                    dev: General.Dev,
+                                    collapsed: false
+                                }).error;
+                            }
+                        } else {
+                            tasks.push(new Promise((resolve, reject) => {
+                                resolvers.set(index, {
+                                    resolve: resolve,
+                                    reject: reject
+                                });
+                                this.worker.postMessage({
+                                    index: index,
+                                    title: post.title,
+                                    url: this.getPostAPI(post),
+                                    time: Date.now(),
+                                    delay: this.fetchDelay
+                                });
+                            }));
+                            await Lib.sleep(this.fetchDelay);
+                        }
                     }
                     await Promise.allSettled(tasks);
                     await Lib.sleep(this.fetchDelay);
                 }
             }
             return true;
+        }
+        _getMeta() {
+            this.profile = {
+                name: Lib.$q("span[itemprop='name'], fix_name")?.$text(),
+                post_count: this.totalPages > 0 ? this.totalPages : void 0,
+                create_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}"),
+                source_url: this.sourceURL
+            };
+        }
+        _setMeta({
+            defName,
+            defPostCount,
+            defCreateTime,
+            defSourceUrl
+        } = {}) {
+            this.metaDict.set(Transl("作者"), this.profile.name ?? defName);
+            this.metaDict.set(Transl("帖子數量"), this.profile.post_count ?? defPostCount);
+            this.metaDict.set(Transl("建立時間"), this.profile.create_time ?? defCreateTime);
+            this.metaDict.set(Transl("獲取頁面"), this.profile.source_url ?? defSourceUrl);
+            Lib.log(this.metaDict, {
+                dev: General.Dev,
+                group: "Meta Data"
+            });
+        }
+        _packData({
+            index,
+            post,
+            data,
+            server
+        }) {
+            const standardTitle = this.normalizeName(post.title, index);
+            const classifiedFiles = this.kemerCategorize({
+                title: standardTitle,
+                data: data,
+                server: server,
+                fillValue: Lib.getFill(data?.length || 1)
+            });
+            const url = this.getPostURL(post);
+            const generatedData = this.fetchGenerate({
+                PostLink: url,
+                Timestamp: this.normalizeTimestamp(post),
+                TypeTag: post.tags,
+                ImgLink: classifiedFiles.img,
+                VideoLink: classifiedFiles.video,
+                DownloadLink: classifiedFiles.other,
+                ExternalLink: this.specialLinkParse(post.content)
+            });
+            if (!Lib.isEmpty(generatedData)) this.dataDict.set(standardTitle, generatedData);
+            Lib.title(`（${this.currentPage} - ${++this.progress}）`);
+            Lib.log({
+                index: index,
+                title: standardTitle,
+                url: url,
+                data: generatedData
+            }, {
+                dev: General.Dev,
+                group: "Request Successful",
+                collapsed: false
+            });
         }
         async _reset() {
             this.metaDict = null;
@@ -1265,6 +1315,7 @@
                 this.modeDisplay = modeDisplay;
                 this.compressMode = compressMode;
                 this.namedData = null;
+                this.sourceType = null;
                 this.forceCompressSignal = false;
                 this.originalTitle = () => {
                     const cache = Lib.title();
@@ -1314,10 +1365,15 @@
                 } else;
             }
             trigger(sourceType) {
+                this.sourceType = sourceType;
                 Lib.waitEl([".post__title, .scrape__title", ".post__files, .scrape__files", ".post__user-name, .scrape__user-name, fix_name"], found => {
                     const [title, files, artist] = found;
                     Process.Lock = true;
-                    this.button.disabled = true;
+                    if (General.IncludeExtras) {
+                        Lib.$qa(".Download_Button:not([disabled])").forEach(el => el.disabled = true);
+                    } else {
+                        this.button.disabled = true;
+                    }
                     const downloadData = new Map();
                     const {
                         server,
@@ -1341,10 +1397,13 @@
                             return published.$text().split(" ")[0];
                         }
                     };
-                    const [compressName, folderName, fillName] = Object.keys(FileName).slice(1).map(key => this._nameAnalysis(FileName[key]));
+                    let [compressName, folderName, fillName] = Object.keys(FileName).slice(1).map(key => this._nameAnalysis(FileName[key]));
                     const imgData = [...files.children].map(child => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
                     const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
-                    const finalData = General.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
+                    const finalData = General.IncludeExtras ? [...imgData, ...extrasData] : (() => {
+                        if (this.compressMode) compressName = `[${sourceType}] ${compressName}`; else fillName = `[${sourceType}] ${fillName}`;
+                        return sourceType === "Files" ? imgData : extrasData;
+                    })();
                     for (const [index, file] of finalData.entries()) {
                         const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
                         if (uri) {
@@ -1353,6 +1412,7 @@
                     }
                     if (downloadData.size == 0) General.Dev = true;
                     Lib.log({
+                        SourceType: sourceType,
                         CompressName: compressName,
                         FolderName: folderName,
                         DownloadData: downloadData
@@ -1573,11 +1633,19 @@
             }
             async _resetButton() {
                 General.CompleteClose && window.close();
-                Process.Lock = false;
-                Lib.$qa(".Download_Button[disabled]").forEach(button => {
+                const modifyButton = button => {
+                    if (!button) return;
                     button.disabled = false;
                     button.$text(`✓ ${this.modeDisplay}`);
-                });
+                };
+                if (General.IncludeExtras) {
+                    Lib.$qa(".Download_Button[disabled]").forEach(el => modifyButton(el));
+                } else {
+                    modifyButton(Lib.$q(`#${this.sourceType} .Download_Button[disabled]`));
+                }
+                if (Lib.$qa(".Download_Button:not([disabled])").length >= 2) {
+                    Process.Lock = false;
+                }
             }
         };
     }
@@ -1617,6 +1685,7 @@
                     fill: white;
                 }
                 .Setting_Button {
+                    display: none; // 暫時用不到隱藏起來
                     cursor: pointer;
                 }
                 .Download_Button {
@@ -1624,7 +1693,7 @@
                     padding: 6px;
                     margin: 10px;
                     border-radius: 8px;
-                    font-size: 1.1vw;
+                    font-size: 1rem;
                     border: 2px solid rgba(59, 62, 68, 0.7);
                     background-color: rgba(29, 31, 32, 0.8);
                     font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -1639,7 +1708,10 @@
                     background-color: hsl(0, 0%, 45%);
                     cursor: Synault;
                 }
-            `, "Download-button-style", false);
+            `, {
+                    id: "Download-button-style",
+                    repeatAdd: false
+                });
                 try {
                     Lib.$qa("[id^='Button-Container-']").forEach(button => button.remove());
                     const Pointer = [...Files].filter(file => {
