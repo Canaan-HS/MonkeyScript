@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         簡易文本轉換器
-// @version      2026.05.17
+// @version      2026.08.12
 // @author       Canaan HS
 // @description  高效將 指定文本 轉換為 自定文本
 
