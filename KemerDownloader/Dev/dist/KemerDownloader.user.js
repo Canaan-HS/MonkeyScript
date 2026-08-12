@@ -6,7 +6,7 @@
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.12.08-Beta
+// @version      2026.08.12-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -29,7 +29,7 @@
 
 // @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1878572/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1897759/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
@@ -912,8 +912,9 @@
               );
             }
             if (!this.isPost) {
-              this.finalPage = Math.min(this.finalPage, 1e3);
-              this.profile.post_count = homeJson.true_count;
+              this.finalPage = 1e3;
+              this.profile.name = "Posts";
+              this.profile.post_count = this.profile.post_count || homeJson.true_count;
             }
             this._setMeta();
           }
@@ -946,14 +947,14 @@
               this.worker.postMessage({ index, title, url, time, delay });
             }
           };
-          homeJson = this.isPost ? homeJson : homeJson.posts;
+          homeJson = this.isPost || Process.IsPawchive ? homeJson : homeJson.posts;
           for (const [index, post] of homeJson.entries()) {
             if (Process.IsPawchive) {
               const file = post.file ? [post.file] : [];
               const attachments = post.attachments || [];
               try {
                 post.tags = post.tags
-                  .slice(1, -1)
+                  ?.slice(1, -1)
                   .split(",")
                   .map((s) => s.trim());
                 this._packData({
@@ -997,7 +998,7 @@
     }
     _getMeta() {
       this.profile = {
-        name: Lib.$q("span[itemprop='name'], fix_name").$text(),
+        name: Lib.$q("span[itemprop='name'], fix_name")?.$text(),
         post_count: this.totalPages > 0 ? this.totalPages : void 0,
         create_time: Lib.getDate("{year}-{month}-{date} {hour}:{minute}"),
         source_url: this.sourceURL,
@@ -1070,6 +1071,7 @@
         this.modeDisplay = modeDisplay;
         this.compressMode = compressMode;
         this.namedData = null;
+        this.sourceType = null;
         this.forceCompressSignal = false;
         this.originalTitle = () => {
           const cache = Lib.title();
@@ -1125,12 +1127,17 @@
         } else;
       }
       trigger(sourceType) {
+        this.sourceType = sourceType;
         Lib.waitEl(
           [".post__title, .scrape__title", ".post__files, .scrape__files", ".post__user-name, .scrape__user-name, fix_name"],
           (found) => {
             const [title, files, artist] = found;
             Process.Lock = true;
-            this.button.disabled = true;
+            if (General.IncludeExtras) {
+              Lib.$qa(".Download_Button:not([disabled])").forEach((el) => (el.disabled = true));
+            } else {
+              this.button.disabled = true;
+            }
             const downloadData = new Map();
             const { server, user, post } = Parse.getUrlInfo(Lib.url);
             this.namedData = {
@@ -1150,12 +1157,18 @@
                 return published.$text().split(" ")[0];
               },
             };
-            const [compressName, folderName, fillName] = Object.keys(FileName)
+            let [compressName, folderName, fillName] = Object.keys(FileName)
               .slice(1)
               .map((key) => this._nameAnalysis(FileName[key]));
             const imgData = [...files.children].map((child) => child.$q(Process.IsNeko ? ".fileThumb, rc, img" : "a, rc, img")).filter(Boolean);
             const extrasData = Lib.$qa(".post__attachment a:not(.fancy-link):not([beautify]), .scrape__attachments a");
-            const finalData = General.IncludeExtras ? [...imgData, ...extrasData] : sourceType === "Files" ? imgData : extrasData;
+            const finalData = General.IncludeExtras
+              ? [...imgData, ...extrasData]
+              : (() => {
+                  if (this.compressMode) compressName = `[${sourceType}] ${compressName}`;
+                  else fillName = `[${sourceType}] ${fillName}`;
+                  return sourceType === "Files" ? imgData : extrasData;
+                })();
             for (const [index, file] of finalData.entries()) {
               const uri = file.src || file.href || file.$gAttr("src") || file.$gAttr("href");
               if (uri) {
@@ -1165,6 +1178,7 @@
             if (downloadData.size == 0) General.Dev = true;
             Lib.log(
               {
+                SourceType: sourceType,
                 CompressName: compressName,
                 FolderName: folderName,
                 DownloadData: downloadData,
@@ -1376,11 +1390,19 @@
       }
       async _resetButton() {
         General.CompleteClose && window.close();
-        Process.Lock = false;
-        Lib.$qa(".Download_Button[disabled]").forEach((button) => {
+        const modifyButton = (button) => {
+          if (!button) return;
           button.disabled = false;
           button.$text(`✓ ${this.modeDisplay}`);
-        });
+        };
+        if (General.IncludeExtras) {
+          Lib.$qa(".Download_Button[disabled]").forEach((el) => modifyButton(el));
+        } else {
+          modifyButton(Lib.$q(`#${this.sourceType} .Download_Button[disabled]`));
+        }
+        if (Lib.$qa(".Download_Button:not([disabled])").length >= 2) {
+          Process.Lock = false;
+        }
       }
     };
   }
@@ -1417,6 +1439,7 @@
                     fill: white;
                 }
                 .Setting_Button {
+                    display: none; // 暫時用不到隱藏起來
                     cursor: pointer;
                 }
                 .Download_Button {
@@ -1424,7 +1447,7 @@
                     padding: 6px;
                     margin: 10px;
                     border-radius: 8px;
-                    font-size: 1.1vw;
+                    font-size: 1rem;
                     border: 2px solid rgba(59, 62, 68, 0.7);
                     background-color: rgba(29, 31, 32, 0.8);
                     font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -1440,8 +1463,7 @@
                     cursor: Synault;
                 }
             `,
-          "Download-button-style",
-          false,
+          { id: "Download-button-style", repeatAdd: false },
         );
         try {
           Lib.$qa("[id^='Button-Container-']").forEach((button) => button.remove());
