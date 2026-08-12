@@ -1281,30 +1281,35 @@ const Lib = (() => {
     };
 
     /**
-     * @description 用於解析格式, 回傳匹配模板的結果
+     * @description 用於解析格式, 回傳匹配模板的結果 (實驗性功能)
      * @param {object} template - 可被匹配的模板
-     * @param {string|object} format - 匹配的格式字串, 要匹配模板的對應 key, 使用 {key} 來標記
-     * @returns {string}
+     * @param {string|object} format - 匹配的格式字串, 要匹配模板的對應物件
+     * @returns {string|array}
      *
      * @example
-     * format 是字串, template 不傳參
-     * format 是物件, template 可自由設置, 傳參或是不傳參
      *
      * const template {
      *      Title: "一個標題",
-     *      Name: ()=> 處理邏輯
+     *      Name: ()=> "處理邏輯"
      * };
      *
-     * const format = "{Title} {Name} {Title}";
-     * const result = formatTemplate(template, format);
-     * console.log(result);
+     * const format = "({Title}) [{Name}]_{Title}";
+     * console.log(formatTemplate(template, format));
+     * => "(一個標題) [處理邏輯]_一個標題"
+     *
+     * const format = {
+     *    A: "{Title}",
+     *    B: "{Name}",
+     *    c: "{Title}-{Name}",
+     * }
+     * console.log(formatTemplate(template, format));
+     * => ["一個標題", "處理邏輯", "一個標題-處理邏輯"]
      */
     const templateUtils = {
-        process: (template, key, value) => {
+        process: (template, key) => {
             const temp = template[key.toLowerCase()];
             return _type(temp) === "Function"
-                ? temp(value)
-                : (temp ? temp : "None");
+                ? temp() : temp || "None";
         }
     };
     function formatTemplate(template, format) {
@@ -1318,15 +1323,36 @@ const Lib = (() => {
             Object.entries(template).map(([key, value]) => [key.toLowerCase(), value])
         );
 
-        if (_type(format) === "String") {
-            return format.replace(/\{\s*([^}\s]+)\s*\}/g, (_, key) => templateUtils.process(template, key));
-        }
+        // 用於解析格式, 如果要嚴格限制 {格式}, 可以用 /\{(\w+)\}/g 來代替
+        const parser = /\{\s*([^}\s]+)\s*\}/g;
 
-        if (_type(format) === "Object") {
-            return Object.entries(format).map(([key, value]) => templateUtils.process(template, key, value));
-        }
+        switch (_type(format).toLowerCase()) {
+            case "string":
+                return format.replace(parser, (_, key) => templateUtils.process(template, key));
+            case "object":
+                // 返回列表
+                return Object.values(format).map(value => {
+                    let result = value;
 
-        return { "Unsupported format": format };
+                    if (typeof value === "string")
+                        result = value.replace(parser, (_, key) => templateUtils.process(template, key));
+
+                    return result;
+                })
+
+                // 返回物件 (暫時未使用)
+                return Object.entries(format).reduce((acc, [key, value]) => {
+                    let result = value;
+
+                    if (typeof value === "string")
+                        result = value.replace(parser, (_, key) => templateUtils.process(template, key));
+
+                    acc[key] = result;
+                    return acc;
+                }, {});
+            default:
+                return { "Unsupported format": format };
+        }
     };
 
     /**
