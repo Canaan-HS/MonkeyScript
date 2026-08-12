@@ -8,7 +8,7 @@ export default `
 // @name:ru      Kemer Загрузчик
 // @name:ko      Kemer 다운로더
 // @name:en      Kemer Downloader
-// @version      2025.12.08-Beta
+// @version      2026.08.12-Beta
 // @author       Canaan HS
 // @description         一鍵下載圖片 (壓縮下載/單圖下載) , 一鍵獲取帖子數據以 Json 或 Txt 下載 , 一鍵開啟當前所有帖子
 // @description:zh-TW   一鍵下載圖片 (壓縮下載/單圖下載) , 下載頁面數據 , 一鍵開啟當前所有帖子
@@ -31,7 +31,7 @@ export default `
 
 // @resource     fflate https://cdn.jsdelivr.net/npm/fflate@0.8.3/umd/index.min.js
 
-// @require      https://update.greasyfork.org/scripts/495339/1878572/Syntax_min.js
+// @require      https://update.greasyfork.org/scripts/495339/1897759/Syntax_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js
 
 // @grant        window.close
