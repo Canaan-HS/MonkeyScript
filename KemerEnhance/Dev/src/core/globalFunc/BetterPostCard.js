@@ -326,7 +326,6 @@ const BetterPostCardFactory = async () => {
                 text-overflow: ellipsis;
             }
             fix_edit {
-                top: 85px;
                 right: 8%;
                 color: #fff;
                 display: none;
