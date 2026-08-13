@@ -1490,12 +1490,12 @@ const Lib = (() => {
                     if (sugar.isEmpty(files)) return reject("Empty Data Error");
 
                     // 準備壓縮的數據，包含每個文件的壓縮等級
-                    const filesWithOptions = {};
-                    Object.entries(files).forEach(([name, data]) => {
-                        const extension = (name.split(".").pop()).toLowerCase();
+                    const filesWithOptions = Object.entries(files).reduce((acc, [name, data]) => {
+                        const extension = name.split(".").at(-1).toLowerCase();
                         const level = Uncompressible.has(extension)
-                            ? 0 : (options.level || 5);
-                        filesWithOptions[name] = { data, level };
+                            ? 0 : options.level || 5;
+                        acc[name] = { data, level };
+                        return acc;
                     });
 
                     worker.postMessage(
