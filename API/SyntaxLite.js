@@ -90,7 +90,11 @@ const Lib = (() => {
     };
     const $node = {
         $text(value) {
-            return value == null ? this?.textContent?.trim() : (this.textContent = value?.trim() ?? "");
+            if (!("textContent" in this)) return null;
+
+            return value == null
+                ? this.textContent.trim()
+                : typeof value === "string" ? (this.textContent = value.trim()) : null;
         },
         $copy(deep = true) {
             return this.cloneNode(deep);
@@ -183,14 +187,6 @@ const Lib = (() => {
     };
 
     Object.assign(Node.prototype, $node); // 原型註冊
-    const $text = Object.keys($node)[0]; // 處理可能的空值
-    Object.defineProperty(Object.prototype, $text, {
-        value: function (value = null) {
-            return $node[$text].call(this, value);
-        },
-        writable: true,
-        configurable: true
-    });
 
     // 簡化語法糖
     const sugar = {
