@@ -1,6 +1,6 @@
 import BlockAds from './BlockAds.js';
 import KeyScroll from './KeyScroll.js';
-import CacheFetch from './CacheFetch.js';
+import CacheReq from './CacheReq.js';
 import DeleteNotice from './DeleteNotice.js';
 import TextToLinkFactory from './TextToLink.js';
 import SidebarCollapse from './SidebarCollapse.js';
@@ -8,7 +8,7 @@ import BetterPostCardFactory from './BetterPostCard.js';
 
 const globalLoader = {
     BlockAds,
-    CacheFetch,
+    CacheReq,
     SidebarCollapse,
     DeleteNotice,
     async TextToLink(...args) {
