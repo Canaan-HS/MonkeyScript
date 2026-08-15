@@ -1232,7 +1232,7 @@ const Lib = (() => {
      *      const decompressed = await strCompress.decompress(compressed);
      * })()
      */
-    function createStrCompress(pakoCode, pakoUrl = "https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js") {
+    function createStrCompress(pakoCode, pakoUrl = "https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js") {
         let worker = createWorker(`
             ${pakoCode || `importScripts('${pakoUrl}')`}
             onmessage = function(e) {
