@@ -27,7 +27,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 // @icon         https://cdn-icons-png.flaticon.com/512/2566/2566449.png
 
-// @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js
+// @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js
 
 // @require      https://update.greasyfork.org/scripts/487608/1897760/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
