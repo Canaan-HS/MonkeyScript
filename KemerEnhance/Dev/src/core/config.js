@@ -3,8 +3,8 @@ import { monkeyWindow, Lib } from '../services/client.js';
 /* Data type checks are removed in user configuration; providing incorrect input may cause it to break */
 const User_Config = {
     Global: {
+        CacheReq: true, // 緩存請求
         BlockAds: true, // 阻擋廣告
-        CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
         DeleteNotice: true, // 刪除上方公告
         SidebarCollapse: true, // 側邊攔摺疊
         KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
@@ -60,7 +60,7 @@ const Parame = {
     Url: Lib.$url,
     SaveKey: { Img: "ImgStyle", Lang: "Language", Menu: "MenuPoint" },
     DB: import.meta.hot
-        ? monkeyWindow["openDB"] ?? await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako"))
+        ? monkeyWindow["openDB"] ??= await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako"))
         : await Lib.openDB("KemerEnhanceDB", 1, GM_getResourceText("pako")),
     // 特例 所以宣告在這裡 (外部不直接從這裡取得)
     _isPawchive: Lib.$domain.startsWith("pawchive"),
