@@ -84,6 +84,7 @@
 
                 // 自動取得 formhash (測試)
                 if (status === 2) {
+                    // ! 目前不支援 Promise 的 verifyStatus 解析, 無法等待取得數據後, 再去修改簽到狀態
                     requestTask.send({
                         API: "https://apk.tw/forum.php",
                         Method: "GET",
@@ -91,7 +92,6 @@
                         verifyStatus(data) {
                             const formhashMatch = data.$q("#my_amupper")?.$gAttr("onclick")?.match(/formhash=([^&]+)/);
                             if (formhashMatch) Lib.setV("apktw_formhash", formhashMatch[1]); // 僅更新數據, 不主動觸發簽到 (如果要主動觸發簽到, 需要手動刪除簽到狀態標籤, 管理上更麻煩)
-                            else { status = 1 } // 沒有取到通常代表登入狀態過期, 讓他顯示已簽, 避免一直觸發重試 (個人喜好, 可以不這樣)
                         }
                     }, false)
                 }
