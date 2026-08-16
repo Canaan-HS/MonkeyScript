@@ -34,7 +34,7 @@
 |   **Parameter**   |                                     **Description**                                      | **Default** |
 | :---------------: | :--------------------------------------------------------------------------------------: | :---------: |
 |    `BlockAds`     |                                    Simple ad blocking                                    |   `true`    |
-|   `CacheFetch`    |        Cache Fetch data under the same tab to speed up subsequent identical loads        |   `true`    |
+|   `CacheReq`    |        Cache Req data under the same tab to speed up subsequent identical loads        |   `true`    |
 |  `DeleteNotice`   |                                      Delete notice                                       |   `true`    |
 | `SidebarCollapse` |                   Sidebar collapses, restored when mouse hovers nearby                   |   `true`    |
 |    `KeyScroll`    |                             Keyboard hotkeys ↑↓ auto scroll                              |   `true`    |
@@ -124,10 +124,10 @@ If your feedback lacks details, is emotional, non-constructive, or is just a sim
 
 Compatibility recommendations:
 
-- **Avoid CacheFetch cache interference**
+- **Avoid CacheReq cache interference**
   - If you need to always request the latest API data instead of cached ones, attach a custom header in your Fetch request:
     ```
-    X-Bypass-CacheFetch: true
+    X-Bypass-CacheReq: true
     ```
   - When detected, the script will bypass its internal cache and send the actual request.
 
