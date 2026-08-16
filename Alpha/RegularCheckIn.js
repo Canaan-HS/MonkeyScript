@@ -23,7 +23,7 @@
 // @grant        GM_addValueChangeListener
 // @grant        GM_removeValueChangeListener
 
-// @require      https://cdn.jsdelivr.net/npm/qmsg@1.6.0/dist/index.umd.min.js
+// @require      https://cdn.jsdelivr.net/npm/qmsg@1.7.2/dist/index.umd.min.js
 // @require      https://update.greasyfork.org/scripts/487608/1878573/SyntaxLite_min.js
 
 // @run-at       document-start
@@ -44,7 +44,7 @@
      *      Headers: Object | Function,
      *      Data: Object | Function,
      *      Cookie: Object | Function,
-     *      verifyStatus: (response) => { 在簽到觸發後執行任意程式 (可選), 最終必要回傳 0=success, 1=checked, 2=failed }
+     *      verifyStatus: (response) => { 在簽到觸發後執行任意程式, 最終必要回傳 0=success, 1=checked, 2=failed, 3=expired } // 必要 (需要判斷簽到狀態)
      */
 
     const taskList = [
@@ -79,21 +79,29 @@
             // 每過一段時間就會變更 formhash=後面字串
             API: `https://apk.tw/plugin.php?id=dsu_amupper:pper&ajax=1&formhash=${Lib.getV("apktw_formhash", "")}&inajax=1`,
             Page: "https://apk.tw/forum.php",
-            verifyStatus(response) {
+            async verifyStatus(response) {
                 let status = response?.includes("wb.gif") ? 0 : 2;
 
-                // 自動取得 formhash (測試)
+                // ! 實驗性
+                // 自動取得 formhash
                 if (status === 2) {
-                    // ! 目前不支援 Promise 的 verifyStatus 解析, 無法等待取得數據後, 再去修改簽到狀態
-                    requestTask.send({
+                    await requestTask.send({
                         API: "https://apk.tw/forum.php",
                         Method: "GET",
                         responseType: "document",
                         verifyStatus(data) {
                             const formhashMatch = data.$q("#my_amupper")?.$gAttr("onclick")?.match(/formhash=([^&]+)/);
-                            if (formhashMatch) Lib.setV("apktw_formhash", formhashMatch[1]); // 僅更新數據, 不主動觸發簽到 (如果要主動觸發簽到, 需要手動刪除簽到狀態標籤, 管理上更麻煩)
+                            if (formhashMatch) {
+                                status = "formhash"; // 隨便給一個狀態
+                                Lib.setV("apktw_formhash", formhashMatch[1]);
+                                setTimeout(() => location.reload(), 1e3); // 重新載入
+                            }
+                            else if (data.$q("#ppered_menu")) {
+                                status = 1;
+                            }
+                            else status = 3;
                         }
-                    }, false)
+                    }, false); // 不顯示並不紀錄狀態
                 }
 
                 return status;
@@ -161,14 +169,19 @@
         // 簽到成功才紀錄
         const showStatus = {
             0(name) {
-                Qmsg.success(`${name} 簽到成功`);
                 Lib.setV(`${name}-Checked`, true);
+                Qmsg.success(`${name} 簽到成功`);
             },
             1(name) {
-                Qmsg.info(`${name} 已經簽到`);
                 Lib.setV(`${name}-Checked`, true);
+                Qmsg.info(`${name} 已經簽到`);
             },
-            2: (name) => Qmsg.error(`${name} 簽到失敗`)
+            2(name) {
+                Qmsg.error(`${name} 簽到失敗`);
+            },
+            3(name) {
+                Qmsg.warning(`${name} 重新登入`);
+            },
         };
 
         const deBug = (name = "Unknown", result) => {
@@ -184,7 +197,7 @@
                 ? obj() : obj;
 
         return {
-            // 傳送簽到請求
+            // 傳送簽到請求 (沒有展示 msg 的, 同時不紀錄狀態)
             send({ API, Method = "POST", Headers, Cookie, Data, responseType = "text", Name, verifyStatus }, msgShow = true) {
                 let checkIn = undefined;
 
@@ -192,7 +205,7 @@
                     if (msgShow) checkIn = Qmsg.loading(`${Name} 簽到中`);
                 } catch (error) { }
 
-                return new Promise((resolve, reject) => {
+                return new Promise(async (resolve, reject) => {
                     const params = {
                         url: API,
                         method: Method,
@@ -205,19 +218,22 @@
                                 return resolve(response);
                             }
 
-                            let status = undefined;
+                            let responseData = {};
 
                             try {
-                                status = verifyStatus?.(deBug(Name, JSON.parse(response.response)));
+                                responseData = JSON.parse(response.response);
                             } catch {
-                                status = verifyStatus?.(deBug(Name, response.response));
+                                responseData = response.response;
                             }
 
-                            if (msgShow) {
-                                status != null
-                                    ? showStatus[status](Name)
-                                    : showStatus[2](Name);
-                            }
+                            Promise.resolve(
+                                verifyStatus?.(deBug(Name, responseData))
+                            ).then(status => {
+                                if (msgShow)
+                                    status != null
+                                        ? showStatus[status](Name)
+                                        : showStatus[2](Name); // 預設為失敗
+                            });
 
                             resolve(response);
                         },
