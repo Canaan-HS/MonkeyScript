@@ -29,7 +29,7 @@ const Fetch = (() => {
         fetchRecord[url] = controller;
 
         return new Promise((resolve, reject) => {
-            fetch(url, { headers, signal: controller.signal })
+            unsafeWindow.fetch(url, { headers, signal: controller.signal })
                 .then(async response => {
                     if (!response.ok) {
                         const text = await response.text();
