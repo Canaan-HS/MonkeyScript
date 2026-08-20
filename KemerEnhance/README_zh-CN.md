@@ -34,7 +34,7 @@
 |     **参数**      |                          **说明**                           | **默认值** |
 | :---------------: | :---------------------------------------------------------: | :--------: |
 |    `BlockAds`     |                        简单阻挡广告                         |   `true`   |
-|   `CacheFetch`    |          同分页下缓存 Fetch 数据，加快后续相同载入          |   `true`   |
+|   `CacheReq`    |          同分页下缓存 Req 数据，加快后续相同载入          |   `true`   |
 |  `DeleteNotice`   |                          删除公告                           |   `true`   |
 | `SidebarCollapse` |                  侧边栏折叠，鼠标靠近恢复                   |   `true`   |
 |    `KeyScroll`    |                  键盘热键功能 ↑↓ 自动滚动                   |   `true`   |
@@ -128,10 +128,10 @@ OriginalImage:
 
 兼容性建议：
 
-- **避免 CacheFetch 缓存干扰**
+- **避免 CacheReq 缓存干扰**
   - 若需要完整请求最新 API 内容，而非被缓存覆盖，可在 Fetch 请求中加上自定义请求头：
     ```
-    X-Bypass-CacheFetch: true
+    X-Bypass-CacheReq: true
     ```
   - 脚本检测到该请求头时，将绕过内部缓存逻辑，直接发送实际请求。
 

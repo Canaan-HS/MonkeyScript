@@ -34,7 +34,7 @@
 |     **參數**      |                          **說明**                           | **預設值** |
 | :---------------: | :---------------------------------------------------------: | :--------: |
 |    `BlockAds`     |                        簡單阻擋廣告                         |   `true`   |
-|   `CacheFetch`    |          同分頁下緩存 Fetch 數據，加快後續相同載入          |   `true`   |
+|   `CacheReq`    |          同分頁下緩存 Req 數據，加快後續相同載入          |   `true`   |
 |  `DeleteNotice`   |                          刪除公告                           |   `true`   |
 | `SidebarCollapse` |                  側邊攔摺疊，滑鼠靠近恢復                   |   `true`   |
 |    `KeyScroll`    |                  鍵盤熱鍵功能 ↑↓ 自動滾動                   |   `true`   |
@@ -129,10 +129,10 @@ OriginalImage:
 
 相容性建議：
 
-- **避免 CacheFetch 緩存干擾**
+- **避免 CacheReq 緩存干擾**
   - 若需要完整請求最新 API 內容，而非被快取覆蓋，可在 Fetch 請求中加上自訂標頭：
     ```
-    X-Bypass-CacheFetch: true
+    X-Bypass-CacheReq: true
     ```
   - 腳本檢測到該標頭時，將繞過內部快取邏輯，直接發送實際請求。
 
