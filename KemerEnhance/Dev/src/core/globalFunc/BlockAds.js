@@ -39,48 +39,18 @@ export default async function BlockAds() {
         "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"
     ]);
 
+    // ! 也許不再需要
     const originalFetch = unsafeWindow.fetch;
     unsafeWindow.fetch = function (input) {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url || '';
         try {
-            if (url.endsWith(".m3u8")) return new Response(url, { status: 204 });
+            if (url.endsWith('.m3u8')) return new Response(url, { status: 204 });
             if ((
                 url.startsWith('http') || url.startsWith('//')
             ) && domains.has(new URL(url).host)) return new Response(url, { status: 204 });
         } catch { }
         return originalFetch.apply(this, arguments);
     };
-
-    // const originalOpen = unsafeWindow.XMLHttpRequest.prototype.open;
-    // unsafeWindow.XMLHttpRequest.prototype.open = function (method, url, ...args) {
-    //     try {
-    //         if (url.endsWith(".m3u8")) {
-    //             this.__blocked = true;
-    //             return;
-    //         }
-
-    //         if (
-    //             (url.startsWith("http") || url.startsWith("//")) &&
-    //             domains.has(new URL(url).host)
-    //         ) {
-    //             this.__blocked = true;
-    //             return;
-    //         }
-    //     } catch { }
-
-    //     return originalOpen.call(this, method, url, ...args);
-    // };
-
-
-    // const originalSend = unsafeWindow.XMLHttpRequest.prototype.send;
-    // unsafeWindow.XMLHttpRequest.prototype.send = function (...args) {
-    //     if (this.__blocked) {
-    //         this.abort();
-    //         return;
-    //     }
-
-    //     return originalSend.apply(this, args);
-    // };
 
     Parame.Registered.add("BlockAds");
 };
