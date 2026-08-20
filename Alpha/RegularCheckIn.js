@@ -69,7 +69,7 @@
             API: "https://jkforum.net/api/jkf-dailyTask-api/v1/DailyTask/CompleteTask",
             Page: "https://jkforum.net/",
             Headers: { "Content-Type": "application/json" },
-            Data: JSON.stringify({ "taskId": "614115862249472" }),
+            Data: JSON.stringify({ "pageUUID": "614115862249472" }),
             Async: true,
             verifyStatus: (response) => response === undefined ? 1 : 0
         },
@@ -160,7 +160,7 @@
         Dev: false, // 開發模式
         TaskKey: "RunTasks", // 任務列表 Key
         TimerKey: "TaskTimer", // 時間戳 Key
-        RegisterKey: "LeaderId", // 當前註冊 Key
+        LeaderKey: "LeaderId", // 當前註冊 Key
         QueryInterval: 3e4, // 詢輪間隔 (毫秒 | 預設 30 秒), 重置簽到任務存活狀態
     };
 
@@ -312,7 +312,7 @@
     };
 
     const createTask = (() => {
-        const taskId = crypto.randomUUID();
+        const pageUUID = crypto.randomUUID();
 
         let stop = false;
         let registered = false;
@@ -320,8 +320,12 @@
         let queryTimer = null;
         let checkInTimer = null;
 
+        // 實驗測試
         function setTab(role = "Leader") {
-            GM_saveTab({ ID: taskId, Role: role, Name: Lib.title() });
+            const data = { ID: pageUUID, Role: role, Name: Lib.title() };
+
+            Lib.log(data);
+            GM_saveTab(data);
         };
 
         function setTimestamp(currentTime) {
@@ -351,28 +355,29 @@
         };
 
         // 註冊變化監聽器
-        async function changeListener(name) {
-            Lib.storageListen([name], Lib.debounce(({ nv, far }) => {
+        async function leaderChangeListener() {
+            Lib.storageListen([config.LeaderKey], Lib.debounce(({ nv, far }) => {
+                // 來自其他窗口
                 if (far) {
-                    // 有新的註冊
-                    if (nv !== taskId && registered) {
+                    // 有新的 Leader
+                    if (registered) {
                         destroyReset();
                         Lib.log("舊詢輪已被停止");
                     }
-                    // 新註冊頁面離開 (查找並觸發恢復)
+                    // 當前 Leader Page 被關閉, 重新找尋 Leader
                     else if (nv === "leave") {
                         GM_getTabs(data => {
                             const tabs = Object.values(data).reverse();
                             for (const { ID, Role } of tabs) {
                                 if (Role === "Leader") continue;
-                                Lib.setV(config.RegisterKey, ID);
+                                Lib.setV(config.LeaderKey, ID);
                                 break;
                             }
                         })
                     }
                 }
-                // 恢復註冊
-                else if (nv === taskId) {
+                // 新的 Leader, 是當前環境的 UUID, 就 恢復註冊
+                else if (nv === pageUUID) {
                     register();
                     Lib.log("詢輪已被恢復");
                 }
@@ -405,7 +410,7 @@
             if (enabledTaskList.length === 0) {
                 Lib.delV(config.TaskKey);
                 Lib.delV(config.TimerKey);
-                Lib.delV(config.RegisterKey);
+                Lib.delV(config.LeaderKey);
 
                 destroyReset();
                 Lib.log("沒有任務, 詢輪已被停止", { dev: config.Dev }).warn;
@@ -424,7 +429,7 @@
                 // 執行簽到工作
                 const checkInWork = async () => {
                     if (!navigator.onLine) return; // 離線不執行
-                    destroyReset(false); // 簽到時停止詢輪
+                    destroyReset(false); // 簽到時停止詢輪, 且不重置
 
                     currentTime = new Date(); // 更新當前時間
 
@@ -499,19 +504,18 @@
         };
 
         // 註冊任務
-        function register() {
-            if (registered || !navigator.onLine) return; // 禁止重複 與 離線註冊
+        async function register(verifyRole = false) {
+            if (registered) return; // 禁止重複註冊
+            if (!navigator.onLine) return; // 禁止離線註冊
 
             registered = true;
             setTab();
 
-            Lib.setV(config.RegisterKey, taskId); // 紀錄註冊時間
-            changeListener(config.RegisterKey); // 監聽註冊時間變化
-
-            taskQuery(); // 開始檢測
+            Lib.setV(config.LeaderKey, pageUUID); // 紀錄註冊窗口
+            leaderChangeListener(); // 監聽註冊窗口變化
 
             Lib.onEvent(window, "beforeunload", () => { // 離開時執行
-                Lib.setV(config.RegisterKey, "leave");
+                Lib.setV(config.LeaderKey, "leave");
             });
 
             Lib.onEvent(document, "visibilitychange", () => { // 切換頁面時執行
@@ -520,9 +524,16 @@
                     taskQuery();
                 }
             });
+
+            taskQuery(); // 開始檢測
         };
 
-        return { register };
+        return {
+            register,
+            get state() {
+                return registered;
+            },
+        };
     })();
 
     // 透過菜單註冊任務
@@ -568,14 +579,21 @@
         };
 
         // 取得任務列表
-        const enabledTask = new Set(Lib.getV(config.TaskKey, []));
+        let enabledTask = new Set(Lib.getV(config.TaskKey, []));
         // 根據版本號判斷菜單是否自動關閉
         const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
-        function run() {
-            // 有任務時註冊
-            if (enabledTask.size > 0) createTask.register();
+        // 初始化註冊
+        if (enabledTask.size > 0) createTask.register();
 
+        // 全局監聽任務列表
+        Lib.storageListen([config.TaskKey], ({ far, nv }) => {
+            if (!far) return;
+            enabledTask = new Set(nv);
+            regMenu();
+        });
+
+        function regMenu() {
             for (const [index, task] of taskList.entries()) {
                 const icon = enabledTask.has(task.Name) ? "🟢" : "🔴";
 
@@ -592,7 +610,7 @@
                         : enabledTask.add(task.Name);
 
                     Lib.setV(config.TaskKey, [...enabledTask]);
-                    run(); // 遞迴更新狀態
+                    regMenu(); // 遞迴更新狀態
                 }, 200), {
                     id: `CheckIn-${index}`,
                     autoClose
@@ -601,10 +619,10 @@
             }
         };
 
-        return { run };
+        return { regMenu };
     })();
 
     if (document.visibilityState === "hidden") {
-        Lib.onE(document, "visibilitychange", () => enableTask.run(), { once: true });
-    } else enableTask.run();
+        Lib.onE(document, "visibilitychange", () => enableTask.regMenu(), { once: true });
+    } else enableTask.regMenu();
 })();
