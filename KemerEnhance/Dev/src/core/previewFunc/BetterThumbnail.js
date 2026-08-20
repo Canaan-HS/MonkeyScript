@@ -67,7 +67,7 @@ const BetterThumbnailFactory = () => {
                     return acc;
                 }, {});
 
-                // ! 理論上這邊的實現如果交給 CacheFetch 攔截時直接修改, 會更加高效
+                // ! 理論上這邊的實現如果交給 CacheReq 攔截時直接修改, 會更加高效
                 const api = `${uri.origin}/api/v1${uri.pathname}${uri.search}`;
 
                 // ? 該網站的該頁面不支援 API 請求
