@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.08.09
+// @version      2026.08.22-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -29,7 +29,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1897760/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
