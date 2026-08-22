@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.08.09
+// @version      2026.08.22-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -29,7 +29,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1897760/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -49,8 +49,8 @@
 (async function () {
     const User_Config = {
         Global: {
+            CacheReq: true, // 緩存請求
             BlockAds: true, // 阻擋廣告
-            CacheFetch: true, // 緩存 Fetch 請求 (僅限 JSON)
             DeleteNotice: true, // 刪除上方公告
             SidebarCollapse: true, // 側邊攔摺疊
             KeyScroll: { mode: 1, enable: true }, // 上下鍵觸發自動滾動 [mode: 1 = 動畫偵滾動, mode: 2 = 間隔滾動] (選擇對於自己較順暢的)
@@ -269,61 +269,123 @@
         });
         Parame.Registered.add("KeyScroll");
     }
-    async function CacheFetch() {
-        if (Page.isNeko || Parame.Registered.has("CacheFetch")) return;
+    async function CacheReq() {
+        if (Page.isNeko || Parame.Registered.has("CacheReq")) return;
+        const cacheMaxCount = 500;
         const cacheKey = "fetch_cache_data";
         const cache = await Parame.DB.get(cacheKey, new Map());
         const saveCache = Lib.debounce(() => {
             Parame.DB.set(cacheKey, cache, {
-                expireStr: "5m"
+                expireStr: "10m"
             });
         }, 1e3);
+        function setCache(url, data) {
+            if (cache.has(url)) {
+                cache.delete(url);
+            } else if (cache.size >= cacheMaxCount) {
+                cache.delete(cache.keys().next().value);
+            }
+            cache.set(url, data);
+            saveCache();
+        }
         const originalFetch = {
-            Sandbox: window.fetch,
-            Window: unsafeWindow.fetch
+            window: unsafeWindow.fetch
         };
-        window.fetch = (...args) => fetchWrapper(originalFetch.Sandbox, ...args);
-        unsafeWindow.fetch = (...args) => fetchWrapper(originalFetch.Window, ...args);
+        unsafeWindow.fetch = (...args) => fetchWrapper(originalFetch.window, ...args);
         async function fetchWrapper(windowContext, ...args) {
-            const input = args[0];
-            const options = args[1] || {};
+            const [input, options = {}] = args;
             if (!input) return windowContext(...args);
-            const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url || "";
-            const method = options.method || (typeof input === "object" ? input.method : "GET") || "GET";
-            if (method.toUpperCase() !== "GET" || options.headers?.["X-Bypass-CacheFetch"] || url.endsWith("random")) {
+            const url = typeof input === "string" ? input : input.url || input.href || "";
+            const rawMethod = options.method || input.method || "GET";
+            const isGet = rawMethod === "GET" || rawMethod === "get";
+            const headers = options.headers;
+            const bypassHeader = typeof headers?.get === "function" ? headers.get("X-Bypass-CacheReq") : headers?.["X-Bypass-CacheReq"];
+            if (!isGet || bypassHeader || url.endsWith("random")) {
                 return windowContext(...args);
             }
             if (cache.has(url)) {
-                const cached = cache.get(url);
-                return new Response(cached.body, {
-                    status: cached.status,
-                    headers: cached.headers
+                const {
+                    body,
+                    status,
+                    headers: headers2
+                } = cache.get(url);
+                return new Response(body, {
+                    status: status,
+                    headers: headers2
                 });
             }
-            try {
-                const response = await windowContext(...args);
-                if (response.status === 200 && (url.includes("api") || url.includes("default_config"))) {
-                    (async () => {
-                        try {
-                            const responseClone = response.clone();
-                            const bodyText = await responseClone.text();
-                            if (bodyText) {
-                                cache.set(url, {
-                                    body: bodyText,
-                                    status: responseClone.status,
-                                    headers: responseClone.headers
-                                });
-                                saveCache();
-                            }
-                        } catch { }
-                    })();
-                }
-                return response;
-            } catch (error) {
-                throw error;
+            const response = await windowContext(...args);
+            if (response.status === 200 && (url.includes("api") || url.includes("default_config"))) {
+                const clone = response.clone();
+                clone.text().then(bodyText => {
+                    if (bodyText) {
+                        setCache(url, {
+                            body: bodyText,
+                            status: clone.status,
+                            headers: clone.headers
+                        });
+                    }
+                }).catch(() => { });
             }
+            return response;
         }
-        Parame.Registered.add("CacheFetch");
+        if (Page.isPawchive) {
+            const XHR = unsafeWindow.XMLHttpRequest;
+            const {
+                open,
+                setRequestHeader,
+                send
+            } = XHR.prototype;
+            XHR.prototype.open = function (method, url, ...args) {
+                this._url = url;
+                this._isGet = method === "GET" || method === "get";
+                return open.call(this, method, url, ...args);
+            };
+            XHR.prototype.setRequestHeader = function (name, value) {
+                if (name === "X-Bypass-CacheReq") this._bypass = true;
+                return setRequestHeader.call(this, name, value);
+            };
+            XHR.prototype.send = function (...args) {
+                const url = this._url;
+                const canCache = this._isGet && !this._bypass && url && !url.endsWith("random");
+                if (canCache && cache.has(url)) {
+                    const cachedDomString = cache.get(url);
+                    queueMicrotask(() => {
+                        Object.defineProperties(this, {
+                            readyState: {
+                                value: 4
+                            },
+                            status: {
+                                value: 200
+                            },
+                            statusText: {
+                                value: "OK"
+                            },
+                            responseText: {
+                                value: cachedDomString
+                            },
+                            response: {
+                                value: cachedDomString
+                            }
+                        });
+                        if (typeof this.onreadystatechange === "function") this.onreadystatechange();
+                        if (typeof this.onload === "function") this.onload();
+                        this.dispatchEvent(new Event("load"));
+                        this.dispatchEvent(new Event("loadend"));
+                    });
+                    return;
+                }
+                if (canCache) {
+                    this.addEventListener("load", () => {
+                        if (this.status === 200 && this.responseText) {
+                            setCache(url, this.responseText.trim().replace(/\s+(?=[^<]*>)/g, " ").replace(/>\s+</g, "><"));
+                        }
+                    });
+                }
+                return send.apply(this, args);
+            };
+        }
+        Parame.Registered.add("CacheReq");
     }
     async function DeleteNotice() {
         Lib.waitEl("#announcement-banner", null, {
@@ -727,7 +789,7 @@
             const controller = new AbortController();
             fetchRecord[url] = controller;
             return new Promise((resolve, reject) => {
-                fetch(url, {
+                unsafeWindow.fetch(url, {
                     headers: headers,
                     signal: controller.signal
                 }).then(async response => {
@@ -1013,7 +1075,6 @@ statusText: ${text}`);
                 text-overflow: ellipsis;
             }
             fix_edit {
-                top: 85px;
                 right: 8%;
                 color: #fff;
                 display: none;
@@ -1321,7 +1382,7 @@ statusText: ${text}`);
     };
     const globalLoader = {
         BlockAds: BlockAds,
-        CacheFetch: CacheFetch,
+        CacheReq: CacheReq,
         SidebarCollapse: SidebarCollapse,
         DeleteNotice: DeleteNotice,
         async TextToLink(...args) {
@@ -2078,12 +2139,12 @@ statusText: ${text}`);
                     height: 100%;
                     padding: .4rem;
                 }
-                .post__attachment-link:not([beautify]) { display: none !important; }
+                .post__attachment-link:not([beautify]):not([class*='--missing']) { display: none !important; }
             `, {
                     id: "Link-Effects",
                     repeatAdd: false
                 });
-                Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
+                Lib.waitEl(".post__attachment-link:not([class*='--missing']), .scrape__attachment-link", null, {
                     raf: true,
                     all: true,
                     timeout: 5
