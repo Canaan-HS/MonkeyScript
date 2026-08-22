@@ -24,7 +24,7 @@
 // @grant        GM_removeValueChangeListener
 
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.7.2/dist/index.umd.min.js
-// @require      https://update.greasyfork.org/scripts/487608/1878573/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 
 // @run-at       document-start
 // ==/UserScript==
@@ -343,8 +343,7 @@
             clearTimeout(queryTimer);
             clearTimeout(checkInTimer);
 
-            Lib.offEvent(window, "beforeunload");
-            Lib.offEvent(document, "visibilitychange");
+            Lib.offEvent();
 
             if (!recover) return;
 
