@@ -1337,15 +1337,15 @@ const Lib = (() => {
                 })
 
                 // 返回物件 (暫時未使用)
-                return Object.entries(format).reduce((acc, [key, value]) => {
-                    let result = value;
+                // return Object.entries(format).reduce((acc, [key, value]) => {
+                //     let result = value;
 
-                    if (typeof value === "string")
-                        result = value.replace(parser, (_, key) => templateUtils.process(template, key));
+                //     if (typeof value === "string")
+                //         result = value.replace(parser, (_, key) => templateUtils.process(template, key));
 
-                    acc[key] = result;
-                    return acc;
-                }, {});
+                //     acc[key] = result;
+                //     return acc;
+                // }, {});
             default:
                 return { "Unsupported format": format };
         }
