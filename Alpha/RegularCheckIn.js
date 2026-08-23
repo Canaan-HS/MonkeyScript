@@ -336,17 +336,16 @@
         };
 
         // 銷毀所有定時器與詢輪, 並重置註冊狀態
-        async function destroyReset(recover = true) {
+        function destroyReset(recover = true) {
             stop = true;
 
-            setTab("Member");
             clearTimeout(queryTimer);
             clearTimeout(checkInTimer);
-
             Lib.offEvent();
 
             if (!recover) return;
 
+            setTab("Member");
             setTimeout(() => {
                 stop = false;
                 registered = false;
@@ -354,7 +353,7 @@
         };
 
         // 註冊變化監聽器
-        async function leaderChangeListener() {
+        function leaderChangeListener() {
             Lib.storageListen([config.LeaderKey], Lib.debounce(({ nv, far }) => {
                 // 來自其他窗口
                 if (far) {
@@ -427,8 +426,8 @@
 
                 // 執行簽到工作
                 const checkInWork = async () => {
-                    if (!navigator.onLine) return; // 離線不執行
                     destroyReset(false); // 簽到時停止詢輪, 且不重置
+                    if (!navigator.onLine) return; // 離線不執行
 
                     currentTime = new Date(); // 更新當前時間
 
@@ -490,20 +489,22 @@
                     const { hour, minute, seconds, ms } = timeUtils.getTriggerTime(currentTime, checkInTime);
                     Lib.log(`任務觸發還剩: ${hour} 小時 ${minute} 分鐘 ${seconds} 秒 | 共 ${ms} 毫秒`, { dev: config.Dev });
 
-                    // ! 實驗性
-                    clearTimeout(checkInTimer);
-                    checkInTimer = setTimeout(checkInWork, ms);
-                }
-            } catch {
-                setTimestamp(currentTime);
-            };
+                    // ? 這邊是為了設置時間一到, 立即觸發, 而不去等輪詢到才觸發, 因為輪詢有延遲
+                    // ? 否則實際上可以只靠輪詢觸發
 
-            if (stop) return;
-            queryTimer = setTimeout(taskQuery, config.QueryInterval);
+                    clearTimeout(checkInTimer); // 清除先前簽到
+                    checkInTimer = setTimeout(checkInWork, ms); // 重設簽到
+                }
+            }
+            catch { }
+            finally {
+                if (stop) return;
+                queryTimer = setTimeout(taskQuery, config.QueryInterval); // 設定詢輪
+            }
         };
 
         // 註冊任務
-        async function register(verifyRole = false) {
+        function register(verifyRole = false) {
             if (registered) return; // 禁止重複註冊
             if (!navigator.onLine) return; // 禁止離線註冊
 
