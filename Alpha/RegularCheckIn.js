@@ -215,7 +215,7 @@
 
                             if (response.status < 200 || response.status > 300) {
                                 if (msgShow) showStatus[2](Name);
-                                return resolve(response);
+                                return resolve(deBug(Name, response));
                             }
 
                             let responseData = {};
