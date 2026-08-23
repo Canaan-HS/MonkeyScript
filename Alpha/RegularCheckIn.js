@@ -26,7 +26,7 @@
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.7.2/dist/index.umd.min.js
 // @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 
-// @run-at       document-start
+// @run-at       document-body
 // ==/UserScript==
 
 (async () => {
@@ -440,13 +440,8 @@
 
                         if (task.AutoOpen && task.Page) {
                             try {
-                                // ! 臨時測試, 目前有偶發 Bug
-                                const currentDomain = Lib.domain;
-                                const targetDomain = new URL(task.Page).hostname;
-
-                                if (currentDomain !== targetDomain) {
-                                    Lib.log({currentDomain, targetDomain});
-
+                                // ! 目前有偶發 Bug
+                                if (Lib.domain && (Lib.domain !== new URL(task.Page).hostname)) {
                                     window.open(task.Page);
                                     return;
                                 }
