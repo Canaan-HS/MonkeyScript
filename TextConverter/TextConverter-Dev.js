@@ -11,10 +11,11 @@
 // @match        *://nhentai.io/*
 // @match        *://nhentai.net/*
 // @match        *://nhentai.xxx/*
-// @match        *://nhentaibr.com/*
-// @match        *://nhentai.website/*
 // @match        *://imhentai.xxx/*
 // @match        *://konachan.com/*
+// @match        *://hentaiera.com/*
+// @match        *://nhentaibr.com/*
+// @match        *://nhentai.website/*
 // @match        *://danbooru.donmai.us/*
 
 // @license      MPL-2.0
@@ -120,13 +121,13 @@
                 acc[value] = key;
                 return acc;
             }, {});
+            return this.ReverseDict;
         },
         RefreshDict() { // 刷新翻譯狀態
             Dict = Translated
                 ? (
                     Translated = false,
-                    this.RefreshReverse(),
-                    this.ReverseDict
+                    this.RefreshReverse()
                 ) : (
                     Translated = true,
                     this.NormalDict
@@ -136,8 +137,7 @@
             const [NormalSize, ReverseSize] = [getObjectSize(this.NormalDict), getObjectSize(this.ReverseDict)];
             const fullMB = (
                 Dict === this.NormalDict
-                    ? NormalSize.MB
-                    : NormalSize.MB + getObjectSize(Dict).MB
+                    ? NormalSize.MB : NormalSize.MB + getObjectSize(Dict).MB
             ) + ReverseSize.MB;
 
             alert(`字典緩存大小
@@ -411,7 +411,7 @@
                 root,
                 NodeFilter.SHOW_TEXT,
                 {
-                    acceptNode: (node) => {
+                    acceptNode(node) {
                         // 標籤過濾
                         const parent = node.parentElement;
                         if (filterTags.has(parent?.tagName)) {
@@ -747,12 +747,7 @@
         const headerSize = 12;
 
         const align = (n) => Math.ceil(n / 8) * 8;
-
-        const getType = (obj) => {
-            if (obj === null) return 'Null';
-            if (obj === undefined) return 'Undefined';
-            return Object.prototype.toString.call(obj).slice(8, -1);
-        };
+        const getType = (obj) => Object.prototype.toString.call(obj).slice(8, -1);
 
         const calcString = (str) => {
             if (seenStrings.has(str)) return 0;
@@ -782,17 +777,17 @@
             if (seenObjects.has(value)) return 0;
             seenObjects.add(value);
 
-            return handlers[type] ? handlers[type](value) : handlers.Object(value);
+            return handlers[type]?.(value) ?? handlers.Object(value);
         };
 
         const handlers = {
             // 集合類型
-            Array: (val) => {
+            Array(val) {
                 let bytes = headerSize + (val.length * bytesPerPointer);
                 for (const item of val) bytes += getSizeRec(item);
                 return align(bytes);
             },
-            Object: (val) => {
+            Object(val) {
                 let bytes = headerSize;
                 const keys = Object.keys(val);
                 const symKeys = Object.getOwnPropertySymbols(val);
@@ -810,13 +805,13 @@
                 }
                 return align(bytes);
             },
-            Set: (val) => {
+            Set(val) {
                 // Set 的底層實現比 Array 複雜，這裡估算 Table 結構開銷
                 let bytes = headerSize + (val.size * bytesPerPointer * 2);
                 for (const item of val) bytes += getSizeRec(item);
                 return align(bytes);
             },
-            Map: (val) => {
+            Map(val) {
                 let bytes = headerSize + (val.size * bytesPerPointer * 4);
                 for (const [k, v] of val) {
                     bytes += getSizeRec(k) + getSizeRec(v);
@@ -827,18 +822,16 @@
             // 特殊對象
             Date: () => align(headerSize + 8),
 
-            RegExp: (val) => {
-                // 正則是源碼字串 + 編譯後的機器碼(無法獲取)，這裡只算源碼
-                return align(headerSize + 4 + calcString(val.toString()));
-            },
+            // 正則是源碼字串 + 編譯後的機器碼(無法獲取)，這裡只算源碼
+            RegExp: (val) => align(headerSize + 4 + calcString(val.toString())),
 
-            BigInt: (val) => {
+            BigInt(val) {
                 // BigInt 是對象，需計算具體位數
                 const hexLen = val.toString(16).length;
                 return align(headerSize + Math.ceil(hexLen / 2));
             },
 
-            Error: (val) => {
+            Error(val) {
                 let bytes = headerSize;
                 if (val.message) bytes += calcString(val.message);
                 if (val.stack) bytes += calcString(val.stack);
