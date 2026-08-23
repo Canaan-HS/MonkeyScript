@@ -69,7 +69,7 @@
             API: "https://jkforum.net/api/jkf-dailyTask-api/v1/DailyTask/CompleteTask",
             Page: "https://jkforum.net/",
             Headers: { "Content-Type": "application/json" },
-            Data: JSON.stringify({ "pageUUID": "614115862249472" }),
+            Data: JSON.stringify({ "taskId": "614115862249472" }),
             Async: true,
             verifyStatus: (response) => response === undefined ? 1 : 0
         },
