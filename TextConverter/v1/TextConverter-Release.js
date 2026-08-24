@@ -169,6 +169,19 @@
     })();
     const translator = (() => {
         const filterTags = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "CANVAS", "IFRAME", "AUDIO", "VIDEO", "EMBED", "OBJECT", "SOURCE", "TRACK", "CODE", "KBD", "SAMP", "TEMPLATE", "SLOT", "PARAM", "META", "LINK", "IMG", "PICTURE", "FIGURE", "FIGCAPTION", "MATH", "PORTAL"]);
+        const emptyOrNumericFilters = {
+            allDigits: /^\d+$/,
+            statNumber: /^[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*[kmb萬億w%]?$/iu,
+            hasValidChar: /[\w\p{L}]/u
+        };
+        function isTranslatableText(content) {
+            content = content.trim();
+            if (!content) return false;
+            if (emptyOrNumericFilters.allDigits.test(content)) return false;
+            if (emptyOrNumericFilters.statNumber.test(content)) return false;
+            if (!emptyOrNumericFilters.hasValidChar.test(content)) return false;
+            return true;
+        }
         function getTextNodes(root) {
             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
                 acceptNode(node) {
@@ -176,18 +189,7 @@
                     if (parent && (filterTags.has(parent.tagName) || parent.hasAttribute(markAttribute))) {
                         return NodeFilter.FILTER_REJECT;
                     }
-                    const content = node.textContent.trim();
-                    if (!content) return NodeFilter.FILTER_REJECT;
-                    if (/^\d+$/.test(content)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    if (/^\d+(\.\d+)?\s*[km]$/i.test(content)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    if (!/[\w\p{L}]/u.test(content)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
+                    return isTranslatableText(node.textContent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                 }
             });
             const nodes = [];
@@ -238,6 +240,7 @@
                 const parentElement = textNode.parentElement;
                 if (!parentElement || filterTags.has(parentElement.tagName)) return;
                 const currentText = textNode.nodeValue;
+                if (!isTranslatableText(currentText)) return;
                 const record = originalSnapshots.get(textNode);
                 if (!forceRescan && this.__isActiveText(record, currentText)) return;
                 if (parentElement.hasAttribute(markAttribute)) parentElement.removeAttribute(markAttribute);
