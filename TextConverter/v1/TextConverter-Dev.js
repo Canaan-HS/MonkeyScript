@@ -209,6 +209,22 @@
             "MATH", "PORTAL"
         ]);
 
+        const emptyOrNumericFilters = {
+            allDigits: /^\d+$/, // 全數字
+            statNumber: /^\d+(\.\d+)?\s*[km]$/i, // 統計數量
+            hasValidChar: /[\w\p{L}]/u, // 無有效字元
+        };
+
+        // 清洗數據, 對文本進行過濾
+        function isTranslatableText(content) {
+            content = content.trim();
+            if (!content) return false; // 空內容
+            if (emptyOrNumericFilters.allDigits.test(content)) return false;
+            if (emptyOrNumericFilters.statNumber.test(content)) return false;
+            if (!emptyOrNumericFilters.hasValidChar.test(content)) return false;
+            return true;
+        };
+
         function getTextNodes(root) {
             const tree = document.createTreeWalker(
                 root,
@@ -221,26 +237,7 @@
                             return NodeFilter.FILTER_REJECT;
                         }
 
-                        // 檢查內容是否為空
-                        const content = node.textContent.trim();
-                        if (!content) return NodeFilter.FILTER_REJECT;
-
-                        // 過濾全都是數字
-                        if (/^\d+$/.test(content)) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 過濾統計數量類型
-                        if (/^\d+(\.\d+)?\s*[km]$/i.test(content)) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        // 過濾非匹配字串
-                        if (!/[\w\p{L}]/u.test(content)) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-
-                        return NodeFilter.FILTER_ACCEPT;
+                        return isTranslatableText(node.textContent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                     }
                 }
             );
@@ -303,6 +300,8 @@
                 if (!parentElement || filterTags.has(parentElement.tagName)) return; // 單節點路徑仍需標籤過濾
 
                 const currentText = textNode.nodeValue;
+                if (!isTranslatableText(currentText)) return;
+
                 const record = originalSnapshots.get(textNode);
 
                 // 迴聲防護 (forceRescan 用於字典更新後的全域重掃), 迴聲保留父元素標記現狀
@@ -328,6 +327,7 @@
                 const placeholderText = inputElement.getAttribute("placeholder");
                 if (placeholderText && (forceRescan || !this.__isActiveText(record?.placeholder, placeholderText))) {
                     const convertedText = translationCore.longShort(placeholderText);
+
                     if (convertedText !== placeholderText) {
                         originalSnapshots.set(inputElement, { ...(record ?? {}), placeholder: { original: placeholderText, converted: convertedText, active: "converted" } });
                         inputElement.setAttribute("placeholder", convertedText);
