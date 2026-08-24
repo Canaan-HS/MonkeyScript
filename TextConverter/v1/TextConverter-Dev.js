@@ -211,7 +211,7 @@
 
         const emptyOrNumericFilters = {
             allDigits: /^\d+$/, // 全數字
-            statNumber: /^\d+(\.\d+)?\s*[km]$/i, // 統計數量
+            statNumber: /^[+-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*[kmb萬億w%]?$/iu, // 統計數量
             hasValidChar: /[\w\p{L}]/u, // 無有效字元
         };
 
