@@ -90,14 +90,14 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         const container = a.parentElement;
 
         // 獲取預設高度
-        const currentHeight = container.getBoundingClientRect().height;
+        const imgHeight = a.$q("img").getBoundingClientRect().height;
         // 獲取原始副本
         let containerCopy = container.$copy();
 
         // 創建影片元素
         const video = Lib.createElement("video", {
             src: videoUrl,
-            style: `width: 100%; height: 100%; min-height: ${currentHeight}px; object-fit: contain;`,
+            style: `width: 100%; height: 100%; min-height: ${imgHeight}px; object-fit: contain;`,
             controls: true,
             playsinline: true,
             on: {
