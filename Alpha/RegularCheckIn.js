@@ -26,7 +26,7 @@
 // @require      https://cdn.jsdelivr.net/npm/qmsg@1.7.2/dist/index.umd.min.js
 // @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 
-// @run-at       document-body
+// @run-at       document-start
 // ==/UserScript==
 
 (async () => {
@@ -441,8 +441,13 @@
                         if (task.AutoOpen && task.Page) {
                             try {
                                 // ! 目前有偶發 Bug
-                                if (Lib.domain && (Lib.domain !== new URL(task.Page).hostname)) {
-                                    window.open(task.Page);
+                                if (Lib.domain !== new URL(task.Page).hostname && !Lib.getV(`${task.Page}-Opened`)) {
+                                    const newWindow = window.open(task.Page);
+
+                                    // (實驗防護)
+                                    if (newWindow && !newWindow.closed) {
+                                        Lib.setV(`${task.Page}-Opened`, true);
+                                    }
                                     return;
                                 }
                             } catch {
@@ -474,8 +479,11 @@
                         enabledTask = null;
 
                         Lib.delV("ReTry-Count");
-                        enabledTaskList.forEach(name => { // 清除簽到記錄
-                            Lib.delV(`${name}-Checked`);
+
+                        // 清除簽到處理狀態標籤
+                        taskList.forEach(({ Name, Page }) => {
+                            Lib.delV(`${Page}-Opened`);
+                            Lib.delV(`${Name}-Checked`);
                         })
                     } else {
                         Lib.setV("ReTry-Count", retryCount + 1);
