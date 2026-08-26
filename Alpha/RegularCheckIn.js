@@ -440,7 +440,13 @@
 
                         if (task.AutoOpen && task.Page) {
                             try {
-                                if (Lib.domain !== new URL(task.Page).hostname) {
+                                // ! 臨時測試, 目前有偶發 Bug
+                                const currentDomain = Lib.domain;
+                                const targetDomain = new URL(task.Page).hostname;
+
+                                if (currentDomain !== targetDomain) {
+                                    Lib.log({currentDomain, targetDomain});
+
                                     window.open(task.Page);
                                     return;
                                 }
