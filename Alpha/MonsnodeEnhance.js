@@ -66,6 +66,15 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         history.pushState(null, null, url);
     };
 
+    // 監聽影片是否可見
+    const activePlayers = new Map();
+    const visibilityObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (!entry.isIntersecting) {
+                activePlayers.get(entry.target)?.pause();
+            }
+        }
+    }, { threshold: 0 });
     const loadVideo = async (a) => {
         const url = a.href;
 
@@ -100,6 +109,9 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
                 },
                 error: () => {
                     video.offAll();
+                    activePlayers.delete(container);
+                    visibilityObserver.unobserve(container);
+
                     containerCopy.$addClass("error-border");
                     Lib.$Q(container, ".play-btn")?.remove();
                     Lib.$Q(container, ".video-container")?.remove();
@@ -117,6 +129,9 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
             loop: { active: true },
             controls: ["play-large", "play", "progress", "current-time", "duration", "mute", "volume", "fullscreen"]
         });
+
+        activePlayers.set(container, player);   // 註冊追蹤
+        visibilityObserver.observe(container);  // 開始觀察可視狀態
 
         // 來源跳轉按鈕
         Lib.createElement(player.elements.buttons.fullscreen, "button", {
@@ -184,16 +199,14 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         if (moreBtn) {
             moreBtn.$sAttr("viewing", true);
 
-            const observer = new IntersectionObserver(([entry]) => {
+            (new IntersectionObserver(([entry]) => {
                 if (entry.isIntersecting) {
                     observer.disconnect();
                     loadPage(moreBtn);
                 }
             }, {
                 rootMargin: "0px 0px 100% 0px"
-            });
-
-            observer.observe(moreBtn);
+            })).observe(moreBtn);
         }
     };
 
@@ -212,6 +225,10 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
             event.preventDefault();
             a.$q(".play-btn").remove();
             loadVideo(a);
+        }
+
+        for (const [container, player] of activePlayers) {
+            if (!container.contains(element)) player.pause();
         }
     });
 });
