@@ -20,12 +20,16 @@
 
 Lib.addStyle(`
 #scroll { display: grid; gap: 5px; padding: 5px; grid-template-columns: repeat(5, 1fr); align-items: start; }
-.listn { position: relative; border-radius: 12px; overflow: hidden; background: #14161a; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: box-shadow .3s ease; }
+.listn { border-radius: 12px; overflow: hidden; background: #14161a; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: box-shadow .3s ease; }
 .video-container { width: 100%; position: relative; display: inline-block; overflow: hidden; border-radius: 12px; }
 .video-container img { width: 100%; display: block; transition: transform 0.4s ease; }
 .play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; width: 48px; height: 48px; border-radius: 50%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M8 5v14l11-7z"/></svg>') center center / 18px no-repeat, linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease; }
 .play-btn:hover { transform: translate(-50%, -50%) scale(1.12); box-shadow: 0 12px 32px rgba(79, 172, 254, 0.65); }
 .source-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@property --border-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.loading-border::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; background: conic-gradient(from var(--border-angle), #00f2fe, #4facfe, #0072ff, transparent 45%, #00f2fe); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: border-spin 1.6s linear infinite; z-index: 3; pointer-events: none; }
+@keyframes border-spin { to { --border-angle: 360deg; } }
+.error-border::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1.5px solid rgba(255, 69, 58, .55); z-index: 3; pointer-events: none; }
 ${GM_getResourceText("plyrStyle")}
 `);
 
@@ -89,29 +93,29 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
             controls: true,
             playsinline: true,
             on: {
-                loadeddata: {
-                    listen: () => {
-                        containerCopy = null;
-                    },
-                    add: { once: true }
+                canplay: () => {
+                    video.offAll();
+                    containerCopy = null;
+                    container.$delClass("loading-border");
                 },
-                error: {
-                    listen: () => {
-                        Lib.$Q(container, ".play-btn")?.remove();
-                        container.replaceWith(containerCopy);
-                    },
-                    add: { once: true }
+                error: () => {
+                    video.offAll();
+                    containerCopy.$addClass("error-border");
+                    Lib.$Q(container, ".play-btn")?.remove();
+                    Lib.$Q(container, ".video-container")?.remove();
+                    container.replaceWith(containerCopy);
                 }
             }
         });
 
         container.replaceChildren(video); // 替換內容
+        container.$addClass("loading-border");
 
         const player = new Plyr(video, {
             autoplay: true,
-            timeType: "current",
             hideControls: false,
-            controls: ["play-large", "play", "progress", "current-time", "mute", "volume", "fullscreen"]
+            loop: { active: true },
+            controls: ["play-large", "play", "progress", "current-time", "duration", "mute", "volume", "fullscreen"]
         });
 
         // 來源跳轉按鈕
