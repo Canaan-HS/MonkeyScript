@@ -199,14 +199,16 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         if (moreBtn) {
             moreBtn.$sAttr("viewing", true);
 
-            (new IntersectionObserver(([entry]) => {
+            const observer = new IntersectionObserver(([entry]) => {
                 if (entry.isIntersecting) {
                     observer.disconnect();
                     loadPage(moreBtn);
                 }
             }, {
                 rootMargin: "0px 0px 100% 0px"
-            })).observe(moreBtn);
+            });
+
+            observer.observe(moreBtn);
         }
     };
 
