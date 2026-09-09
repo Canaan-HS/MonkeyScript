@@ -87,6 +87,7 @@ const Booster = (() => {
                     // 將完成的節點添加
                     Share.EnhancedNodes.push({
                         Connected: true,
+                        MediaNode: media,
                         Destination: mediaAudioContent.destination,
                         SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode,
                         Gain: GainNode.gain,
@@ -135,7 +136,9 @@ const Booster = (() => {
                                 };
 
                                 Share.EnhancedNodes.forEach(items => {
-                                    const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
+                                    const {
+                                        Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination
+                                    } = items;
 
                                     if (disconnected && !Connected) {
                                         SourceNode
