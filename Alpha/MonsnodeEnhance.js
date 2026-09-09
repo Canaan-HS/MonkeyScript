@@ -14,51 +14,22 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/plyr/3.8.4/plyr.min.js
 // @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
 
-// @run-at       document-start
+// @run-at       document-body
 // @grant        GM_getResourceText
 // ==/UserScript==
 
 Lib.addStyle(`
-    .video-container {
-      width: 100%;
-      position: relative;
-      display: inline-block;
-      overflow: hidden;
-      border-radius: 12px;
-    }
-    .video-container img {
-      width: 100%;
-      display: block;
-      transition: transform 0.4s ease;
-    }
-    .play-btn {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      cursor: pointer;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background:
-        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M8 5v14l11-7z"/></svg>') center center / 18px no-repeat,
-        linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-    }
-    .play-btn:hover {
-      transform: translate(-50%, -50%) scale(1.12);
-      box-shadow: 0 12px 32px rgba(79, 172, 254, 0.65);
-    }
-    .source-button svg {
-        width: 16px;
-        height: 16px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-    ${GM_getResourceText("plyrStyle")}
+#scroll { display: grid; gap: 5px; padding: 5px; grid-template-columns: repeat(5, 1fr); align-items: start; }
+@media (max-width: 1200px) { #scroll { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 900px)  { #scroll { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px)  { #scroll { grid-template-columns: repeat(2, 1fr); } }
+.listn { position: relative; border-radius: 12px; overflow: hidden; background: #14161a; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: box-shadow .3s ease; }
+.video-container { width: 100%; position: relative; display: inline-block; overflow: hidden; border-radius: 12px; }
+.video-container img { width: 100%; display: block; transition: transform 0.4s ease; }
+.play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; cursor: pointer; width: 48px; height: 48px; border-radius: 50%; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffffff"><path d="M8 5v14l11-7z"/></svg>') center center / 18px no-repeat, linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease; }
+.play-btn:hover { transform: translate(-50%, -50%) scale(1.12); box-shadow: 0 12px 32px rgba(79, 172, 254, 0.65); }
+.source-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+${GM_getResourceText("plyrStyle")}
 `);
 
 Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
@@ -66,12 +37,29 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         attr: { name: "referrer", content: "no-referrer" }
     });
 
-    const addBtn = () => {
-        for (const a of scroll.$qa(".listn > a:not([btn-exists])")) {
-            a.$sAttr("btn-exists", true);
-            a.$addClass("video-container");
-            Lib.createElement(a, "div", { class: "play-btn" }, "afterbegin");
+    const fragment = Lib.createFragment;
+    const loadPage = async (btn) => {
+        const url = btn.href;
+
+        const response = await fetch(url);
+        if (!response.ok) return loadPage(btn);
+
+        const htmlText = await response.text();
+        const html = Lib.domParse(htmlText);
+
+        // 替換成新的 more 按鈕
+        const oldContainer = btn.closest("div");
+        const newContainer = html.$q(".btn").closest("div");
+        oldContainer.replaceWith(newContainer);
+
+        for (const item of html.$qa("#scroll .listn")) {
+            fragment.appendChild(item);
         };
+
+        // 添加新元素到當前列表
+        scroll.appendChild(fragment);
+
+        history.pushState(null, null, url);
     };
 
     const loadVideo = async (a) => {
@@ -177,8 +165,36 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         });
     };
 
-    addBtn(); // 初始化
-    Lib.observer(scroll, addBtn, { // 後續監聽
+    const addFeatures = () => {
+        for (const a of scroll.$qa(".listn:has(iframe)")) {
+            a.remove();
+        };
+
+        for (const a of scroll.$qa(".listn > a:not([btn-exists])")) {
+            a.$sAttr("btn-exists", true);
+            a.$addClass("video-container");
+            Lib.createElement(a, "div", { class: "play-btn" }, "afterbegin");
+        };
+
+        const moreBtn = Lib.$q(".btn:not([viewing])");
+        if (moreBtn) {
+            moreBtn.$sAttr("viewing", true);
+
+            const observer = new IntersectionObserver(([entry]) => {
+                if (entry.isIntersecting) {
+                    observer.disconnect();
+                    loadPage(moreBtn);
+                }
+            }, {
+                rootMargin: "0px 0px 100% 0px"
+            });
+
+            observer.observe(moreBtn);
+        }
+    };
+
+    addFeatures(); // 初始化
+    Lib.observer(scroll, addFeatures, { // 後續監聽
         debounce: 300,
         subtree: false,
         attributes: false
