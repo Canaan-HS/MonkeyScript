@@ -202,13 +202,11 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
 
     Lib.onEvent(scroll, "click", event => {
         const element = event.target;
+        const a = element.closest(".video-container");
 
-        if (element.className === "play-btn") {
+        if (a) {
             event.preventDefault();
-
-            const a = element.parentElement; // 取得 a 連結元素
-            element.remove();
-
+            a.$q(".play-btn").remove();
             loadVideo(a);
         }
     });
