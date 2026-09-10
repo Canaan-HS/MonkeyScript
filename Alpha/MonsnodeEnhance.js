@@ -58,20 +58,21 @@
                     const htmlText = await response.text();
                     const html = Lib.domParse(htmlText);
 
-                    // 替換成新的 more 按鈕
-                    const oldContainer = btn.closest("div");
-                    const newContainer = html.$q(".btn").closest("div");
-                    oldContainer.replaceWith(newContainer);
+                    try {
+                        // 替換成新的 more 按鈕
+                        const oldContainer = btn.closest("div");
+                        const newContainer = html.$q(".btn").closest("div");
+                        oldContainer.replaceWith(newContainer);
 
-                    for (const item of html.$qa("#scroll .listn")) {
-                        fragment.appendChild(item);
-                    };
+                        // 添加新元素到當前列表
+                        for (const item of html.$qa("#scroll .listn")) {
+                            fragment.appendChild(item);
+                        };
+                        scroll.appendChild(fragment);
 
-                    // 添加新元素到當前列表
-                    scroll.appendChild(fragment);
-
-                    pageRecord.add(url);
-                    history.pushState(null, null, url);
+                        pageRecord.add(url);
+                        history.pushState(null, null, url);
+                    } catch { /* 該網站失敗時通常是該頁面是 Data does not exist. */ }
                 };
 
                 // 監聽影片是否可見
