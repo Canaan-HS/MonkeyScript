@@ -15,11 +15,31 @@ export default function Main() {
         };
 
         if (status) {
+            // 初始化菜單
             Share.Menu = CreateMenu();
-            Share.SetControl = (type, value) => { // 建立控制器
+            // 初始化控制器
+            Share.SetControl = (type, value) => {
                 Share.Parame[type] = value; // 更新增強參數 (原始值)
-                Share.EnhancedNodes.forEach(items => {
+                Share.EnhancedNodes = Share.EnhancedNodes.filter(items => {
+                    if (!items.MediaNode.isConnected) {
+                        const {
+                            Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode
+                        } = items;
+
+                        if (!Connected) return false;
+
+                        SourceNode.disconnect();
+                        GainNode.disconnect();
+                        LowFilterNode.disconnect();
+                        MidFilterNode.disconnect();
+                        HighFilterNode.disconnect();
+                        CompressorNode.disconnect();
+
+                        return false;
+                    }
+
                     items[type].value = value;
+                    return true;
                 })
             };
 
