@@ -228,7 +228,7 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         }
 
         for (const [container, player] of activePlayers) {
-            if (!container.contains(element)) player.pause();
+            if (!player.paused && !container.contains(element)) player.pause();
         }
     });
 });
