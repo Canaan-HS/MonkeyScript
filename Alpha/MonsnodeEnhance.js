@@ -20,9 +20,6 @@
 
 Lib.addStyle(`
 #scroll { display: grid; gap: 5px; padding: 5px; grid-template-columns: repeat(5, 1fr); align-items: start; }
-@media (max-width: 1200px) { #scroll { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 900px)  { #scroll { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px)  { #scroll { grid-template-columns: repeat(2, 1fr); } }
 .listn { position: relative; border-radius: 12px; overflow: hidden; background: #14161a; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: box-shadow .3s ease; }
 .video-container { width: 100%; position: relative; display: inline-block; overflow: hidden; border-radius: 12px; }
 .video-container img { width: 100%; display: block; transition: transform 0.4s ease; }
@@ -37,9 +34,11 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         attr: { name: "referrer", content: "no-referrer" }
     });
 
+    const pageRecord = new Set();
     const fragment = Lib.createFragment;
     const loadPage = async (btn) => {
         const url = btn.href;
+        if (pageRecord.has(url)) return;
 
         const response = await fetch(url);
         if (!response.ok) return loadPage(btn);
@@ -59,6 +58,7 @@ Lib.waitEl("#scroll", null, { raf: true, timeout: 10 }).then(scroll => {
         // 添加新元素到當前列表
         scroll.appendChild(fragment);
 
+        pageRecord.add(url);
         history.pushState(null, null, url);
     };
 
