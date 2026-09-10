@@ -19,7 +19,7 @@
 // @supportURL   https://github.com/Canaan-HS/MonkeyScript/issues
 
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
-// @require      https://update.greasyfork.org/scripts/487608/1755350/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -192,6 +192,7 @@
             SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(mediaAudioContent.destination);
             Share.EnhancedNodes.push({
               Connected: true,
+              MediaNode: media,
               Destination: mediaAudioContent.destination,
               SourceNode,
               GainNode,
@@ -772,8 +773,20 @@
         Share.Menu = CreateMenu();
         Share.SetControl = (type, value) => {
           Share.Parame[type] = value;
-          Share.EnhancedNodes.forEach((items) => {
+          Share.EnhancedNodes = Share.EnhancedNodes.filter((items) => {
+            if (!items.MediaNode.isConnected) {
+              const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode } = items;
+              if (!Connected) return false;
+              SourceNode.disconnect();
+              GainNode.disconnect();
+              LowFilterNode.disconnect();
+              MidFilterNode.disconnect();
+              HighFilterNode.disconnect();
+              CompressorNode.disconnect();
+              return false;
+            }
             items[type].value = value;
+            return true;
           });
         };
         const findMedia = () => {
