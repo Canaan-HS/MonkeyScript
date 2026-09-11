@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@types/node':
-        specifier: ^24.13.3
-        version: 24.13.3
+        specifier: ^24.13.4
+        version: 24.13.4
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -28,10 +28,10 @@ importers:
         version: 3.19.3
       vite:
         specifier: ^7.3.6
-        version: 7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)
+        version: 7.3.6(@types/node@24.13.4)(lightningcss@1.32.0)
       vite-plugin-monkey:
         specifier: ^7.1.9
-        version: 7.1.9(postcss@8.5.28)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0))
+        version: 7.1.9(postcss@8.5.28)(vite@7.3.6(@types/node@24.13.4)(lightningcss@1.32.0))
 
 packages:
 
@@ -345,8 +345,8 @@ packages:
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/node@24.13.3':
-    resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
+  '@types/node@24.13.4':
+    resolution: {integrity: sha512-YJ7EqCstVTzIr0fMr7qul/977en+pQHrfmuKIo6Zr9i75Be21dr3MovcfvGtyvi2HAUrRerWps5sMO9I7WaxDw==}
 
   acorn-walk@8.3.5:
     resolution: {integrity: sha512-HEHNfbars9v4pgpW6SO1KSPkfoS0xVOM/9UzkJltjlsHZmJasxg8aXkuZa7SMf8vKGIBhpUsPluQSqhJFCqebw==}
@@ -858,7 +858,7 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@types/node@24.13.3':
+  '@types/node@24.13.4':
     dependencies:
       undici-types: 7.18.2
 
@@ -1139,7 +1139,7 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  vite-plugin-monkey@7.1.9(postcss@8.5.28)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)):
+  vite-plugin-monkey@7.1.9(postcss@8.5.28)(vite@7.3.6(@types/node@24.13.4)(lightningcss@1.32.0)):
     dependencies:
       acorn: 8.18.0
       acorn-walk: 8.3.5
@@ -1153,11 +1153,11 @@ snapshots:
       postcss-url: 10.1.4(postcss@8.5.28)
       systemjs: 6.15.1
     optionalDependencies:
-      vite: 7.3.6(@types/node@24.13.3)(lightningcss@1.32.0)
+      vite: 7.3.6(@types/node@24.13.4)(lightningcss@1.32.0)
     transitivePeerDependencies:
       - postcss
 
-  vite@7.3.6(@types/node@24.13.3)(lightningcss@1.32.0):
+  vite@7.3.6(@types/node@24.13.4)(lightningcss@1.32.0):
     dependencies:
       esbuild: 0.28.2
       fdir: 6.5.0(picomatch@4.0.7)
@@ -1166,7 +1166,7 @@ snapshots:
       rollup: 4.63.1
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 24.13.3
+      '@types/node': 24.13.4
       fsevents: 2.3.3
       lightningcss: 1.32.0
 
