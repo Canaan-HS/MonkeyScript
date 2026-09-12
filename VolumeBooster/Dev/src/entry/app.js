@@ -73,13 +73,16 @@ export default function Main() {
                 }
             };
 
-            // 觀察者持續觸發查找
-            Lib.observer(Lib.body, mutationsList => {
-                if (Share.ProcessLock) return;
-                if (mutationsList.some(m => m.type === "childList")) findMedia();
-            }, { mark: "Media-Booster", attributes: false, throttle: 1300 }, ({ ob }) => {
-                if (import.meta.hot) monkeyWindow.ob = ob;
-                regMenu(Transl("❌ 禁用網域"));
+            Lib.waitEl("body", null, { raf: true, timeout: 30 }).then(body => {
+
+                // 觀察者持續觸發查找
+                Lib.observer(body, mutationsList => {
+                    if (Share.ProcessLock) return;
+                    if (mutationsList.some(m => m.type === "childList")) findMedia();
+                }, { mark: "Media-Booster", attributes: false, throttle: 1300 }, ({ ob }) => {
+                    if (import.meta.hot) monkeyWindow.ob = ob;
+                    regMenu(Transl("❌ 禁用網域"));
+                });
             });
 
         } else regMenu(Transl("✅ 啟用網域"));
