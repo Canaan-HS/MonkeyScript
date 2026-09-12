@@ -37,7 +37,7 @@
      *      callback: 查找操作的回調函數,        - function
      * }
      */
-    const featuresCfg = {
+    const features = {
         "monsnode.com": {
             mainContainer: "#scroll",
             waitOptions: { raf: true },
@@ -269,7 +269,7 @@
         initPatch();
 
         // 嘗試獲取功能
-        const feature = featuresCfg[Lib.domain];
+        const feature = features[Lib.domain];
 
         if (feature && feature instanceof Object) {
 
@@ -280,8 +280,8 @@
                 callback
             } = feature;
 
-            Lib.waitEl(mainContainer, callback, waitOptions);
             if (style) Lib.addStyle(style);
+            Lib.waitEl(mainContainer, callback, waitOptions);
         }
     });
 })();
