@@ -631,7 +631,8 @@
         return { regMenu };
     })();
 
-    if (document.visibilityState === "hidden") {
-        Lib.onE(document, "visibilitychange", () => enableTask.regMenu(), { once: true });
-    } else enableTask.regMenu();
+    // ? 某些網站獲取資訊不穩定, 嘗試等待頁面載入, 再進行任務
+    Lib.waitEl("body", () => {
+        enableTask.regMenu();
+    }, { debounce: 300, timeout: 15, timeoutResult: true });
 })();
