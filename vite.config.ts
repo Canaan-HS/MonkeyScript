@@ -133,7 +133,8 @@ const userscriptPolisherPlugin = (): Plugin => ({
                     }).code
                     : await prettier.format(processedContent, {
                         parser: 'babel',
-                        printWidth: 800,
+                        printWidth: 600,
+                        objectWrap: 'collapse', // prettier 3.5+ 新選項, 讓已拆行的短物件收縮回 inline
                     })
             ).trimEnd();
 
