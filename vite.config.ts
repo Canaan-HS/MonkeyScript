@@ -117,7 +117,10 @@ const userscriptPolisherPlugin = (): Plugin => ({
                 })
                 .map(line =>
                     /* bundler 頂層宣告 var-化, 統一轉回 const */
-                    line.replace(/^([ \t]*)var\s+([A-Za-z_$][\w$]*)\s*=/, (_, indent, name) => `${indent}const ${name} =`)
+                    line.replace(
+                        /^([ \t]*)var\s+((?:[A-Za-z_$][\w$]*|\{[^}]*\}|\[[^\]]*\]))\s*=/,
+                        (_, indent, declaration) => `${indent}const ${declaration} =`
+                    )
                 ).join('\n');
 
             // 格式化最終的完整內容
