@@ -95,6 +95,8 @@ const userscriptPolisherPlugin = (): Plugin => ({
                 return;
             }
 
+            const header = originalContent.substring(0, headerEndIndex + headerEndMarker.length).trimEnd();
+
             // 逐行清理程式碼
             const processedContent = originalContent
                 .substring(headerEndIndex + headerEndMarker.length)
@@ -105,15 +107,18 @@ const userscriptPolisherPlugin = (): Plugin => ({
                     /* vite-plugin-monkey 編譯處理 */
                     if (trimmed === '') return false; // 空行
                     if (/^['"]use strict['"];?$/.test(trimmed)) return false; // 'use strict';
-                    if (/^var _monkeyWindow/.test(trimmed)) return false; // var _monkeyWindow
-                    if (/^const \{.*?\}\s*=\s*_?monkeyWindow;/.test(trimmed)) return false; // const { ... } = _monkeyWindow
+                    if (/^var\s+\{.*?\}\s*=\s*\(\(\)\s*=>\s*window\)\(\);?$/.test(trimmed)) return false; // var { ... } = (() => window)();
 
                     /* 自訂標記處理 */
                     if (trimmed.includes('__REMOVE_ON_BUILD__')) return false;
                     // if (trimmed.includes(removeMarker)) return false; // ? 暫時沒用到
 
                     return true;
-                }).join('\n');
+                })
+                .map(line =>
+                    /* bundler 頂層宣告 var-化, 統一轉回 const */
+                    line.replace(/^([ \t]*)var\s+([A-Za-z_$][\w$]*)\s*=/, (_, indent, name) => `${indent}const ${name} =`)
+                ).join('\n');
 
             // 格式化最終的完整內容
             const formattedCode: string = (
@@ -132,7 +137,7 @@ const userscriptPolisherPlugin = (): Plugin => ({
                     })
             ).trimEnd();
 
-            const finalContent = config.meta + '\n\n' + formattedCode;
+            const finalContent = header + '\n\n' + formattedCode;
             fs.writeFileSync(finalScriptPath, finalContent, 'utf-8');
         } catch (error) {
             console.error('[process] An error occurred:', error);
@@ -158,6 +163,8 @@ export default defineConfig({
                 description: 'vite dev server',
                 ...config.userscript as any,
             },
+            /* 讓 plugin 自動帶入 meta (build/meta = config.meta, serve = 預設) */
+            generate: async ({ userscript, mode }) => (mode === 'serve' ? userscript : config.meta),
             server: {
                 open: false,
                 mountGmApi: true,
