@@ -3,8 +3,8 @@ import { fileURLToPath } from 'url';
 
 import { util } from 'vite-plugin-monkey';
 
-import metaData from './metadata';
-import parseMeta from '../../parseMeta';
+import metaData from './metadata.ts';
+import parseMeta from '../../parseMeta.ts';
 
 const meta = metaData.trim();
 const parsed = parseMeta(meta);
