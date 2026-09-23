@@ -3,7 +3,7 @@
 // @name:zh-TW   媒體音量增強器
 // @name:zh-CN   媒体音量增强器
 // @name:en      Media Volume Booster
-// @version      2025.12.12-Beta
+// @version      2026.09.24-Beta
 // @author       Canaan HS
 // @description         調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
 // @description:zh-TW   調整媒體音量與濾波器，增強倍數最高 20 倍，設置可記住並自動應用。部分網站可能無效、無聲音或無法播放，可選擇禁用。
@@ -21,6 +21,7 @@
 // @resource     Icon https://cdn-icons-png.flaticon.com/512/11243/11243783.png
 // @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
 
+// @grant        unsafeWindow
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_deleteValue
@@ -28,33 +29,12 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @run-at       document-body
+// @run-at       document-start
 // ==/UserScript==
 
 (function () {
-  const Default = {
-    Gain: 1,
-    LowFilterGain: 1.2,
-    LowFilterFreq: 200,
-    MidFilterQ: 1,
-    MidFilterGain: 1.6,
-    MidFilterFreq: 2e3,
-    HighFilterGain: 1.8,
-    HighFilterFreq: 1e4,
-    CompressorRatio: 3,
-    CompressorKnee: 4,
-    CompressorThreshold: -8,
-    CompressorAttack: 0.03,
-    CompressorRelease: 0.2,
-  };
-  const Share = {
-    Menu: null,
-    Parame: null,
-    SetControl: null,
-    ProcessLock: false,
-    EnhancedNodes: [],
-    ProcessedElements: new WeakSet(),
-  };
+  const Default = { Gain: 1, LowFilterGain: 1.2, LowFilterFreq: 200, MidFilterQ: 1, MidFilterGain: 1.6, MidFilterFreq: 2e3, HighFilterGain: 1.8, HighFilterFreq: 1e4, CompressorRatio: 3, CompressorKnee: 4, CompressorThreshold: -8, CompressorAttack: 0.03, CompressorRelease: 0.2 };
+  const Share = { Menu: null, Parame: null, SetControl: null, ProcessLock: false, EnhancedNodes: [], ProcessedElements: new WeakSet() };
   const word = {
     Traditional: {},
     Simplified: {
@@ -124,6 +104,40 @@
     const matcher = Lib.translMatcher(word);
     return { Transl: (str) => matcher[str] ?? str };
   })();
+  const audioContextRecord = (() => {
+    if (!unsafeWindow.AudioContext) return;
+    const mediaRecord = new WeakMap();
+    const nodeRecord = new WeakMap();
+    const audioContextPrototype = unsafeWindow.AudioContext.prototype;
+    const audioNodePrototype = unsafeWindow.AudioNode.prototype;
+    const createSource = audioContextPrototype.createMediaElementSource;
+    const connect = audioNodePrototype.connect;
+    audioContextPrototype.createMediaElementSource = function (media) {
+      const source = createSource.call(this, media);
+      const record = { source, context: this, destination: this.destination, gain: null, lowFilter: null, midFilter: null, highFilter: null, compressor: null };
+      mediaRecord.set(media, record);
+      nodeRecord.set(source, record);
+      return source;
+    };
+    audioNodePrototype.connect = function (destination, ...args) {
+      const result = connect.call(this, destination, ...args);
+      const record = nodeRecord.get(this);
+      if (!record) return result;
+      nodeRecord.set(destination, record);
+      if (destination instanceof unsafeWindow.GainNode) record.gain = destination;
+      else if (destination instanceof unsafeWindow.BiquadFilterNode) {
+        if (destination.type === "lowshelf") record.lowFilter = destination;
+        else if (destination.type === "peaking") record.midFilter = destination;
+        else if (destination.type === "highshelf") record.highFilter = destination;
+      } else if (destination instanceof unsafeWindow.DynamicsCompressorNode) record.compressor = destination;
+      return result;
+    };
+    return {
+      get(media) {
+        return mediaRecord.get(media) ?? {};
+      },
+    };
+  })();
   const bannedDomains = (() => {
     let banned = new Set(Lib.getV("Banned", []));
     let excludeStatus = banned.has(Lib.$domain);
@@ -138,16 +152,22 @@
   })();
   const updateParame = () => {
     let Config = Lib.getV(Lib.$domain, {});
-    if (typeof Config === "number") {
-      Config = { Gain: Config };
-    }
+    if (typeof Config === "number") Config = { Gain: Config };
     Share.Parame = Object.assign({}, Default, Config);
+  };
+  const isCrossOrigin = (url) => {
+    if (!url || url.startsWith("blob:") || url.startsWith("data:")) return false;
+    try {
+      return Lib.domain !== new URL(url).hostname;
+    } catch {
+      return false;
+    }
   };
   const Booster = (() => {
     let updated = false;
     let initialized = false;
     let mediaAudioContent = null;
-    const audioContext = window.AudioContext || window.webkitAudioContext;
+    const audioContext = AudioContext;
     function booster(mediaObj) {
       try {
         if (!audioContext) throw new Error(Transl("不支援音頻增強節點"));
@@ -156,23 +176,20 @@
         const successNode = [];
         for (const media of mediaObj) {
           Share.ProcessedElements.add(media);
-          if (media.mediaKeys || media.encrypted || (window.MediaSource && media.srcObject instanceof MediaSource)) {
+          if (media.mediaKeys || media.encrypted || (MediaSource && media.srcObject instanceof MediaSource) || (!media.crossOrigin && isCrossOrigin(media.currentSrc))) {
             Lib.log(media, { group: Transl("不支援的媒體跳過"), collapsed: false });
             continue;
           }
           try {
-            if (!media.crossOrigin && media.src && !media.src.startsWith("blob:")) {
-              const src = media.src;
-              media.crossOrigin = "anonymous";
-              media.src = "";
-              media.src = src;
-            }
-            const SourceNode = mediaAudioContent.createMediaElementSource(media);
-            const GainNode = mediaAudioContent.createGain();
-            const LowFilterNode = mediaAudioContent.createBiquadFilter();
-            const MidFilterNode = mediaAudioContent.createBiquadFilter();
-            const HighFilterNode = mediaAudioContent.createBiquadFilter();
-            const CompressorNode = mediaAudioContent.createDynamicsCompressor();
+            const recordContext = audioContextRecord.get(media);
+            const tempContext = recordContext.context ?? mediaAudioContent;
+            const SourceNode = recordContext.source ?? tempContext.createMediaElementSource(media);
+            const GainNode = recordContext.gain ?? tempContext.createGain();
+            const LowFilterNode = recordContext.lowFilter ?? tempContext.createBiquadFilter();
+            const MidFilterNode = recordContext.midFilter ?? tempContext.createBiquadFilter();
+            const HighFilterNode = recordContext.highFilter ?? tempContext.createBiquadFilter();
+            const CompressorNode = recordContext.compressor ?? tempContext.createDynamicsCompressor();
+            const DestinationNode = recordContext.destination ?? tempContext.destination;
             GainNode.gain.value = Share.Parame.Gain;
             LowFilterNode.type = "lowshelf";
             LowFilterNode.gain.value = Share.Parame.LowFilterGain;
@@ -189,17 +206,17 @@
             CompressorNode.threshold.value = Share.Parame.CompressorThreshold;
             CompressorNode.attack.value = Share.Parame.CompressorAttack;
             CompressorNode.release.value = Share.Parame.CompressorRelease;
-            SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(mediaAudioContent.destination);
+            SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(DestinationNode);
             Share.EnhancedNodes.push({
               Connected: true,
               MediaNode: media,
-              Destination: mediaAudioContent.destination,
+              DestinationNode,
               SourceNode,
               GainNode,
+              CompressorNode,
               LowFilterNode,
               MidFilterNode,
               HighFilterNode,
-              CompressorNode,
               Gain: GainNode.gain,
               LowFilterGain: LowFilterNode.gain,
               LowFilterFreq: LowFilterNode.frequency,
@@ -234,9 +251,9 @@
                       return;
                     }
                     Share.EnhancedNodes.forEach((items) => {
-                      const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination } = items;
+                      const { Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, DestinationNode } = items;
                       if (disconnected && !Connected) {
-                        SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(Destination);
+                        SourceNode.connect(GainNode).connect(LowFilterNode).connect(MidFilterNode).connect(HighFilterNode).connect(CompressorNode).connect(DestinationNode);
                         items.Connected = true;
                       } else if (!disconnected && Connected) {
                         SourceNode.disconnect();
@@ -245,7 +262,7 @@
                         MidFilterNode.disconnect();
                         HighFilterNode.disconnect();
                         CompressorNode.disconnect();
-                        SourceNode.connect(Destination);
+                        SourceNode.connect(DestinationNode);
                         items.Connected = false;
                       }
                     });
@@ -272,11 +289,10 @@
               { passive: true, capture: true, mark: "Media-Booster-Hotkey" },
             );
             Lib.storageListen([Lib.$domain], (call) => {
-              if (call.far && call.key === Lib.$domain) {
+              if (call.far && call.key === Lib.$domain)
                 Object.entries(call.nv).forEach(([type, value]) => {
                   Share.SetControl(type, value);
                 });
-              }
             });
           }
         }
@@ -684,9 +700,7 @@
           shadow.remove();
         }, 800);
       }
-      const displayMap = {
-        ...Object.fromEntries([...shadowGate.querySelectorAll(".Booster-Label")].map((el) => [el.id, el])),
-      };
+      const displayMap = { ...Object.fromEntries([...shadowGate.querySelectorAll(".Booster-Label")].map((el) => [el.id, el])) };
       function updateControl(id, value) {
         displayMap[`${id}-Label`].textContent = value;
         shadowGate.querySelector(`#${id}`).value = value;
@@ -696,8 +710,7 @@
         const target = event.target;
         if (target.type !== "range") return;
         const id = target.id;
-        const value = parseFloat(target.value);
-        updateControl(id, value);
+        updateControl(id, parseFloat(target.value));
       });
       content.addEventListener("click", (event) => {
         const target = event.target;
@@ -716,13 +729,9 @@
                 let newValue = parseFloat(input.value);
                 const min = parseFloat(slider.min);
                 const max = parseFloat(slider.max);
-                if (isNaN(newValue)) {
-                  newValue = parseFloat(originalValue);
-                } else if (newValue < min) {
-                  newValue = min;
-                } else if (newValue > max) {
-                  newValue = max;
-                }
+                if (isNaN(newValue)) newValue = parseFloat(originalValue);
+                else if (newValue < min) newValue = min;
+                else if (newValue > max) newValue = max;
                 target.isEditing = false;
                 updateControl(controlId, newValue);
                 target.textContent = newValue;
@@ -756,18 +765,14 @@
         } else if (target.id === "Booster-Sound-Save") {
           Lib.setV(Lib.$domain, Share.Parame);
           deleteMenu();
-        } else if (target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu") {
-          deleteMenu();
-        }
+        } else if (target.id === "Booster-Menu-Close" || target.id === "Booster-Modal-Menu") deleteMenu();
       });
     };
   };
   function Main() {
     bannedDomains.isEnabled((status) => {
       const regMenu = async (name) => {
-        Lib.regMenu({
-          [name]: () => bannedDomains.addBanned(),
-        });
+        Lib.regMenu({ [name]: () => bannedDomains.addBanned() });
       };
       if (status) {
         Share.Menu = CreateMenu();
@@ -800,25 +805,25 @@
             },
           });
           const media = [];
-          while (tree.nextNode()) {
-            media.push(tree.currentNode);
-          }
+          while (tree.nextNode()) media.push(tree.currentNode);
           if (media.length > 0) {
             Share.ProcessLock = true;
             Booster.trigger(media);
           }
         };
-        Lib.observer(
-          Lib.body,
-          (mutationsList) => {
-            if (Share.ProcessLock) return;
-            if (mutationsList.some((m) => m.type === "childList")) findMedia();
-          },
-          { mark: "Media-Booster", attributes: false, throttle: 1300 },
-          ({ ob }) => {
-            regMenu(Transl("❌ 禁用網域"));
-          },
-        );
+        Lib.waitEl("body", null, { raf: true, timeout: 30 }).then((body) => {
+          Lib.observer(
+            body,
+            (mutationsList) => {
+              if (Share.ProcessLock) return;
+              if (mutationsList.some((m) => m.type === "childList")) findMedia();
+            },
+            { mark: "Media-Booster", attributes: false, throttle: 1300 },
+            ({ ob }) => {
+              regMenu(Transl("❌ 禁用網域"));
+            },
+          );
+        });
       } else regMenu(Transl("✅ 啟用網域"));
     });
   }
