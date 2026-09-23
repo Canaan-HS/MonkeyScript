@@ -2,14 +2,14 @@ import { Lib } from '../services/client.js';
 import { Share } from '../core/config.js';
 import Transl from '../shared/language.js';
 
-import { updateParame } from '../utils/tools.js';
+import { audioContextRecord, updateParame, isCrossOrigin } from '../utils/tools.js';
 
 const Booster = (() => {
     let updated = false; // 是否已更新
     let initialized = false; // 是否初始化
 
     let mediaAudioContent = null; // 儲存音頻上下文 實例
-    const audioContext = window.AudioContext || window.webkitAudioContext; // 音頻上下文
+    const audioContext = AudioContext; // 音頻上下文
 
     /* 增強處理 */
     function booster(mediaObj) {
@@ -25,8 +25,13 @@ const Booster = (() => {
 
                 if (
                     media.mediaKeys || media.encrypted // 檢查 DRM 保護
-                    || (window.MediaSource && media.srcObject instanceof MediaSource) // 檢查 MSE
+                    || (MediaSource && media.srcObject instanceof MediaSource) // 檢查 MSE
+                    || !media.crossOrigin && isCrossOrigin(media.currentSrc) // 檢查跨域
                 ) {
+                    /**
+                     * 跨域播放可能的解法:
+                     * - hook createElement 跟 HTMLMediaElement 創建時的原型, 並透過 Cloudflare Worker 代理流量
+                     */
                     Lib.log(
                         media, { group: Transl("不支援的媒體跳過"), collapsed: false }
                     );
@@ -34,20 +39,16 @@ const Booster = (() => {
                 };
 
                 try {
-                    // 設置跨域
-                    if (!media.crossOrigin && media.src && !media.src.startsWith("blob:")) {
-                        const src = media.src;
-                        media.crossOrigin = "anonymous";
-                        media.src = "";
-                        media.src = src;
-                    };
+                    const recordContext = audioContextRecord.get(media);
+                    const tempContext = recordContext.context ?? mediaAudioContent;
 
-                    const SourceNode = mediaAudioContent.createMediaElementSource(media); // 音頻來源
-                    const GainNode = mediaAudioContent.createGain(); // 增益節點
-                    const LowFilterNode = mediaAudioContent.createBiquadFilter(); // 低音慮波器
-                    const MidFilterNode = mediaAudioContent.createBiquadFilter(); // 中音慮波器
-                    const HighFilterNode = mediaAudioContent.createBiquadFilter(); // 高音濾波器
-                    const CompressorNode = mediaAudioContent.createDynamicsCompressor(); // 動態壓縮節點
+                    const SourceNode = recordContext.source ?? tempContext.createMediaElementSource(media); // 音頻來源
+                    const GainNode = recordContext.gain ?? tempContext.createGain(); // 增益節點
+                    const LowFilterNode = recordContext.lowFilter ?? tempContext.createBiquadFilter(); // 低音慮波器
+                    const MidFilterNode = recordContext.midFilter ?? tempContext.createBiquadFilter(); // 中音慮波器
+                    const HighFilterNode = recordContext.highFilter ?? tempContext.createBiquadFilter(); // 高音濾波器
+                    const CompressorNode = recordContext.compressor ?? tempContext.createDynamicsCompressor(); // 動態壓縮節點
+                    const DestinationNode = recordContext.destination ?? tempContext.destination; // 輸出節點
 
                     // 設置初始增量
                     GainNode.gain.value = Share.Parame.Gain;
@@ -82,14 +83,15 @@ const Booster = (() => {
                         .connect(MidFilterNode)
                         .connect(HighFilterNode)
                         .connect(CompressorNode)
-                        .connect(mediaAudioContent.destination);
+                        .connect(DestinationNode);
 
                     // 將完成的節點添加
                     Share.EnhancedNodes.push({
                         Connected: true,
                         MediaNode: media,
-                        Destination: mediaAudioContent.destination,
-                        SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode,
+                        DestinationNode, SourceNode,
+                        GainNode, CompressorNode,
+                        LowFilterNode, MidFilterNode, HighFilterNode,
                         Gain: GainNode.gain,
                         LowFilterGain: LowFilterNode.gain,
                         LowFilterFreq: LowFilterNode.frequency,
@@ -137,7 +139,7 @@ const Booster = (() => {
 
                                 Share.EnhancedNodes.forEach(items => {
                                     const {
-                                        Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, Destination
+                                        Connected, SourceNode, GainNode, LowFilterNode, MidFilterNode, HighFilterNode, CompressorNode, DestinationNode
                                     } = items;
 
                                     if (disconnected && !Connected) {
@@ -147,7 +149,7 @@ const Booster = (() => {
                                             .connect(MidFilterNode)
                                             .connect(HighFilterNode)
                                             .connect(CompressorNode)
-                                            .connect(Destination);
+                                            .connect(DestinationNode);
 
                                         items.Connected = true;
                                     } else if (!disconnected && Connected) {
@@ -157,7 +159,7 @@ const Booster = (() => {
                                         MidFilterNode.disconnect();
                                         HighFilterNode.disconnect();
                                         CompressorNode.disconnect();
-                                        SourceNode.connect(Destination);
+                                        SourceNode.connect(DestinationNode);
 
                                         items.Connected = false;
                                     }
