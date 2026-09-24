@@ -159,14 +159,14 @@ const BetterPostCardFactory = async () => {
             `, "beforebegin");
         };
 
+        if (!tagEl) return;
+
         /* 取得支援修復的正則 */
         const [tag_text, support_id, support_name] = [
             tagEl.$text(),
             supportFixTag.ID,
             supportFixTag.NAME
         ];
-
-        if (!tag_text) return;
 
         const [mark, matchId] = support_id.test(tag_text)
             ? ["{id}", support_id]
