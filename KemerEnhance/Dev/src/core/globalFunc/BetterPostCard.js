@@ -564,12 +564,15 @@ const BetterPostCardFactory = async () => {
                                         if (Page.isNeko) data = data.$qa(".post-card__image");
                                         currentBox.$text(""); // 清除載入文本
 
-                                        const srcBox = new Set();
+                                        const linkBox = new Set();
                                         for (const post of data) {
-                                            let src = "";
+                                            let url, src;
 
                                             if (Page.isNeko) src = post.src ?? "";
                                             else {
+                                                // 暫時只支援有 API 的站點
+                                                url = `${Lib.$origin}/${post.service}/user/${post.user}/post/${post.id}`;
+
                                                 for (const { path } of [
                                                     post.file,
                                                     ...post?.attachments || []
@@ -585,19 +588,22 @@ const BetterPostCardFactory = async () => {
                                             }
 
                                             if (!src) continue;
-                                            srcBox.add(src);
+                                            linkBox.add({ url, src });
                                         }
 
-                                        if (srcBox.size === 0) currentBox.$text("No Image");
+                                        if (linkBox.size === 0) currentBox.$text("No Image");
                                         else {
-                                            currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(''));
-                                            srcBox.clear();
+                                            currentBox.$iAdjacent([...linkBox].map(({ url, src }, index) =>
+                                                `<img src="${src}" jump="${url}" loading="lazy" number="${index + 1}">`
+                                            ).join(''));
+
+                                            linkBox.clear();
                                         }
                                     })
                             } else currentBox.$text("Not Supported");
                         }
 
-                        // ? 這樣寫是為了使用 ?. 語法, 避免 currentBox 為 null 造成錯誤
+                        // 如果有 box 了就直接顯示
                         currentBox?.$sAttr("style", "display: block;");
                     }, 3e2), { passive: true, mark: "PostShow" });
 
@@ -656,13 +662,14 @@ const BetterPostCardFactory = async () => {
                     }, 300);
                 } else if (
                     // ! 以後在優化, 現在只是為了快速實現
-                    openInTab.enable && Lib.platform.desktop && (
-                        tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE"
+                    tagName === "FIX_TAG" // 任意頁面的 tag
+                    || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) // 任意平台的 預覽|內容 name
+                    || Lib.platform.desktop && openInTab.enable && ( // 僅有桌面版本 且 啟用在新分頁打開
+                        tagName === "FIX_NAME" // 搜尋頁面的 name (其他頁面會由上方條件判斷)
+                        || tagName === "PICTURE"
                         || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")
                     )
-                    || tagName === "FIX_TAG"
-                    || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())
-                    || Page.isContent() && target.matches(".fancy-image__image")
+                    || Page.isContent() && target.matches(".fancy-image__image") // 內容頁面的圖片
                 ) {
                     event.preventDefault();
                     event.stopImmediatePropagation();
