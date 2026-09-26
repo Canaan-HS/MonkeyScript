@@ -418,19 +418,55 @@ const BetterPostCardFactory = async () => {
             fix_cont fix_wrapper:hover fix_edit {
                 display: block;
             }
+
+            /* 快速預覽容器 */
             .post-show-box {
                 z-index: 9999;
                 cursor: pointer;
                 position: absolute;
-                padding: 8px 4px;
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                padding: 10px 14px;
                 max-width: 120%;
                 min-width: 80px;
                 overflow-x: auto;
                 overflow-y: hidden;
                 white-space: nowrap;
-                border-radius: 5px;
-                background: #1d1f20ff;
-                border: 1px solid #fff;
+                border-radius: 12px;
+                background: rgba(29, 31, 32, 0.94);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow:
+                    0 12px 28px rgba(0, 0, 0, 0.5),
+                    0 2px 6px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                -webkit-mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                animation: post-show-box-in 0.18s ease-out;
+            }
+            @keyframes post-show-box-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px) scale(0.98);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
             }
             .post-show-box[preview="above"] {
                 bottom: 85%;
@@ -443,9 +479,20 @@ const BetterPostCardFactory = async () => {
             }
             .post-show-box img {
                 height: 23vh;
-                margin: 0 .3rem;
-                min-width: 55%;
-                border: 1px solid #fff;
+                width: auto;
+                min-width: clamp(3.75rem, 6vw, 5.5rem);
+                max-width: 42vw;
+                object-fit: contain;
+                flex-shrink: 0;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+            .post-show-box img:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
             }
             .fancy-image__image {
                 z-index: 1;
