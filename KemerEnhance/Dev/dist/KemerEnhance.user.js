@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.08.22-Beta
+// @version      2026.09.26-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -48,56 +48,9 @@
 
 (async function () {
   const User_Config = {
-    Global: {
-      CacheReq: true,
-      BlockAds: true,
-      DeleteNotice: true,
-      SidebarCollapse: true,
-      KeyScroll: { mode: 1, enable: true },
-      TextToLink: {
-        enable: true,
-        openInTab: {
-          enable: true,
-          active: false,
-          insert: true,
-          setParent: false,
-        },
-      },
-      BetterPostCard: {
-        enable: true,
-        previewAbove: true,
-        enableNameTools: true,
-        openInTab: {
-          enable: true,
-          active: true,
-          insert: true,
-          setParent: false,
-        },
-      },
-    },
-    Preview: {
-      CardZoom: { mode: 3, enable: true },
-      CardText: { mode: 2, enable: true },
-      BetterThumbnail: true,
-      QuickPostToggle: true,
-      NewTabOpens: {
-        enable: true,
-        active: false,
-        insert: true,
-        setParent: true,
-      },
-    },
-    Content: {
-      ExtraButton: true,
-      LinkBeautify: true,
-      CommentFormat: true,
-      VideoBeautify: { mode: 1, enable: true },
-      OriginalImage: {
-        mode: 1,
-        enable: true,
-        experiment: false,
-      },
-    },
+    Global: { CacheReq: true, BlockAds: true, DeleteNotice: true, SidebarCollapse: true, KeyScroll: { mode: 1, enable: true }, TextToLink: { enable: true, openInTab: { enable: true, active: false, insert: true, setParent: false } }, BetterPostCard: { enable: true, previewAbove: true, enableNameTools: true, openInTab: { enable: true, active: true, insert: true, setParent: false } } },
+    Preview: { CardZoom: { mode: 3, enable: true }, CardText: { mode: 2, enable: true }, BetterThumbnail: true, QuickPostToggle: true, NewTabOpens: { enable: true, active: false, insert: true, setParent: true } },
+    Content: { ExtraButton: true, LinkBeautify: true, CommentFormat: true, VideoBeautify: { mode: 1, enable: true }, OriginalImage: { mode: 1, enable: true, experiment: false } },
   };
   const Parame = {
     Url: Lib.$url,
@@ -114,11 +67,11 @@
       Object.defineProperty(this, "ThumbnailApi", { value, writable: false });
       return value;
     },
-    Artists: new RegExp(".+(?<!favorites)\\/artists.*"),
+    Artists: /.+(?<!favorites)\/artists.*/,
     Links: /.+\/user\/[^\/]+\/links.*/,
     Recommended: /.+\/user\/[^\/]+\/recommended.*/,
     FavoritesArtists: /.+\/favorites\/artists.*/,
-    Posts: new RegExp(".+(?<!favorites)\\/posts.*"),
+    Posts: /.+(?<!favorites)\/posts.*/,
     User: /.+\/user\/[^\/]+(\?.*)?$/,
     FavorPosts: /.+\/favorites\/posts.*/,
     Dms: /.+\/dms(\?.*)?$/,
@@ -128,36 +81,9 @@
     SupportImg: new Set(["jpg", "jpeg", "png", "gif", "bmp", "webp", "avif", "heic", "svg"]),
     VideoType: new Set(["mp4", "avi", "mkv", "mov", "flv", "wmv", "webm", "mpg", "mpeg", "m4v", "ogv", "3gp", "asf", "ts", "vob", "rm", "rmvb", "m2ts", "f4v", "mts", "mpe", "mpv", "m2v", "m4a", "bdmv", "ifo", "r3d", "braw", "cine", "qt", "f4p", "swf", "mng", "gifv", "yuv", "roq", "nsv", "amv", "svi", "mod", "mxf", "ogg"]),
   };
-  const Page = {
-    isContent: () => Parame.Content.test(Parame.Url),
-    isAnnouncement: () => Parame.Announcement.test(Parame.Url) || Parame.Dms.test(Parame.Url),
-    isSearch: () => Parame.Artists.test(Parame.Url) || Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url) || Parame.FavoritesArtists.test(Parame.Url),
-    isPreview: () => Parame.Posts.test(Parame.Url) || Parame.User.test(Parame.Url) || Parame.FavorPosts.test(Parame.Url),
-    isNeko: Lib.$domain.startsWith("nekohouse"),
-    isPawchive: Parame._isPawchive,
-  };
+  const Page = { isContent: () => Parame.Content.test(Parame.Url), isAnnouncement: () => Parame.Announcement.test(Parame.Url) || Parame.Dms.test(Parame.Url), isSearch: () => Parame.Artists.test(Parame.Url) || Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url) || Parame.FavoritesArtists.test(Parame.Url), isPreview: () => Parame.Posts.test(Parame.Url) || Parame.User.test(Parame.Url) || Parame.FavorPosts.test(Parame.Url), isNeko: Lib.$domain.startsWith("nekohouse"), isPawchive: Parame._isPawchive };
   const Load = (() => {
-    const color = {
-      kemono: "#e8a17d !important",
-      coomer: "#99ddff !important",
-      pawchive: "#e9bbb4 !important",
-      nekohouse: "#bb91ff !important",
-    }[Lib.$domain.split(".")[0]];
-    const userSet = {
-      menuSet: () =>
-        Lib.getV(Parame.SaveKey.Menu, {
-          Top: "10vh",
-          Left: "10vw",
-        }),
-      imgSet: () =>
-        Lib.getV(Parame.SaveKey.Img, {
-          Width: "auto",
-          Height: "auto",
-          Spacing: "0px",
-          MaxWidth: "100%",
-        }),
-    };
-    return { ...userSet, color };
+    return { menuSet: () => Lib.getV(Parame.SaveKey.Menu, { Top: "10vh", Left: "10vw" }), imgSet: () => Lib.getV(Parame.SaveKey.Img, { Width: "auto", Height: "auto", Spacing: "0px", MaxWidth: "100%" }), color: { kemono: "#e8a17d !important", coomer: "#99ddff !important", pawchive: "#e9bbb4 !important", nekohouse: "#bb91ff !important" }[Lib.$domain.split(".")[0]] };
   })();
   async function BlockAds() {
     if (Page.isNeko) return;
@@ -182,10 +108,7 @@
   }
   async function KeyScroll({ mode }) {
     if (Lib.platform.mobile || Parame.Registered.has("KeyScroll")) return;
-    const scrollConfig = {
-      scrollPixel: 2,
-      scrollInterval: 800,
-    };
+    const scrollConfig = { scrollPixel: 2, scrollInterval: 800 };
     const upScrollSpeed = scrollConfig.scrollPixel * -1;
     let scrollFunc,
       isUpScroll = false,
@@ -202,9 +125,7 @@
       case 2:
         scrollFunc = (Move) => {
           const Interval = setInterval(() => {
-            if (!isUpScroll && !isDownScroll) {
-              clearInterval(Interval);
-            }
+            if (!isUpScroll && !isDownScroll) clearInterval(Interval);
             if (isUpScroll && Move < 0) {
               window.scrollBy(0, Move);
               topDetected();
@@ -235,9 +156,8 @@
         if (key == "ArrowUp") {
           event.stopImmediatePropagation();
           event.preventDefault();
-          if (isUpScroll) {
-            isUpScroll = false;
-          } else if (!isUpScroll || isDownScroll) {
+          if (isUpScroll) isUpScroll = false;
+          else if (!isUpScroll || isDownScroll) {
             isDownScroll = false;
             isUpScroll = true;
             scrollFunc(upScrollSpeed);
@@ -245,9 +165,8 @@
         } else if (key == "ArrowDown") {
           event.stopImmediatePropagation();
           event.preventDefault();
-          if (isDownScroll) {
-            isDownScroll = false;
-          } else if (isUpScroll || !isDownScroll) {
+          if (isDownScroll) isDownScroll = false;
+          else if (isUpScroll || !isDownScroll) {
             isUpScroll = false;
             isDownScroll = true;
             scrollFunc(scrollConfig.scrollPixel);
@@ -267,15 +186,12 @@
       Parame.DB.set(cacheKey, cache, { expireStr: "10m" });
     }, 1e3);
     function setCache(url, data) {
-      if (cache.has(url)) {
-        cache.delete(url);
-      } else if (cache.size >= cacheMaxCount) {
-        cache.delete(cache.keys().next().value);
-      }
+      if (cache.has(url)) cache.delete(url);
+      else if (cache.size >= cacheMaxCount) cache.delete(cache.keys().next().value);
       cache.set(url, data);
       saveCache();
     }
-    const originalFetch = { window: unsafeWindow.fetch };
+    const originalFetch = { sandbox: window.fetch, window: unsafeWindow.fetch };
     unsafeWindow.fetch = (...args) => fetchWrapper(originalFetch.window, ...args);
     async function fetchWrapper(windowContext, ...args) {
       const [input, options = {}] = args;
@@ -285,12 +201,10 @@
       const isGet = rawMethod === "GET" || rawMethod === "get";
       const headers = options.headers;
       const bypassHeader = typeof headers?.get === "function" ? headers.get("X-Bypass-CacheReq") : headers?.["X-Bypass-CacheReq"];
-      if (!isGet || bypassHeader || url.endsWith("random")) {
-        return windowContext(...args);
-      }
+      if (!isGet || bypassHeader || url.endsWith("random")) return windowContext(...args);
       if (cache.has(url)) {
-        const { body, status, headers: headers2 } = cache.get(url);
-        return new Response(body, { status, headers: headers2 });
+        const { body, status, headers } = cache.get(url);
+        return new Response(body, { status, headers });
       }
       const response = await windowContext(...args);
       if (response.status === 200 && (url.includes("api") || url.includes("default_config"))) {
@@ -298,9 +212,7 @@
         clone
           .text()
           .then((bodyText) => {
-            if (bodyText) {
-              setCache(url, { body: bodyText, status: clone.status, headers: clone.headers });
-            }
+            if (bodyText) setCache(url, { body: bodyText, status: clone.status, headers: clone.headers });
           })
           .catch(() => {});
       }
@@ -324,13 +236,7 @@
         if (canCache && cache.has(url)) {
           const cachedDomString = cache.get(url);
           queueMicrotask(() => {
-            Object.defineProperties(this, {
-              readyState: { value: 4 },
-              status: { value: 200 },
-              statusText: { value: "OK" },
-              responseText: { value: cachedDomString },
-              response: { value: cachedDomString },
-            });
+            Object.defineProperties(this, { readyState: { value: 4 }, status: { value: 200 }, statusText: { value: "OK" }, responseText: { value: cachedDomString }, response: { value: cachedDomString } });
             if (typeof this.onreadystatechange === "function") this.onreadystatechange();
             if (typeof this.onload === "function") this.onload();
             this.dispatchEvent(new Event("load"));
@@ -338,9 +244,9 @@
           });
           return;
         }
-        if (canCache) {
+        if (canCache)
           this.addEventListener("load", () => {
-            if (this.status === 200 && this.responseText) {
+            if (this.status === 200 && this.responseText)
               setCache(
                 url,
                 this.responseText
@@ -348,9 +254,7 @@
                   .replace(/\s+(?=[^<]*>)/g, " ")
                   .replace(/>\s+</g, "><"),
               );
-            }
           });
-        }
         return send.apply(this, args);
       };
     }
@@ -378,8 +282,7 @@
       function bytesToBase64Url(bytes) {
         let bin = "";
         for (let i = 0, L = bytes.length; i < L; i++) bin += String.fromCharCode(bytes[i]);
-        let b64 = btoa(bin);
-        return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
       }
       function equalBytesConstTime(a, b) {
         if (!a || !b || a.length !== b.length) return false;
@@ -414,9 +317,7 @@
           const mod = b64.length % 4;
           if (mod !== 0) b64 += "=".repeat(4 - mod);
           const data = base64ToBytes(b64);
-          if (!data || data.length < 1 + 1 + 6 + 32 + 32) {
-            return pFragmentOrFull;
-          }
+          if (!data || data.length < 72) return pFragmentOrFull;
           const algorithm = data[0];
           const type = data[1];
           const publicHandle = data.subarray(2, 8);
@@ -424,15 +325,12 @@
           const macTag = data.subarray(data.length - 32);
           const encryptedKey = data.subarray(40, data.length - 32);
           const keyLen = encryptedKey.length;
-          const pwKey = await importPwKey(password);
-          const dk = await deriveDK(pwKey, salt);
-          if (dk.length < 64 || dk.length < 32 + 32) {
-            return pFragmentOrFull;
-          }
+          const dk = await deriveDK(await importPwKey(password), salt);
+          if (dk.length < 64 || dk.length < 64) return pFragmentOrFull;
           const xorKey = dk.subarray(0, keyLen);
           const macKey = dk.subarray(32, 64);
           const recoveredKey = xorInto(encryptedKey, xorKey);
-          const msgLen = 1 + 1 + publicHandle.length + salt.length + encryptedKey.length;
+          const msgLen = 2 + publicHandle.length + salt.length + encryptedKey.length;
           const msg = new Uint8Array(msgLen);
           let off = 0;
           msg[off++] = algorithm;
@@ -444,14 +342,10 @@
           msg.set(encryptedKey, off);
           const macCryptoKey = await importMacKey(macKey);
           const macBuffer = await crypto.subtle.sign("HMAC", macCryptoKey, msg);
-          const mac = new Uint8Array(macBuffer);
-          if (!equalBytesConstTime(mac, macTag)) {
-            return pFragmentOrFull;
-          }
+          if (!equalBytesConstTime(new Uint8Array(macBuffer), macTag)) return pFragmentOrFull;
           const handleB64Url = bytesToBase64Url(publicHandle);
           const keyB64Url = bytesToBase64Url(recoveredKey);
-          const fileType = type === 0 ? "folder" : "file";
-          return `https://mega.nz/${fileType}/${handleB64Url}#${keyB64Url}`;
+          return `https://mega.nz/${type === 0 ? "folder" : "file"}/${handleB64Url}#${keyB64Url}`;
         } catch (e) {
           return pFragmentOrFull;
         }
@@ -463,9 +357,7 @@
       const result = {};
       if (typeof data === "string") {
         let match;
-        while ((match = encryptedExtract.exec(data)) !== null) {
-          result[match[1]] = match[2]?.trim() ?? "";
-        }
+        while ((match = encryptedExtract.exec(data)) !== null) result[match[1]] = match[2]?.trim() ?? "";
       }
       return result;
     }
@@ -478,9 +370,7 @@
       const result = {};
       if (typeof data === "string") {
         let match;
-        while ((match = missingExtract.exec(data)) !== null) {
-          result[match[1] + match[2]] = match[3] || "";
-        }
+        while ((match = missingExtract.exec(data)) !== null) result[match[1] + match[2]] = match[3] || "";
       }
       return result;
     }
@@ -502,10 +392,7 @@
           href += "#" + key;
         }
       }
-      return {
-        state,
-        href: href.match(urlRegex)?.[0] ?? href,
-      };
+      return { state, href: href.match(urlRegex)?.[0] ?? href };
     }
     async function getPassword(node, href) {
       let state;
@@ -515,19 +402,13 @@
           ({ state, href } = parsePassword(href, nextNode.$text()));
           if (state) nextNode?.remove();
         } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
-          const nodeText = [...nextNode.childNodes].find((node2) => node2.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+          const nodeText = [...nextNode.childNodes].find((node) => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
           ({ state, href } = parsePassword(href, nodeText));
         }
       }
       return href;
     }
-    return {
-      getPassword,
-      getCompleteUrl,
-      getDecryptedUrl,
-      extractPasswords,
-      extractMissingKey,
-    };
+    return { getPassword, getCompleteUrl, getDecryptedUrl, extractPasswords, extractMissingKey };
   }
   const TextToLinkFactory = () => {
     let mega;
@@ -564,10 +445,10 @@
     const getTextNodeMap = (root) => {
       const nodes = new Map();
       const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-        acceptNode: (node2) => {
-          const parentElement = node2.parentElement;
+        acceptNode: (node) => {
+          const parentElement = node.parentElement;
           if (!parentElement || exclusionTags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
-          const content = node2.$text();
+          const content = node.$text();
           if (!content || exclusionRegex.test(content)) return NodeFilter.FILTER_REJECT;
           return content === "(frame embed)" || urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         },
@@ -604,10 +485,8 @@
         if (modifyUrl && modifyUrl !== href) {
           a.href = modifyUrl;
           a.$text(modifyUrl);
-        } else {
-          a.$text(href);
-        }
-      } else if (complex) {
+        } else a.$text(href);
+      } else if (complex)
         textNode.replaceWith(
           Lib.createDomFragment(
             text.replace(urlRegex, (url) => {
@@ -616,7 +495,7 @@
             }),
           ),
         );
-      } else {
+      else {
         if (text.match(urlRegex).length === 0) return;
         if (text.includes("mega.nz")) {
           mega ??= megaUtils(urlRegex);
@@ -637,9 +516,7 @@
           segments.push(`<a href="${protocolParse(modifyUrl)}" rel="noopener noreferrer">${modifyUrl}</a>`);
           lastIndex = index + url.length;
         }
-        if (lastIndex < text.length) {
-          segments.push(text.slice(lastIndex));
-        }
+        if (lastIndex < text.length) segments.push(text.slice(lastIndex));
         father.tagName === "A" ? father.replaceWith(Lib.createDomFragment(segments.join(""))) : father.$iHtml(segments.join(""));
       }
     }
@@ -647,15 +524,13 @@
       async TextToLink(config) {
         if (!Page.isContent() && !Page.isAnnouncement()) return;
         let parentNode, text, textNode, data, isComplex;
-        if (Page.isContent()) {
+        if (Page.isContent())
           Lib.waitEl(".post__body, .scrape__body", null).then(async (body) => {
             let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
             if (article) {
               jumpTrigger(content, config);
               let span;
-              for (span of article.$qa("span.choice-text")) {
-                parseModify(article, span, span.$text());
-              }
+              for (span of article.$qa("span.choice-text")) parseModify(article, span, span.$text());
             } else if (content) {
               jumpTrigger(content, config);
               for ([parentNode, data] of getTextNodeMap(content).entries()) {
@@ -674,7 +549,7 @@
               attachments && jumpTrigger(attachments, config);
             }
           });
-        } else if (Page.isAnnouncement()) {
+        else if (Page.isAnnouncement())
           Lib.waitEl(".card-list__items pre", null, { raf: true }).then(() => {
             const items = Lib.$q(".card-list__items");
             jumpTrigger(items, config);
@@ -686,7 +561,6 @@
               }
             }
           });
-        }
       },
     };
   };
@@ -710,10 +584,7 @@
         .content-wrapper.shifted { transition: 0.8s; margin-left: 0rem; }
         .global-sidebar:hover + .content-wrapper.shifted { margin-left: 12rem; }
     `,
-      {
-        id: "Collapse-Effects",
-        repeatAdd: false,
-      },
+      { id: "Collapse-Effects", repeatAdd: false },
     );
   }
   const Fetch = (() => {
@@ -743,11 +614,7 @@
           .then(async (response) => {
             if (!response.ok) {
               const text = await response.text();
-              throw new Error(`
-Fetch failed
-url: ${response.url}
-status: ${response.status}
-statusText: ${text}`);
+              throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
             }
             try {
               return await responseRule[responseType](response);
@@ -773,10 +640,7 @@ statusText: ${text}`);
     const oldKey = "fix_record_v2";
     const recordKey = "better_post_record";
     const oldRecord = Lib.getLocal(oldKey);
-    if (oldRecord instanceof Array) {
-      const r = await Parame.DB.set(recordKey, new Map(oldRecord));
-      r === recordKey && Lib.delLocal(oldKey);
-    }
+    if (oldRecord instanceof Array) (await Parame.DB.set(recordKey, new Map(oldRecord))) === recordKey && Lib.delLocal(oldKey);
     let recordCache;
     const fixCache = new Map();
     const init = async () => {
@@ -790,15 +654,7 @@ statusText: ${text}`);
     const saveWork = Lib.debounce(() => saveRecord(fixCache), 1e3);
     const fixRequest = async (url, headers = {}) => {
       return new Promise((resolve) => {
-        GM_xmlhttpRequest({
-          method: "GET",
-          url,
-          headers,
-          responseType: "json",
-          onload: (response) => resolve(response),
-          onerror: () => resolve(),
-          ontimeout: () => resolve(),
-        });
+        GM_xmlhttpRequest({ method: "GET", url, headers, responseType: "json", onload: (response) => resolve(response), onerror: () => resolve(), ontimeout: () => resolve() });
       });
     };
     const replaceUrlTail = (url, tail) => {
@@ -819,17 +675,14 @@ statusText: ${text}`);
         if (supportServer.test(str)) {
           const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
           acc.server = specialServer[cleanStr] ?? cleanStr;
-        } else {
-          acc.user = str;
-        }
+        } else acc.user = str;
         return acc;
       }, {});
     };
     const getPixivName = async (id) => {
       const response = await fixRequest(`https://www.pixiv.net/ajax/user/${id}?full=1&lang=ja`, { referer: "https://www.pixiv.net/" });
       if (response.status === 200) {
-        const user = response.response;
-        let user_name = user.body.name;
+        let user_name = response.response.body.name;
         user_name = user_name.replace(/(c\d+)?([日月火水木金土]曜日?|[123１２３一二三]日目?)[東南西北]..?\d+\w?/i, "");
         user_name = user_name.replace(/[@＠]?(fanbox|fantia|skeb|ファンボ|リクエスト|お?仕事|新刊|単行本|同人誌)+(.*(更新|募集|公開|開設|開始|発売|販売|委託|休止|停止)+中?[!！]?$|$)/gi, "");
         user_name = user_name.replace(/\(\)|（）|「」|【】|[@＠_＿]+$/g, "").trim();
@@ -840,17 +693,12 @@ statusText: ${text}`);
       const response = await fixRequest(`https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`);
       if (response.status === 200) {
         const user = response.response.data[0];
-        const user_code = user?.user_code || "";
-        const username = user?.username || "";
-        return [user_code, username];
+        return [user?.user_code || "", user?.username || ""];
       } else return;
     };
     const candfansPageAdapt = (oldId, newId, oldUrl, oldName, newName) => {
-      if (Page.isSearch()) {
-        oldId = newId || oldId;
-      } else {
-        oldUrl = newId ? replaceUrlTail(oldUrl, newId) : oldUrl;
-      }
+      if (Page.isSearch()) oldId = newId || oldId;
+      else oldUrl = newId ? replaceUrlTail(oldUrl, newId) : oldUrl;
       oldName = newName || oldName;
       return [oldId, oldUrl, oldName];
     };
@@ -877,7 +725,7 @@ statusText: ${text}`);
     };
     async function fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) {
       nameEl.$sAttr("style", "display: none;");
-      if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER") {
+      if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER")
         nameEl.$iAdjacent(
           `
                 <fix_wrapper>
@@ -887,16 +735,14 @@ statusText: ${text}`);
             `,
           "beforebegin",
         );
-      }
+      if (!tagEl) return;
       const [tag_text, support_id, support_name] = [tagEl.$text(), supportFixTag.ID, supportFixTag.NAME];
-      if (!tag_text) return;
       const [mark, matchId] = support_id.test(tag_text) ? ["{id}", support_id] : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
       if (!mark) return;
       tagEl.$iHtml(
         tag_text.replace(matchId, (tag) => {
           let supported = false;
-          const supportFormat = appendTag ? ((supported = supportFixTag[`${tag}${appendTag}`]), supported ? ((user = parseUrlInfo(otherUrl).user), supported) : supportFixTag[tag]) : supportFixTag[tag];
-          return `<fix_tag jump="${supportFormat.replace(mark, user)}">${tag}</fix_tag>`;
+          return `<fix_tag jump="${(appendTag ? ((supported = supportFixTag[`${tag}${appendTag}`]), supported ? ((user = parseUrlInfo(otherUrl).user), supported) : supportFixTag[tag]) : supportFixTag[tag]).replace(mark, user)}">${tag}</fix_tag>`;
         }),
       );
     }
@@ -904,27 +750,21 @@ statusText: ${text}`);
       let { mainUrl, otherUrl, server, user, nameEl, tagEl, appendTag } = data;
       let recordName = recordCache?.get(user);
       if (recordName) {
-        if (server === "candfans") {
-          [user, mainUrl, recordName] = candfansPageAdapt(user, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
-        }
+        if (server === "candfans") [user, mainUrl, recordName] = candfansPageAdapt(user, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
         fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, recordName, appendTag);
-      } else {
-        if (supportFixName.has(server)) {
-          if (server === "candfans") {
-            const [user_code, username] = (await getCandfansName(user)) ?? nameEl.$text();
-            if (user_code && username) fixCache.set(user, [user_code, username]);
-            [user, mainUrl, recordName] = candfansPageAdapt(user, user_code, mainUrl, nameEl.$text(), username);
-            fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
-          } else {
-            const username = (await getPixivName(user)) ?? nameEl.$text();
-            fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
-            fixCache.set(user, username);
-          }
-          saveWork();
+      } else if (supportFixName.has(server)) {
+        if (server === "candfans") {
+          const [user_code, username] = (await getCandfansName(user)) ?? nameEl.$text();
+          if (user_code && username) fixCache.set(user, [user_code, username]);
+          [user, mainUrl, recordName] = candfansPageAdapt(user, user_code, mainUrl, nameEl.$text(), username);
+          fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
         } else {
-          fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
+          const username = (await getPixivName(user)) ?? nameEl.$text();
+          fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
+          fixCache.set(user, username);
         }
-      }
+        saveWork();
+      } else fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
     }
     async function searchFix(items) {
       items.$sAttr("fix", true);
@@ -932,30 +772,14 @@ statusText: ${text}`);
       const img = items.$q("img");
       const { server, user } = parseUrlInfo(url);
       img.$sAttr("jump", url);
-      fixTrigger({
-        mainUrl: url,
-        otherUrl: "",
-        server,
-        user,
-        nameEl: items.$q(".user-card__name"),
-        tagEl: items.$q(".user-card__service"),
-        appendTag: "",
-      });
+      fixTrigger({ mainUrl: url, otherUrl: "", server, user, nameEl: items.$q(".user-card__name"), tagEl: items.$q(".user-card__service"), appendTag: "" });
     }
     async function otherFix(artist, tag = "", mainUrl = null, otherUrl = null, reTag = "fix_view") {
       try {
         const parent = artist.parentElement;
         const url = mainUrl ?? parent.href;
         const { server, user } = parseUrlInfo(url);
-        await fixTrigger({
-          mainUrl: url,
-          otherUrl,
-          server,
-          user,
-          nameEl: artist,
-          tagEl: tag,
-          appendTag: otherUrl ? "Post" : "",
-        });
+        await fixTrigger({ mainUrl: url, otherUrl, server, user, nameEl: artist, tagEl: tag, appendTag: otherUrl ? "Post" : "" });
         parent.replaceWith(Lib.createElement(reTag, { html: parent.$iHtml() }));
       } catch {}
     }
@@ -965,9 +789,7 @@ statusText: ${text}`);
         async () => {
           recordCache = await getRecord();
           const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
-          for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) {
-            searchFix(items);
-          }
+          for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) searchFix(items);
         },
         { mark: "dynamic-fix", subtree: false, debounce: 50 },
       );
@@ -1139,10 +961,7 @@ statusText: ${text}`);
                 position: absolute;
             }
         `,
-        {
-          id: "Better-Post-Card-Effects",
-          repeatAdd: false,
-        },
+        { id: "Better-Post-Card-Effects", repeatAdd: false },
       );
     };
     return {
@@ -1176,9 +995,9 @@ statusText: ${text}`);
                       class: "post-show-box",
                       attr: { preview: previewAbove ? "above" : "below" },
                       on: {
-                        wheel: (event2) => {
-                          event2.preventDefault();
-                          event2.currentTarget.scrollLeft += event2.deltaY;
+                        wheel: (event) => {
+                          event.preventDefault();
+                          event.currentTarget.scrollLeft += event.deltaY;
                         },
                       },
                     },
@@ -1188,24 +1007,20 @@ statusText: ${text}`);
                   if (url && !url.includes("discord")) {
                     const uri = new URL(url);
                     const api = Page.isNeko ? url : `${uri.origin}/api/v1${uri.pathname}/posts`;
-                    Fetch.send(api, null, {
-                      responseType: Page.isNeko ? "document" : "json",
-                    }).then((data) => {
+                    Fetch.send(api, null, { responseType: Page.isNeko ? "document" : "json" }).then((data) => {
                       if (Page.isNeko) data = data.$qa(".post-card__image");
                       currentBox.$text("");
                       const srcBox = new Set();
                       for (const post of data) {
                         let src = "";
                         if (Page.isNeko) src = post.src ?? "";
-                        else {
+                        else
                           for (const { path } of [post.file, ...(post?.attachments || [])]) {
                             if (!path) continue;
-                            const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                            if (!isImg) continue;
+                            if (!Parame.SupportImg.has(path.split(".")[1])) continue;
                             src = Parame.ThumbnailApi + path;
                             break;
                           }
-                        }
                         if (!src) continue;
                         srcBox.add(src);
                       }
@@ -1252,15 +1067,7 @@ statusText: ${text}`);
               event.stopImmediatePropagation();
               Lib.$q(".edit_textarea")?.remove();
               const display = target.previousElementSibling;
-              const text = Lib.createElement(
-                display,
-                "textarea",
-                {
-                  class: "edit_textarea",
-                  style: `height: ${display.scrollHeight + 10}px;`,
-                },
-                "beforebegin",
-              );
+              const text = Lib.createElement(display, "textarea", { class: "edit_textarea", style: `height: ${display.scrollHeight + 10}px;` }, "beforebegin");
               const original_name = display.$text();
               text.value = original_name.trim();
               text.scrollTop = 0;
@@ -1286,9 +1093,8 @@ statusText: ${text}`);
               event.preventDefault();
               event.stopImmediatePropagation();
               const url = target.$gAttr("jump");
-              if (url) {
-                openInTab.enable || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && Page.isPreview()) ? GM_openInTab(url, openInTab) : location.assign(url);
-              } else if (tagName === "IMG" || tagName === "PICTURE") {
+              if (url) openInTab.enable || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && Page.isPreview()) ? GM_openInTab(url, openInTab) : location.assign(url);
+              else if (tagName === "IMG" || tagName === "PICTURE") {
                 const href = target.closest("a").href;
                 openInTab.enable && !Page.isContent() ? GM_openInTab(href, openInTab) : location.assign(href);
               }
@@ -1296,7 +1102,7 @@ statusText: ${text}`);
           },
           { capture: true, mark: "BetterPostCard" },
         );
-        if (isSearch) {
+        if (isSearch)
           Lib.waitEl(".card-list__items", null, { raf: true, timeout: 10 }).then((card_items) => {
             if (Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url)) {
               const artist = Lib.$q("span[itemprop='name']");
@@ -1305,15 +1111,14 @@ statusText: ${text}`);
             dynamicFix(card_items);
             card_items.$sAttr("fix-trigger", true);
           });
-        } else if (Page.isContent()) {
+        else if (Page.isContent())
           Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, { raf: true, timeout: 10 }).then(([title, artist]) => {
             otherFix(artist, title, artist.href, Lib.url, "fix_cont");
           });
-        } else {
+        else
           Lib.waitEl("span[itemprop='name']", null, { raf: true, timeout: 3 }).then((artist) => {
             otherFix(artist);
           });
-        }
       },
     };
   };
@@ -1328,8 +1133,7 @@ statusText: ${text}`);
       Object.defineProperty(this, value.name, { value, writable: false });
     },
     async BetterPostCard(...args) {
-      const func = await BetterPostCardFactory();
-      const value = func.BetterPostCard;
+      const value = (await BetterPostCardFactory()).BetterPostCard;
       value(...args);
       Object.defineProperty(this, value.name, { value, writable: false });
     },
@@ -1350,10 +1154,7 @@ statusText: ${text}`);
                     opacity: 1 !important;
                 }
             `,
-          {
-            id: "CardText-Effects-2",
-            repeatAdd: false,
-          },
+          { id: "CardText-Effects-2", repeatAdd: false },
         );
         break;
       default:
@@ -1382,15 +1183,12 @@ statusText: ${text}`);
                     transform: translateY(0);
                 }
             `,
-          {
-            id: "CardText-Effects",
-            repeatAdd: false,
-          },
+          { id: "CardText-Effects", repeatAdd: false },
         );
     }
   }
   async function CardZoom({ mode }) {
-    let paddingBottom, rowGap, height;
+    let paddingBottom, rowGap, aspectRatio;
     switch (mode) {
       case 2:
         Lib.addStyle(
@@ -1412,14 +1210,11 @@ statusText: ${text}`);
                     position: relative;
                 }
             `,
-          {
-            id: "CardZoom-Effects-2",
-            repeatAdd: false,
-          },
+          { id: "CardZoom-Effects-2", repeatAdd: false },
         );
         break;
       case 3:
-        [paddingBottom, rowGap, height] = Page.isNeko ? ["0", "0", "57"] : ["7", "5.8", "50"];
+        [paddingBottom, rowGap, aspectRatio] = Page.isNeko ? ["0", "0", "320 / 416"] : ["7", "5.8", "320 / 365"];
         Lib.addStyle(
           `
                 .card-list--legacy { padding-bottom: ${paddingBottom}em }
@@ -1429,14 +1224,12 @@ statusText: ${text}`);
                 }
                 .post-card a {
                     width: 20em;
-                    height: ${height}vh;
+                    aspect-ratio: ${aspectRatio};
+                    height: auto;
                 }
                 .post-card__image-container img { object-fit: contain }
-            `,
-          {
-            id: "CardZoom-Effects-3",
-            repeatAdd: false,
-          },
+                `,
+          { id: "CardZoom-Effects-3", repeatAdd: false },
         );
     }
     Lib.addStyle(
@@ -1454,10 +1247,7 @@ statusText: ${text}`);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
     `,
-      {
-        id: "CardZoom-Effects",
-        repeatAdd: false,
-      },
+      { id: "CardZoom-Effects", repeatAdd: false },
     );
   }
   async function NewTabOpens(openInTab) {
@@ -1511,12 +1301,11 @@ statusText: ${text}`);
             },
             onerror: () => reject(new Error("Network error")),
           });
-          if (abortSignal) {
+          if (abortSignal)
             abortSignal.addEventListener("abort", () => {
               request.abort?.();
               reject(new Error("Aborted"));
             });
-          }
         });
       }
       const totalPages = Math.ceil(+menu[0].previousElementSibling.$text().split("of")[1].trim() / 50);
@@ -1532,74 +1321,42 @@ statusText: ${text}`);
       let pageButtonIndexMap = null;
       let visibleRangeCache = { page: -1, range: null };
       function getVisibleRange(currentPage) {
-        if (visibleRangeCache.page === currentPage) {
-          return visibleRangeCache.range;
-        }
+        if (visibleRangeCache.page === currentPage) return visibleRangeCache.range;
         let range;
-        if (!hasScrolling) {
-          range = { start: 1, end: totalPages };
-        } else {
+        if (!hasScrolling) range = { start: 1, end: totalPages };
+        else {
           let start = 1;
-          if (currentPage >= MAX_VISIBLE && totalPages > MAX_VISIBLE) {
-            start = currentPage - MAX_VISIBLE + 2;
-          }
+          if (currentPage >= MAX_VISIBLE && totalPages > MAX_VISIBLE) start = currentPage - MAX_VISIBLE + 2;
           range = { start, end: Math.min(totalPages, start + MAX_VISIBLE - 1) };
         }
         visibleRangeCache = { page: currentPage, range };
         return range;
       }
       function createButton(text, page, isDisabled = false, isCurrent = false, isHidden = false) {
-        return preact.h(Rendering, {
-          href: isDisabled ? void 0 : pageLinks[page - 1],
-          textContent: text,
-          className: `${isDisabled ? "pagination-button-disabled" : ""} ${isCurrent ? "pagination-button-current" : ""}`.trim(),
-          style: isHidden ? { display: "none" } : void 0,
-        });
+        return preact.h(Rendering, { href: isDisabled ? void 0 : pageLinks[page - 1], textContent: text, className: `${isDisabled ? "pagination-button-disabled" : ""} ${isCurrent ? "pagination-button-current" : ""}`.trim(), style: isHidden ? { display: "none" } : void 0 });
       }
       function createPaginationElements(currentPage = 1) {
         const { start, end } = getVisibleRange(currentPage);
-        const elements2 = [];
-        if (hasScrolling) {
-          elements2.push(createButton("<<", 1, currentPage === 1));
-        }
-        elements2.push(createButton("<", currentPage - 1, currentPage === 1));
+        const elements = [];
+        if (hasScrolling) elements.push(createButton("<<", 1, currentPage === 1));
+        elements.push(createButton("<", currentPage - 1, currentPage === 1));
         pageLinks.forEach((link, index) => {
           const pageNum = index + 1;
           const isVisible = pageNum >= start && pageNum <= end;
           const isCurrent = pageNum === currentPage;
-          elements2.push(createButton(pageNum, pageNum, isCurrent, isCurrent, !isVisible));
+          elements.push(createButton(pageNum, pageNum, isCurrent, isCurrent, !isVisible));
         });
-        elements2.push(createButton(">", currentPage + 1, currentPage === totalPages));
-        if (hasScrolling) {
-          elements2.push(createButton(">>", totalPages, currentPage === totalPages));
-        }
-        return elements2;
+        elements.push(createButton(">", currentPage + 1, currentPage === totalPages));
+        if (hasScrolling) elements.push(createButton(">>", totalPages, currentPage === totalPages));
+        return elements;
       }
       function initializeButtonCache() {
         const menu1Buttons = menu[0].$qa("a");
         const menu2Buttons = menu[1].$qa("a");
         const navOffset = hasScrolling ? 2 : 1;
         buttonCache = {
-          menu1: {
-            all: menu1Buttons,
-            nav: {
-              first: hasScrolling ? menu1Buttons[0] : null,
-              prev: menu1Buttons[hasScrolling ? 1 : 0],
-              next: menu1Buttons[menu1Buttons.length - (hasScrolling ? 2 : 1)],
-              last: hasScrolling ? menu1Buttons[menu1Buttons.length - 1] : null,
-            },
-            pages: menu1Buttons.slice(navOffset, menu1Buttons.length - navOffset),
-          },
-          menu2: {
-            all: menu2Buttons,
-            nav: {
-              first: hasScrolling ? menu2Buttons[0] : null,
-              prev: menu2Buttons[hasScrolling ? 1 : 0],
-              next: menu2Buttons[menu2Buttons.length - (hasScrolling ? 2 : 1)],
-              last: hasScrolling ? menu2Buttons[menu2Buttons.length - 1] : null,
-            },
-            pages: menu2Buttons.slice(navOffset, menu2Buttons.length - navOffset),
-          },
+          menu1: { all: menu1Buttons, nav: { first: hasScrolling ? menu1Buttons[0] : null, prev: menu1Buttons[hasScrolling ? 1 : 0], next: menu1Buttons[menu1Buttons.length - (hasScrolling ? 2 : 1)], last: hasScrolling ? menu1Buttons[menu1Buttons.length - 1] : null }, pages: menu1Buttons.slice(navOffset, menu1Buttons.length - navOffset) },
+          menu2: { all: menu2Buttons, nav: { first: hasScrolling ? menu2Buttons[0] : null, prev: menu2Buttons[hasScrolling ? 1 : 0], next: menu2Buttons[menu2Buttons.length - (hasScrolling ? 2 : 1)], last: hasScrolling ? menu2Buttons[menu2Buttons.length - 1] : null }, pages: menu2Buttons.slice(navOffset, menu2Buttons.length - navOffset) },
         };
         pageButtonIndexMap = new Map();
         buttonCache.menu1.pages.forEach((btn, index) => {
@@ -1612,42 +1369,28 @@ statusText: ${text}`);
         const isLastPage = targetPage === totalPages;
         const { nav } = menuData;
         const navUpdates = [];
-        if (hasScrolling) {
-          navUpdates.push([nav.first, isFirstPage, pageLinks[0]], [nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]], [nav.last, isLastPage, pageLinks[totalPages - 1]]);
-        } else {
-          navUpdates.push([nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]]);
-        }
+        if (hasScrolling) navUpdates.push([nav.first, isFirstPage, pageLinks[0]], [nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]], [nav.last, isLastPage, pageLinks[totalPages - 1]]);
+        else navUpdates.push([nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]]);
         navUpdates.forEach(([btn, isDisabled, href]) => {
           btn.$toggleClass("pagination-button-disabled", isDisabled);
-          if (isDisabled) {
-            btn.$dAttr("href");
-          } else {
-            btn.href = href;
-          }
+          if (isDisabled) btn.$dAttr("href");
+          else btn.href = href;
         });
       }
       function updatePageButtons(menuData, targetPage, visibleRange) {
         const { start, end } = visibleRange;
         const { pages } = menuData;
         const currentActiveBtn = pages.find((btn) => btn.classList.contains("pagination-button-current"));
-        if (currentActiveBtn) {
-          currentActiveBtn.$delClass("pagination-button-current", "pagination-button-disabled");
-        }
+        if (currentActiveBtn) currentActiveBtn.$delClass("pagination-button-current", "pagination-button-disabled");
         const startIndex = Math.max(0, start - 1);
         const endIndex = Math.min(pages.length - 1, end - 1);
-        for (let i = 0; i < startIndex; i++) {
-          pages[i].style.display = "none";
-        }
-        for (let i = endIndex + 1; i < pages.length; i++) {
-          pages[i].style.display = "none";
-        }
+        for (let i = 0; i < startIndex; i++) pages[i].style.display = "none";
+        for (let i = endIndex + 1; i < pages.length; i++) pages[i].style.display = "none";
         for (let i = startIndex; i <= endIndex; i++) {
           const btn = pages[i];
           const pageNum = i + 1;
           btn.style.display = "";
-          if (pageNum === targetPage) {
-            btn.$addClass("pagination-button-current", "pagination-button-disabled");
-          }
+          if (pageNum === targetPage) btn.$addClass("pagination-button-current", "pagination-button-disabled");
         }
       }
       function updatePagination(targetPage) {
@@ -1657,12 +1400,7 @@ statusText: ${text}`);
         updatePageButtons(buttonCache.menu1, targetPage, visibleRange);
         updatePageButtons(buttonCache.menu2, targetPage, visibleRange);
       }
-      const navigationActions = {
-        "<<": () => 1,
-        ">>": () => totalPages,
-        "<": (current) => (current > 1 ? current - 1 : null),
-        ">": (current) => (current < totalPages ? current + 1 : null),
-      };
+      const navigationActions = { "<<": () => 1, ">>": () => totalPages, "<": (current) => (current > 1 ? current - 1 : null), ">": (current) => (current < totalPages ? current + 1 : null) };
       function parseTargetPage(clickText, currentPage) {
         const clickedNum = parseInt(clickText);
         if (!isNaN(clickedNum)) return clickedNum;
@@ -1689,9 +1427,7 @@ statusText: ${text}`);
           const target = event.target.closest("menu a:not(.pagination-button-disabled)");
           if (!target || isLoading) return;
           event.preventDefault();
-          if (abortController) {
-            abortController.abort();
-          }
+          if (abortController) abortController.abort();
           abortController = new AbortController();
           const currentActiveBtn = target.closest("menu").$q(".pagination-button-current");
           const currentPage = parseInt(currentActiveBtn.$text());
@@ -1709,9 +1445,7 @@ statusText: ${text}`);
             target.closest("#paginator-bottom") && menu[0].scrollIntoView();
             history.pushState(null, null, pageLinks[targetPage - 1]);
           } catch (error) {
-            if (error.message !== "Aborted") {
-              Lib.log("Page fetch failed:", error).error;
-            }
+            if (error.message !== "Aborted") Lib.log("Page fetch failed:", error).error;
           } finally {
             isLoading = false;
             abortController = null;
@@ -1756,9 +1490,8 @@ statusText: ${text}`);
         Lib.waitEl("article.post-card", null, { raf: true, all: true, timeout: 5 }).then((postCard) => {
           const uri = new URL(Parame.Url);
           if (uri.searchParams.get("q") === "") uri.searchParams.delete("q");
-          if (Parame.User.test(Parame.Url)) {
-            uri.pathname += "/posts";
-          } else if (Parame.FavorPosts.test(Parame.Url)) {
+          if (Parame.User.test(Parame.Url)) uri.pathname += "/posts";
+          else if (Parame.FavorPosts.test(Parame.Url)) {
             uri.pathname = uri.pathname.replace("/posts", "");
             uri.searchParams.set("type", "post");
           }
@@ -1780,21 +1513,21 @@ statusText: ${text}`);
               const record = new Set();
               let fileData = [post.file, ...attachments];
               if (Page.isPawchive) fileData = fileData.slice(1);
-              const count = fileData.reduce((count2, attach, index) => {
+              const count = fileData.reduce((count, attach, index) => {
                 const path = attach.path || "";
-                if (record.has(path)) return count2;
+                if (record.has(path)) return count;
                 const ext = path.split(".").at(-1).toLowerCase();
-                if (!ext) return count2;
+                if (!ext) return count;
                 const isImg = Parame.SupportImg.has(ext);
-                if (isImg) count2.image = (count2.image ?? 0) + 1;
-                else if (Parame.VideoType.has(ext)) count2.video = (count2.video ?? 0) + 1;
-                else count2.file = (count2.file ?? 0) + 1;
+                if (isImg) count.image = (count.image ?? 0) + 1;
+                else if (Parame.VideoType.has(ext)) count.video = (count.video ?? 0) + 1;
+                else count.file = (count.file ?? 0) + 1;
                 if (src && !replaced && index > 0 && isImg) {
                   replaced = true;
                   changeSrc(img, src, Parame.ThumbnailApi + path);
                 }
                 record.add(path);
-                return count2;
+                return count;
               }, {});
               if (footer && !Lib.isEmpty(count)) {
                 const { image, video, file } = count;
@@ -1823,11 +1556,11 @@ statusText: ${text}`);
     },
   };
   async function VideoBeautify({ mode }) {
-    if (Page.isNeko) {
+    if (Page.isNeko)
       Lib.waitEl(".scrape__files video", null, { raf: true, all: true, timeout: 5 }).then((video) => {
         video.forEach((media) => media.$sAttr("preload", "metadata"));
       });
-    } else {
+    else
       Lib.waitEl(Page.isPawchive ? ".post__videos li" : "ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, { raf: true, all: true, timeout: 5 }).then((parents) => {
         Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
           Lib.addStyle(
@@ -1843,10 +1576,7 @@ statusText: ${text}`);
                             border-radius: 8px !important;
                         }
                     `,
-            {
-              id: "Video-Effects",
-              repeatAdd: false,
-            },
+            { id: "Video-Effects", repeatAdd: false },
           );
           const move = mode === 2;
           const linkBox = Object.fromEntries([...post].map((a) => [a.download?.trim(), a]));
@@ -1873,7 +1603,6 @@ statusText: ${text}`);
           }
         });
       });
-    }
   }
   async function CommentFormat() {
     Lib.addStyle(
@@ -1896,10 +1625,7 @@ statusText: ${text}`);
             border: 0.125em solid var(--colour1-secondary);
         }
     `,
-      {
-        id: "Comment-Effects",
-        repeatAdd: false,
-      },
+      { id: "Comment-Effects", repeatAdd: false },
     );
   }
   const ExtraButtonFactory = () => {
@@ -1910,10 +1636,7 @@ statusText: ${text}`);
                 width: 100%;
             }
         `,
-        {
-          id: "Post-Extra",
-          repeatAdd: false,
-        },
+        { id: "Post-Extra", repeatAdd: false },
       );
     };
     const getNextPage = (url, oldMain, retry = 5) => {
@@ -1947,9 +1670,7 @@ statusText: ${text}`);
                                 <style>svg{fill: ${Load.color}}</style>
                                 <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM135.1 217.4l107.1-99.9c3.8-3.5 8.7-5.5 13.8-5.5s10.1 2 13.8 5.5l107.1 99.9c4.5 4.2 7.1 10.1 7.1 16.3c0 12.3-10 22.3-22.3 22.3H304v96c0 17.7-14.3 32-32 32H240c-17.7 0-32-14.3-32-32V256H150.3C138 256 128 246 128 233.7c0-6.2 2.6-12.1 7.1-16.3z"></path>
                             </svg>`,
-              on: {
-                click: () => header?.scrollIntoView(),
-              },
+              on: { click: () => header?.scrollIntoView() },
             });
           }
           if (nextBtn && !Lib.$q("#next-btn")) {
@@ -1989,13 +1710,11 @@ statusText: ${text}`);
       browse.$q("View")?.remove();
       Fetch.send(browse.href?.replace("posts/archives", "api/v1/file"), (json) => {
         const password = json.password;
-        browse.$iAdjacent(
-          `
+        browse.$iAdjacent(`
                     <view>
                         ${password ? `password: ${password}<br>` : ""}
                         ${json.file_list.map((file) => `${file}<br>`).join("")}
-                    </view>`,
-        );
+                    </view>`);
       }).catch(() => {
         setTimeout(() => showBrowse(browse, retry - 1), 1e3);
       });
@@ -2031,10 +1750,7 @@ statusText: ${text}`);
                 }
                 .post__attachment-link:not([beautify]):not([class*='--missing']) { display: none !important; }
             `,
-          {
-            id: "Link-Effects",
-            repeatAdd: false,
-          },
+          { id: "Link-Effects", repeatAdd: false },
         );
         Lib.waitEl(".post__attachment-link:not([class*='--missing']), .scrape__attachment-link", null, { raf: true, all: true, timeout: 5 }).then((post) => {
           for (const link of post) {
@@ -2046,9 +1762,7 @@ statusText: ${text}`);
             if (Page.isNeko) {
               link.$text(text);
               link.$sAttr("download", text);
-            } else {
-              link.$iAdjacent(`<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`, "beforebegin");
-            }
+            } else link.$iAdjacent(`<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`, "beforebegin");
             const browse = link.nextElementSibling;
             if (!browse || browse.$text() !== "browse »") continue;
             showBrowse(browse);
@@ -2067,8 +1781,7 @@ statusText: ${text}`);
         "click",
         (event) => {
           const target = event.target;
-          const isImg = target.matches("img");
-          if (isImg && target.alt === "Loading Failed") {
+          if (target.matches("img") && target.alt === "Loading Failed") {
             target.onload = null;
             target.$dAttr("src");
             target.onload = function () {
@@ -2111,7 +1824,7 @@ statusText: ${text}`);
       const indicator = Lib.createElement(container, "div", { class: "progress-indicator" });
       let blob = null;
       try {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++)
           try {
             blob = await new Promise((resolve, reject) => {
               let timeout = null;
@@ -2144,12 +1857,8 @@ statusText: ${text}`);
           } catch (error) {
             if (i < 4) await new Promise((res) => setTimeout(res, 300));
           }
-        }
-        if (blob && blob.size > 0) {
-          result(URL.createObjectURL(blob));
-        } else {
-          result(Parame.Url);
-        }
+        if (blob && blob.size > 0) result(URL.createObjectURL(blob));
+        else result(Parame.Url);
       } catch (error) {
         result(Parame.Url);
       } finally {
@@ -2161,7 +1870,7 @@ statusText: ${text}`);
         Lib.waitEl(".post__thumbnail, .scrape__thumbnail", null, { raf: true, all: true, timeout: 5 }).then((thumbnail) => {
           let token = 0,
             timer = null;
-          function imgRendering({ root, index, thumbUrl, newUrl, oldUrl, mode: mode2 }) {
+          function imgRendering({ root, index, thumbUrl, newUrl, oldUrl, mode }) {
             if (!root.isConnected) return;
             ++index;
             ++token;
@@ -2180,18 +1889,17 @@ statusText: ${text}`);
               clearTimeout(timer);
               --token;
               cleanMark(img);
-              mode2 === "slow" && slowAutoLoad(index);
+              mode === "slow" && slowAutoLoad(index);
             };
-            if (mode2 === "fast") {
+            if (mode === "fast")
               img.onerror = function () {
                 --token;
                 img.onload = img.onerror = null;
                 imgReload(img, 7);
               };
-            }
             root.replaceWith(container);
           }
-          async function imgLoad(root, index, mode2 = "fast") {
+          async function imgLoad(root, index, mode = "fast") {
             if (!root.isConnected) return;
             root.$dAttr("class");
             const a = root.$q(linkQuery);
@@ -2206,31 +1914,14 @@ statusText: ${text}`);
             if (experiment) {
               img.$addClass("Image-loading-indicator-experiment");
               imgRequest(root, safeHref, (href) => {
-                imgRendering({
-                  root: replaceRoot,
-                  index,
-                  thumbUrl: safeSrc,
-                  newUrl: href,
-                  oldUrl: safeHref,
-                  mode: mode2,
-                });
+                imgRendering({ root: replaceRoot, index, thumbUrl: safeSrc, newUrl: href, oldUrl: safeHref, mode });
               });
-            } else {
-              imgRendering({
-                root: replaceRoot,
-                index,
-                thumbUrl: safeSrc,
-                newUrl: safeHref,
-                mode: mode2,
-              });
-            }
+            } else imgRendering({ root: replaceRoot, index, thumbUrl: safeSrc, newUrl: safeHref, mode });
           }
           async function fastAutoLoad() {
             loadFailedClick();
             for (const [index, root] of [...thumbnail].entries()) {
-              while (token >= 7) {
-                await Lib.sleep(700);
-              }
+              while (token >= 7) await Lib.sleep(700);
               imgLoad(root, index);
             }
           }
@@ -2295,101 +1986,11 @@ statusText: ${text}`);
   };
   const dict = {
     Traditional: {},
-    Simplified: {
-      "📝 設置選單": "📝 设置菜单",
-      設置菜單: "设置菜单",
-      圖像設置: "图像设置",
-      讀取設定: "加载设置",
-      關閉離開: "关闭",
-      保存應用: "保存并应用",
-      語言: "语言",
-      英文: "英语",
-      繁體: "繁体中文",
-      簡體: "简体中文",
-      日文: "日语",
-      韓文: "韩语",
-      俄語: "俄语",
-      圖片高度: "图片高度",
-      圖片寬度: "图片宽度",
-      圖片最大寬度: "图片最大宽度",
-      圖片間隔高度: "图片间距",
-    },
-    Japan: {
-      "📝 設置選單": "📝 設定メニュー",
-      設置菜單: "設定メニュー",
-      圖像設置: "画像設定",
-      讀取設定: "設定を読み込む",
-      關閉離開: "閉じる",
-      保存應用: "保存して適用",
-      語言: "言語",
-      英文: "英語",
-      繁體: "繁体字中国語",
-      簡體: "簡体字中国語",
-      日文: "日本語",
-      韓文: "韓国語",
-      俄語: "ロシア語",
-      圖片高度: "画像の高さ",
-      圖片寬度: "画像の幅",
-      圖片最大寬度: "画像の最大幅",
-      圖片間隔高度: "画像の間隔",
-    },
-    Korea: {
-      "📝 設置選單": "📝 설정 메뉴",
-      設置菜單: "설정 메뉴",
-      圖像設置: "이미지 설정",
-      讀取設定: "설정 불러오기",
-      關閉離開: "닫기",
-      保存應用: "저장 및 적용",
-      語言: "언어",
-      英文: "영어",
-      繁體: "번체 중국어",
-      簡體: "간체 중국어",
-      日文: "일본어",
-      韓文: "한국어",
-      俄語: "러시아어",
-      圖片高度: "이미지 높이",
-      圖片寬度: "이미지 너비",
-      圖片最大寬度: "이미지 최대 너비",
-      圖片間隔高度: "이미지 간격",
-    },
-    Russia: {
-      "📝 設置選單": "📝 Меню настроек",
-      設置菜單: "Меню настроек",
-      圖像設置: "Настройки изображений",
-      讀取設定: "Загрузить настройки",
-      關閉離開: "Закрыть",
-      保存應用: "Сохранить и применить",
-      語言: "Язык",
-      英文: "Английский",
-      繁體: "Традиционный китайский",
-      簡體: "Упрощенный китайский",
-      日文: "Японский",
-      韓文: "Корейский",
-      俄語: "Русский",
-      圖片高度: "Высота изображения",
-      圖片寬度: "Ширина изображения",
-      圖片最大寬度: "Максимальная ширина",
-      圖片間隔高度: "Интервал между изображениями",
-    },
-    English: {
-      "📝 設置選單": "📝 Settings Menu",
-      設置菜單: "Settings Menu",
-      圖像設置: "Image Settings",
-      讀取設定: "Load Settings",
-      關閉離開: "Close & Exit",
-      保存應用: "Save & Apply",
-      語言: "Language",
-      英文: "English",
-      繁體: "Traditional Chinese",
-      簡體: "Simplified Chinese",
-      日文: "Japanese",
-      韓文: "Korean",
-      俄語: "Russian",
-      圖片高度: "Image Height",
-      圖片寬度: "Image Width",
-      圖片最大寬度: "Max Image Width",
-      圖片間隔高度: "Image Spacing",
-    },
+    Simplified: { "📝 設置選單": "📝 设置菜单", 設置菜單: "设置菜单", 圖像設置: "图像设置", 讀取設定: "加载设置", 關閉離開: "关闭", 保存應用: "保存并应用", 語言: "语言", 英文: "英语", 繁體: "繁体中文", 簡體: "简体中文", 日文: "日语", 韓文: "韩语", 俄語: "俄语", 圖片高度: "图片高度", 圖片寬度: "图片宽度", 圖片最大寬度: "图片最大宽度", 圖片間隔高度: "图片间距" },
+    Japan: { "📝 設置選單": "📝 設定メニュー", 設置菜單: "設定メニュー", 圖像設置: "画像設定", 讀取設定: "設定を読み込む", 關閉離開: "閉じる", 保存應用: "保存して適用", 語言: "言語", 英文: "英語", 繁體: "繁体字中国語", 簡體: "簡体字中国語", 日文: "日本語", 韓文: "韓国語", 俄語: "ロシア語", 圖片高度: "画像の高さ", 圖片寬度: "画像の幅", 圖片最大寬度: "画像の最大幅", 圖片間隔高度: "画像の間隔" },
+    Korea: { "📝 設置選單": "📝 설정 메뉴", 設置菜單: "설정 메뉴", 圖像設置: "이미지 설정", 讀取設定: "설정 불러오기", 關閉離開: "닫기", 保存應用: "저장 및 적용", 語言: "언어", 英文: "영어", 繁體: "번체 중국어", 簡體: "간체 중국어", 日文: "일본어", 韓文: "한국어", 俄語: "러시아어", 圖片高度: "이미지 높이", 圖片寬度: "이미지 너비", 圖片最大寬度: "이미지 최대 너비", 圖片間隔高度: "이미지 간격" },
+    Russia: { "📝 設置選單": "📝 Меню настроек", 設置菜單: "Меню настроек", 圖像設置: "Настройки изображений", 讀取設定: "Загрузить настройки", 關閉離開: "Закрыть", 保存應用: "Сохранить и применить", 語言: "Язык", 英文: "Английский", 繁體: "Традиционный китайский", 簡體: "Упрощенный китайский", 日文: "Японский", 韓文: "Корейский", 俄語: "Русский", 圖片高度: "Высота изображения", 圖片寬度: "Ширина изображения", 圖片最大寬度: "Максимальная ширина", 圖片間隔高度: "Интервал между изображениями" },
+    English: { "📝 設置選單": "📝 Settings Menu", 設置菜單: "Settings Menu", 圖像設置: "Image Settings", 讀取設定: "Load Settings", 關閉離開: "Close & Exit", 保存應用: "Save & Apply", 語言: "Language", 英文: "English", 繁體: "Traditional Chinese", 簡體: "Simplified Chinese", 日文: "Japanese", 韓文: "Korean", 俄語: "Russian", 圖片高度: "Image Height", 圖片寬度: "Image Width", 圖片最大寬度: "Max Image Width", 圖片間隔高度: "Image Spacing" },
   };
   function getLanguage() {
     const Log = Lib.getV(Parame.SaveKey.Lang, navigator.language);
@@ -2408,14 +2009,7 @@ statusText: ${text}`);
         element.style[property] = value;
       });
     };
-    const stylePointer = {
-      Top: (value) => normalStyle(menuRule[1], "top", value),
-      Left: (value) => normalStyle(menuRule[1], "left", value),
-      Width: (value) => importantStyle(imgRule[1], "width", value),
-      Height: (value) => importantStyle(imgRule[1], "height", value),
-      MaxWidth: (value) => importantStyle(imgRule[1], "max-width", value),
-      Spacing: (value) => importantStyle(imgRule[1], "margin", `${value} auto`),
-    };
+    const stylePointer = { Top: (value) => normalStyle(menuRule[1], "top", value), Left: (value) => normalStyle(menuRule[1], "left", value), Width: (value) => importantStyle(imgRule[1], "width", value), Height: (value) => importantStyle(imgRule[1], "height", value), MaxWidth: (value) => importantStyle(imgRule[1], "max-width", value), Spacing: (value) => importantStyle(imgRule[1], "margin", `${value} auto`) };
     async function postViewInit() {
       if (!Page.isPawchive && Parame.Registered.has("PostViewInit")) return;
       const set = Load.imgSet();
@@ -2459,22 +2053,14 @@ statusText: ${text}`);
                 background-color: rgba(0, 0, 0, 0.3);
             }
         `,
-        {
-          id: "Image-Custom-Style",
-          repeatAdd: false,
-        },
+        { id: "Image-Custom-Style", repeatAdd: false },
       );
       imgRule = Lib.headRecord.get("Image-Custom-Style")?.sheet.cssRules;
       if (Parame.Registered.has("PostViewInit")) return;
       Lib.storageListen(Object.values(Parame.SaveKey), (call) => {
         if (call.far) {
-          if (typeof call.nv === "string") {
-            menuInit();
-          } else {
-            for (const [key, value] of Object.entries(call.nv)) {
-              stylePointer[key](value);
-            }
-          }
+          if (typeof call.nv === "string") menuInit();
+          else for (const [key, value] of Object.entries(call.nv)) stylePointer[key](value);
         }
       });
       Parame.Registered.add("PostViewInit");
@@ -2863,11 +2449,7 @@ statusText: ${text}`);
               dom += getImgOptions(Transl(title), key) + "\n";
             });
             imageSetEl.insertAdjacentHTML("beforeend", dom);
-            Object.assign(imgsetCss, {
-              width: "auto",
-              height: "auto",
-              opacity: "1",
-            });
+            Object.assign(imgsetCss, { width: "auto", height: "auto", opacity: "1" });
             target.disabled = true;
             readsetEl.disabled = false;
             menuRequ.imgSettings();
@@ -2892,9 +2474,7 @@ statusText: ${text}`);
           menuRequ.imgSave();
           menuRequ.menuSave();
           menuRequ.menuClose();
-        } else if (id === "closure") {
-          menuRequ.menuClose();
-        }
+        } else if (id === "closure") menuRequ.menuClose();
       });
       Lib.onE(imageSetEl, "wheel", (event) => {
         event.stopPropagation();
@@ -2904,20 +2484,15 @@ statusText: ${text}`);
   })();
   function Main() {
     const Enhance = (() => {
-      const loadFunc = {
-        Global: globalLoader,
-        Preview: previewLoader,
-        Content: contentLoader,
-      };
+      const loadFunc = { Global: globalLoader, Preview: previewLoader, Content: contentLoader };
       async function call(runPage) {
         const config = User_Config[runPage] ?? {};
         const loadedFunc = loadFunc[runPage] ?? {};
         for (const [name, func] of Object.entries(loadedFunc)) {
           let cfg = config[name];
           if (!cfg || !func) continue;
-          if (typeof cfg !== "object") {
-            cfg = { enable: true };
-          } else if (!cfg.enable) continue;
+          if (typeof cfg !== "object") cfg = { enable: true };
+          else if (!cfg.enable) continue;
           func.call(loadedFunc, cfg);
         }
       }
@@ -2942,12 +2517,7 @@ statusText: ${text}`);
       });
       Lib.onUrlChange((change) => {
         Parame.Url = change.url;
-        waitDom.observe(document, {
-          attributes: true,
-          childList: true,
-          subtree: true,
-          characterData: true,
-        });
+        waitDom.observe(document, { attributes: true, childList: true, subtree: true, characterData: true });
         Lib.body.$sAttr("Enhance", true);
       });
     }
