@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.08.22-Beta
+// @version      2026.09.27-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -125,11 +125,11 @@
             });
             return value;
         },
-        Artists: new RegExp(".+(?<!favorites)\\/artists.*"),
+        Artists: /.+(?<!favorites)\/artists.*/,
         Links: /.+\/user\/[^\/]+\/links.*/,
         Recommended: /.+\/user\/[^\/]+\/recommended.*/,
         FavoritesArtists: /.+\/favorites\/artists.*/,
-        Posts: new RegExp(".+(?<!favorites)\\/posts.*"),
+        Posts: /.+(?<!favorites)\/posts.*/,
         User: /.+\/user\/[^\/]+(\?.*)?$/,
         FavorPosts: /.+\/favorites\/posts.*/,
         Dms: /.+\/dms(\?.*)?$/,
@@ -148,13 +148,7 @@
         isPawchive: Parame._isPawchive
     };
     const Load = (() => {
-        const color = {
-            kemono: "#e8a17d !important",
-            coomer: "#99ddff !important",
-            pawchive: "#e9bbb4 !important",
-            nekohouse: "#bb91ff !important"
-        }[Lib.$domain.split(".")[0]];
-        const userSet = {
+        return {
             menuSet: () => Lib.getV(Parame.SaveKey.Menu, {
                 Top: "10vh",
                 Left: "10vw"
@@ -164,11 +158,13 @@
                 Height: "auto",
                 Spacing: "0px",
                 MaxWidth: "100%"
-            })
-        };
-        return {
-            ...userSet,
-            color: color
+            }),
+            color: {
+                kemono: "#e8a17d !important",
+                coomer: "#99ddff !important",
+                pawchive: "#e9bbb4 !important",
+                nekohouse: "#bb91ff !important"
+            }[Lib.$domain.split(".")[0]]
         };
     })();
     async function BlockAds() {
@@ -215,9 +211,7 @@
             case 2:
                 scrollFunc = Move => {
                     const Interval = setInterval(() => {
-                        if (!isUpScroll && !isDownScroll) {
-                            clearInterval(Interval);
-                        }
+                        if (!isUpScroll && !isDownScroll) clearInterval(Interval);
                         if (isUpScroll && Move < 0) {
                             window.scrollBy(0, Move);
                             topDetected();
@@ -246,9 +240,7 @@
             if (key == "ArrowUp") {
                 event.stopImmediatePropagation();
                 event.preventDefault();
-                if (isUpScroll) {
-                    isUpScroll = false;
-                } else if (!isUpScroll || isDownScroll) {
+                if (isUpScroll) isUpScroll = false; else if (!isUpScroll || isDownScroll) {
                     isDownScroll = false;
                     isUpScroll = true;
                     scrollFunc(upScrollSpeed);
@@ -256,9 +248,7 @@
             } else if (key == "ArrowDown") {
                 event.stopImmediatePropagation();
                 event.preventDefault();
-                if (isDownScroll) {
-                    isDownScroll = false;
-                } else if (isUpScroll || !isDownScroll) {
+                if (isDownScroll) isDownScroll = false; else if (isUpScroll || !isDownScroll) {
                     isUpScroll = false;
                     isDownScroll = true;
                     scrollFunc(scrollConfig.scrollPixel);
@@ -280,15 +270,12 @@
             });
         }, 1e3);
         function setCache(url, data) {
-            if (cache.has(url)) {
-                cache.delete(url);
-            } else if (cache.size >= cacheMaxCount) {
-                cache.delete(cache.keys().next().value);
-            }
+            if (cache.has(url)) cache.delete(url); else if (cache.size >= cacheMaxCount) cache.delete(cache.keys().next().value);
             cache.set(url, data);
             saveCache();
         }
         const originalFetch = {
+            sandbox: window.fetch,
             window: unsafeWindow.fetch
         };
         unsafeWindow.fetch = (...args) => fetchWrapper(originalFetch.window, ...args);
@@ -300,31 +287,27 @@
             const isGet = rawMethod === "GET" || rawMethod === "get";
             const headers = options.headers;
             const bypassHeader = typeof headers?.get === "function" ? headers.get("X-Bypass-CacheReq") : headers?.["X-Bypass-CacheReq"];
-            if (!isGet || bypassHeader || url.endsWith("random")) {
-                return windowContext(...args);
-            }
+            if (!isGet || bypassHeader || url.endsWith("random")) return windowContext(...args);
             if (cache.has(url)) {
                 const {
                     body,
                     status,
-                    headers: headers2
+                    headers
                 } = cache.get(url);
                 return new Response(body, {
                     status: status,
-                    headers: headers2
+                    headers: headers
                 });
             }
             const response = await windowContext(...args);
             if (response.status === 200 && (url.includes("api") || url.includes("default_config"))) {
                 const clone = response.clone();
                 clone.text().then(bodyText => {
-                    if (bodyText) {
-                        setCache(url, {
-                            body: bodyText,
-                            status: clone.status,
-                            headers: clone.headers
-                        });
-                    }
+                    if (bodyText) setCache(url, {
+                        body: bodyText,
+                        status: clone.status,
+                        headers: clone.headers
+                    });
                 }).catch(() => { });
             }
             return response;
@@ -375,13 +358,9 @@
                     });
                     return;
                 }
-                if (canCache) {
-                    this.addEventListener("load", () => {
-                        if (this.status === 200 && this.responseText) {
-                            setCache(url, this.responseText.trim().replace(/\s+(?=[^<]*>)/g, " ").replace(/>\s+</g, "><"));
-                        }
-                    });
-                }
+                if (canCache) this.addEventListener("load", () => {
+                    if (this.status === 200 && this.responseText) setCache(url, this.responseText.trim().replace(/\s+(?=[^<]*>)/g, " ").replace(/>\s+</g, "><"));
+                });
                 return send.apply(this, args);
             };
         }
@@ -412,8 +391,7 @@
             function bytesToBase64Url(bytes) {
                 let bin = "";
                 for (let i = 0, L = bytes.length; i < L; i++) bin += String.fromCharCode(bytes[i]);
-                let b64 = btoa(bin);
-                return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+                return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
             }
             function equalBytesConstTime(a, b) {
                 if (!a || !b || a.length !== b.length) return false;
@@ -458,9 +436,7 @@
                     const mod = b64.length % 4;
                     if (mod !== 0) b64 += "=".repeat(4 - mod);
                     const data = base64ToBytes(b64);
-                    if (!data || data.length < 1 + 1 + 6 + 32 + 32) {
-                        return pFragmentOrFull;
-                    }
+                    if (!data || data.length < 72) return pFragmentOrFull;
                     const algorithm = data[0];
                     const type = data[1];
                     const publicHandle = data.subarray(2, 8);
@@ -468,15 +444,12 @@
                     const macTag = data.subarray(data.length - 32);
                     const encryptedKey = data.subarray(40, data.length - 32);
                     const keyLen = encryptedKey.length;
-                    const pwKey = await importPwKey(password);
-                    const dk = await deriveDK(pwKey, salt);
-                    if (dk.length < 64 || dk.length < 32 + 32) {
-                        return pFragmentOrFull;
-                    }
+                    const dk = await deriveDK(await importPwKey(password), salt);
+                    if (dk.length < 64 || dk.length < 64) return pFragmentOrFull;
                     const xorKey = dk.subarray(0, keyLen);
                     const macKey = dk.subarray(32, 64);
                     const recoveredKey = xorInto(encryptedKey, xorKey);
-                    const msgLen = 1 + 1 + publicHandle.length + salt.length + encryptedKey.length;
+                    const msgLen = 2 + publicHandle.length + salt.length + encryptedKey.length;
                     const msg = new Uint8Array(msgLen);
                     let off = 0;
                     msg[off++] = algorithm;
@@ -488,14 +461,10 @@
                     msg.set(encryptedKey, off);
                     const macCryptoKey = await importMacKey(macKey);
                     const macBuffer = await crypto.subtle.sign("HMAC", macCryptoKey, msg);
-                    const mac = new Uint8Array(macBuffer);
-                    if (!equalBytesConstTime(mac, macTag)) {
-                        return pFragmentOrFull;
-                    }
+                    if (!equalBytesConstTime(new Uint8Array(macBuffer), macTag)) return pFragmentOrFull;
                     const handleB64Url = bytesToBase64Url(publicHandle);
                     const keyB64Url = bytesToBase64Url(recoveredKey);
-                    const fileType = type === 0 ? "folder" : "file";
-                    return `https://mega.nz/${fileType}/${handleB64Url}#${keyB64Url}`;
+                    return `https://mega.nz/${type === 0 ? "folder" : "file"}/${handleB64Url}#${keyB64Url}`;
                 } catch (e) {
                     return pFragmentOrFull;
                 }
@@ -507,9 +476,7 @@
             const result = {};
             if (typeof data === "string") {
                 let match;
-                while ((match = encryptedExtract.exec(data)) !== null) {
-                    result[match[1]] = match[2]?.trim() ?? "";
-                }
+                while ((match = encryptedExtract.exec(data)) !== null) result[match[1]] = match[2]?.trim() ?? "";
             }
             return result;
         }
@@ -525,9 +492,7 @@
             const result = {};
             if (typeof data === "string") {
                 let match;
-                while ((match = missingExtract.exec(data)) !== null) {
-                    result[match[1] + match[2]] = match[3] || "";
-                }
+                while ((match = missingExtract.exec(data)) !== null) result[match[1] + match[2]] = match[3] || "";
             }
             return result;
         }
@@ -568,7 +533,7 @@
                     } = parsePassword(href, nextNode.$text()));
                     if (state) nextNode?.remove();
                 } else if (nextNode.nodeType === Node.ELEMENT_NODE) {
-                    const nodeText = [...nextNode.childNodes].find(node2 => node2.nodeType === Node.TEXT_NODE)?.$text() ?? "";
+                    const nodeText = [...nextNode.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.$text() ?? "";
                     ({
                         state,
                         href
@@ -619,10 +584,10 @@
         const getTextNodeMap = root => {
             const nodes = new Map();
             const tree = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-                acceptNode: node2 => {
-                    const parentElement = node2.parentElement;
+                acceptNode: node => {
+                    const parentElement = node.parentElement;
                     if (!parentElement || exclusionTags.has(parentElement.tagName)) return NodeFilter.FILTER_REJECT;
-                    const content = node2.$text();
+                    const content = node.$text();
                     if (!content || exclusionRegex.test(content)) return NodeFilter.FILTER_REJECT;
                     return content === "(frame embed)" || urlMatch(content) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                 }
@@ -657,15 +622,11 @@
                 if (modifyUrl && modifyUrl !== href) {
                     a.href = modifyUrl;
                     a.$text(modifyUrl);
-                } else {
-                    a.$text(href);
-                }
-            } else if (complex) {
-                textNode.replaceWith(Lib.createDomFragment(text.replace(urlRegex, url => {
-                    const decode = decodeURIComponent(url).trim();
-                    return `<a href="${protocolParse(decode)}" rel="noopener noreferrer">${decode}</a>`;
-                })));
-            } else {
+                } else a.$text(href);
+            } else if (complex) textNode.replaceWith(Lib.createDomFragment(text.replace(urlRegex, url => {
+                const decode = decodeURIComponent(url).trim();
+                return `<a href="${protocolParse(decode)}" rel="noopener noreferrer">${decode}</a>`;
+            }))); else {
                 if (text.match(urlRegex).length === 0) return;
                 if (text.includes("mega.nz")) {
                     mega ??= megaUtils(urlRegex);
@@ -684,9 +645,7 @@
                     segments.push(`<a href="${protocolParse(modifyUrl)}" rel="noopener noreferrer">${modifyUrl}</a>`);
                     lastIndex = index + url.length;
                 }
-                if (lastIndex < text.length) {
-                    segments.push(text.slice(lastIndex));
-                }
+                if (lastIndex < text.length) segments.push(text.slice(lastIndex));
                 father.tagName === "A" ? father.replaceWith(Lib.createDomFragment(segments.join(""))) : father.$iHtml(segments.join(""));
             }
         }
@@ -694,48 +653,42 @@
             async TextToLink(config) {
                 if (!Page.isContent() && !Page.isAnnouncement()) return;
                 let parentNode, text, textNode, data, isComplex;
-                if (Page.isContent()) {
-                    Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
-                        let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
-                        if (article) {
-                            jumpTrigger(content, config);
-                            let span;
-                            for (span of article.$qa("span.choice-text")) {
-                                parseModify(article, span, span.$text());
-                            }
-                        } else if (content) {
-                            jumpTrigger(content, config);
-                            for ([parentNode, data] of getTextNodeMap(content).entries()) {
-                                isComplex = parentNode.childElementCount >= 1 || data.length > 1;
-                                for (textNode of data) {
-                                    text = textNode.$text();
-                                    if (text.startsWith("https://mega.nz")) {
-                                        mega ??= megaUtils(urlRegex);
-                                        text = await mega.getPassword(parentNode, text);
-                                    }
-                                    parseModify(content, parentNode, text, textNode, isComplex);
-                                }
-                            }
-                        } else {
-                            const attachments = body.$q(".post__attachments, .scrape__attachments");
-                            attachments && jumpTrigger(attachments, config);
-                        }
-                    });
-                } else if (Page.isAnnouncement()) {
-                    Lib.waitEl(".card-list__items pre", null, {
-                        raf: true
-                    }).then(() => {
-                        const items = Lib.$q(".card-list__items");
-                        jumpTrigger(items, config);
-                        for ([parentNode, data] of getTextNodeMap(items).entries()) {
+                if (Page.isContent()) Lib.waitEl(".post__body, .scrape__body", null).then(async body => {
+                    let [article, content] = [body.$q("article"), body.$q(".post__content, .scrape__content")];
+                    if (article) {
+                        jumpTrigger(content, config);
+                        let span;
+                        for (span of article.$qa("span.choice-text")) parseModify(article, span, span.$text());
+                    } else if (content) {
+                        jumpTrigger(content, config);
+                        for ([parentNode, data] of getTextNodeMap(content).entries()) {
                             isComplex = parentNode.childElementCount >= 1 || data.length > 1;
                             for (textNode of data) {
                                 text = textNode.$text();
-                                parseModify(items, parentNode, text, textNode, isComplex);
+                                if (text.startsWith("https://mega.nz")) {
+                                    mega ??= megaUtils(urlRegex);
+                                    text = await mega.getPassword(parentNode, text);
+                                }
+                                parseModify(content, parentNode, text, textNode, isComplex);
                             }
                         }
-                    });
-                }
+                    } else {
+                        const attachments = body.$q(".post__attachments, .scrape__attachments");
+                        attachments && jumpTrigger(attachments, config);
+                    }
+                }); else if (Page.isAnnouncement()) Lib.waitEl(".card-list__items pre", null, {
+                    raf: true
+                }).then(() => {
+                    const items = Lib.$q(".card-list__items");
+                    jumpTrigger(items, config);
+                    for ([parentNode, data] of getTextNodeMap(items).entries()) {
+                        isComplex = parentNode.childElementCount >= 1 || data.length > 1;
+                        for (textNode of data) {
+                            text = textNode.$text();
+                            parseModify(items, parentNode, text, textNode, isComplex);
+                        }
+                    }
+                });
             }
         };
     };
@@ -795,11 +748,7 @@
                 }).then(async response => {
                     if (!response.ok) {
                         const text = await response.text();
-                        throw new Error(`
-Fetch failed
-url: ${response.url}
-status: ${response.status}
-statusText: ${text}`);
+                        throw new Error(`\nFetch failed\nurl: ${response.url}\nstatus: ${response.status}\nstatusText: ${text}`);
                     }
                     try {
                         return await responseRule[responseType](response);
@@ -825,10 +774,7 @@ statusText: ${text}`);
         const oldKey = "fix_record_v2";
         const recordKey = "better_post_record";
         const oldRecord = Lib.getLocal(oldKey);
-        if (oldRecord instanceof Array) {
-            const r = await Parame.DB.set(recordKey, new Map(oldRecord));
-            r === recordKey && Lib.delLocal(oldKey);
-        }
+        if (oldRecord instanceof Array) await Parame.DB.set(recordKey, new Map(oldRecord)) === recordKey && Lib.delLocal(oldKey);
         let recordCache;
         const fixCache = new Map();
         const init = async () => {
@@ -874,9 +820,7 @@ statusText: ${text}`);
                 if (supportServer.test(str)) {
                     const cleanStr = str.replace(/\/?(www\.|\.com|\.to|\.jp|\.net|\.adult|user\?u=)/g, "");
                     acc.server = specialServer[cleanStr] ?? cleanStr;
-                } else {
-                    acc.user = str;
-                }
+                } else acc.user = str;
                 return acc;
             }, {});
         };
@@ -885,8 +829,7 @@ statusText: ${text}`);
                 referer: "https://www.pixiv.net/"
             });
             if (response.status === 200) {
-                const user = response.response;
-                let user_name = user.body.name;
+                let user_name = response.response.body.name;
                 user_name = user_name.replace(/(c\d+)?([日月火水木金土]曜日?|[123１２３一二三]日目?)[東南西北]..?\d+\w?/i, "");
                 user_name = user_name.replace(/[@＠]?(fanbox|fantia|skeb|ファンボ|リクエスト|お?仕事|新刊|単行本|同人誌)+(.*(更新|募集|公開|開設|開始|発売|販売|委託|休止|停止)+中?[!！]?$|$)/gi, "");
                 user_name = user_name.replace(/\(\)|（）|「」|【】|[@＠_＿]+$/g, "").trim();
@@ -897,17 +840,11 @@ statusText: ${text}`);
             const response = await fixRequest(`https://candfans.jp/api/contents/get-timeline?user_id=${id}&record=1`);
             if (response.status === 200) {
                 const user = response.response.data[0];
-                const user_code = user?.user_code || "";
-                const username = user?.username || "";
-                return [user_code, username];
+                return [user?.user_code || "", user?.username || ""];
             } else return;
         };
         const candfansPageAdapt = (oldId, newId, oldUrl, oldName, newName) => {
-            if (Page.isSearch()) {
-                oldId = newId || oldId;
-            } else {
-                oldUrl = newId ? replaceUrlTail(oldUrl, newId) : oldUrl;
-            }
+            if (Page.isSearch()) oldId = newId || oldId; else oldUrl = newId ? replaceUrlTail(oldUrl, newId) : oldUrl;
             oldName = newName || oldName;
             return [oldId, oldUrl, oldName];
         };
@@ -934,23 +871,20 @@ statusText: ${text}`);
         };
         async function fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, showText, appendTag) {
             nameEl.$sAttr("style", "display: none;");
-            if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER") {
-                nameEl.$iAdjacent(`
+            if (nameEl.previousElementSibling?.tagName !== "FIX_WRAPPER") nameEl.$iAdjacent(`
                 <fix_wrapper>
                     <fix_name jump="${mainUrl}">${showText.trim()}</fix_name>
                     <fix_edit id="${user}">Edit</fix_edit>
                 </fix_wrapper>
             `, "beforebegin");
-            }
+            if (!tagEl) return;
             const [tag_text, support_id, support_name] = [tagEl.$text(), supportFixTag.ID, supportFixTag.NAME];
-            if (!tag_text) return;
             const [mark, matchId] = support_id.test(tag_text) ? ["{id}", support_id] : support_name.test(tag_text) ? ["{name}", support_name] : ["", null];
             if (!mark) return;
             tagEl.$iHtml(tag_text.replace(matchId, tag => {
                 let supported = false;
-                const supportFormat = appendTag ? (supported = supportFixTag[`${tag}${appendTag}`],
-                    supported ? (user = parseUrlInfo(otherUrl).user, supported) : supportFixTag[tag]) : supportFixTag[tag];
-                return `<fix_tag jump="${supportFormat.replace(mark, user)}">${tag}</fix_tag>`;
+                return `<fix_tag jump="${(appendTag ? (supported = supportFixTag[`${tag}${appendTag}`],
+                    supported ? (user = parseUrlInfo(otherUrl).user, supported) : supportFixTag[tag]) : supportFixTag[tag]).replace(mark, user)}">${tag}</fix_tag>`;
             }));
         }
         async function fixTrigger(data) {
@@ -965,27 +899,21 @@ statusText: ${text}`);
             } = data;
             let recordName = recordCache?.get(user);
             if (recordName) {
-                if (server === "candfans") {
-                    [user, mainUrl, recordName] = candfansPageAdapt(user, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
-                }
+                if (server === "candfans") [user, mainUrl, recordName] = candfansPageAdapt(user, recordName[0], mainUrl, nameEl.$text(), recordName[1]);
                 fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, recordName, appendTag);
-            } else {
-                if (supportFixName.has(server)) {
-                    if (server === "candfans") {
-                        const [user_code, username] = await getCandfansName(user) ?? nameEl.$text();
-                        if (user_code && username) fixCache.set(user, [user_code, username]);
-                        [user, mainUrl, recordName] = candfansPageAdapt(user, user_code, mainUrl, nameEl.$text(), username);
-                        fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
-                    } else {
-                        const username = await getPixivName(user) ?? nameEl.$text();
-                        fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
-                        fixCache.set(user, username);
-                    }
-                    saveWork();
+            } else if (supportFixName.has(server)) {
+                if (server === "candfans") {
+                    const [user_code, username] = await getCandfansName(user) ?? nameEl.$text();
+                    if (user_code && username) fixCache.set(user, [user_code, username]);
+                    [user, mainUrl, recordName] = candfansPageAdapt(user, user_code, mainUrl, nameEl.$text(), username);
+                    fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
                 } else {
-                    fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
+                    const username = await getPixivName(user) ?? nameEl.$text();
+                    fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, username, appendTag);
+                    fixCache.set(user, username);
                 }
-            }
+                saveWork();
+            } else fixUpdateUi(mainUrl, otherUrl, user, nameEl, tagEl, nameEl.$text(), appendTag);
         }
         async function searchFix(items) {
             items.$sAttr("fix", true);
@@ -1032,9 +960,7 @@ statusText: ${text}`);
             Lib.observer(element, async () => {
                 recordCache = await getRecord();
                 const checkFix = !Parame.FavoritesArtists.test(Parame.Url);
-                for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) {
-                    searchFix(items);
-                }
+                for (const items of element.$qa(`a.user-card${checkFix ? ":not([fix])" : ""}`)) searchFix(items);
             }, {
                 mark: "dynamic-fix",
                 subtree: false,
@@ -1165,19 +1091,54 @@ statusText: ${text}`);
             fix_cont fix_wrapper:hover fix_edit {
                 display: block;
             }
+            /* 快速預覽容器 */
             .post-show-box {
                 z-index: 9999;
                 cursor: pointer;
                 position: absolute;
-                padding: 8px 4px;
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                padding: 10px 14px;
                 max-width: 120%;
                 min-width: 80px;
                 overflow-x: auto;
                 overflow-y: hidden;
                 white-space: nowrap;
-                border-radius: 5px;
-                background: #1d1f20ff;
-                border: 1px solid #fff;
+                border-radius: 12px;
+                background: rgba(29, 31, 32, 0.94);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow:
+                    0 12px 28px rgba(0, 0, 0, 0.5),
+                    0 2px 6px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                -webkit-mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                animation: post-show-box-in 0.18s ease-out;
+            }
+            @keyframes post-show-box-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px) scale(0.98);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
             }
             .post-show-box[preview="above"] {
                 bottom: 85%;
@@ -1190,9 +1151,20 @@ statusText: ${text}`);
             }
             .post-show-box img {
                 height: 23vh;
-                margin: 0 .3rem;
-                min-width: 55%;
-                border: 1px solid #fff;
+                width: auto;
+                min-width: clamp(3.75rem, 6vw, 5.5rem);
+                max-width: 42vw;
+                object-fit: contain;
+                flex-shrink: 0;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+            .post-show-box img:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
             }
             .fancy-image__image {
                 z-index: 1;
@@ -1242,9 +1214,9 @@ statusText: ${text}`);
                                         preview: previewAbove ? "above" : "below"
                                     },
                                     on: {
-                                        wheel: event2 => {
-                                            event2.preventDefault();
-                                            event2.currentTarget.scrollLeft += event2.deltaY;
+                                        wheel: event => {
+                                            event.preventDefault();
+                                            event.currentTarget.scrollLeft += event.deltaY;
                                         }
                                     }
                                 }, "beforebegin");
@@ -1257,26 +1229,32 @@ statusText: ${text}`);
                                     }).then(data => {
                                         if (Page.isNeko) data = data.$qa(".post-card__image");
                                         currentBox.$text("");
-                                        const srcBox = new Set();
+                                        const linkBox = new Set();
                                         for (const post of data) {
-                                            let src = "";
+                                            let url, src;
                                             if (Page.isNeko) src = post.src ?? ""; else {
+                                                url = `${Lib.$origin}/${post.service}/user/${post.user}/post/${post.id}`;
                                                 for (const {
                                                     path
                                                 } of [post.file, ...post?.attachments || []]) {
                                                     if (!path) continue;
-                                                    const isImg = Parame.SupportImg.has(path.split(".")[1]);
-                                                    if (!isImg) continue;
+                                                    if (!Parame.SupportImg.has(path.split(".")[1])) continue;
                                                     src = Parame.ThumbnailApi + path;
                                                     break;
                                                 }
                                             }
                                             if (!src) continue;
-                                            srcBox.add(src);
+                                            linkBox.add({
+                                                url: url,
+                                                src: src
+                                            });
                                         }
-                                        if (srcBox.size === 0) currentBox.$text("No Image"); else {
-                                            currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
-                                            srcBox.clear();
+                                        if (linkBox.size === 0) currentBox.$text("No Image"); else {
+                                            currentBox.$iAdjacent([...linkBox].map(({
+                                                url,
+                                                src
+                                            }, index) => `<img src="${src}" jump="${url}" loading="lazy" number="${index + 1}">`).join(""));
+                                            linkBox.clear();
                                         }
                                     });
                                 } else currentBox.$text("Not Supported");
@@ -1335,13 +1313,11 @@ statusText: ${text}`);
                                 });
                             }, 50);
                         }, 300);
-                    } else if (openInTab.enable && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Page.isContent() && target.matches(".fancy-image__image")) {
+                    } else if (tagName === "FIX_TAG" || tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent()) || Lib.platform.desktop && openInTab.enable && (tagName === "FIX_NAME" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img")) || Page.isContent() && target.matches(".fancy-image__image")) {
                         event.preventDefault();
                         event.stopImmediatePropagation();
                         const url = target.$gAttr("jump");
-                        if (url) {
-                            openInTab.enable || tagName === "FIX_TAG" || tagName === "FIX_NAME" && Page.isPreview() ? GM_openInTab(url, openInTab) : location.assign(url);
-                        } else if (tagName === "IMG" || tagName === "PICTURE") {
+                        if (url) openInTab.enable || tagName === "FIX_TAG" || tagName === "FIX_NAME" && Page.isPreview() ? GM_openInTab(url, openInTab) : location.assign(url); else if (tagName === "IMG" || tagName === "PICTURE") {
                             const href = target.closest("a").href;
                             openInTab.enable && !Page.isContent() ? GM_openInTab(href, openInTab) : location.assign(href);
                         }
@@ -1350,33 +1326,27 @@ statusText: ${text}`);
                     capture: true,
                     mark: "BetterPostCard"
                 });
-                if (isSearch) {
-                    Lib.waitEl(".card-list__items", null, {
-                        raf: true,
-                        timeout: 10
-                    }).then(card_items => {
-                        if (Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url)) {
-                            const artist = Lib.$q("span[itemprop='name']");
-                            artist && otherFix(artist);
-                        }
-                        dynamicFix(card_items);
-                        card_items.$sAttr("fix-trigger", true);
-                    });
-                } else if (Page.isContent()) {
-                    Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
-                        raf: true,
-                        timeout: 10
-                    }).then(([title, artist]) => {
-                        otherFix(artist, title, artist.href, Lib.url, "fix_cont");
-                    });
-                } else {
-                    Lib.waitEl("span[itemprop='name']", null, {
-                        raf: true,
-                        timeout: 3
-                    }).then(artist => {
-                        otherFix(artist);
-                    });
-                }
+                if (isSearch) Lib.waitEl(".card-list__items", null, {
+                    raf: true,
+                    timeout: 10
+                }).then(card_items => {
+                    if (Parame.Links.test(Parame.Url) || Parame.Recommended.test(Parame.Url)) {
+                        const artist = Lib.$q("span[itemprop='name']");
+                        artist && otherFix(artist);
+                    }
+                    dynamicFix(card_items);
+                    card_items.$sAttr("fix-trigger", true);
+                }); else if (Page.isContent()) Lib.waitEl(["h1 span:nth-child(2)", ".post__user-name, .scrape__user-name"], null, {
+                    raf: true,
+                    timeout: 10
+                }).then(([title, artist]) => {
+                    otherFix(artist, title, artist.href, Lib.url, "fix_cont");
+                }); else Lib.waitEl("span[itemprop='name']", null, {
+                    raf: true,
+                    timeout: 3
+                }).then(artist => {
+                    otherFix(artist);
+                });
             }
         };
     };
@@ -1394,8 +1364,7 @@ statusText: ${text}`);
             });
         },
         async BetterPostCard(...args) {
-            const func = await BetterPostCardFactory();
-            const value = func.BetterPostCard;
+            const value = (await BetterPostCardFactory()).BetterPostCard;
             value(...args);
             Object.defineProperty(this, value.name, {
                 value: value,
@@ -1458,7 +1427,7 @@ statusText: ${text}`);
     async function CardZoom({
         mode
     }) {
-        let paddingBottom, rowGap, height;
+        let paddingBottom, rowGap, aspectRatio;
         switch (mode) {
             case 2:
                 Lib.addStyle(`
@@ -1485,7 +1454,7 @@ statusText: ${text}`);
                 break;
 
             case 3:
-                [paddingBottom, rowGap, height] = Page.isNeko ? ["0", "0", "57"] : ["7", "5.8", "50"];
+                [paddingBottom, rowGap, aspectRatio] = Page.isNeko ? ["0", "0", "320 / 416"] : ["7", "5.8", "320 / 365"];
                 Lib.addStyle(`
                 .card-list--legacy { padding-bottom: ${paddingBottom}em }
                 .card-list--legacy .card-list__items {
@@ -1494,10 +1463,11 @@ statusText: ${text}`);
                 }
                 .post-card a {
                     width: 20em;
-                    height: ${height}vh;
+                    aspect-ratio: ${aspectRatio};
+                    height: auto;
                 }
                 .post-card__image-container img { object-fit: contain }
-            `, {
+                `, {
                     id: "CardZoom-Effects-3",
                     repeatAdd: false
                 });
@@ -1582,12 +1552,10 @@ statusText: ${text}`);
                         },
                         onerror: () => reject(new Error("Network error"))
                     });
-                    if (abortSignal) {
-                        abortSignal.addEventListener("abort", () => {
-                            request.abort?.();
-                            reject(new Error("Aborted"));
-                        });
-                    }
+                    if (abortSignal) abortSignal.addEventListener("abort", () => {
+                        request.abort?.();
+                        reject(new Error("Aborted"));
+                    });
                 });
             }
             const totalPages = Math.ceil(+menu[0].previousElementSibling.$text().split("of")[1].trim() / 50);
@@ -1601,20 +1569,14 @@ statusText: ${text}`);
                 range: null
             };
             function getVisibleRange(currentPage) {
-                if (visibleRangeCache.page === currentPage) {
-                    return visibleRangeCache.range;
-                }
+                if (visibleRangeCache.page === currentPage) return visibleRangeCache.range;
                 let range;
-                if (!hasScrolling) {
-                    range = {
-                        start: 1,
-                        end: totalPages
-                    };
-                } else {
+                if (!hasScrolling) range = {
+                    start: 1,
+                    end: totalPages
+                }; else {
                     let start = 1;
-                    if (currentPage >= MAX_VISIBLE && totalPages > MAX_VISIBLE) {
-                        start = currentPage - MAX_VISIBLE + 2;
-                    }
+                    if (currentPage >= MAX_VISIBLE && totalPages > MAX_VISIBLE) start = currentPage - MAX_VISIBLE + 2;
                     range = {
                         start: start,
                         end: Math.min(totalPages, start + MAX_VISIBLE - 1)
@@ -1641,22 +1603,18 @@ statusText: ${text}`);
                     start,
                     end
                 } = getVisibleRange(currentPage);
-                const elements2 = [];
-                if (hasScrolling) {
-                    elements2.push(createButton("<<", 1, currentPage === 1));
-                }
-                elements2.push(createButton("<", currentPage - 1, currentPage === 1));
+                const elements = [];
+                if (hasScrolling) elements.push(createButton("<<", 1, currentPage === 1));
+                elements.push(createButton("<", currentPage - 1, currentPage === 1));
                 pageLinks.forEach((link, index) => {
                     const pageNum = index + 1;
                     const isVisible = pageNum >= start && pageNum <= end;
                     const isCurrent = pageNum === currentPage;
-                    elements2.push(createButton(pageNum, pageNum, isCurrent, isCurrent, !isVisible));
+                    elements.push(createButton(pageNum, pageNum, isCurrent, isCurrent, !isVisible));
                 });
-                elements2.push(createButton(">", currentPage + 1, currentPage === totalPages));
-                if (hasScrolling) {
-                    elements2.push(createButton(">>", totalPages, currentPage === totalPages));
-                }
-                return elements2;
+                elements.push(createButton(">", currentPage + 1, currentPage === totalPages));
+                if (hasScrolling) elements.push(createButton(">>", totalPages, currentPage === totalPages));
+                return elements;
             }
             function initializeButtonCache() {
                 const menu1Buttons = menu[0].$qa("a");
@@ -1697,18 +1655,10 @@ statusText: ${text}`);
                     nav
                 } = menuData;
                 const navUpdates = [];
-                if (hasScrolling) {
-                    navUpdates.push([nav.first, isFirstPage, pageLinks[0]], [nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]], [nav.last, isLastPage, pageLinks[totalPages - 1]]);
-                } else {
-                    navUpdates.push([nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]]);
-                }
+                if (hasScrolling) navUpdates.push([nav.first, isFirstPage, pageLinks[0]], [nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]], [nav.last, isLastPage, pageLinks[totalPages - 1]]); else navUpdates.push([nav.prev, isFirstPage, pageLinks[targetPage - 2]], [nav.next, isLastPage, pageLinks[targetPage]]);
                 navUpdates.forEach(([btn, isDisabled, href]) => {
                     btn.$toggleClass("pagination-button-disabled", isDisabled);
-                    if (isDisabled) {
-                        btn.$dAttr("href");
-                    } else {
-                        btn.href = href;
-                    }
+                    if (isDisabled) btn.$dAttr("href"); else btn.href = href;
                 });
             }
             function updatePageButtons(menuData, targetPage, visibleRange) {
@@ -1720,24 +1670,16 @@ statusText: ${text}`);
                     pages
                 } = menuData;
                 const currentActiveBtn = pages.find(btn => btn.classList.contains("pagination-button-current"));
-                if (currentActiveBtn) {
-                    currentActiveBtn.$delClass("pagination-button-current", "pagination-button-disabled");
-                }
+                if (currentActiveBtn) currentActiveBtn.$delClass("pagination-button-current", "pagination-button-disabled");
                 const startIndex = Math.max(0, start - 1);
                 const endIndex = Math.min(pages.length - 1, end - 1);
-                for (let i = 0; i < startIndex; i++) {
-                    pages[i].style.display = "none";
-                }
-                for (let i = endIndex + 1; i < pages.length; i++) {
-                    pages[i].style.display = "none";
-                }
+                for (let i = 0; i < startIndex; i++) pages[i].style.display = "none";
+                for (let i = endIndex + 1; i < pages.length; i++) pages[i].style.display = "none";
                 for (let i = startIndex; i <= endIndex; i++) {
                     const btn = pages[i];
                     const pageNum = i + 1;
                     btn.style.display = "";
-                    if (pageNum === targetPage) {
-                        btn.$addClass("pagination-button-current", "pagination-button-disabled");
-                    }
+                    if (pageNum === targetPage) btn.$addClass("pagination-button-current", "pagination-button-disabled");
                 }
             }
             function updatePagination(targetPage) {
@@ -1776,9 +1718,7 @@ statusText: ${text}`);
                 const target = event.target.closest("menu a:not(.pagination-button-disabled)");
                 if (!target || isLoading) return;
                 event.preventDefault();
-                if (abortController) {
-                    abortController.abort();
-                }
+                if (abortController) abortController.abort();
                 abortController = new AbortController();
                 const currentActiveBtn = target.closest("menu").$q(".pagination-button-current");
                 const currentPage = parseInt(currentActiveBtn.$text());
@@ -1793,9 +1733,7 @@ statusText: ${text}`);
                     target.closest("#paginator-bottom") && menu[0].scrollIntoView();
                     history.pushState(null, null, pageLinks[targetPage - 1]);
                 } catch (error) {
-                    if (error.message !== "Aborted") {
-                        Lib.log("Page fetch failed:", error).error;
-                    }
+                    if (error.message !== "Aborted") Lib.log("Page fetch failed:", error).error;
                 } finally {
                     isLoading = false;
                     abortController = null;
@@ -1845,9 +1783,7 @@ statusText: ${text}`);
                 }).then(postCard => {
                     const uri = new URL(Parame.Url);
                     if (uri.searchParams.get("q") === "") uri.searchParams.delete("q");
-                    if (Parame.User.test(Parame.Url)) {
-                        uri.pathname += "/posts";
-                    } else if (Parame.FavorPosts.test(Parame.Url)) {
+                    if (Parame.User.test(Parame.Url)) uri.pathname += "/posts"; else if (Parame.FavorPosts.test(Parame.Url)) {
                         uri.pathname = uri.pathname.replace("/posts", "");
                         uri.searchParams.set("type", "post");
                     }
@@ -1875,19 +1811,19 @@ statusText: ${text}`);
                             const record = new Set();
                             let fileData = [post.file, ...attachments];
                             if (Page.isPawchive) fileData = fileData.slice(1);
-                            const count = fileData.reduce((count2, attach, index) => {
+                            const count = fileData.reduce((count, attach, index) => {
                                 const path = attach.path || "";
-                                if (record.has(path)) return count2;
+                                if (record.has(path)) return count;
                                 const ext = path.split(".").at(-1).toLowerCase();
-                                if (!ext) return count2;
+                                if (!ext) return count;
                                 const isImg = Parame.SupportImg.has(ext);
-                                if (isImg) count2.image = (count2.image ?? 0) + 1; else if (Parame.VideoType.has(ext)) count2.video = (count2.video ?? 0) + 1; else count2.file = (count2.file ?? 0) + 1;
+                                if (isImg) count.image = (count.image ?? 0) + 1; else if (Parame.VideoType.has(ext)) count.video = (count.video ?? 0) + 1; else count.file = (count.file ?? 0) + 1;
                                 if (src && !replaced && index > 0 && isImg) {
                                     replaced = true;
                                     changeSrc(img, src, Parame.ThumbnailApi + path);
                                 }
                                 record.add(path);
-                                return count2;
+                                return count;
                             }, {});
                             if (footer && !Lib.isEmpty(count)) {
                                 const {
@@ -1925,26 +1861,23 @@ statusText: ${text}`);
     async function VideoBeautify({
         mode
     }) {
-        if (Page.isNeko) {
-            Lib.waitEl(".scrape__files video", null, {
+        if (Page.isNeko) Lib.waitEl(".scrape__files video", null, {
+            raf: true,
+            all: true,
+            timeout: 5
+        }).then(video => {
+            video.forEach(media => media.$sAttr("preload", "metadata"));
+        }); else Lib.waitEl(Page.isPawchive ? ".post__videos li" : "ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
+            raf: true,
+            all: true,
+            timeout: 5
+        }).then(parents => {
+            Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
                 raf: true,
                 all: true,
                 timeout: 5
-            }).then(video => {
-                video.forEach(media => media.$sAttr("preload", "metadata"));
-            });
-        } else {
-            Lib.waitEl(Page.isPawchive ? ".post__videos li" : "ul[style*='text-align: center; list-style-type: none;'] li:not([id])", null, {
-                raf: true,
-                all: true,
-                timeout: 5
-            }).then(parents => {
-                Lib.waitEl(".post__attachment-link, .scrape__attachment-link", null, {
-                    raf: true,
-                    all: true,
-                    timeout: 5
-                }).then(post => {
-                    Lib.addStyle(`
+            }).then(post => {
+                Lib.addStyle(`
                         .fluid_video_wrapper {
                             height: 50% !important;
                             width: 65% !important;
@@ -1956,38 +1889,37 @@ statusText: ${text}`);
                             border-radius: 8px !important;
                         }
                     `, {
-                        id: "Video-Effects",
-                        repeatAdd: false
-                    });
-                    const move = mode === 2;
-                    const linkBox = Object.fromEntries([...post].map(a => [a.download?.trim(), a]));
-                    for (const li of parents) {
-                        const waitLoad = new MutationObserver(Lib.debounce(() => {
-                            waitLoad.disconnect();
-                            let [video, summary] = [li.$q("video"), li.$q("summary")];
-                            if (!video || !summary) return;
-                            video.$sAttr("loop", true);
-                            video.$sAttr("preload", "metadata");
-                            const link = linkBox[summary.$text()];
-                            if (!link) return;
-                            move && link.parentElement.remove();
-                            let element = link.$copy();
-                            element.$sAttr("beautify", true);
-                            element.$text(element.$text().replace("Download", ""));
-                            summary.$text("");
-                            summary.appendChild(element);
-                        }, 100));
-                        waitLoad.observe(li, {
-                            attributes: true,
-                            characterData: true,
-                            childList: true,
-                            subtree: true
-                        });
-                        li.$sAttr("Video-Beautify", true);
-                    }
+                    id: "Video-Effects",
+                    repeatAdd: false
                 });
+                const move = mode === 2;
+                const linkBox = Object.fromEntries([...post].map(a => [a.download?.trim(), a]));
+                for (const li of parents) {
+                    const waitLoad = new MutationObserver(Lib.debounce(() => {
+                        waitLoad.disconnect();
+                        let [video, summary] = [li.$q("video"), li.$q("summary")];
+                        if (!video || !summary) return;
+                        video.$sAttr("loop", true);
+                        video.$sAttr("preload", "metadata");
+                        const link = linkBox[summary.$text()];
+                        if (!link) return;
+                        move && link.parentElement.remove();
+                        let element = link.$copy();
+                        element.$sAttr("beautify", true);
+                        element.$text(element.$text().replace("Download", ""));
+                        summary.$text("");
+                        summary.appendChild(element);
+                    }, 100));
+                    waitLoad.observe(li, {
+                        attributes: true,
+                        characterData: true,
+                        childList: true,
+                        subtree: true
+                    });
+                    li.$sAttr("Video-Beautify", true);
+                }
             });
-        }
+        });
     }
     async function CommentFormat() {
         Lib.addStyle(`
@@ -2158,9 +2090,7 @@ statusText: ${text}`);
                         if (Page.isNeko) {
                             link.$text(text);
                             link.$sAttr("download", text);
-                        } else {
-                            link.$iAdjacent(`<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`, "beforebegin");
-                        }
+                        } else link.$iAdjacent(`<a class="${link.$gAttr("class")}" href="${link.href}" download="${text}" beautify="true">${text}</a>`, "beforebegin");
                         const browse = link.nextElementSibling;
                         if (!browse || browse.$text() !== "browse »") continue;
                         showBrowse(browse);
@@ -2176,8 +2106,7 @@ statusText: ${text}`);
         const loadFailedClick = () => {
             Lib.onE(".post__files, .scrape__files", "click", event => {
                 const target = event.target;
-                const isImg = target.matches("img");
-                if (isImg && target.alt === "Loading Failed") {
+                if (target.matches("img") && target.alt === "Loading Failed") {
                     target.onload = null;
                     target.$dAttr("src");
                     target.onload = function () {
@@ -2223,45 +2152,39 @@ statusText: ${text}`);
             });
             let blob = null;
             try {
-                for (let i = 0; i < 5; i++) {
-                    try {
-                        blob = await new Promise((resolve, reject) => {
-                            let timeout = null;
-                            const request = GM_xmlhttpRequest({
-                                url: url,
-                                method: "GET",
-                                responseType: "blob",
-                                onload: res => {
-                                    clearTimeout(timeout);
-                                    return res.status === 200 ? resolve(res.response) : reject(res);
-                                },
-                                onerror: reject,
-                                onprogress: progress => {
-                                    timer();
-                                    if (progress.lengthComputable && indicator.isConnected) {
-                                        const percent = (progress.loaded / progress.total * 100).toFixed(1);
-                                        indicator.$text(`${percent}%`);
-                                    }
-                                }
-                            });
-                            function timer() {
+                for (let i = 0; i < 5; i++) try {
+                    blob = await new Promise((resolve, reject) => {
+                        let timeout = null;
+                        const request = GM_xmlhttpRequest({
+                            url: url,
+                            method: "GET",
+                            responseType: "blob",
+                            onload: res => {
                                 clearTimeout(timeout);
-                                timeout = setTimeout(() => {
-                                    request.abort();
-                                    reject();
-                                }, 15e3);
+                                return res.status === 200 ? resolve(res.response) : reject(res);
+                            },
+                            onerror: reject,
+                            onprogress: progress => {
+                                timer();
+                                if (progress.lengthComputable && indicator.isConnected) {
+                                    const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                                    indicator.$text(`${percent}%`);
+                                }
                             }
                         });
-                        break;
-                    } catch (error) {
-                        if (i < 4) await new Promise(res => setTimeout(res, 300));
-                    }
+                        function timer() {
+                            clearTimeout(timeout);
+                            timeout = setTimeout(() => {
+                                request.abort();
+                                reject();
+                            }, 15e3);
+                        }
+                    });
+                    break;
+                } catch (error) {
+                    if (i < 4) await new Promise(res => setTimeout(res, 300));
                 }
-                if (blob && blob.size > 0) {
-                    result(URL.createObjectURL(blob));
-                } else {
-                    result(Parame.Url);
-                }
+                if (blob && blob.size > 0) result(URL.createObjectURL(blob)); else result(Parame.Url);
             } catch (error) {
                 result(Parame.Url);
             } finally {
@@ -2285,7 +2208,7 @@ statusText: ${text}`);
                         thumbUrl,
                         newUrl,
                         oldUrl,
-                        mode: mode2
+                        mode
                     }) {
                         if (!root.isConnected) return;
                         ++index;
@@ -2305,18 +2228,16 @@ statusText: ${text}`);
                             clearTimeout(timer);
                             --token;
                             cleanMark(img);
-                            mode2 === "slow" && slowAutoLoad(index);
+                            mode === "slow" && slowAutoLoad(index);
                         };
-                        if (mode2 === "fast") {
-                            img.onerror = function () {
-                                --token;
-                                img.onload = img.onerror = null;
-                                imgReload(img, 7);
-                            };
-                        }
+                        if (mode === "fast") img.onerror = function () {
+                            --token;
+                            img.onload = img.onerror = null;
+                            imgReload(img, 7);
+                        };
                         root.replaceWith(container);
                     }
-                    async function imgLoad(root, index, mode2 = "fast") {
+                    async function imgLoad(root, index, mode = "fast") {
                         if (!root.isConnected) return;
                         root.$dAttr("class");
                         const a = root.$q(linkQuery);
@@ -2337,25 +2258,21 @@ statusText: ${text}`);
                                     thumbUrl: safeSrc,
                                     newUrl: href,
                                     oldUrl: safeHref,
-                                    mode: mode2
+                                    mode: mode
                                 });
                             });
-                        } else {
-                            imgRendering({
-                                root: replaceRoot,
-                                index: index,
-                                thumbUrl: safeSrc,
-                                newUrl: safeHref,
-                                mode: mode2
-                            });
-                        }
+                        } else imgRendering({
+                            root: replaceRoot,
+                            index: index,
+                            thumbUrl: safeSrc,
+                            newUrl: safeHref,
+                            mode: mode
+                        });
                     }
                     async function fastAutoLoad() {
                         loadFailedClick();
                         for (const [index, root] of [...thumbnail].entries()) {
-                            while (token >= 7) {
-                                await Lib.sleep(700);
-                            }
+                            while (token >= 7) await Lib.sleep(700);
                             imgLoad(root, index);
                         }
                     }
@@ -2603,13 +2520,7 @@ statusText: ${text}`);
             if (Parame.Registered.has("PostViewInit")) return;
             Lib.storageListen(Object.values(Parame.SaveKey), call => {
                 if (call.far) {
-                    if (typeof call.nv === "string") {
-                        menuInit();
-                    } else {
-                        for (const [key, value] of Object.entries(call.nv)) {
-                            stylePointer[key](value);
-                        }
-                    }
+                    if (typeof call.nv === "string") menuInit(); else for (const [key, value] of Object.entries(call.nv)) stylePointer[key](value);
                 }
             });
             Parame.Registered.add("PostViewInit");
@@ -3032,9 +2943,7 @@ statusText: ${text}`);
                     menuRequ.imgSave();
                     menuRequ.menuSave();
                     menuRequ.menuClose();
-                } else if (id === "closure") {
-                    menuRequ.menuClose();
-                }
+                } else if (id === "closure") menuRequ.menuClose();
             });
             Lib.onE(imageSetEl, "wheel", event => {
                 event.stopPropagation();
@@ -3058,11 +2967,9 @@ statusText: ${text}`);
                 for (const [name, func] of Object.entries(loadedFunc)) {
                     let cfg = config[name];
                     if (!cfg || !func) continue;
-                    if (typeof cfg !== "object") {
-                        cfg = {
-                            enable: true
-                        };
-                    } else if (!cfg.enable) continue;
+                    if (typeof cfg !== "object") cfg = {
+                        enable: true
+                    }; else if (!cfg.enable) continue;
                     func.call(loadedFunc, cfg);
                 }
             }
