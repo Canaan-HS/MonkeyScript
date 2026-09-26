@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.09.26-Beta
+// @version      2026.09.27-Beta
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -919,19 +919,54 @@
             fix_cont fix_wrapper:hover fix_edit {
                 display: block;
             }
+            /* 快速預覽容器 */
             .post-show-box {
                 z-index: 9999;
                 cursor: pointer;
                 position: absolute;
-                padding: 8px 4px;
+                display: flex;
+                align-items: center;
+                gap: 0.65rem;
+                padding: 10px 14px;
                 max-width: 120%;
                 min-width: 80px;
                 overflow-x: auto;
                 overflow-y: hidden;
                 white-space: nowrap;
-                border-radius: 5px;
-                background: #1d1f20ff;
-                border: 1px solid #fff;
+                border-radius: 12px;
+                background: rgba(29, 31, 32, 0.94);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                box-shadow:
+                    0 12px 28px rgba(0, 0, 0, 0.5),
+                    0 2px 6px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                -webkit-mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                mask-image: linear-gradient(
+                    to right,
+                    transparent,
+                    black 20px,
+                    black calc(100% - 20px),
+                    transparent
+                );
+                animation: post-show-box-in 0.18s ease-out;
+            }
+            @keyframes post-show-box-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px) scale(0.98);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
             }
             .post-show-box[preview="above"] {
                 bottom: 85%;
@@ -944,9 +979,20 @@
             }
             .post-show-box img {
                 height: 23vh;
-                margin: 0 .3rem;
-                min-width: 55%;
-                border: 1px solid #fff;
+                width: auto;
+                min-width: clamp(3.75rem, 6vw, 5.5rem);
+                max-width: 42vw;
+                object-fit: contain;
+                flex-shrink: 0;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid rgba(255, 255, 255, 0.14);
+                box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+                transition: transform 0.15s ease, box-shadow 0.15s ease;
+            }
+            .post-show-box img:hover {
+                transform: scale(1.05);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
             }
             .fancy-image__image {
                 z-index: 1;
@@ -1010,24 +1056,26 @@
                     Fetch.send(api, null, { responseType: Page.isNeko ? "document" : "json" }).then((data) => {
                       if (Page.isNeko) data = data.$qa(".post-card__image");
                       currentBox.$text("");
-                      const srcBox = new Set();
+                      const linkBox = new Set();
                       for (const post of data) {
-                        let src = "";
+                        let url, src;
                         if (Page.isNeko) src = post.src ?? "";
-                        else
+                        else {
+                          url = `${Lib.$origin}/${post.service}/user/${post.user}/post/${post.id}`;
                           for (const { path } of [post.file, ...(post?.attachments || [])]) {
                             if (!path) continue;
                             if (!Parame.SupportImg.has(path.split(".")[1])) continue;
                             src = Parame.ThumbnailApi + path;
                             break;
                           }
+                        }
                         if (!src) continue;
-                        srcBox.add(src);
+                        linkBox.add({ url, src });
                       }
-                      if (srcBox.size === 0) currentBox.$text("No Image");
+                      if (linkBox.size === 0) currentBox.$text("No Image");
                       else {
-                        currentBox.$iAdjacent([...srcBox].map((src, index) => `<img src="${src}" loading="lazy" number="${index + 1}">`).join(""));
-                        srcBox.clear();
+                        currentBox.$iAdjacent([...linkBox].map(({ url, src }, index) => `<img src="${src}" jump="${url}" loading="lazy" number="${index + 1}">`).join(""));
+                        linkBox.clear();
                       }
                     });
                   } else currentBox.$text("Not Supported");
@@ -1089,7 +1137,7 @@
                   );
                 }, 50);
               }, 300);
-            } else if ((openInTab.enable && Lib.platform.desktop && (tagName === "FIX_NAME" || tagName === "FIX_TAG" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Page.isContent() && target.matches(".fancy-image__image"))) {
+            } else if (tagName === "FIX_TAG" || (tagName === "FIX_NAME" && (Page.isPreview() || Page.isContent())) || (Lib.platform.desktop && openInTab.enable && (tagName === "FIX_NAME" || tagName === "PICTURE" || target.matches(".fancy-image__image, .post-show-box, .post-show-box img"))) || (Page.isContent() && target.matches(".fancy-image__image"))) {
               event.preventDefault();
               event.stopImmediatePropagation();
               const url = target.$gAttr("jump");
