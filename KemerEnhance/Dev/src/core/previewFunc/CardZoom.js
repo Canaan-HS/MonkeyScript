@@ -3,7 +3,7 @@ import { Page } from '../config.js';
 
 /* 帖子預覽卡縮放效果 */
 export default async function CardZoom({ mode }) {
-    let paddingBottom, rowGap, height;
+    let paddingBottom, rowGap, aspectRatio;
     switch (mode) {
         case 2:
             Lib.addStyle(`
@@ -29,9 +29,9 @@ export default async function CardZoom({ mode }) {
             });
             break;
         case 3:
-            [paddingBottom, rowGap, height] = Page.isNeko
-                ? ["0", "0", "57"]
-                : ["7", "5.8", "50"];
+            [paddingBottom, rowGap, aspectRatio] = Page.isNeko
+                ? ["0", "0", "320 / 416"]   // ! isNeko 連不上, 還未測試 目前用估算值
+                : ["7", "5.8", "320 / 365"];
 
             Lib.addStyle(`
                 .card-list--legacy { padding-bottom: ${paddingBottom}em }
@@ -41,10 +41,11 @@ export default async function CardZoom({ mode }) {
                 }
                 .post-card a {
                     width: 20em;
-                    height: ${height}vh;
+                    aspect-ratio: ${aspectRatio};
+                    height: auto;
                 }
                 .post-card__image-container img { object-fit: contain }
-            `, {
+                `, {
                 id: "CardZoom-Effects-3",
                 repeatAdd: false,
             });
