@@ -17,13 +17,13 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "cross-env": "^10.1.0",
     "open": "^11.0.4",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "uglify-js": "^3.19.3",
-    "vite": "^8.3.1",
+    "vite": "^8.3.4",
     "vite-plugin-monkey": "^8.1.1"
   }
 }
