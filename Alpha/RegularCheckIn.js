@@ -439,8 +439,15 @@
 
                         if (task.AutoOpen && task.Page) {
                             try {
-                                if (Lib.domain !== new URL(task.Page).hostname) {
-                                    window.open(task.Page);
+                                // ? 偶發有 Bug 造成重複開啟, 似乎跟插件載入時機有關, 不知道真實原因
+                                if (Lib.domain !== new URL(task.Page).hostname && !Lib.getV(`${task.Page}-Opened`)) {
+                                    const newWindow = window.open(task.Page);
+
+                                    // 防護機制
+                                    if (newWindow && !newWindow.closed) {
+                                        Lib.setV(`${task.Page}-Opened`, true);
+                                    }
+
                                     return;
                                 }
                             } catch {
@@ -474,7 +481,8 @@
                         Lib.delV("ReTry-Count");
 
                         // 清除簽到處理狀態標籤
-                        taskList.forEach(({ Name }) => {
+                        taskList.forEach(({ Name, Page }) => {
+                            Lib.delV(`${Page}-Opened`);
                             Lib.delV(`${Name}-Checked`);
                         })
                     } else {
