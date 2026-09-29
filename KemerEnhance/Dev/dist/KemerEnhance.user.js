@@ -43,7 +43,7 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @run-at       document-body
+// @run-at       document-start
 // ==/UserScript==
 
 (async function () {
@@ -70,10 +70,10 @@
     Artists: /.+(?<!favorites)\/artists.*/,
     Links: /.+\/user\/[^\/]+\/links.*/,
     Recommended: /.+\/user\/[^\/]+\/recommended.*/,
-    FavoritesArtists: /.+\/favorites\/artists.*/,
+    FavoritesArtists: /.+\/favorites\/artists.*|.+pawchive.*(?:\/favorites.*|\?type=artist.*)/,
     Posts: /.+(?<!favorites)\/posts.*/,
     User: /.+\/user\/[^\/]+(\?.*)?$/,
-    FavorPosts: /.+\/favorites\/posts.*/,
+    FavorPosts: /.+\/favorites(?:\/posts|\?type=post).*/,
     Dms: /.+\/dms(\?.*)?$/,
     Announcement: /.+\/user\/[^\/]+\/announcements.*/,
     Content: /.+\/user\/.+\/post\/.+$/,
