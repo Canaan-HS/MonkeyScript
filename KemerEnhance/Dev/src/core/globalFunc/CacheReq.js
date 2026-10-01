@@ -90,6 +90,7 @@ export default async function CacheReq() {
             const url = this._url;
 
             // 快取條件判斷（只走 GET、非 bypass、非 random URL）
+            // ! 需要測試是否排除 favorites 的 API 快取
             const canCache = this._isGet && !this._bypass && url && !url.endsWith('random');
 
             // 命中快取
