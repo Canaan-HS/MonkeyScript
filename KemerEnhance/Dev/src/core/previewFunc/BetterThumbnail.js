@@ -88,7 +88,6 @@ const BetterThumbnailFactory = () => {
                         const record = new Set();
 
                         let fileData = [post.file, ...attachments];
-                        if (Page.isPawchive) fileData = fileData.slice(1);
 
                         const count = fileData.reduce((count, attach, index) => {
                             const path = attach.path || "";
@@ -104,7 +103,7 @@ const BetterThumbnailFactory = () => {
                             else count.file = (count.file ?? 0) + 1;
 
                             // 替換縮圖
-                            if (src && !replaced && index > 0 && isImg) {
+                            if (!replaced && src && isImg && index > 0) {
                                 replaced = true;
                                 changeSrc(img, src, Parame.ThumbnailApi + path);
                             };
