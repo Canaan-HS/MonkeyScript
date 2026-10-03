@@ -232,7 +232,7 @@
       };
       XHR.prototype.send = function (...args) {
         const url = this._url;
-        const canCache = this._isGet && !this._bypass && url && !url.endsWith("random");
+        const canCache = this._isGet && !this._bypass && url && !url.endsWith("random") && !url.includes("favorites");
         if (canCache && cache.has(url)) {
           const cachedDomString = cache.get(url);
           queueMicrotask(() => {
