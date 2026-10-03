@@ -1559,9 +1559,7 @@
               const src = img?.src;
               const attachments = post.attachments || [];
               const record = new Set();
-              let fileData = [post.file, ...attachments];
-              if (Page.isPawchive) fileData = fileData.slice(1);
-              const count = fileData.reduce((count, attach, index) => {
+              const count = [post.file, ...attachments].reduce((count, attach, index) => {
                 const path = attach.path || "";
                 if (record.has(path)) return count;
                 const ext = path.split(".").at(-1).toLowerCase();
@@ -1570,7 +1568,7 @@
                 if (isImg) count.image = (count.image ?? 0) + 1;
                 else if (Parame.VideoType.has(ext)) count.video = (count.video ?? 0) + 1;
                 else count.file = (count.file ?? 0) + 1;
-                if (src && !replaced && index > 0 && isImg) {
+                if (!replaced && src && isImg && index > 0) {
                   replaced = true;
                   changeSrc(img, src, Parame.ThumbnailApi + path);
                 }
