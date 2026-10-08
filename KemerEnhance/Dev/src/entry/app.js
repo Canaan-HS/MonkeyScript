@@ -8,6 +8,8 @@ import contentLoader from '../core/contentFunc/_loader_.js';
 import MenuFactory from '../core/menu.js';
 
 export default function Main() {
+    Lib.addCfg.rootTag = "body";
+
     const Enhance = (() => {
 
         // 加載函數映射
@@ -37,8 +39,6 @@ export default function Main() {
 
         return {
             async run() {
-                if (Page.isPawchive) await Lib.delHead();
-
                 call("Global");
 
                 if (Page.isPreview()) call("Preview");
