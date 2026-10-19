@@ -439,14 +439,8 @@
 
                         if (task.AutoOpen && task.Page) {
                             try {
-                                // ! 目前有偶發 Bug
-                                if (Lib.domain !== new URL(task.Page).hostname && !Lib.getV(`${task.Page}-Opened`)) {
-                                    const newWindow = window.open(task.Page);
-
-                                    // (實驗防護)
-                                    if (newWindow && !newWindow.closed) {
-                                        Lib.setV(`${task.Page}-Opened`, true);
-                                    }
+                                if (Lib.domain !== new URL(task.Page).hostname) {
+                                    window.open(task.Page);
                                     return;
                                 }
                             } catch {
@@ -480,8 +474,7 @@
                         Lib.delV("ReTry-Count");
 
                         // 清除簽到處理狀態標籤
-                        taskList.forEach(({ Name, Page }) => {
-                            Lib.delV(`${Page}-Opened`);
+                        taskList.forEach(({ Name }) => {
                             Lib.delV(`${Name}-Checked`);
                         })
                     } else {
@@ -512,7 +505,7 @@
         };
 
         // 註冊任務
-        function register(verifyRole = false) {
+        function register() {
             if (registered) return; // 禁止重複註冊
             if (!navigator.onLine) return; // 禁止離線註冊
 
