@@ -12,7 +12,6 @@
 // @namespace    https://greasyfork.org/users/989635
 // @icon         https://cdn-icons-png.flaticon.com/512/10233/10233926.png
 
-// @grant        GM_info
 // @grant        GM_saveTab
 // @grant        GM_getTabs
 // @grant        GM_setValue
@@ -577,20 +576,8 @@
             }
         };
 
-        // 判斷版本號
-        function isVersionGreater(version, targetVersion) {
-            const [major1, minor1, patch1] = version.split('.').map(Number);
-            const [major2, minor2, patch2] = targetVersion.split('.').map(Number);
-
-            return major1 > major2 ||
-                (major1 === major2 && minor1 > minor2) ||
-                (major1 === major2 && minor1 === minor2 && patch1 > patch2);
-        };
-
         // 取得任務列表
         let enabledTask = new Set(Lib.getV(config.TaskKey, []));
-        // 根據版本號判斷菜單是否自動關閉
-        const autoClose = !!(isVersionGreater(GM_info.version ?? "5.3.0", "5.3.0"));
 
         // 初始化註冊
         if (enabledTask.size > 0) createTask.register();
@@ -606,6 +593,12 @@
             for (const [index, task] of taskList.entries()) {
                 const icon = enabledTask.has(task.Name) ? "🟢" : "🔴";
 
+                /*
+                    Todo: 另外使用模態菜單來交互
+                    ? 5.3.0 之後的 GM_registerMenuCommand 再 autoClose: false 下, 每次刷新都會完整重繪 UI
+                    ? 在這狀態下交互會被鎖定, 要在那邊等他閃逤完才能繼續, UX 體驗極差, 雖然 autoClose: true 可以避免
+                    ? 但 doubleClickConfirm 目前的判定需要他是 false 才能觸發
+                */
                 GM_registerMenuCommand(`${icon} ${task.Name}`, doubleClickConfirm((open) => {
 
                     if (open) {
@@ -622,7 +615,7 @@
                     regMenu(); // 遞迴更新狀態
                 }, 200), {
                     id: `CheckIn-${index}`,
-                    autoClose
+                    autoClose: false
                 })
 
             }
