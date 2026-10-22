@@ -81,15 +81,15 @@ const Parame = {
     Links: /.+\/user\/[^\/]+\/links.*/,
     // 預覽頁的推薦 ./recommended
     Recommended: /.+\/user\/[^\/]+\/recommended.*/,
-    // favorites 頁面 ./favorites/artists*
-    FavoritesArtists: /.+\/favorites\/artists.*/,
+    // favorites 頁面 ./favorites/artists* | ./favorites?type=artist
+    FavoritesArtists: /.+\/favorites\/artists.*|.+pawchive.*(?:\/favorites.*|\?type=artist.*)/,
 
     // 排除 favorites 頁面以外的 posts & posts/popular 頁面
     Posts: /.+(?<!favorites)\/posts.*/,
     // 最常見的 User 預覽頁面, ./user/id || ./user/id?.*
     User: /.+\/user\/[^\/]+(\?.*)?$/,
-    // favorites 頁面 ./favorites/posts*
-    FavorPosts: /.+\/favorites\/posts.*/,
+    // favorites 頁面 ./favorites/posts* | ./favorites?type=post
+    FavorPosts: /.+\/favorites(?:\/posts|\?type=post).*/,
 
     // DMs 頁面
     Dms: /.+\/dms(\?.*)?$/,
