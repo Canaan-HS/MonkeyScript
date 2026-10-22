@@ -372,6 +372,7 @@ const Lib = (() => {
         } catch { resolve?.(false) }
     };
 
+	// Todo: 當使用自定鍵值註冊相同元素上的相同監聽器時, 使用單次掛載, 並廣播事件的機制, 避免重複創建
     const eventRecord = new Map();
     /**
      * ! 匹配全域的腳本建議使用 mark 定義鍵值
