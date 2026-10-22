@@ -45,7 +45,7 @@ export default `
 // @grant        GM_registerMenuCommand
 // @grant        GM_addValueChangeListener
 
-// @run-at       document-start
+// @run-at       document-body
 // ==/UserScript==
 
 `;
