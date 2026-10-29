@@ -646,8 +646,14 @@ const Lib = (() => {
      * @example
      * addStyle(rule, id)
      * addScript(rule, id, repeatAdd)
+     *
+     * rootTag 預設為 head, 支援讓 add 添加到除 head 外的元素
+     * 這是一個全域設定, 修改之後的調用都會應用, 不支援個別配置
+     *
+     * addCfg.rootTag = "body"; // 透過接口從外部修改 (string)
      */
     const headRecord = new Map();
+    const addCfg = { rootTag: "head" };
     const addCall = {
         addStyle: (rule, { id, repeatAdd } = {}) => addHead("style", rule, id, repeatAdd),
         addScript: (rule, { id, repeatAdd } = {}) => addHead("script", rule, id, repeatAdd),
@@ -661,10 +667,10 @@ const Lib = (() => {
             element = document.createElement(type);
             element.id = id;
 
-            const head = sugar.head;
-            if (head) head.appendChild(element);
-            else waitEl("head").then(head => {
-                head.appendChild(element);
+            const rootEl = sugar[addCfg.rootTag];
+            if (rootEl) rootEl.appendChild(element);
+            else waitEl(addCfg.rootTag).then(rootEl => {
+                rootEl.appendChild(element);
             })
         };
 
