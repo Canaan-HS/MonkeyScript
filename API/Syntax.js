@@ -372,7 +372,7 @@ const Lib = (() => {
         } catch { resolve?.(false) }
     };
 
-	// Todo: 當使用自定鍵值註冊相同元素上的相同監聽器時, 使用單次掛載, 並廣播事件的機制, 避免重複創建
+    // Todo: 當使用自定鍵值註冊相同元素上的相同監聽器時, 使用單次掛載, 並廣播事件的機制, 避免重複創建
     const eventRecord = new Map();
     /**
      * ! 匹配全域的腳本建議使用 mark 定義鍵值
@@ -647,8 +647,14 @@ const Lib = (() => {
      * @example
      * addStyle(rule, id)
      * addScript(rule, id, repeatAdd)
+     *
+     * rootTag 預設為 head, 支援讓 add 添加到除 head 外的元素
+     * 這是一個全域設定, 修改之後的調用都會應用, 不支援個別配置
+     *
+     * addCfg.rootTag = "body"; // 透過接口從外部修改 (string)
      */
     const headRecord = new Map();
+    const addCfg = { rootTag: "head" };
     const addCall = {
         addStyle: (rule, { id, repeatAdd } = {}) => addHead("style", rule, id, repeatAdd),
         addScript: (rule, { id, repeatAdd } = {}) => addHead("script", rule, id, repeatAdd),
@@ -662,10 +668,10 @@ const Lib = (() => {
             element = document.createElement(type);
             element.id = id;
 
-            const head = sugar.head;
-            if (head) head.appendChild(element);
-            else waitEl("head").then(head => {
-                head.appendChild(element);
+            const rootEl = sugar[addCfg.rootTag];
+            if (rootEl) rootEl.appendChild(element);
+            else waitEl(addCfg.rootTag).then(rootEl => {
+                rootEl.appendChild(element);
             })
         };
 
@@ -1337,16 +1343,16 @@ const Lib = (() => {
                     return result;
                 })
 
-                // 返回物件 (暫時未使用)
-                // return Object.entries(format).reduce((acc, [key, value]) => {
-                //     let result = value;
+            // 返回物件 (暫時未使用)
+            // return Object.entries(format).reduce((acc, [key, value]) => {
+            //     let result = value;
 
-                //     if (typeof value === "string")
-                //         result = value.replace(parser, (_, key) => templateUtils.process(template, key));
+            //     if (typeof value === "string")
+            //         result = value.replace(parser, (_, key) => templateUtils.process(template, key));
 
-                //     acc[key] = result;
-                //     return acc;
-                // }, {});
+            //     acc[key] = result;
+            //     return acc;
+            // }, {});
             default:
                 return { "Unsupported format": format };
         }
@@ -2082,7 +2088,7 @@ const Lib = (() => {
         deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
             ...addCall, ...storageCall, ...GM_storageCall,
-            eventRecord, headRecord, observerRecord,
+            addCfg, eventRecord, headRecord, observerRecord,
             type: _type, onE, onEvent, offEvent, onUrlChange, log, delHead, observer, waitEl, openDB,
             throttle: _throttle, debounce: _debounce, scopeParse,
             createWorker, formatTemplate, createZip, createStrCompress, createNetworkObserver,
