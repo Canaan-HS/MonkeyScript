@@ -1631,7 +1631,7 @@ const Lib = (() => {
         deviceCall, sugar, // 含有 get() 的語法糖, 不能直接展開合併, 展開時會直接調用變成一般的 value
         {
             ...addCall, ...storageCall, ...GM_storageCall,
-            eventRecord, headRecord, observerRecord,
+            addCfg, eventRecord, headRecord, observerRecord,
             type: _type, onE, onEvent, offEvent, onUrlChange, log, delHead,
             observer, waitEl, openDB, throttle: _throttle, debounce: _debounce, createWorker, createStrCompress, outputJson,
             runTime, getDate, translMatcher, regMenu, unMenu, storageListen,
