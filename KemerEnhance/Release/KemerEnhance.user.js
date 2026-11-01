@@ -6,7 +6,7 @@
 // @name:ko      Kemer 강화
 // @name:ru      Kemer Улучшение
 // @name:en      Kemer Enhance
-// @version      2026.09.27-Beta
+// @version      c
 // @author       Canaan HS
 // @description        美化介面與操作增強，增加額外功能，提供更好的使用體驗
 // @description:zh-TW  美化介面與操作增強，增加額外功能，提供更好的使用體驗
@@ -29,7 +29,7 @@
 
 // @resource     pako https://cdnjs.cloudflare.com/ajax/libs/pako/2.2.0/pako.min.js
 
-// @require      https://update.greasyfork.org/scripts/487608/1909139/SyntaxLite_min.js
+// @require      https://update.greasyfork.org/scripts/487608/1983254/SyntaxLite_min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/preact/10.27.1/preact.umd.min.js
 
 // @grant        unsafeWindow
@@ -128,10 +128,10 @@
         Artists: /.+(?<!favorites)\/artists.*/,
         Links: /.+\/user\/[^\/]+\/links.*/,
         Recommended: /.+\/user\/[^\/]+\/recommended.*/,
-        FavoritesArtists: /.+\/favorites\/artists.*/,
+        FavoritesArtists: /.+\/favorites\/artists.*|.+pawchive.*(?:\/favorites.*|\?type=artist.*)/,
         Posts: /.+(?<!favorites)\/posts.*/,
         User: /.+\/user\/[^\/]+(\?.*)?$/,
-        FavorPosts: /.+\/favorites\/posts.*/,
+        FavorPosts: /.+\/favorites(?:\/posts|\?type=post).*/,
         Dms: /.+\/dms(\?.*)?$/,
         Announcement: /.+\/user\/[^\/]+\/announcements.*/,
         Content: /.+\/user\/.+\/post\/.+$/,
@@ -170,26 +170,37 @@
     async function BlockAds() {
         if (Page.isNeko) return;
         Lib.addStyle(`
-        [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"] { display: none !important }
+        [class^="ad-"], [class^="root--"], [id^="ts_ad_native_"], [id^="ts_ad_video_"], .▶ { display: none !important }
     `, {
             id: "Ad-blocking-style",
             repeatAdd: false
         });
         if (Parame.Registered.has("BlockAds")) return;
-        const domains = new Set(["go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com", "go.bluetrafficstream.com", "creative.bluetrafficstream.com", "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"]);
-        const originalFetch = unsafeWindow.fetch;
-        unsafeWindow.fetch = function (input) {
-            const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url || "";
-            try {
-                if (url.endsWith(".m3u8")) return new Response(url, {
-                    status: 204
-                });
-                if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return new Response(url, {
-                    status: 204
-                });
-            } catch { }
-            return originalFetch.apply(this, arguments);
-        };
+        if (Page.isPawchive) {
+            const originalGetItem = unsafeWindow.Storage.prototype.getItem;
+            unsafeWindow.Storage.prototype.getItem = function (key) {
+                if (key.startsWith("__PPU_SESSION")) {
+                    const timer = new Date().getTime();
+                    return `0|${timer}|1|${timer}|1|0|0`;
+                }
+                return originalGetItem.call(this, key);
+            };
+        } else {
+            const domains = new Set(["go.mnaspm.com", "tsyndicate.com", "go.reebr.com", "creative.reebr.com", "go.bluetrafficstream.com", "creative.bluetrafficstream.com", "tsvideo.sacdnssedge.com", "media-hls.growcdnssedge.com", "static-worker.ourdream.ai"]);
+            const originalFetch = unsafeWindow.fetch;
+            unsafeWindow.fetch = function (input) {
+                const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url || "";
+                try {
+                    if (url.endsWith(".m3u8")) return new Response(url, {
+                        status: 204
+                    });
+                    if ((url.startsWith("http") || url.startsWith("//")) && domains.has(new URL(url).host)) return new Response(url, {
+                        status: 204
+                    });
+                } catch { }
+                return originalFetch.apply(this, arguments);
+            };
+        }
         Parame.Registered.add("BlockAds");
     }
     async function KeyScroll({
@@ -330,7 +341,7 @@
             };
             XHR.prototype.send = function (...args) {
                 const url = this._url;
-                const canCache = this._isGet && !this._bypass && url && !url.endsWith("random");
+                const canCache = this._isGet && !this._bypass && url && !url.endsWith("random") && !url.includes("favorites");
                 if (canCache && cache.has(url)) {
                     const cachedDomString = cache.get(url);
                     queueMicrotask(() => {
@@ -1809,16 +1820,14 @@
                             const src = img?.src;
                             const attachments = post.attachments || [];
                             const record = new Set();
-                            let fileData = [post.file, ...attachments];
-                            if (Page.isPawchive) fileData = fileData.slice(1);
-                            const count = fileData.reduce((count, attach, index) => {
+                            const count = [post.file, ...attachments].reduce((count, attach, index) => {
                                 const path = attach.path || "";
                                 if (record.has(path)) return count;
                                 const ext = path.split(".").at(-1).toLowerCase();
                                 if (!ext) return count;
                                 const isImg = Parame.SupportImg.has(ext);
                                 if (isImg) count.image = (count.image ?? 0) + 1; else if (Parame.VideoType.has(ext)) count.video = (count.video ?? 0) + 1; else count.file = (count.file ?? 0) + 1;
-                                if (src && !replaced && index > 0 && isImg) {
+                                if (!replaced && src && isImg && index > 0) {
                                     replaced = true;
                                     changeSrc(img, src, Parame.ThumbnailApi + path);
                                 }
@@ -2955,6 +2964,7 @@
         };
     })();
     function Main() {
+        if (Page.isPawchive) Lib.addCfg.rootTag = "body";
         const Enhance = (() => {
             const loadFunc = {
                 Global: globalLoader,
@@ -2975,7 +2985,6 @@
             }
             return {
                 async run() {
-                    if (Page.isPawchive) await Lib.delHead();
                     call("Global");
                     if (Page.isPreview()) call("Preview"); else if (Page.isContent()) {
                         MenuFactory.postViewInit();
