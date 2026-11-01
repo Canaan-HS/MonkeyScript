@@ -8,7 +8,7 @@ import contentLoader from '../core/contentFunc/_loader_.js';
 import MenuFactory from '../core/menu.js';
 
 export default function Main() {
-    Lib.addCfg.rootTag = "body";
+    if (Page.isPawchive) Lib.addCfg.rootTag = "body";
 
     const Enhance = (() => {
 
