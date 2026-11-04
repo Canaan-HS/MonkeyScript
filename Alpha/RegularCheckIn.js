@@ -505,7 +505,14 @@
                     checkInTimer = setTimeout(checkInWork, ms); // 重設簽到
                 }
             }
-            catch { }
+            catch (error) {
+                if (error.message === "沒有時間戳記錄") {
+                    setTimestamp(currentTime);
+                    return;
+                }
+
+                Lib.log(error).error;
+            }
             finally {
                 if (stop) return;
                 queryTimer = setTimeout(taskQuery, config.QueryInterval); // 設定詢輪
